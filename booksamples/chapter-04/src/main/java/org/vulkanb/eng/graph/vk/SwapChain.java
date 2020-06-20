@@ -25,11 +25,16 @@ public class SwapChain {
 
             PhysicalDevice physicalDevice = device.getPhysicalDevice();
 
-            int numImages = calcNumImages(surface.getVkSurfaceCapabilities(), requestedImages);
+            // Get surface capabilities
+            VkSurfaceCapabilitiesKHR surfCapabilities = VkSurfaceCapabilitiesKHR.callocStack(stack);
+            vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.getPhysicalDevice().getVkPhysicalDevice(),
+                    surface.getVkSurface(), surfCapabilities), "Failed to get surface capabilities");
+
+            int numImages = calcNumImages(surfCapabilities, requestedImages);
 
             this.surfaceFormat = calcSurfaceFormat(physicalDevice, surface);
 
-            VkExtent2D swapChainExtent = calcSwapChainExtent(stack, window, surface.getVkSurfaceCapabilities());
+            VkExtent2D swapChainExtent = calcSwapChainExtent(stack, window, surfCapabilities);
 
             VkSwapchainCreateInfoKHR vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.callocStack(stack)
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)
@@ -41,7 +46,7 @@ public class SwapChain {
                     .imageArrayLayers(1)
                     .imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
                     .imageSharingMode(VK_SHARING_MODE_EXCLUSIVE)
-                    .preTransform(surface.getVkSurfaceCapabilities().currentTransform())
+                    .preTransform(surfCapabilities.currentTransform())
                     .compositeAlpha(KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
                     .clipped(true);
             if (vsync) {

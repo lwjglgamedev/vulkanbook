@@ -28,6 +28,11 @@ public SwapChain(Device device, Surface surface, Window window, int requestedIma
 
             PhysicalDevice physicalDevice = device.getPhysicalDevice();
 
+            // Get surface capabilities
+            VkSurfaceCapabilitiesKHR surfCapabilities = VkSurfaceCapabilitiesKHR.callocStack(stack);
+            vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.getPhysicalDevice().getVkPhysicalDevice(),
+                    surface.getVkSurface(), surfCapabilities), "Failed to get surface capabilities");
+
             int numImages = calcNumImages(surfCapabilities, requestedImages);
 ```
 
