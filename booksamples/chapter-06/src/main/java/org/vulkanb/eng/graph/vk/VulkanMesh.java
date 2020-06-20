@@ -1,0 +1,148 @@
+package org.vulkanb.eng.graph.vk;
+
+import org.lwjgl.PointerBuffer;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.VkBufferCopy;
+import org.vulkanb.eng.scene.MeshData;
+
+import java.nio.*;
+
+import static org.lwjgl.vulkan.VK10.*;
+import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+
+public class VulkanMesh {
+
+    private String id;
+    private VulkanBuffer indicesBuffer;
+    private int indicesCount;
+    private VulkanBuffer verticesBuffer;
+
+    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount) {
+        this.id = id;
+        this.verticesBuffer = verticesBuffer;
+        this.indicesBuffer = indicesBuffer;
+        this.indicesCount = indicesCount;
+    }
+
+    private static TransferBuffers createIndicesBuffers(Device device, MeshData meshData) {
+        int[] indices = meshData.indices();
+        int numIndices = indices.length;
+        int bufferSize = numIndices * GraphConstants.FLOAT_LENGTH;
+
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            PointerBuffer pp = stack.mallocPointer(1);
+            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
+                    "Failed to map memory");
+
+            IntBuffer data = pp.getIntBuffer(0, bufferSize);
+            data.put(indices);
+
+            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
+        }
+
+        return new TransferBuffers(srcBuffer, dstBuffer);
+    }
+
+    private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
+        float[] positions = meshData.positions();
+        int numPositions = positions.length;
+        int bufferSize = numPositions * GraphConstants.FLOAT_LENGTH;
+
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            PointerBuffer pp = stack.mallocPointer(1);
+            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
+                    "Failed to map memory");
+
+            FloatBuffer data = pp.getFloatBuffer(0, bufferSize);
+            data.put(positions);
+
+            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
+        }
+
+        return new TransferBuffers(srcBuffer, dstBuffer);
+    }
+
+    public static VulkanMesh[] loadMeshes(CommandPool commandPool, Queue queue, MeshData[] meshDataList) {
+        int numMeshes = meshDataList != null ? meshDataList.length : 0;
+        VulkanMesh[] meshes = new VulkanMesh[numMeshes];
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            Device device = commandPool.getDevice();
+            CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
+            cmd.beginRecording();
+
+            VulkanBuffer[] positionTransferBuffers = new VulkanBuffer[numMeshes];
+            VulkanBuffer[] indicesTransferBuffers = new VulkanBuffer[numMeshes];
+            for (int i = 0; i < numMeshes; i++) {
+                MeshData meshData = meshDataList[i];
+                TransferBuffers verticesBuffers = createVerticesBuffers(device, meshData);
+                TransferBuffers indicesBuffers = createIndicesBuffers(device, meshData);
+
+                positionTransferBuffers[i] = verticesBuffers.srcBuffer();
+                indicesTransferBuffers[i] = indicesBuffers.srcBuffer();
+
+                meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
+                        meshData.indices().length);
+                recordTransferCommand(cmd, verticesBuffers);
+                recordTransferCommand(cmd, indicesBuffers);
+            }
+
+            cmd.endRecording();
+            Fence fence = new Fence(device, true);
+            fence.reset();
+            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
+            fence.fenceWait();
+            fence.cleanUp();
+
+            for (int i = 0; i < numMeshes; i++) {
+                positionTransferBuffers[i].cleanUp();
+                indicesTransferBuffers[i].cleanUp();
+            }
+        }
+
+        return meshes;
+    }
+
+    private static void recordTransferCommand(CommandBuffer cmd, TransferBuffers transferBuffers) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkBufferCopy.Buffer copyRegion = VkBufferCopy.callocStack(1, stack)
+                    .srcOffset(0).dstOffset(0).size(transferBuffers.srcBuffer().getRequestedSize());
+            vkCmdCopyBuffer(cmd.getVkCommandBuffer(), transferBuffers.srcBuffer().getBuffer(),
+                    transferBuffers.dstBuffer().getBuffer(), copyRegion);
+        }
+    }
+
+    public void cleanUp() {
+        this.indicesBuffer.cleanUp();
+        this.verticesBuffer.cleanUp();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public VulkanBuffer getIndicesBuffer() {
+        return this.indicesBuffer;
+    }
+
+    public int getIndicesCount() {
+        return indicesCount;
+    }
+
+    public VulkanBuffer getVerticesBuffer() {
+        return this.verticesBuffer;
+    }
+
+    private record TransferBuffers(VulkanBuffer srcBuffer, VulkanBuffer dstBuffer) {
+    }
+}

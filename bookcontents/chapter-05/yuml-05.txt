@@ -1,0 +1,1 @@
+(Record commands)->(Acquire image)->(Submit commands)->(Present Image)
