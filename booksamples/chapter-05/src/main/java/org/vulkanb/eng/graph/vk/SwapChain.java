@@ -139,7 +139,7 @@ public class SwapChain {
             int width = Math.min(window.getWidth(), surfCapabilities.maxImageExtent().width());
             width = Math.max(width, surfCapabilities.minImageExtent().width());
 
-            int height = Math.min(window.getWidth(), surfCapabilities.maxImageExtent().height());
+            int height = Math.min(window.getHeight(), surfCapabilities.maxImageExtent().height());
             height = Math.max(height, surfCapabilities.minImageExtent().height());
 
             result.width(width);
