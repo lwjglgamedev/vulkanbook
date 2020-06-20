@@ -543,7 +543,7 @@ Let's review the new method for image presentation named `presentImage`:
 
 ```java
 public boolean presentImage(Queue queue) {
-    boolean resize = true;
+    boolean resize = false;
     try (MemoryStack stack = MemoryStack.stackPush()) {
         VkPresentInfoKHR present = VkPresentInfoKHR.callocStack(stack)
                 .sType(KHRSwapchain.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR)
@@ -555,7 +555,7 @@ public boolean presentImage(Queue queue) {
 
         int err = KHRSwapchain.vkQueuePresentKHR(queue.getVkQueue(), present);
         if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
-            resize = false;
+            resize = true;
         } else if (err == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
             // Not optimal but swap chain can still be used
         } else if (err != VK_SUCCESS) {
