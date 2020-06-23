@@ -28,8 +28,7 @@ public class Main implements IAppLogic {
 
     @Override
     public void init(Window window, Scene scene, Render render) {
-        // To be implemented
-        MeshData meshData = new MeshData("Triange", new float[]{
+        MeshData meshData = new MeshData("Triangle", new float[]{
                 -0.5f, -0.5f, 0.0f,
                 0.0f, 0.5f, 0.0f,
                 0.5f, -0.5f, 0.0f},

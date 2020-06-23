@@ -60,6 +60,23 @@ public class Pipeline {
 
             VkPipelineColorBlendAttachmentState.Buffer blendAttState = VkPipelineColorBlendAttachmentState.callocStack(
                     pipeLineCreationInfo.numColorAttachments(), stack);
+
+            VkPipelineDepthStencilStateCreateInfo ds = null;
+            if (pipeLineCreationInfo.hasDepthAttachment()) {
+                ds = VkPipelineDepthStencilStateCreateInfo.callocStack(stack)
+                        .sType(VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)
+                        .depthTestEnable(true)
+                        .depthWriteEnable(true)
+                        .depthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                        .depthBoundsTestEnable(false)
+                        .stencilTestEnable(false)
+                        .back(it -> it
+                                .failOp(VK_STENCIL_OP_KEEP)
+                                .passOp(VK_STENCIL_OP_KEEP)
+                                .compareOp(VK_COMPARE_OP_ALWAYS));
+                ds.front(ds.back());
+            }
+
             for (int i = 0; i < pipeLineCreationInfo.numColorAttachments(); i++) {
                 blendAttState.get(i)
                         .colorWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
@@ -77,8 +94,14 @@ public class Pipeline {
                                     VK_DYNAMIC_STATE_SCISSOR
                             ));
 
+            VkPushConstantRange.Buffer vpcr = VkPushConstantRange.callocStack(1, stack)
+                    .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
+                    .offset(0)
+                    .size(GraphConstants.MAT4X4_SIZE);
+
             VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
-                    .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
+                    .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
+                    .pPushConstantRanges(vpcr);
 
             vkCheck(vkCreatePipelineLayout(device.getVkDevice(), pPipelineLayoutCreateInfo, null, lp),
                     "Failed to create pipeline layout");
@@ -96,7 +119,9 @@ public class Pipeline {
                     .pDynamicState(vkPipelineDynamicStateCreateInfo)
                     .layout(this.vkPipelineLayout)
                     .renderPass(pipeLineCreationInfo.vkRenderPass);
-
+            if (ds != null) {
+                pipeline.pDepthStencilState(ds);
+            }
             vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), pipelineCache.getVkPipelineCache(), pipeline, null, lp),
                     "Error creating graphics pipeline");
             this.vkPipeline = lp.get(0);
@@ -118,7 +143,7 @@ public class Pipeline {
     }
 
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
-                                       VertexBufferStructure vertexBufferStructure) {
+                                       boolean hasDepthAttachment, VertexBufferStructure vertexBufferStructure) {
         public void cleanUp() {
             vertexBufferStructure.cleanUp();
         }

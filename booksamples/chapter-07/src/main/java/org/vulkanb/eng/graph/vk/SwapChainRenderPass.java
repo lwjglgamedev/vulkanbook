@@ -13,11 +13,12 @@ public class SwapChainRenderPass {
     private SwapChain swapChain;
     private long vkRenderPass;
 
-    public SwapChainRenderPass(SwapChain swapChain) {
+    public SwapChainRenderPass(SwapChain swapChain, Image depthImage) {
         this.swapChain = swapChain;
+        VkExtent2D extent = swapChain.getSwapChainExtent();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(1, stack);
+            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(2, stack);
 
             // Color attachment
             attachments.get(0)
@@ -28,14 +29,28 @@ public class SwapChainRenderPass {
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .finalLayout(KHRSwapchain.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
+            // Depth attachment
+            attachments.get(1)
+                    .format(depthImage.getFormat())
+                    .samples(VK_SAMPLE_COUNT_1_BIT)
+                    .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
+                    .storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
+                    .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
+                    .finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
             VkAttachmentReference.Buffer colorReference = VkAttachmentReference.callocStack(1, stack)
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+            VkAttachmentReference depthReference = VkAttachmentReference.mallocStack(stack)
+                    .attachment(1)
+                    .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
             VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .colorAttachmentCount(colorReference.remaining())
-                    .pColorAttachments(colorReference);
+                    .pColorAttachments(colorReference)
+                    .pDepthStencilAttachment(depthReference);
 
             VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc()
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)

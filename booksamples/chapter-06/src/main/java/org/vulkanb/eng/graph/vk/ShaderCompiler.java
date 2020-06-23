@@ -61,7 +61,7 @@ public class ShaderCompiler {
                 compiledShader = compileShader(shaderCode, shaderType);
                 Files.write(spvFile.toPath(), compiledShader);
             } else {
-                LOGGER.debug("Shader [{}] already compiled. Loading complied version: [{}]", glslFile.getPath(), spvFile.getPath());
+                LOGGER.debug("Shader [{}] already compiled. Loading compiled version: [{}]", glslFile.getPath(), spvFile.getPath());
             }
         } catch (IOException excp) {
             throw new RuntimeException(excp);

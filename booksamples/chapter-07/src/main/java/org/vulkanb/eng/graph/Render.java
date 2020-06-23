@@ -66,10 +66,11 @@ public class Render {
         if (window.isResized() || this.swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);
+            scene.getPerspective().resize(window.getWidth(), window.getHeight());
             this.swapChain.acquireNextImage();
         }
 
-        this.fwdRenderActivity.recordCommandBuffers(this.meshList);
+        this.fwdRenderActivity.recordCommandBuffers(this.meshList, scene);
         this.fwdRenderActivity.submit(this.presentQueue);
 
         if (this.swapChain.presentImage(this.graphQueue)) {

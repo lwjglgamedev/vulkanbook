@@ -40,7 +40,9 @@ With that structure we can invoke the `vkCreateBuffer`function to create the buf
 The next thing to do is to allocate the memory. Again, in order to achieve that, we need to setup a structure named `VkMemoryAllocateInfo`, which defines the following attributes:
 
 - `sType`: It shall have the `VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO` value.
+
 - `allocationSize`: It will hold the size of the memory to be allocated in bytes.
+
 - `memoryTypeIndex`: It will hold the memory type index to be used. The index refers to the memory types available in the device.
   
   ```java
@@ -503,7 +505,7 @@ public static void compileShaderIfChanged(String glsShaderFile, int shaderType) 
             compiledShader = compileShader(shaderCode, shaderType);
             Files.write(spvFile.toPath(), compiledShader);
         } else {
-            LOGGER.debug("Shader [{}] already compiled. Loading complied version: [{}]", glslFile.getPath(), spvFile.getPath());
+            LOGGER.debug("Shader [{}] already compiled. Loading compiled version: [{}]", glslFile.getPath(), spvFile.getPath());
         }
     } catch (IOException excp) {
         throw new RuntimeException(excp);
@@ -777,8 +779,7 @@ public class Main implements IAppLogic {
     ...
     @Override
     public void init(Window window, Scene scene, Render render) {
-        // To be implemented
-        MeshData meshData = new MeshData("Triange", new float[]{
+        MeshData meshData = new MeshData("Triangle", new float[]{
                 -0.5f, -0.5f, 0.0f,
                 0.0f, 0.5f, 0.0f,
                 0.5f, -0.5f, 0.0f},

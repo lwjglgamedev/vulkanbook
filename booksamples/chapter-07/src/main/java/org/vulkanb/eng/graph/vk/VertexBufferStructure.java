@@ -6,7 +6,8 @@ import static org.lwjgl.vulkan.VK10.*;
 
 public class VertexBufferStructure {
 
-    private static final int NUMBER_OF_ATTRIBUTES = 1;
+    public static final int TEXT_COORD_COMPONENTS = 2;
+    private static final int NUMBER_OF_ATTRIBUTES = 2;
     private static final int POSITION_COMPONENTS = 3;
     private VkPipelineVertexInputStateCreateInfo vi;
     private VkVertexInputAttributeDescription.Buffer viAttrs;
@@ -25,9 +26,18 @@ public class VertexBufferStructure {
                 .format(VK_FORMAT_R32G32B32_SFLOAT)
                 .offset(0);
 
+        // Texture coordinates
+        i++;
+        this.viAttrs.get(i)
+                .binding(0)
+                .location(i)
+                .format(VK_FORMAT_R32G32B32_SFLOAT)
+                .offset(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
+
         this.viBindings.get(0)
                 .binding(0)
-                .stride(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH)
+                .stride(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH +
+                        TEXT_COORD_COMPONENTS * GraphConstants.FLOAT_LENGTH)
                 .inputRate(VK_VERTEX_INPUT_RATE_VERTEX);
 
         this.vi

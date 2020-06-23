@@ -1,6 +1,7 @@
 package org.vulkanb;
 
 import org.apache.logging.log4j.*;
+import org.joml.Vector3f;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.scene.*;
@@ -8,6 +9,10 @@ import org.vulkanb.eng.scene.*;
 public class Main implements IAppLogic {
 
     private static final Logger LOGGER = LogManager.getLogger();
+
+    private float angle = 0;
+    private Entity cubeEntity;
+    private Vector3f rotatingAngle = new Vector3f(1, 1, 1);
 
     public static void main(String[] args) {
         LOGGER.info("Starting application");
@@ -23,17 +28,47 @@ public class Main implements IAppLogic {
 
     @Override
     public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
-        // To be implemented
+        angle += 1.0f;
+        if (angle >= 360) {
+            angle = angle - 360;
+        }
+        this.cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
+        this.cubeEntity.updateModelMatrix();
     }
 
     @Override
     public void init(Window window, Scene scene, Render render) {
-        // To be implemented
-        MeshData meshData = new MeshData("Triange", new float[]{
-                -0.5f, -0.5f, 0.0f,
-                0.0f, 0.5f, 0.0f,
-                0.5f, -0.5f, 0.0f},
-                new int[]{0, 1, 2});
+        float[] data = new float[]{
+                -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
+                -0.5f, -0.5f, 0.5f, 0.5f, 0.0f,
+                0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+                0.5f, 0.5f, 0.5f, 1.0f, 0.5f,
+                -0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+                0.5f, 0.5f, -0.5f, 0.5f, 1.0f,
+                -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+                0.5f, -0.5f, -0.5f, 0.0f, 0.5f,
+        };
+        int[] indices = new int[]{
+                // Front face
+                0, 1, 3, 3, 1, 2,
+                // Top Face
+                4, 0, 3, 5, 4, 3,
+                // Right face
+                3, 2, 7, 5, 3, 7,
+                // Left face
+                6, 1, 0, 6, 0, 4,
+                // Bottom face
+                2, 1, 6, 2, 6, 7,
+                // Back face
+                7, 6, 4, 7, 4, 5,
+        };
+
+        String meshId = "CubeMesh";
+        MeshData meshData = new MeshData(meshId, data, indices);
         render.loadMeshes(new MeshData[]{meshData});
+
+        this.cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        this.cubeEntity.setPosition(0, 0, -2);
+        scene.addEntity(this.cubeEntity);
     }
 }
