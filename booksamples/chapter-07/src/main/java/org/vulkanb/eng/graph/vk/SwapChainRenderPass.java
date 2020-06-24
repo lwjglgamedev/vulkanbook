@@ -15,7 +15,6 @@ public class SwapChainRenderPass {
 
     public SwapChainRenderPass(SwapChain swapChain, Image depthImage) {
         this.swapChain = swapChain;
-        VkExtent2D extent = swapChain.getSwapChainExtent();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(2, stack);

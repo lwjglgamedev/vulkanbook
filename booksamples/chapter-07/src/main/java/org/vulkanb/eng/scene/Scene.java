@@ -4,7 +4,6 @@ import org.vulkanb.eng.Window;
 
 import java.util.*;
 
-// TODO: Resize perspective
 public class Scene {
 
     private Map<String, List<Entity>> entitiesMap;
