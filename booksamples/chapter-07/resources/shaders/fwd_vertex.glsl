@@ -5,13 +5,13 @@ layout(location = 1) in vec2 entityTextCoords;
 
 layout(location = 0) out vec2 textCoords;
 
-layout(push_constant) uniform matrix {
-    mat4 model_matrix;
-} model;
+layout(push_constant) uniform matrices {
+    mat4 matrices[2];
+} push_constants;
 
 void main()
 {
-    gl_Position = model.model_matrix * vec4(entityPos, 1);
+    gl_Position = push_constants.matrices[0] * push_constants.matrices[1] * vec4(entityPos, 1);
     textCoords = entityTextCoords;
 }
 

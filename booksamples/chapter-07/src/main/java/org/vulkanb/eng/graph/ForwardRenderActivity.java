@@ -53,7 +53,8 @@ public class ForwardRenderActivity {
 
 
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                this.renderPass.getVkRenderPass(), this.fwdShaderProgram, 1, true, new VertexBufferStructure());
+                this.renderPass.getVkRenderPass(), this.fwdShaderProgram, 1, true, GraphConstants.MAT4X4_SIZE * 2,
+                new VertexBufferStructure());
         this.pipeLine = new Pipeline(this.pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanUp();
 
@@ -161,8 +162,7 @@ public class ForwardRenderActivity {
 
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
-            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
-            Matrix4f transfMatrix = new Matrix4f(scene.getPerspective().getPerspectiveMatrix());
+            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE * 2);
             for (VulkanMesh mesh : meshes) {
                 LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
@@ -171,8 +171,8 @@ public class ForwardRenderActivity {
 
                 List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
                 for (Entity entity : entities) {
-                    transfMatrix.mul(entity.getModelMatrix());
-                    setModelMatrix(cmdHandle, transfMatrix, pushConstantBuffer);
+                    setPushConstants(cmdHandle, scene.getPerspective().getPerspectiveMatrix(), entity.getModelMatrix(),
+                            pushConstantBuffer);
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
             }
@@ -194,8 +194,10 @@ public class ForwardRenderActivity {
         createFrameBuffers();
     }
 
-    private void setModelMatrix(VkCommandBuffer cmdHandle, Matrix4f modelMatrix, ByteBuffer pushConstantBuffer) {
-        modelMatrix.get(pushConstantBuffer);
+    private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f projMatrix, Matrix4f modelMatrix,
+                                  ByteBuffer pushConstantBuffer) {
+        projMatrix.get(pushConstantBuffer);
+        modelMatrix.get(GraphConstants.MAT4X4_SIZE, pushConstantBuffer);
         vkCmdPushConstants(cmdHandle, this.pipeLine.getVkPipelineLayout(),
                 VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
     }

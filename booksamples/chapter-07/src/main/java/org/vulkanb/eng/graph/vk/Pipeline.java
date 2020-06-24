@@ -94,10 +94,13 @@ public class Pipeline {
                                     VK_DYNAMIC_STATE_SCISSOR
                             ));
 
-            VkPushConstantRange.Buffer vpcr = VkPushConstantRange.callocStack(1, stack)
-                    .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
-                    .offset(0)
-                    .size(GraphConstants.MAT4X4_SIZE);
+            VkPushConstantRange.Buffer vpcr = null;
+            if (pipeLineCreationInfo.pushConstantsSize() > 0) {
+                VkPushConstantRange.callocStack(1, stack)
+                        .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
+                        .offset(0)
+                        .size(pipeLineCreationInfo.pushConstantsSize());
+            }
 
             VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
@@ -143,7 +146,8 @@ public class Pipeline {
     }
 
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
-                                       boolean hasDepthAttachment, VertexBufferStructure vertexBufferStructure) {
+                                       boolean hasDepthAttachment, int pushConstantsSize,
+                                       VertexBufferStructure vertexBufferStructure) {
         public void cleanUp() {
             vertexBufferStructure.cleanUp();
         }
