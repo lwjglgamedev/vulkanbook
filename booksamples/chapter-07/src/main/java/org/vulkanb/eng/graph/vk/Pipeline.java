@@ -96,7 +96,7 @@ public class Pipeline {
 
             VkPushConstantRange.Buffer vpcr = null;
             if (pipeLineCreationInfo.pushConstantsSize() > 0) {
-                VkPushConstantRange.callocStack(1, stack)
+                vpcr = VkPushConstantRange.callocStack(1, stack)
                         .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
                         .offset(0)
                         .size(pipeLineCreationInfo.pushConstantsSize());
