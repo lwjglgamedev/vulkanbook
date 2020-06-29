@@ -679,7 +679,7 @@ public void submit(Queue queue) {
         SwapChain.SyncSemaphores syncSemaphores = this.swapChain.getSyncSemaphoresList()[idx];
         queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
                 stack.longs(syncSemaphores.imgAcquisitionSemaphores().getVkSemaphore()),
-                stack.ints(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT),
+                stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
                 stack.longs(syncSemaphores.renderCompleteSemaphores().getVkSemaphore()), currentFence);
     }
 }
