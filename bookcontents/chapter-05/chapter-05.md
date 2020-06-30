@@ -710,7 +710,7 @@ public void submit(PointerBuffer commandBuffers, LongBuffer waitSemaphores, IntB
 }
 ```
 
-This method can receive a list of command buffer handles (we can submit more than one at a time) and several synchronization elements. In order to submit a list of command buffers qo a queue we need to setup a `VkSubmitInfo` structure. The attributes of this structure are:
+This method can receive a list of command buffer handles (we can submit more than one at a time) and several synchronization elements. In order to submit a list of command buffers to a queue we need to setup a `VkSubmitInfo` structure. The attributes of this structure are:
 
 - `sType`: In this case it shall be `VK_STRUCTURE_TYPE_SUBMIT_INFO`. 
 - `pCommandBuffers`: The list of the command buffers to submit.
@@ -720,6 +720,68 @@ This method can receive a list of command buffer handles (we can submit more tha
 - `pWaitDstStageMask`: It states where in the pipeline execution we should wait. We have not talked yet about the pipeline, but we have different steps (vertex, fragments, etc.). In this case we need to wait when generating the output color, so we use the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` value. 
 
 When submitting the command buffers we can also set a handle to a `Fence`. We will use this as a blocking mechanism in our application to prevent re-submitting commands that are still in use. 
+
+## A final word on synchronization
+
+As it has been explained right before, our command will wait for execution when I t reaches the stage specified by the `pWaitDstStageMask` parameter. This means, that the commands will start to execute and make their way through the pipeline. Whenever they reach that stage, they will block until the semaphore is signaled. In our case, we pass the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` stage. This implies, that as soon as the pipeline “needs” to generate outputs for the color attachment, the execution will be blocked until the swap chain image is acquired and the semaphore is signaled. However, in our subpass, we defined a transition
+layout for the swap chain image from `VK_IMAGE_LAYOUT_UNDEFINED` to `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`.  This can be performed at any point, even before the image has been acquired and the semaphore has been signaled.
+the semaphore has been signaled. This means, that the GPU may try to transition the swap chain image to the layout defined in the render pass when the image is in use by the presentation engine and has been acquired yet.
+
+In order to solve this, we have basically two options:
+
+1. Change the `pWaitDstStageMask` parameter to block the command execution as soon as it enters the pipeline, by using the `TOP_OF_PIPE `.
+
+2. Introduce a subpass dependency that will prevent to transition the image layout until the image has been acquired. (We could use also barriers, but it is more efficient this way).
+
+The first option is not very optimal. We would prevent the commands to execute until
+the image has been acquired, but this would mean that some commands, that are not contained in a render pass, would be blocked until this event occurs. We can do much better than that, we can let some commands to progress through the pipeline and only wait when we are about to generate the colors for the image to be acquired. Therefore, we will go for the second one.
+
+We need to go back to the `SwapChainRenderPass` and update the constructor this way:
+
+```java
+public SwapChainRenderPass(SwapChain swapChain) {
+    this.swapChain = swapChain;
+
+    try (MemoryStack stack = MemoryStack.stackPush()) {
+    ...
+        VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(1, stack);
+        subpassDependencies.get(0)
+                .srcSubpass(VK_SUBPASS_EXTERNAL)
+                .dstSubpass(0)
+                .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+                .dstStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+                .srcAccessMask(0)
+                .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
+        VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc()
+                .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
+                .pAttachments(attachments)
+                .pSubpasses(subPass)
+                .pDependencies(subpassDependencies);
+     ...
+}
+```
+
+
+We need to create a buffer of `VkSubpassDependency` structures. In this case, we will only create one and include them in the `VkRenderPassCreateInfo` creation structure using the `pDependencies` parameter. The `VkSubpassDependency` structure can bee seen as a barrier, it separates the execution of two blocks, the conditions defined by the combination of the `srcXX` parameters must be met before the part controlled by  the `dstXX` conditions can execute. The parameters are:
+
+- `srcSubpass`: This controls to which this subpass should depend on. In this case, this is an external dependency: `VK_SUBPASS_EXTERNAL`.
+
+- `dstSubpass`: This controls the index of the subpass that this dependency applies to. In our case, we have only on subpass, so it is set to `0` (first position).
+
+- `srcStageMask`:  This states the stage that should be reached for the first block (external dependency).
+
+- `dstStageMask`:  This states the stage that should be reached in our render pass.
+
+- `srcAccessMask`  and `dstAccessMask` controls what accesses will be done in the source and destination blocks.
+
+Basically, we are preventing the render pass to perform the image layout transition until the  `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` stage is reached. That stage can only be reached, when the semaphore used to acquire the swap chain image is signaled, that is, when the image is acquired. This is controlled by the `srcXX`conditions. Any image layout transition will block until those conditions are met. Since we are only using that to sync the start of the render pass, we do not need to set up anything in the `srcAccessMask`.  However, when we have done that transition, we use the `VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT` flag to state that we are going to output values to a color attachment.
+
+Indeed, if we do not specify any dependency, Vulkan will set up a default one for us. (strictly speaking, if there is an image layout transition) You can red the values for that dependency in the specification. In that case, the `srcStageMask` has the value `VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT`.  This is what causes the "issue" that we are solving, there's nothing preventing the image layout as soon as the render pass starts at the beginning of the pipeline. 
+
+I hope that the explanations above clarify the purpose of this dependency. To be honest, IMHO, the Vulkan specification is not very clear explaining these concepts (I promise I've tried to do my best).
+
+
 
 We have finished by now! With all that code we are no able to see a wonderful empty  screen with the clear color specified like this:
 
