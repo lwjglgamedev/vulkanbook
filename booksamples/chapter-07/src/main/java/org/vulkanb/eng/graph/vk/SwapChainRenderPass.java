@@ -13,7 +13,7 @@ public class SwapChainRenderPass {
     private SwapChain swapChain;
     private long vkRenderPass;
 
-    public SwapChainRenderPass(SwapChain swapChain, Image depthImage) {
+    public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
         this.swapChain = swapChain;
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -30,7 +30,7 @@ public class SwapChainRenderPass {
 
             // Depth attachment
             attachments.get(1)
-                    .format(depthImage.getFormat())
+                    .format(depthImageFormat)
                     .samples(VK_SAMPLE_COUNT_1_BIT)
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
                     .storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)

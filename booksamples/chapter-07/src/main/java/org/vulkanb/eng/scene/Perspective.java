@@ -20,8 +20,6 @@ public class Perspective {
 
     public void resize(int width, int height) {
         this.perspectiveMatrix.identity();
-        this.perspectiveMatrix.scale(1.0f, -1.0f, 1.0f);
         this.perspectiveMatrix.perspective(FOV, (float) width / (float) height, Z_NEAR, Z_FAR, true);
     }
-
 }

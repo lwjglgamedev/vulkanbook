@@ -37,7 +37,7 @@ public class ForwardRenderActivity {
 
         int numImages = swapChain.getImageViews().length;
         createDepthImage();
-        this.renderPass = new SwapChainRenderPass(swapChain, this.depthImage);
+        this.renderPass = new SwapChainRenderPass(swapChain, this.depthImage.getFormat());
         createFrameBuffers();
 
         EngineProperties engineProperties = EngineProperties.getInstance();
