@@ -330,6 +330,10 @@ The code above, if the minimal requirements to use Vulkan are available (the Vul
         GLFW.glfwSetWindowSize(this.windowHandle, this.width, this.height);
     }
 
+    public void setResized(boolean resized) {
+        this.resized = resized;
+    }
+    
     public boolean shouldClose() {
         return GLFW.glfwWindowShouldClose(this.windowHandle);
     }

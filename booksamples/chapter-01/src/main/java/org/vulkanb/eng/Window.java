@@ -97,6 +97,10 @@ public class Window implements GLFWFramebufferSizeCallbackI {
         GLFW.glfwSetWindowSize(this.windowHandle, this.width, this.height);
     }
 
+    public void setResized(boolean resized) {
+        this.resized = resized;
+    }
+
     public boolean shouldClose() {
         return GLFW.glfwWindowShouldClose(this.windowHandle);
     }
