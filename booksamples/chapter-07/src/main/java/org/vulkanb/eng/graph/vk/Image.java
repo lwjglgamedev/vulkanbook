@@ -54,8 +54,6 @@ public class Image {
                     .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),
                             memReqs.memoryTypeBits(), 0));
 
-            vkGetImageMemoryRequirements(device.getVkDevice(), this.getVkImage(), memReqs);
-
             // Allocate memory
             vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
             this.vkMemory = lp.get(0);
