@@ -20,8 +20,8 @@ public class ForwardRenderActivity {
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/fwd_vertex.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
     private CommandBuffer[] commandBuffers;
-    private Image depthImage;
-    private ImageView depthImageView;
+    private ImageView[] depthImageViews;
+    private Image[] depthImages;
     private Fence[] fences;
     private FrameBuffer[] frameBuffers;
     private ShaderProgram fwdShaderProgram;
@@ -36,8 +36,8 @@ public class ForwardRenderActivity {
         Device device = swapChain.getDevice();
 
         int numImages = swapChain.getImageViews().length;
-        createDepthImage();
-        this.renderPass = new SwapChainRenderPass(swapChain, this.depthImage.getFormat());
+        createDepthImages();
+        this.renderPass = new SwapChainRenderPass(swapChain, this.depthImages[0].getFormat());
         createFrameBuffers();
 
         EngineProperties engineProperties = EngineProperties.getInstance();
@@ -68,8 +68,12 @@ public class ForwardRenderActivity {
 
     public void cleanUp() {
         this.pipeLine.cleanUp();
-        this.depthImageView.cleanUp();
-        this.depthImage.cleanUp();
+        for (ImageView imageView : this.depthImageViews) {
+            imageView.cleanUp();
+        }
+        for (Image image : this.depthImages) {
+            image.cleanUp();
+        }
         this.fwdShaderProgram.cleanUp();
         for (FrameBuffer frameBuffer : this.frameBuffers) {
             frameBuffer.cleanUp();
@@ -83,14 +87,19 @@ public class ForwardRenderActivity {
         }
     }
 
-    private void createDepthImage() {
+    private void createDepthImages() {
         Device device = this.swapChain.getDevice();
+        int numImages = this.swapChain.getNumImages();
         VkExtent2D swapChainExtent = this.swapChain.getSwapChainExtent();
         int mipLevels = 1;
-        this.depthImage = new Image(device, swapChainExtent.width(), swapChainExtent.height(),
-                VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, mipLevels);
-        this.depthImageView = new ImageView(device, this.depthImage.getVkImage(),
-                this.depthImage.getFormat(), VK_IMAGE_ASPECT_DEPTH_BIT, mipLevels);
+        this.depthImages = new Image[numImages];
+        this.depthImageViews = new ImageView[numImages];
+        for (int i = 0; i < numImages; i++) {
+            this.depthImages[i] = new Image(device, swapChainExtent.width(), swapChainExtent.height(),
+                    VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, mipLevels);
+            this.depthImageViews[i] = new ImageView(device, this.depthImages[i].getVkImage(),
+                    this.depthImages[i].getFormat(), VK_IMAGE_ASPECT_DEPTH_BIT, mipLevels);
+        }
     }
 
     private void createFrameBuffers() {
@@ -101,10 +110,10 @@ public class ForwardRenderActivity {
             int numImages = imageViews.length;
 
             LongBuffer pAttachments = stack.mallocLong(2);
-            pAttachments.put(1, this.depthImageView.getVkImageView());
             this.frameBuffers = new FrameBuffer[numImages];
             for (int i = 0; i < numImages; i++) {
                 pAttachments.put(0, imageViews[i].getVkImageView());
+                pAttachments.put(1, this.depthImageViews[i].getVkImageView());
                 this.frameBuffers[i] = new FrameBuffer(device, swapChainExtent.width(), swapChainExtent.height(),
                         pAttachments, this.renderPass.getVkRenderPass());
             }
@@ -127,7 +136,7 @@ public class ForwardRenderActivity {
 
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(2, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
-            clearValues.apply(1, v -> v.depthStencil().depth(1.0f).stencil(0));
+            clearValues.apply(1, v -> v.depthStencil().depth(1.0f));
 
             VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
@@ -187,10 +196,13 @@ public class ForwardRenderActivity {
         for (FrameBuffer frameBuffer : this.frameBuffers) {
             frameBuffer.cleanUp();
         }
-        this.depthImageView.cleanUp();
-        this.depthImage.cleanUp();
-
-        createDepthImage();
+        for (ImageView imageView : this.depthImageViews) {
+            imageView.cleanUp();
+        }
+        for (Image image : this.depthImages) {
+            image.cleanUp();
+        }
+        createDepthImages();
         createFrameBuffers();
     }
 

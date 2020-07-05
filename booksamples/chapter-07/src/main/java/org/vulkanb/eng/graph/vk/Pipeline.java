@@ -69,12 +69,7 @@ public class Pipeline {
                         .depthWriteEnable(true)
                         .depthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
                         .depthBoundsTestEnable(false)
-                        .stencilTestEnable(false)
-                        .back(it -> it
-                                .failOp(VK_STENCIL_OP_KEEP)
-                                .passOp(VK_STENCIL_OP_KEEP)
-                                .compareOp(VK_COMPARE_OP_ALWAYS));
-                ds.front(ds.back());
+                        .stencilTestEnable(false);
             }
 
             for (int i = 0; i < pipeLineCreationInfo.numColorAttachments(); i++) {
