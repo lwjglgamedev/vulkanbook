@@ -38,15 +38,25 @@ public class Main implements IAppLogic {
 
     @Override
     public void init(Window window, Scene scene, Render render) {
-        float[] data = new float[]{
-                -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
-                -0.5f, -0.5f, 0.5f, 0.5f, 0.0f,
-                0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-                0.5f, 0.5f, 0.5f, 1.0f, 0.5f,
-                -0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-                0.5f, 0.5f, -0.5f, 0.5f, 1.0f,
-                -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-                0.5f, -0.5f, -0.5f, 0.0f, 0.5f,
+        float[] positions = new float[]{
+                -0.5f, 0.5f, 0.5f,
+                -0.5f, -0.5f, 0.5f,
+                0.5f, -0.5f, 0.5f,
+                0.5f, 0.5f, 0.5f,
+                -0.5f, 0.5f, -0.5f,
+                0.5f, 0.5f, -0.5f,
+                -0.5f, -0.5f, -0.5f,
+                0.5f, -0.5f, -0.5f,
+        };
+        float[] textCoords = new float[]{
+                0.0f, 0.0f,
+                0.5f, 0.0f,
+                1.0f, 0.0f,
+                1.0f, 0.5f,
+                1.0f, 1.0f,
+                0.5f, 1.0f,
+                0.0f, 1.0f,
+                0.0f, 0.5f,
         };
         int[] indices = new int[]{
                 // Front face
@@ -64,7 +74,7 @@ public class Main implements IAppLogic {
         };
 
         String meshId = "CubeMesh";
-        MeshData meshData = new MeshData(meshId, data, indices);
+        MeshData meshData = new MeshData(meshId, positions, textCoords, indices);
         render.loadMeshes(new MeshData[]{meshData});
 
         this.cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));

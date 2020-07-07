@@ -325,7 +325,7 @@ private static TransferBuffers createVerticesBuffers(Device device, MeshData mes
         vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
                 "Failed to map memory");
 
-        FloatBuffer data = pp.getFloatBuffer(0, bufferSize);
+        FloatBuffer data = pp.getFloatBuffer(0, numPositions);
         data.put(positions);
 
         vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
@@ -362,7 +362,7 @@ private static TransferBuffers createIndicesBuffers(Device device, MeshData mesh
         vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
                 "Failed to map memory");
 
-        IntBuffer data = pp.getIntBuffer(0, bufferSize);
+        IntBuffer data = pp.getIntBuffer(0, numIndices);
         data.put(indices);
 
         vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
@@ -1001,6 +1001,6 @@ By now, we just return a red color.
 
 With all these changes, after many chapters, we are now able to see a nice triangle on the screen:
 
-![Screen Shot](screen_shot.png)
+<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-07/chapter-07.md)

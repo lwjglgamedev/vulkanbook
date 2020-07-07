@@ -39,7 +39,7 @@ public class VulkanMesh {
             vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
                     "Failed to map memory");
 
-            IntBuffer data = pp.getIntBuffer(0, bufferSize);
+            IntBuffer data = pp.getIntBuffer(0, numIndices);
             data.put(indices);
 
             vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
@@ -50,8 +50,12 @@ public class VulkanMesh {
 
     private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
         float[] positions = meshData.positions();
-        int numPositions = positions.length;
-        int bufferSize = numPositions * GraphConstants.FLOAT_LENGTH;
+        float[] textCoords = meshData.textCoords();
+        if (textCoords == null || textCoords.length == 0) {
+            textCoords = new float[(positions.length / 3) * 2];
+        }
+        int numElements = positions.length + textCoords.length;
+        int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -63,8 +67,17 @@ public class VulkanMesh {
             vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
                     "Failed to map memory");
 
-            FloatBuffer data = pp.getFloatBuffer(0, bufferSize);
-            data.put(positions);
+            int rows = positions.length / 3;
+            FloatBuffer data = pp.getFloatBuffer(0, numElements);
+            for (int row = 0; row < rows; row++) {
+                int starPos = row * 3;
+                int startTextCoord = row * 2;
+                data.put(positions[starPos + 0]);
+                data.put(positions[starPos + 1]);
+                data.put(positions[starPos + 2]);
+                data.put(textCoords[startTextCoord + 0]);
+                data.put(textCoords[startTextCoord + 1]);
+            }
 
             vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
         }

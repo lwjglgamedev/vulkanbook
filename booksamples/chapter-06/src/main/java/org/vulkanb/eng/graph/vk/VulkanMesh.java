@@ -39,7 +39,7 @@ public class VulkanMesh {
             vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
                     "Failed to map memory");
 
-            IntBuffer data = pp.getIntBuffer(0, bufferSize);
+            IntBuffer data = pp.getIntBuffer(0, numIndices);
             data.put(indices);
 
             vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
@@ -63,7 +63,7 @@ public class VulkanMesh {
             vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
                     "Failed to map memory");
 
-            FloatBuffer data = pp.getFloatBuffer(0, bufferSize);
+            FloatBuffer data = pp.getFloatBuffer(0, numPositions);
             data.put(positions);
 
             vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());

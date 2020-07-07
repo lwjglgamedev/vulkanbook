@@ -168,6 +168,64 @@ public class VertexBufferStructure {
 
 We define a new constant named `TEXT_COORD_COMPONENTS`  which states that the texture coordinates will be composed by two elements (two floats). The number of attributes of each vertex will be now two (defined by the constant `NUMBER_OF_ATTRIBUTES`), one for the position components and another one for the texture coordinates. We need to define another attribute for the texture coordinates, therefore the buffer of `VkVertexInputAttributeDescription` will have an extra element.  The attribute definition itself is quite similar to the one used for the positions, in this case, the size will be for two floats. Finally, the stride need to be update due to the length increase.
 
+We need to modify the `MeshData` class to include texture coordinates:
+
+```java
+package org.vulkanb.eng.scene;
+
+public record MeshData(String id, float[]positions, float[]textCoords, int[]indices) {
+}
+
+```
+
+An therefore,  the way we load vertices in the `VulkanMesh`  class needs also to be updated:
+
+```java
+public class VulkanMesh {
+...
+    private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
+        float[] positions = meshData.positions();
+        float[] textCoords = meshData.textCoords();
+        if (textCoords == null || textCoords.length == 0) {
+            textCoords = new float[(positions.length / 3) * 2];
+        }
+        int numElements = positions.length + textCoords.length;
+        int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
+
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            PointerBuffer pp = stack.mallocPointer(1);
+            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
+                    "Failed to map memory");
+
+            int rows = positions.length / 3;
+            FloatBuffer data = pp.getFloatBuffer(0, numElements);
+            for (int row = 0; row < rows; row++) {
+                int starPos = row * 3;
+                int startTextCoord = row * 2;
+                data.put(positions[starPos + 0]);
+                data.put(positions[starPos + 1]);
+                data.put(positions[starPos + 2]);
+                data.put(textCoords[startTextCoord + 0]);
+                data.put(textCoords[startTextCoord + 1]);
+            }
+
+            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
+        }
+
+        return new TransferBuffers(srcBuffer, dstBuffer);
+    }
+
+...
+}
+```
+
+We need to interleave the texture coordinates between the positions. Each vertex defines three float components for the positions and two float components for the texture coordinates.
+
 ## Modifying the render pass
 
 In order to properly render 3D models we need to store depth information. We need to output that depth data while rendering to a image that will hold depth values. This will allow the GPU to perform depth testing operations. This means, that we need to add another output attachment to the render pass we are using. Therefore, we need to modify the `SwapChainRenderPass` as shown below:
@@ -678,15 +736,25 @@ public class Main implements IAppLogic {
     ...    
     @Override
     public void init(Window window, Scene scene, Render render) {
-        float[] data = new float[]{
-                -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
-                -0.5f, -0.5f, 0.5f, 0.5f, 0.0f,
-                0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-                0.5f, 0.5f, 0.5f, 1.0f, 0.5f,
-                -0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-                0.5f, 0.5f, -0.5f, 0.5f, 1.0f,
-                -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-                0.5f, -0.5f, -0.5f, 0.0f, 0.5f,
+        float[] positions = new float[]{
+                -0.5f, 0.5f, 0.5f,
+                -0.5f, -0.5f, 0.5f,
+                0.5f, -0.5f, 0.5f,
+                0.5f, 0.5f, 0.5f,
+                -0.5f, 0.5f, -0.5f,
+                0.5f, 0.5f, -0.5f,
+                -0.5f, -0.5f, -0.5f,
+                0.5f, -0.5f, -0.5f,
+        };
+        float[] textCoords = new float[]{
+                0.0f, 0.0f,
+                0.5f, 0.0f,
+                1.0f, 0.0f,
+                1.0f, 0.5f,
+                1.0f, 1.0f,
+                0.5f, 1.0f,
+                0.0f, 1.0f,
+                0.0f, 0.5f,
         };
         int[] indices = new int[]{
                 // Front face
@@ -702,8 +770,9 @@ public class Main implements IAppLogic {
                 // Back face
                 7, 6, 4, 7, 4, 5,
         };
+
         String meshId = "CubeMesh";
-        MeshData meshData = new MeshData(meshId, data, indices);
+        MeshData meshData = new MeshData(meshId, positions, textCoords, indices);
         render.loadMeshes(new MeshData[]{meshData});
 
         this.cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
@@ -714,7 +783,7 @@ public class Main implements IAppLogic {
 }
 ```
 
-We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color. The way of loading that mesh has not changed, but we need to create a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `handleInput`method, that will be invoked periodically to update that angle:
+We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color.  We need to create also a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `handleInput`method, that will be invoked periodically to update that angle:
 
 ```java
     @Override
@@ -766,6 +835,6 @@ void main()
 
 With all those changes we can now see a nice spinning cube in a window that can be resized.
 
-![Screen Shot](screen_shot.png)
+<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-08/chapter-08.md)
