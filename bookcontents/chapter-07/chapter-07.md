@@ -33,6 +33,7 @@ public Image(Device device, int width, int height, int format, int usage, int mi
 ```
 
 The constructor receives the following parameters:
+
 - `width` and `height`: The size of the image.
 - `format`:  Describes the format of the texel blocks that compose the image.
 - `usage`:  Describes the intended usage that this image will have.
@@ -40,6 +41,7 @@ The constructor receives the following parameters:
 - `sampleCount`:  Specifies the number of texels per sample (more on this in later chapters).
 
 Besides storing some parameters as attributes of the class, the first thing we do is instantiate a structure needed to create an image named `VkImageCreateInfo`. The attributes that we are using are:
+
 - `sType`:  The classical type attribute of most Vulkan structures. In this case we use the value `VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO`.
 - `imageType`:  It specifies the dimensions of the the image. In our case we will be using regular 2D dimensions, so we set to the value: `VK_IMAGE_TYPE_2D`. Three dimensions images (`VK_IMAGE_TYPE_3D`) are like a set of slices of 2D textures and are used for volumetric effects or for scientific or medical visualizations (like MRIs). One dimension textures are define by the value `VK_IMAGE_TYPE_1D`.
 - `format`: Described above, format of the texel blocks that compose the image.
@@ -53,6 +55,7 @@ Besides storing some parameters as attributes of the class, the first thing we d
 - `usage`: Already described in the constructor's parameters description.
 
 Now we can create the image by invoking the `vkCreateImage` Vulkan function:
+
 ```java
         LongBuffer lp = stack.mallocLong(1);
         vkCheck(vkCreateImage(device.getVkDevice(), imageCreateInfo, null, lp), "Failed to create image");
@@ -60,6 +63,7 @@ Now we can create the image by invoking the `vkCreateImage` Vulkan function:
 ```
 
 After that we need to allocate the memory associated to that image. As in the case of buffers, that image is just a handle, we need to manually allocate the memory that will host the contents for the image by ourselves. The first step is to get the memory requirements by calling the `vkGetImageMemoryRequirements` function:
+
 ```java
         // Get memory requirements for this object
         VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
@@ -67,6 +71,7 @@ After that we need to allocate the memory associated to that image. As in the ca
 ```
 
 With that information we can populate the `VkMemoryAllocateInfo` structure which contains the information to perform the memory allocation.
+
 ```java
         // Select memory size and type
         VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
@@ -77,6 +82,7 @@ With that information we can populate the `VkMemoryAllocateInfo` structure which
 ```
 
 Again, the code is similar as the one used with the buffers, once we have got the requirements, we set the memory size and select the adequate memory type index (obtained by calling the `memoryTypeFromProperties` from the `VulkanUtils` class). After that we can finally allocate the memory and bind it to the image:
+
 ```java
         // Allocate memory
         vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
@@ -90,6 +96,7 @@ Again, the code is similar as the one used with the buffers, once we have got th
 ```
 
 The rest of the methods of this class are the `cleanUp` to free resources and some *getters* to obtain the image handle, the associated memory, the format of the image and the mip levels.
+
 ```java
 public void cleanUp() {
     vkDestroyImage(this.device.getVkDevice(), this.vkImage, null);
@@ -116,6 +123,7 @@ public long getVkMemory() {
 ## Changing vertices structure
 
 In the previous chapter, we defined the structure of our vertices, which basically stated that our vertices were composed by x, y and z positions. Therefore, we would not need anything more to display 3D models. However, displaying a 3D model just using a single color (without shadows or light effects), makes difficult to verify if the model is being loaded property. So, we will add extra components that we will reuse in next chapters, we will add texture coordinates. Although we will not be handling textures in this chapter, we can use those components to pass some color information (at lest for two color channels). We need to modify the `VertexBufferStructure`  in this way:
+
 ```java
 public class VertexBufferStructure {
 
@@ -163,6 +171,7 @@ We define a new constant named `TEXT_COORD_COMPONENTS`  which states that the te
 ## Modifying the render pass
 
 In order to properly render 3D models we need to store depth information. We need to output that depth data while rendering to a image that will hold depth values. This will allow the GPU to perform depth testing operations. This means, that we need to add another output attachment to the render pass we are using. Therefore, we need to modify the `SwapChainRenderPass` as shown below:
+
 ```java
 public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
     this.swapChain = swapChain;
@@ -195,7 +204,9 @@ public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
     }
 }
 ```
+
 The constructor, in addition to the swap chain, receives now the format of the image which will be used to store depth values. We need to add a new `VkAttachmentDescription` to describe the new depth attachment. Some remarks about the parameters:
+
 - The format of that attachment is the format of the `depthImage`.
 - We are not using multi-sampling, we just pass the `VK_SAMPLE_COUNT_1_BIT`. 
 - The value used for the `loadOp` attribute is the same as in the color attachment. We want their contents to be cleared at the start of this render pass. 
@@ -207,6 +218,7 @@ After that we create a reference to the depth attachment (`VkAttachmentReference
 ## Scene changes
 
 If we are going to represent 3D scenes, we need to project from the 3D world into a 2D space (the screen). We will need to use a perspective projection matrix in order to avoid distortions and to represent far away objects smaller than closer ones. We will create a new class that will support its creation and update (due to windows resizing) named `Perspective`, which is defined like this:
+
 ```java
 package org.vulkanb.eng.scene;
 
@@ -238,6 +250,7 @@ public class Perspective {
 We are using the [JOML](https://github.com/JOML-CI/JOML) library to create a `Matrix4f` which will hold the projection matrix. The `resize`should be called, at least once, to initialize the parameters of the matrix with the correct parameters (by invoking the `Matrix4f` `perspective`method). The `perspective` method receives the usual arguments, the field of view (in  radians), the aspect ratio and the near and far planes. You may have noticed that it receives an extra argument, which in JOML documentation is named `zZeroToOne`. We have already talked about that Vulkan uses a different coordinate System where y axis point downwards. Vulkan also defines a different range for z coordinates. The Normalized Device Coordinates (NDC), in OpenGL use the range [-1, 1] to represent screen coordinates and also for the z value. Anything outside that range is considered to be out of the field of view and will not be presented. In Vulkan, and also in Direct3D, the NDC range used for the z coordinates is [0, 1]. We need to set the `zZeroToOne` parameter to true to be compliant with Vulkan coordinates System.
 
 We are going also to introduce a new concept for the engine that will allow to define game entities and use the same `Mesh` to render multiple elements. Instead of rendering meshes, we will have entities which have some properties, such as their scale, position and rotation and will be associated to a mesh. They can model a player, NPCs or scene objects and will be managed by a class named `Entity`, which is defined like this:
+
 ```java
 package org.vulkanb.eng.scene;
 
@@ -307,6 +320,7 @@ public class Entity {
 Each `Entity` shall have an identifier which should be unique. It is also linked to the mesh that will be used to render it through the `meshId` attribute. An `Entity` will have also a position, a rotation (modeled using a  quaternion) and a scale. With all that information we are able to construct a model matrix by calling the `updateModelMatrix` from the `Matrix4f` class. The `updateModelMatrix` should be called, each time the position, rotation or scale changes.
 
 Now we can setup the required infrastructure to put the `Perspective` and `Entity` classes into work. We will add this to an empty class which has been there since the beginning, the  `Scene` class. The class definition starts like this:
+
 ```java
 public class Scene {
 
@@ -321,6 +335,7 @@ public class Scene {
 ```
 
 The constructor receives the a `Window` instance and creates a `Map` of `List`s which will contain `Entity` instances. That map will organized the entities by its `meshId`. The constructor initializes that map and also creates an instance of the `Perspective` class, which will hold the perspective matrix. The next method will be used to add new entities:
+
 ```java
 ...
     public void addEntity(Entity entity) {
@@ -365,6 +380,7 @@ As it can be seen, the entities are organized by their `meshId`. Those entities 
 ## Enable depth testing
 
 We need also to modify the pipeline to actually use the depth image for depth testing. Since we may have pipelines that do not use depth testing at all, we will indicate if it's required in the `PipeLineCreationInfo` `record`:
+
 ```java
 public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
                                    boolean hasDepthAttachment, int pushConstantsSize,
@@ -376,6 +392,7 @@ public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgra
 ```
 
 You may see also that there's another attribute, named `pushConstantsSize`. We will explain its usage later on. Now, in the `Pipeline` class constructor we need to enable the depth stencil state if the `hasDepthAttachment`  attribute from the `PipeLineCreationInfo` class is `true`.
+
 ```java
 public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
     ...
@@ -392,6 +409,7 @@ public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeL
 ```
 
 We need to instantiate a `VkPipelineDepthStencilStateCreateInfo`  structure which has the following attributes:
+
 - `sType`: In this case it should have the `VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO`.
 - `depthTestEnable`: It controls if depth testing is enabled or not (when rendering it is used to discard fragments which are behind already rendered fragments, values which do not fulfill the test operation will be discarded). This is what we need, so we set it  to `true`. 
 - `depthWriteEnable`: This controls if depth writing to the depth attachment is enabled or not. You could enable depth testing but do not want to write depth values, for example if the depth image used as a depth attachment has already been created by another task. This is not our case, we want the depth image to be written while rendering, so we set it to `true`.
@@ -400,6 +418,7 @@ We need to instantiate a `VkPipelineDepthStencilStateCreateInfo`  structure whic
 - `stencilTestEnable`: This enables stencil test. Since we are not using stencils at this moment, we set it to false.
 
 This structure will be used later on while creating the pipeline:
+
 ```java
         VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
                 .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
@@ -423,6 +442,7 @@ Push constants are small sets of data that can be set while recording command bu
 As it has been said before, push constants are intended to pass small amount of data that can change very frequently. As you can see, 128 bytes is quite small, but we can store there the model matrices for each entity (64 bytes). This will be the regular use case for push constants here. But, we also need to pass the projection matrix (another 64 bytes). In later chapters we will pass that information through uniforms. However, since we have not coded yet the mechanisms required to support uniforms, we will use the available space of push constants to pass also this information. Keep in mind that this is a temporary solution, we will change that in next chapters.
 
 We need to include that support in the pipeline layout definition. So, we need to included that in the constructor of the `Pipeline` class like this:
+
 ```java
 public PipelinePipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
 
@@ -443,6 +463,7 @@ public PipelinePipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLi
 ```
 
 We need to create a push constant range, defined by the structure `VkPushConstantRange`. This will only be done if the new  `pushConstantsSize` attribute of the `PipeLineCreationInfo` class is higher than `0`. The attributes of the `VkPushConstantRange` are:
+
 - `stageFlags`: It is a combination of flags that states the shader stages that will access this range of push constants. We will use this in the vertex buffer so we pass  the `VK_SHADER_STAGE_VERTEX_BIT` value.
 - `offset`:  This is the offset from the start where this range starts. In our case, we will simplify this. We provide support for just one push constant and always start on `0`. 
 - `size`:  This is the size for this range in bytes. 
@@ -452,6 +473,7 @@ Once we have created the ranges, we can include them in the `VkPipelineLayoutCre
 ## Putting it all up together
 
 We have coded all the elements required to support the proper rendering of 3D models and pass transformation matrices to the shaders. We now can use them and also support another missing feature: resizing support. Let's start with the changes required in the `Render` class.
+
 ```java
 ...
 public class Render {
@@ -493,15 +515,18 @@ In the `render` method, we first check if the window has been resized or the cur
 The new `resize` method, waits for the device and graphics queue to be idle, clean ups the swap chain resources and creates a new one. This implies the creation of new swap chain images adapted to new window size. It also invokes the `resize` method form the `ForwardRenderActivity` class. Let's review the changes required in that class.
 
 We need to create two new attributes in the `ForwardRenderActivity`  class to store the images and the image views for the depth data:
+
 ```java
 public class ForwardRenderActivity {
 ...
     private ImageView[] depthImageViews;
     private Image[] depthImages;
 ```
+
 In some other tutorials, you will see that they use a single image and image view for the depth data. The argument used to justify this is, in some cases, that since the depth images are only used internally, while rendering, there's no need to use separate resources. This argument is not correct, render operations in different frames may overlap, so we need to use separate resources or use the proper synchronization mechanisms to prevent that. Probably, the samples used in those tutorial work, because they have a different synchronizations schema that prevent this form happening, but the argument to justify that is not correct. There's an excellent analysis of this in this [Stack overflow](https://stackoverflow.com/questions/62371266/why-is-a-single-depth-buffer-sufficient-for-this-vulkan-swapchain-render-loop) question. In that question, a different approach is proposed, use an additional subpass dependency (as in the case for controlling the swap chain images transitions). However by now, we will choose to use  a simpler approach, just use separate resources.
 
 We need also to change the constructor of the `ForwardRenderActivity` class:
+
 ```java
 public class ForwardRenderActivity {
 ...
@@ -519,6 +544,7 @@ public class ForwardRenderActivity {
 ```
 
 We have created a new method to initialize the depth images and their associated image views named `createDepthImages`.  We also have moved the frame buffer creation to another method named `createFrameBuffers`. The reason for that is that these resources will need to be recreated when the window resizes, if we extract that code to some methods we will be able to reuse them without duplicating code. The `createDepthImages` is defined like this:
+
 ```java
     private void createDepthImages() {
         Device device = this.swapChain.getDevice();
@@ -537,6 +563,7 @@ We have created a new method to initialize the depth images and their associated
 ```
 
 We create as many images and image views as images are in the swap chain. We use the format `VK_FORMAT_D32_SFLOAT` for the depth values (32 bits signed floats), and specify that the images are going to be used as a depth / stencil attachment by the usage flag `VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT`. The code for the frame buffers creation has not been modified, just extracted to the `createFrameBuffers` method:
+
 ```java
     private void createFrameBuffers() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -558,6 +585,7 @@ We create as many images and image views as images are in the swap chain. We use
 ```
 
 The `cleanUp`method needs also to be modified to free the image and image view resources:
+
 ```java
     public void cleanUp() {
         ...
@@ -572,6 +600,7 @@ The `cleanUp`method needs also to be modified to free the image and image view r
 ```
 
 We need also to update the `recordCommandBuffers` method, to take the depth buffer into consideration, to actually use the push constants and to modify how we render to use the game entities. Let's start by the depth buffer:
+
 ```java
     public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
     ...
@@ -583,6 +612,7 @@ We need also to update the `recordCommandBuffers` method, to take the depth buff
 ```
 
 In previous chapters, we just recorded commands to clear the color attachment. Now we have another one, the depth attachment, that needs to be cleared at the beginning of each frame. Therefore, we need to add a new `VkClearValue` structure to clear it with the maximum depth value allowed `1.0f`. After that, we need to change the loop in which we iterated over the meshes, recording drawing commands for each of them:
+
 ```java
     public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
     ...
@@ -607,6 +637,7 @@ In previous chapters, we just recorded commands to clear the color attachment. N
 ```
 
 We allocate a `ButeBuffer` to store the information for the push constants. The single loop that iterated over the meshes is now a double loop. We iterate first using the meshes, and for each of them we get the list of entities that have that mesh and iterate over them to render them. The vertex and index buffers are the same, we just need to bind them once per mesh, but for entities, we need to set the push constants for each of them and also record a draw command. Let's examine the `setPushConstants` method:
+
 ```java
     private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f projMatrix, Matrix4f modelMatrix,
                                   ByteBuffer pushConstantBuffer) {
@@ -618,6 +649,7 @@ We allocate a `ButeBuffer` to store the information for the push constants. The 
 ```
 
 The method receives the projection and model matrices and a buffer. It just copies the data contained in those matrices into the buffer. Then we call the `vkCmdPushConstants` function to update the values of the push constants. Finally, in the `resize` method, we just clean the frame buffers, the images and image views and recreate them again.
+
 ```java
     public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;
@@ -636,6 +668,7 @@ The method receives the projection and model matrices and a buffer. It just copi
 ```
 
 The next step missing now is to modify the `init` method in or `Main` class:
+
 ```java
 public class Main implements IAppLogic {
     ...
@@ -682,6 +715,7 @@ public class Main implements IAppLogic {
 ```
 
 We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color. The way of loading that mesh has not changed, but we need to create a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `handleInput`method, that will be invoked periodically to update that angle:
+
 ```java
     @Override
     public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
@@ -695,6 +729,7 @@ We are defining the coordinates of a cube, and setting some random texture coord
 ```
 
 The final step is to modify the shaders. The vertex shader will now use the push constants, which is composed by two matrices and use them to transform the entity position from model coordinates system to word coordinate systems (by multiplying by the model matrix) and from world coordinates to normalized screen coordinates by multiplying by the projection matrix. We also pass the texture coordinates to the fragment shader.
+
 ```glsl
 #version 450
 
@@ -716,6 +751,7 @@ void main()
 ```
 
 In the fragment shader, we just use the texture coordinates for the R and G channels.
+
 ```glsl
 #version 450
 

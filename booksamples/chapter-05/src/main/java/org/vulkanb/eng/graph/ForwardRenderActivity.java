@@ -5,6 +5,7 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
+import java.util.Arrays;
 
 import static org.lwjgl.vulkan.VK10.*;
 
@@ -45,16 +46,10 @@ public class ForwardRenderActivity {
     }
 
     public void cleanUp() {
-        for (FrameBuffer frameBuffer : this.frameBuffers) {
-            frameBuffer.cleanUp();
-        }
+        Arrays.stream(this.frameBuffers).forEach(FrameBuffer::cleanUp);
         this.renderPass.cleanUp();
-        for (CommandBuffer commandBuffer : this.commandBuffers) {
-            commandBuffer.cleanUp();
-        }
-        for (Fence fence : this.fences) {
-            fence.cleanUp();
-        }
+        Arrays.stream(this.commandBuffers).forEach(CommandBuffer::cleanUp);
+        Arrays.stream(this.fences).forEach(Fence::cleanUp);
     }
 
     private void recordCommandBuffer(CommandBuffer commandBuffer, FrameBuffer frameBuffer, int width, int height) {

@@ -622,16 +622,10 @@ The next method is the `cleanUp`:
 
 ```java
 public void cleanUp() {
-    for (FrameBuffer frameBuffer : this.frameBuffers) {
-        frameBuffer.cleanUp();
-    }
+    Arrays.stream(this.frameBuffers).forEach(FrameBuffer::cleanUp);
     this.renderPass.cleanUp();
-    for (CommandBuffer commandBuffer : this.commandBuffers) {
-        commandBuffer.cleanUp();
-    }
-    for (Fence fence : this.fences) {
-        fence.cleanUp();
-    }
+    Arrays.stream(this.commandBuffers).forEach(CommandBuffer::cleanUp);
+    Arrays.stream(this.fences).forEach(Fence::cleanUp);
 }
 ```
 
@@ -762,7 +756,6 @@ public SwapChainRenderPass(SwapChain swapChain) {
 }
 ```
 
-
 We need to create a buffer of `VkSubpassDependency` structures. In this case, we will only create one and include them in the `VkRenderPassCreateInfo` creation structure using the `pDependencies` parameter. The `VkSubpassDependency` structure can bee seen as a barrier, it separates the execution of two blocks, the conditions defined by the combination of the `srcXX` parameters must be met before the part controlled by  the `dstXX` conditions can execute. The parameters are:
 
 - `srcSubpass`: This controls to which this subpass should depend on. In this case, this is an external dependency: `VK_SUBPASS_EXTERNAL`.
@@ -780,8 +773,6 @@ Basically, we are preventing the render pass to perform the image layout transit
 Indeed, if we do not specify any dependency, Vulkan will set up a default one for us. (strictly speaking, if there is an image layout transition) You can red the values for that dependency in the specification. In that case, the `srcStageMask` has the value `VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT`.  This is what causes the "issue" that we are solving, there's nothing preventing the image layout as soon as the render pass starts at the beginning of the pipeline. 
 
 I hope that the explanations above clarify the purpose of this dependency. To be honest, IMHO, the Vulkan specification is not very clear explaining these concepts (I promise I've tried to do my best).
-
-
 
 We have finished by now! With all that code we are no able to see a wonderful empty  screen with the clear color specified like this:
 

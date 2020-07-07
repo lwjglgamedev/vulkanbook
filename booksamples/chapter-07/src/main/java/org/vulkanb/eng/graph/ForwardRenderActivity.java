@@ -5,11 +5,12 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
 
 import java.nio.*;
-import java.util.List;
+import java.util.*;
 
 import static org.lwjgl.vulkan.VK10.*;
 
@@ -68,23 +69,13 @@ public class ForwardRenderActivity {
 
     public void cleanUp() {
         this.pipeLine.cleanUp();
-        for (ImageView imageView : this.depthImageViews) {
-            imageView.cleanUp();
-        }
-        for (Image image : this.depthImages) {
-            image.cleanUp();
-        }
+        Arrays.stream(this.depthImageViews).forEach(ImageView::cleanUp);
+        Arrays.stream(this.depthImages).forEach(Image::cleanUp);
         this.fwdShaderProgram.cleanUp();
-        for (FrameBuffer frameBuffer : this.frameBuffers) {
-            frameBuffer.cleanUp();
-        }
+        Arrays.stream(this.frameBuffers).forEach(FrameBuffer::cleanUp);
         this.renderPass.cleanUp();
-        for (CommandBuffer commandBuffer : this.commandBuffers) {
-            commandBuffer.cleanUp();
-        }
-        for (Fence fence : this.fences) {
-            fence.cleanUp();
-        }
+        Arrays.stream(this.commandBuffers).forEach(CommandBuffer::cleanUp);
+        Arrays.stream(this.fences).forEach(Fence::cleanUp);
     }
 
     private void createDepthImages() {
