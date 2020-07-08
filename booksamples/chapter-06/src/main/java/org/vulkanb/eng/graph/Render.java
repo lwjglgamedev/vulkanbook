@@ -72,12 +72,21 @@ public class Render {
     }
 
     public void unloadMesh(String id) {
-        this.meshList.removeIf(mesh -> mesh.getId().equals(id));
+        Iterator<VulkanMesh> it = this.meshList.iterator();
+        while (it.hasNext()) {
+            VulkanMesh mesh = it.next();
+            if (mesh.getId().equals(id)) {
+                mesh.cleanUp();
+                it.remove();
+            }
+        }
     }
 
     public void unloadMeshes() {
         this.device.waitIdle();
-        this.meshList.forEach(VulkanMesh::cleanUp);
+        for (VulkanMesh vulkanMesh : this.meshList) {
+            vulkanMesh.cleanUp();
+        }
         this.meshList.clear();
     }
 }
