@@ -92,6 +92,7 @@
         <module>chapter-05</module>
         <module>chapter-06</module>
         <module>chapter-07</module>
+        <module>chapter-08</module>
     </modules>
 
     <properties>
