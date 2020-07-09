@@ -5,7 +5,7 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Render {
 
-    public void cleanUp() {
+    public void cleanup() {
         // To be implemented
     }
 

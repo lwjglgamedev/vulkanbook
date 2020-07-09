@@ -1,20 +1,20 @@
-# Setting the basis
+# Setting Up The Basics
 
-In this chapter we will set up all the base code required to define a basic rendering loop. This game loop will constantly render new frames, get user inputs and update the game or application state. The code presented here is not directly related to Vulkan, you will see something similar in any other application independently of the specific API they use (This is the reason why we will mainly use large chunks of code here, without explaining step of step every detail.)
+In this chapter we will set up all the base code required to define a basic rendering loop. This game loop will have these responsibilities: constantly render new frames; get user inputs; and update the game or application state. The code presented here is not directly related to Vulkan, but rather the starting point before we dive right in. You will see something similar in any other application independently of the specific API they use (this is the reason why we will mainly use large chunks of code here, without explaining step of step every detail).
 
 ## Requirements
 
 The base requirements to run the samples of this book are:
 
-- Java version 14 or higher.
+- [Java version 14](https://jdk.java.net/14/) or higher.
 - Maven 3.6.X or higher to build the samples. Building the samples with maven will create a jar file, under the target folder, and the required folders with the dependencies and the resources. You can execute them from the command line just by using `java -jar <name_of_the_sample.jar>`.
-- Using an IDE is optional. Personally I'm using [IntelliJ IDEA](https://www.jetbrains.com/es-es/idea/).
+- Using an IDE is optional. Personally I'm using [IntelliJ IDEA](https://www.jetbrains.com/es-es/idea/). If you're using an IDE, you may let it compile and run it for you.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-01).
 
 ## Main class
 
-So let's start from the beginning, let's start with our `Main` class:
+So let's start from the beginning with, of all things, our `Main` class:
 
 ```java
 package org.vulkanb;
@@ -52,10 +52,10 @@ public class Main implements IAppLogic {
 }
 ```
 
-As you can see, in the `main` method, we just start our render / game engine, modeled by the `Engine` class. This class requires, in its constructor, the name of the application and a reference to the class that will implement the application logic. This is controlled by an interface `IAppLogic` interface which defines three methods:
+As you can see, in the `main` method, we just start our render/game engine, modeled by the `Engine` class. This class requires, in its constructor, the name of the application and a reference to the class which will implement the application logic. This is controlled by an interface `IAppLogic` which defines three methods:
 
-- `init`:  Which is invoked upon application startup to create the required resources (meshes, textures, etc.).
-- `handelInput`: Which is invoked periodically so the application can update its stated reacting to user input.
+- `init`: Invoked upon application startup to create the required resources (meshes, textures, etc).
+- `handelInput`: Which is invoked periodically so that the application can update its stated reacting to user input.
 - `cleanUp`: Which is invoked when the application finished to properly release the acquired resources.
 
 ## Engine
@@ -77,18 +77,18 @@ public class Engine {
     private Window window;
 
     public Engine(String windowTitle, IAppLogic gameLogic) {
-        this.window = new Window(windowTitle);
-        this.render = new Render();
-        this.appLogic = gameLogic;
-        this.scene = new Scene(this.window);
-        this.render.init(this.window);
-        this.appLogic.init(this.window, this.scene, this.render);
+        window = new Window(windowTitle);
+        render = new Render();
+        appLogic = gameLogic;
+        scene = new Scene(window);
+        render.init(window);
+        appLogic.init(window, scene, render);
     }
 
-    private void cleanUp() {
-        this.appLogic.cleanUp();
-        this.render.cleanUp();
-        this.window.cleanUp();
+    private void cleanup() {
+        appLogic.cleanup();
+        render.cleanup();
+        window.cleanup();
     }
 
     public void run() {
@@ -98,7 +98,7 @@ public class Engine {
         double deltaU = 0;
 
         long updateTime = initialTime;
-        while (this.running && !this.window.shouldClose()) {
+        while (running && !window.shouldClose()) {
 
             this.window.pollEvents();
 
@@ -108,35 +108,35 @@ public class Engine {
 
             if (deltaU >= 1) {
                 long diffTimeNanos = currentTime - updateTime;
-                this.appLogic.handleInput(this.window, this.scene, diffTimeNanos);
+                appLogic.handleInput(window, scene, diffTimeNanos);
                 updateTime = currentTime;
                 deltaU--;
             }
 
-            this.render.render(this.window, this.scene);
+            render.render(window, scene);
         }
 
-        cleanUp();
+        cleanup();
     }
 
     public void start() {
-        this.running = true;
+        running = true;
         run();
     }
 
     public void stop() {
-        this.running = false;
+        running = false;
     }
 }
 ```
 
-Let's dissect what we are doing in the constructor. We firs create a `Window` class instance. The `Window` class is responsible of setting up a window using the [GLFW](https://www.glfw.org/) library and also allows us to retrieve user input. Then, we create an instance of the `Render` class which is responsible of performing the graphics rendering tasks. The `Scene` class instance will hold up all the scene items, camera settings and lights. After that, we invoke the `init` methods of the `Render` instance and the application logic.
+Let's dissect what we are doing in the constructor. We first create a `Window` class instance. The `Window` class is responsible for setting up a window using the [GLFW](https://www.glfw.org/) library and allows us to retrieve user input. Then, we create an instance of the `Render` class which is responsible for performing the graphics rendering tasks. The `Scene` class instance will hold up all the scene items, camera settings and lights. After that, we invoke the `init` methods of the `Render` instance and the application logic.
 
-Basically the engine class is a an infinite loop, modeled in the `run` method, which is triggered in the `start` method. This class also provides a `stop` method to get out of that loop and a `cleanUp` method to free resources when the loop exists.
+Basically the engine class is an infinite loop, modeled in the `run` method, which is triggered in the `start` method. This class also provides a handy `stop` method to get out of said loop and a `cleanup` method to free resources when the loop exists.
 
-But let's go back to the core method of the `Engine` class, the `run` method. We basically control the elapsed time since the last loop block to check if enough seconds have passed to update the state. If so, we calculate the elapsed time since the last update and invoke the `handleInput` method from the `IAppLogic` instance. We invoke the `render` method in each turn of the loop. We will see later on that we can limit the frame rate using the vsync or leave it uncapped.
+Let's go back to the core method of the `Engine` class, the `run` method. We basically control the elapsed time since the last loop block to check if enough seconds have passed to update the state. If so, we calculate the elapsed time since the last update and invoke the `handleInput` method from the `IAppLogic` instance. We invoke the `render` method in each turn of the loop. Later on we will be able to limit the frame rate using vsync, or leave it uncapped.
 
-You may have notice that we use a class named `EngineProperties` which in this case establishes the updates per second. This is a class that reads a properties file that will allow us to configure several parameters of the engine at run time. The code is pretty straight forward:
+You may have notice that we use a class named `EngineProperties`, which in this case establishes the updates per second. This is a class which reads a property file that will allow us to configure several parameters of the engine at runtime. The code is pretty straight forward:
 
 ```java
 package org.vulkanb.eng;
@@ -159,26 +159,26 @@ public class EngineProperties {
 
         try (InputStream stream = EngineProperties.class.getResourceAsStream("/" + FILENAME)) {
             props.load(stream);
-            this.ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
+            ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
     }
 
     public static synchronized EngineProperties getInstance() {
-        if (instance== null) {
-            instance= new EngineProperties();
+        if (instance == null) {
+            instance = new EngineProperties();
         }
-        return INSTANCE;
+        return instance;
     }
 
     public int getUps() {
-        return this.ups;
+        return ups;
     }
 }
 ```
 
-By now the `Render` class is just an empty shell as well as the `Scene` class:
+At this point, the `Render` and `Scene` classes are both just an empty shell:
 
 ```java
 package org.vulkanb.eng.graph;
@@ -188,7 +188,7 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Render {
 
-    public void cleanUp() {
+    public void cleanup() {
         // To be implemented
     }
 
@@ -216,7 +216,7 @@ public class Scene {
 
 ## Window
 
-Now it's turn for our `Window` class. As it's been said before, this class mainly deals with window creation and input management. Besides that, this class is the first one that shows the first tiny bits of Vulkan. Let's start by examining its main attributes and constructor.
+Now it's the turn for our `Window` class. As it's been said before, this class mainly deals with window creation and input management. Alongside that, this class is the first one which shows the first tiny bits of Vulkan. Let's start by examining its main attributes and constructor.
 
 ```java
 package org.vulkanb.eng;
@@ -224,12 +224,12 @@ package org.vulkanb.eng;
 import org.lwjgl.glfw.*;
 import org.lwjgl.system.MemoryUtil;
 
-public class Window implements GLFWFramebufferSizeCallbackI {
+public class Window {
 
-    private int height;
     private GLFWKeyCallback keyCallback;
     private MouseInput mouseInput;
     private boolean resized;
+    private int height;
     private int width;
     private long windowHandle;
 
@@ -243,36 +243,32 @@ public class Window implements GLFWFramebufferSizeCallbackI {
         }
 
         GLFWVidMode vidMode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
-        this.width = vidMode.width();
-        this.height = vidMode.height();
+        width = vidMode.width();
+        height = vidMode.height();
 
         GLFW.glfwDefaultWindowHints();
         GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_NO_API);
         GLFW.glfwWindowHint(GLFW.GLFW_MAXIMIZED, GLFW.GLFW_FALSE);
 
         // Create the window
-        this.windowHandle = GLFW.glfwCreateWindow(this.width, this.height, title, MemoryUtil.NULL, MemoryUtil.NULL);
-        if (this.windowHandle == MemoryUtil.NULL) {
+        windowHandle = GLFW.glfwCreateWindow(width, height, title, MemoryUtil.NULL, MemoryUtil.NULL);
+        if (windowHandle == MemoryUtil.NULL) {
             throw new RuntimeException("Failed to create the GLFW window");
         }
 
-        GLFW.glfwSetFramebufferSizeCallback(this.windowHandle, this);
-
-        this.keyCallback = new GLFWKeyCallback() {
-            @Override
-            public void invoke(long window, int key, int scancode, int action, int mods) {
-                if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
-                    GLFW.glfwSetWindowShouldClose(window, true);
-                }
+        GLFW.glfwSetFramebufferSizeCallback(windowHandle, (window, width, height) -> resize(width, height));
+                
+        GLFW.glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
+            if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
+                GLFW.glfwSetWindowShouldClose(window, true);
             }
-        };
-        GLFW.glfwSetKeyCallback(this.windowHandle, this.keyCallback);
+        });
 
-        this.mouseInput = new MouseInput(this.windowHandle);
+        mouseInput = new MouseInput(windowHandle);
     }
 ```
 
-The code it's self explanatory, we basically initialize GLFW, set up the window size to the primary monitor dimensions, create the window, set up key call backs (with a special case for signaling when window should close) and create a handler for mouse input. But, at the very beginning, there's a little fragment which checks if Vulkan is supported: 
+The code it's self-explanatory, we basically initialize GLFW, set up the window size to the primary monitor dimensions, create the window, set up key call backs (with a special case for signaling when window should close) and create a handler for mouse input. But at the very beginning, there's a little fragment which checks if Vulkan is supported: 
 
 ```java
 if (!GLFWVulkan.glfwVulkanSupported()) {
@@ -280,54 +276,48 @@ if (!GLFWVulkan.glfwVulkanSupported()) {
 }
 ```
 
-The code above, if the minimal requirements to use Vulkan are available (the Vulkan loader and a minimal functional ICD). This does not imply that Vulkan will work properly, but it is a minimum. Without this there is no sense in going on.The rest of the methods are basic ones to free resources, handling window resizing and getting access to the mouse handler.
+The code above, will test if the minimal requirements to use Vulkan are available (the Vulkan loader and a minimal functional ICD). This does not imply that Vulkan will work properly, but it is a minimum. Without this there is no sense in going on. The rest of the methods are basic ones to free resources, handling window resizing, etc.
 
 ```java
     public void cleanUp() {
-        GLFW.glfwDestroyWindow(this.windowHandle);
-        this.keyCallback.free();
+        GLFW.glfwDestroyWindow(windowHandle);
         GLFW.glfwTerminate();
     }
 
     public int getHeight() {
-        return this.height;
+        return height;
     }
 
     public MouseInput getMouseInput() {
-        return this.mouseInput;
+        return mouseInput;
     }
 
     public int getWidth() {
-        return this.width;
+        return width;
     }
 
     public long getWindowHandle() {
-        return this.windowHandle;
-    }
-
-    @Override
-    public void invoke(long handle, int width, int height) {
-        resize(width, height);
+        return windowHandle;
     }
 
     public boolean isResized() {
-        return this.resized;
+        return resized;
     }
 
     public void pollEvents() {
         GLFW.glfwPollEvents();
-        this.mouseInput.input();
+        mouseInput.input();
     }
 
     public void resetResized() {
-        this.resized = false;
+        resized = false;
     }
 
     public void resize(int width, int height) {
-        this.resized = true;
+        resized = true;
         this.width = width;
         this.height = height;
-        GLFW.glfwSetWindowSize(this.windowHandle, this.width, this.height);
+        GLFW.glfwSetWindowSize(windowHandle, width, height);
     }
 
     public void setResized(boolean resized) {
@@ -335,12 +325,12 @@ The code above, if the minimal requirements to use Vulkan are available (the Vul
     }
     
     public boolean shouldClose() {
-        return GLFW.glfwWindowShouldClose(this.windowHandle);
+        return GLFW.glfwWindowShouldClose(windowHandle);
     }
 }
 ```
 
-`MouseInput` is the class responsible of handling mouse input and clicks. It's code is also pretty straight forward.
+`MouseInput` is the class responsible for handling mouse input and clicks. Its code is also pretty straight forward.
 
 ```java
 package org.vulkanb.eng;
@@ -359,12 +349,12 @@ public class MouseInput {
     private boolean rightButtonPressed;
 
     public MouseInput(long windowHandle) {
-        this.previousPos = new Vector2f(-1, -1);
-        this.currentPos = new Vector2f();
-        this.displVec = new Vector2f();
-        this.leftButtonPressed = false;
-        this.rightButtonPressed = false;
-        this.inWindow = false;
+        previousPos = new Vector2f(-1, -1);
+        currentPos = new Vector2f();
+        displVec = new Vector2f();
+        leftButtonPressed = false;
+        rightButtonPressed = false;
+        inWindow = false;
 
         glfwSetCursorPosCallback(windowHandle, (handle, xpos, ypos) -> {
             currentPos.x = (float) xpos;
@@ -378,7 +368,7 @@ public class MouseInput {
     }
 
     public Vector2f getCurrentPos() {
-        return this.currentPos;
+        return currentPos;
     }
 
     public Vector2f getDisplVec() {
@@ -414,6 +404,8 @@ public class MouseInput {
 }
 ```
 
-If you run the sample you will get a nice black window that you can resize, move and close. With this this chapter comes to its end. In the next chapter we will start viewing the first basic Vulkan concepts.
+How you want to handle user input is largely up to you. In order to get them, just use `glfwSet*Callback()`. This is all the freedom you'll get, so embrace it while you can.
+
+If you run the sample you will get a nice black window that you can resize, move and close. With that, this chapter comes to its end. In the next chapter we will start viewing the first basic Vulkan concepts.
 
 [Next chapter](../chapter-02/chapter-02.md)
