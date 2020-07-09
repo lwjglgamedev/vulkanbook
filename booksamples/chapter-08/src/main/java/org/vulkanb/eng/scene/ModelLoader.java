@@ -120,6 +120,7 @@ public class ModelLoader {
             material = new Material();
         }
         return new MeshData(id, listToArray(vertices), listToArray(textCoords), listIntToArray(indices),
+                material);
     }
 
     private static List<Float> processTextCoords(AIMesh aiMesh) {
