@@ -11,10 +11,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class TextureSampler {
 
     private static final int MAX_ANISOTROPY = 16;
-
+    private Device device;
     private long vkSampler;
 
     public TextureSampler(Device device, int mipLevels) {
+        this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO)
@@ -41,6 +42,10 @@ public class TextureSampler {
             vkCheck(vkCreateSampler(device.getVkDevice(), samplerInfo, null, lp), "Failed to create sampler");
             this.vkSampler = lp.get(0);
         }
+    }
+
+    public void cleanUp() {
+        vkDestroySampler(this.device.getVkDevice(), this.vkSampler, null);
     }
 
     public long getVkSampler() {

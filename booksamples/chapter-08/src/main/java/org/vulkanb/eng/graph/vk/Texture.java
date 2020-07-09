@@ -21,7 +21,6 @@ public class Texture {
     private Image image;
     private ImageView imageView;
     private int mipLevels;
-    private long vkSampler;
     private int width;
 
     public Texture(CommandPool commandPool, Queue queue, String fileName, int imageFormat) {
@@ -43,11 +42,10 @@ public class Texture {
             this.mipLevels = 1;
 
             VulkanBuffer bufferData = createImage(stack, this.device, buf, imageFormat);
-            transitionImageLayout(stack, this.device, commandPool, queue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            transitionImageLayout(stack, commandPool, queue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             copyBufferToImage(stack, commandPool, queue, bufferData);
-            transitionImageLayout(stack, this.device, commandPool, queue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            transitionImageLayout(stack, commandPool, queue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             this.imageView = new ImageView(this.device, this.image.getVkImage(), this.image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, this.mipLevels);
-            createSampler(stack, this.device);
 
             bufferData.cleanUp();
         }
@@ -56,7 +54,6 @@ public class Texture {
     }
 
     public void cleanUp() {
-        vkDestroySampler(this.device.getVkDevice(), this.vkSampler, null);
         this.imageView.cleanUp();
         this.image.cleanUp();
     }
@@ -109,33 +106,6 @@ public class Texture {
         return bufferData;
     }
 
-    private void createSampler(MemoryStack stack, Device device) {
-        VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.callocStack(stack)
-                .sType(VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO)
-                .magFilter(VK_FILTER_LINEAR)
-                .minFilter(VK_FILTER_LINEAR)
-                .addressModeU(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-                .addressModeV(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-                .addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-                .borderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
-                .unnormalizedCoordinates(false)
-                .compareEnable(false)
-                .compareOp(VK_COMPARE_OP_ALWAYS)
-                .mipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
-                .minLod(0.0f)
-                .maxLod(this.mipLevels)
-                .mipLodBias(0.0f);
-        if (device.isSamplerAnisotropy()) {
-            samplerInfo
-                    .anisotropyEnable(true)
-                    .maxAnisotropy(MAX_ANISOTROPY);
-        }
-
-        LongBuffer lp = stack.mallocLong(1);
-        vkCheck(vkCreateSampler(device.getVkDevice(), samplerInfo, null, lp), "Failed to create sampler");
-        this.vkSampler = lp.get(0);
-    }
-
     public String getFileName() {
         return fileName;
     }
@@ -144,11 +114,7 @@ public class Texture {
         return this.imageView;
     }
 
-    public long getVkSampler() {
-        return this.vkSampler;
-    }
-
-    private void transitionImageLayout(MemoryStack stack, Device device, CommandPool commandPool, Queue queue,
+    private void transitionImageLayout(MemoryStack stack, CommandPool commandPool, Queue queue,
                                        int oldLayout, int newLayout) {
 
         CommandBuffer cmd = new CommandBuffer(commandPool, true, true);

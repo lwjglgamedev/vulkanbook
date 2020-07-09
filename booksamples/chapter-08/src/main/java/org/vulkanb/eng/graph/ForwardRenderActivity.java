@@ -18,6 +18,7 @@ public class ForwardRenderActivity {
 
     private static final String FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/fwd_fragment.glsl";
     private static final String FRAGMENT_SHADER_FILE_SPV = FRAGMENT_SHADER_FILE_GLSL + ".spv";
+    private static final int MAX_DESCRIPTORS = 100;
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/fwd_vertex.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
     private CommandBuffer[] commandBuffers;
@@ -34,6 +35,7 @@ public class ForwardRenderActivity {
     private SwapChainRenderPass renderPass;
     private SwapChain swapChain;
     private TextureDescriptorSetLayout textureDescriptorSetLayout;
+    private TextureSampler textureSampler;
 
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache) {
         this.swapChain = swapChain;
@@ -73,12 +75,13 @@ public class ForwardRenderActivity {
             this.commandBuffers[i] = new CommandBuffer(commandPool, true, false);
             this.fences[i] = new Fence(device, true);
         }
-        // TBD: CHANGE THIS
-        this.descriptorPool = new DescriptorPool(device, 100, 0);
+        this.descriptorPool = new DescriptorPool(device, MAX_DESCRIPTORS, 0);
         this.descriptorSetMap = new HashMap<>();
+        this.textureSampler = new TextureSampler(device, 1);
     }
 
     public void cleanUp() {
+        this.textureSampler.cleanUp();
         this.descriptorPool.cleanUp();
         this.pipeLine.cleanUp();
         Arrays.stream(this.descriptorSetLayouts).forEach(DescriptorSetLayout::cleanUp);
@@ -135,7 +138,7 @@ public class ForwardRenderActivity {
             if (textureDescriptorSet == null) {
                 Texture texture = textureCache.getTexture(vulkanMesh.getTextureId());
                 textureDescriptorSet = new TextureDescriptorSet(this.descriptorPool, this.textureDescriptorSetLayout,
-                        texture, 0);
+                        texture, this.textureSampler, 0);
                 this.descriptorSetMap.put(vulkanMesh.getTextureId(), textureDescriptorSet);
             }
         }

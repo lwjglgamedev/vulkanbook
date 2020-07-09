@@ -13,7 +13,7 @@ public class TextureDescriptorSet {
     private long vkDescriptorSet;
 
     public TextureDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
-                                Texture texture, int binding) {
+                                Texture texture, TextureSampler textureSampler, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = descriptorPool.getDevice();
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
@@ -32,7 +32,7 @@ public class TextureDescriptorSet {
             VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
                     .imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
                     .imageView(texture.getImageView().getVkImageView())
-                    .sampler(texture.getVkSampler());
+                    .sampler(textureSampler.getVkSampler());
 
             VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
 
