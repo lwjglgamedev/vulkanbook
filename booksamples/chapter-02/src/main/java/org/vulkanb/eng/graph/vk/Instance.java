@@ -58,7 +58,7 @@ public class Instance {
                     .applicationVersion(1)
                     .pEngineName(appShortName)
                     .engineVersion(0)
-                    .apiVersion(VK_MAKE_VERSION(1, 2, 0));
+                    .apiVersion(VK_API_VERSION_1_0);
 
             // Validation layers
             String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;

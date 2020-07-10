@@ -16,11 +16,13 @@ The source code of the samples of this book is in [GitHub](https://github.com/lw
 
 ## Support
 
-If you like the book please rate it with a start and share it. If you want to contribute with a donation you can do a donation: [![Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5MH9AA9TPQQBN)
+If you like the book please rate it with a start and share it. If you want to contribute with a donation you can do a donation: [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5MH9AA9TPQQBN)
 
 ## Comments are welcome
 
 Suggestions and corrections are more than welcome (and if you do like it please rate it with a star). Please send them using the discussion forum and make the corrections you consider in order to improve the book.
+
+If you find something confusing, or you would like something clarified in the book, please [submit an issue](https://github.com/lwjglgamedev/vulkanbook/issues/new/choose) on GitHub.
 
 ## Author
 
