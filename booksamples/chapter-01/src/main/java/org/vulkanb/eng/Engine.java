@@ -5,25 +5,25 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Engine {
 
+    private boolean running;
     private IAppLogic appLogic;
     private Render render;
-    private boolean running;
     private Scene scene;
     private Window window;
 
     public Engine(String windowTitle, IAppLogic gameLogic) {
-        this.window = new Window(windowTitle);
-        this.render = new Render();
-        this.appLogic = gameLogic;
-        this.scene = new Scene(this.window);
-        this.render.init(this.window);
-        this.appLogic.init(this.window, this.scene, this.render);
+        window = new Window(windowTitle);
+        render = new Render();
+        appLogic = gameLogic;
+        scene = new Scene(window);
+        render.init(window);
+        appLogic.init(window, scene, render);
     }
 
-    private void cleanUp() {
-        this.appLogic.cleanUp();
-        this.render.cleanUp();
-        this.window.cleanUp();
+    private void cleanup() {
+        appLogic.cleanup();
+        render.cleanup();
+        window.cleanup();
     }
 
     public void run() {
@@ -33,9 +33,9 @@ public class Engine {
         double deltaU = 0;
 
         long updateTime = initialTime;
-        while (this.running && !this.window.shouldClose()) {
+        while (running && !window.shouldClose()) {
 
-            this.window.pollEvents();
+            window.pollEvents();
 
             long currentTime = System.nanoTime();
             deltaU += (currentTime - initialTime) / timeU;
@@ -43,23 +43,23 @@ public class Engine {
 
             if (deltaU >= 1) {
                 long diffTimeNanos = currentTime - updateTime;
-                this.appLogic.handleInput(this.window, this.scene, diffTimeNanos);
+                appLogic.handleInput(window, scene, diffTimeNanos);
                 updateTime = currentTime;
                 deltaU--;
             }
 
-            this.render.render(this.window, this.scene);
+            render.render(window, scene);
         }
 
-        cleanUp();
+        cleanup();
     }
 
     public void start() {
-        this.running = true;
+        running = true;
         run();
     }
 
     public void stop() {
-        this.running = false;
+        running = false;
     }
 }

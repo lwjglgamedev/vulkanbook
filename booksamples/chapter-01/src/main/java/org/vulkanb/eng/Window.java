@@ -1,100 +1,92 @@
 package org.vulkanb.eng;
 
-import org.lwjgl.glfw.*;
+import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.system.MemoryUtil;
 
-public class Window implements GLFWFramebufferSizeCallbackI {
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFWVulkan.*;
 
-    private int height;
-    private GLFWKeyCallback keyCallback;
+public class Window {
+
     private MouseInput mouseInput;
     private boolean resized;
+    private int height;
     private int width;
     private long windowHandle;
 
     public Window(String title) {
-        if (!GLFW.glfwInit()) {
+        if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
 
-        if (!GLFWVulkan.glfwVulkanSupported()) {
+        if (!glfwVulkanSupported()) {
             throw new IllegalStateException("Cannot find a compatible Vulkan installable client driver (ICD)");
         }
 
-        GLFWVidMode vidMode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
-        this.width = vidMode.width();
-        this.height = vidMode.height();
+        GLFWVidMode vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        width = vidMode.width();
+        height = vidMode.height();
 
-        GLFW.glfwDefaultWindowHints();
-        GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_NO_API);
-        GLFW.glfwWindowHint(GLFW.GLFW_MAXIMIZED, GLFW.GLFW_FALSE);
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
 
         // Create the window
-        this.windowHandle = GLFW.glfwCreateWindow(this.width, this.height, title, MemoryUtil.NULL, MemoryUtil.NULL);
-        if (this.windowHandle == MemoryUtil.NULL) {
+        windowHandle = glfwCreateWindow(width, height, title, MemoryUtil.NULL, MemoryUtil.NULL);
+        if (windowHandle == MemoryUtil.NULL) {
             throw new RuntimeException("Failed to create the GLFW window");
         }
 
-        GLFW.glfwSetFramebufferSizeCallback(this.windowHandle, this);
+        glfwSetFramebufferSizeCallback(windowHandle, (window, width, height) -> resize(width, height));
 
-        this.keyCallback = new GLFWKeyCallback() {
-            @Override
-            public void invoke(long window, int key, int scancode, int action, int mods) {
-                if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
-                    GLFW.glfwSetWindowShouldClose(window, true);
-                }
+        glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
+                glfwSetWindowShouldClose(window, true);
             }
-        };
-        GLFW.glfwSetKeyCallback(this.windowHandle, this.keyCallback);
+        });
 
-        this.mouseInput = new MouseInput(this.windowHandle);
+        mouseInput = new MouseInput(windowHandle);
     }
 
-    public void cleanUp() {
-        GLFW.glfwDestroyWindow(this.windowHandle);
-        this.keyCallback.free();
-        GLFW.glfwTerminate();
+    public void cleanup() {
+        glfwDestroyWindow(windowHandle);
+        glfwTerminate();
     }
 
     public int getHeight() {
-        return this.height;
+        return height;
     }
 
     public MouseInput getMouseInput() {
-        return this.mouseInput;
+        return mouseInput;
     }
 
     public int getWidth() {
-        return this.width;
+        return width;
     }
 
     public long getWindowHandle() {
-        return this.windowHandle;
-    }
-
-    @Override
-    public void invoke(long handle, int width, int height) {
-        resize(width, height);
+        return windowHandle;
     }
 
     public boolean isResized() {
-        return this.resized;
+        return resized;
     }
 
     public void pollEvents() {
-        GLFW.glfwPollEvents();
-        this.mouseInput.input();
+        glfwPollEvents();
+        mouseInput.input();
     }
 
     public void resetResized() {
-        this.resized = false;
+        resized = false;
     }
 
     public void resize(int width, int height) {
         this.resized = true;
         this.width = width;
         this.height = height;
-        GLFW.glfwSetWindowSize(this.windowHandle, this.width, this.height);
+        glfwSetWindowSize(windowHandle, width, height);
     }
 
     public void setResized(boolean resized) {
@@ -102,6 +94,6 @@ public class Window implements GLFWFramebufferSizeCallbackI {
     }
 
     public boolean shouldClose() {
-        return GLFW.glfwWindowShouldClose(this.windowHandle);
+        return glfwWindowShouldClose(windowHandle);
     }
 }
