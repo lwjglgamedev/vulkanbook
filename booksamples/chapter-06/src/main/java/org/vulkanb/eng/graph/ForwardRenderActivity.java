@@ -91,6 +91,7 @@ public class ForwardRenderActivity {
             fence.fenceWait();
             fence.reset();
 
+            commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
 

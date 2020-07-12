@@ -54,10 +54,11 @@ public class VulkanBuffer {
 ```
 
 The next thing to do is to allocate the memory. Again, in order to achieve that, we need to setup a structure named `VkMemoryAllocateInfo`, which defines the following attributes:
+
 - `sType`: It shall have the `VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO` value.
 - `allocationSize`: It will hold the size of the memory to be allocated in bytes.
 - `memoryTypeIndex`: It will hold the memory type index to be used. The index refers to the memory types available in the device.
-  
+
 ```java
 public class VulkanBuffer {
     ...
@@ -229,6 +230,7 @@ public class VertexBufferStructure {
 ```
 
 The attributes are:
+
 - `binding`: The same meaning as in the vertices attributes description.
 - `stride`: The distance in bytes from two consecutive elements in the buffer. In our case, we are using 32 bit floats for the positions (4 bytes each) and three position components (x, y, z).
 - `inputRate`: It specifies the rate at which vertex attributes are pulled from the underlying buffer. It can have two possible values:
@@ -438,6 +440,7 @@ public class VulkanMesh {
 ```
 
 The intermediate buffer is created with the `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` flag as its usage parameter. With this flag we state that this buffer can be used as the source of a transfer command. For the `reqMask` attribute we use the combination of two flags:
+
 - `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`: This means that the memory allocated by this buffer can be mapped and accessed by the CPU. This is what we need in order to populate with the mesh data.
 - `VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT`: This means that we do not need to execute flushing commands when the CPU writes to this buffer or vice versa.
 
@@ -808,6 +811,7 @@ public class Pipeline {
 ```
 
 After that we configure the rasterization stage:
+
 ```java
 public class Pipeline {
     ...
@@ -827,6 +831,7 @@ public class Pipeline {
 ```
 
 Description of the parameters:
+
 - `polygonMode`: It specifies how triangles should be rendered: In our case we want the triangles to be filled up with the color assigned in the fragments. For example, if we want to draw it as lines (as in OpenGL, the equivalent would be to use this line: `glPolygonMode( GL_FRONT_AND_BACK, GL_LINE )`)  we should use `VK_POLYGON_MODE_LINE`.
 - `cullMode`: This is used if we want to apply culling (for example, not drawing triangles that are in the inner parts of models). By now we are not applying culling, but we can activate it according to the orientation of the vertices of the triangles.
 - `frontFace`: It specifies how front face for culling is determined. In our case, we set to `VK_FRONT_FACE_CLOCKWISE`, that is, if the vertices are drawn in clockwise order they are considered as clock wise.
@@ -1120,6 +1125,7 @@ public class ForwardRenderActivity {
             fence.fenceWait();
             fence.reset();
 
+            commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
 
@@ -1140,7 +1146,8 @@ public class ForwardRenderActivity {
 }
 ```
 
-The new code starts now:
+Although the code looks similar to the one use din the previous chapter, there is an important change, we are resetting the command buffer. In the previous chapter, we pre-record the command buffers at the beginning. Here we are recording a command buffer in each frame, we need to reset them prior to is usage. It is important to do it after the fence has been signaled, to prevent the command buffer rest while is still in use.  The new code starts now:
+
 ```java
 public class ForwardRenderActivity {
     ...

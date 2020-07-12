@@ -41,6 +41,7 @@ public class Image {
 ```
 
 The constructor receives the following parameters:
+
 - `width` and `height`: The size of the image.
 - `format`:  Describes the format of the texel blocks that compose the image.
 - `usage`:  Describes the intended usage that this image will have.
@@ -48,6 +49,7 @@ The constructor receives the following parameters:
 - `sampleCount`:  Specifies the number of texels per sample (more on this in later chapters).
 
 Besides storing some parameters as attributes of the class, the first thing we do is instantiate a structure needed to create an image named `VkImageCreateInfo`. The attributes that we are using are:
+
 - `sType`:  The classical type attribute of most Vulkan structures. In this case we use the value `VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO`.
 - `imageType`:  It specifies the dimensions of the the image. In our case we will be using regular 2D dimensions, so we set to the value: `VK_IMAGE_TYPE_2D`. Three dimensions images (`VK_IMAGE_TYPE_3D`) are like a set of slices of 2D textures and are used for volumetric effects or for scientific or medical visualizations (like MRIs). One dimension textures are define by the value `VK_IMAGE_TYPE_1D`.
 - `format`: Described above, format of the texel blocks that compose the image.
@@ -308,6 +310,7 @@ public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
 ```
 
 The constructor, in addition to the swap chain, receives now the format of the image which will be used to store depth values. We need to add a new `VkAttachmentDescription` to describe the new depth attachment. Some remarks about the parameters:
+
 - The format of that attachment is the format of the `depthImage`.
 - We are not using multi-sampling, we just pass the `VK_SAMPLE_COUNT_1_BIT`. 
 - The value used for the `loadOp` attribute is the same as in the color attachment. We want their contents to be cleared at the start of this render pass. 
@@ -526,6 +529,7 @@ public class Pipeline {
 ```
 
 We need to instantiate a `VkPipelineDepthStencilStateCreateInfo`  structure which has the following attributes:
+
 - `sType`: In this case it should have the `VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO`.
 - `depthTestEnable`: It controls if depth testing is enabled or not (when rendering it is used to discard fragments which are behind already rendered fragments, values which do not fulfill the test operation will be discarded). This is what we need, so we set it  to `true`. 
 - `depthWriteEnable`: This controls if depth writing to the depth attachment is enabled or not. You could enable depth testing but do not want to write depth values, for example if the depth image used as a depth attachment has already been created by another task. This is not our case, we want the depth image to be written while rendering, so we set it to `true`.
@@ -588,6 +592,7 @@ public class Pipeline {
 ```
 
 We need to create a push constant range, defined by the structure `VkPushConstantRange`. This will only be done if the new  `pushConstantsSize` attribute of the `PipeLineCreationInfo` class is higher than `0`. The attributes of the `VkPushConstantRange` are:
+
 - `stageFlags`: It is a combination of flags that states the shader stages that will access this range of push constants. We will use this in the vertex buffer so we pass  the `VK_SHADER_STAGE_VERTEX_BIT` value.
 - `offset`:  This is the offset from the start where this range starts. In our case, we will simplify this. We provide support for just one push constant and always start on `0`. 
 - `size`:  This is the size for this range in bytes. 
