@@ -2,7 +2,7 @@ package org.vulkanb.eng.graph.vk;
 
 import org.apache.logging.log4j.*;
 
-import static org.lwjgl.vulkan.VK10.vkDestroyDescriptorSetLayout;
+import static org.lwjgl.vulkan.VK11.vkDestroyDescriptorSetLayout;
 
 public abstract class DescriptorSetLayout {
 
@@ -14,12 +14,12 @@ public abstract class DescriptorSetLayout {
         this.device = device;
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying descriptor set layout");
-        vkDestroyDescriptorSetLayout(this.device.getVkDevice(), this.vkDescriptorLayout, null);
+        vkDestroyDescriptorSetLayout(device.getVkDevice(), vkDescriptorLayout, null);
     }
 
     public long getVkDescriptorLayout() {
-        return this.vkDescriptorLayout;
+        return vkDescriptorLayout;
     }
 }

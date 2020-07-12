@@ -2,7 +2,7 @@ package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.vulkan.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class VertexBufferStructure {
 
@@ -13,33 +13,33 @@ public class VertexBufferStructure {
     private VkVertexInputBindingDescription.Buffer viBindings;
 
     public VertexBufferStructure() {
-        this.viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);
-        this.viBindings = VkVertexInputBindingDescription.calloc(1);
-        this.vi = VkPipelineVertexInputStateCreateInfo.calloc();
+        viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);
+        viBindings = VkVertexInputBindingDescription.calloc(1);
+        vi = VkPipelineVertexInputStateCreateInfo.calloc();
 
         int i = 0;
         // Position
-        this.viAttrs.get(i)
+        viAttrs.get(i)
                 .binding(0)
                 .location(i)
                 .format(VK_FORMAT_R32G32B32_SFLOAT)
                 .offset(0);
 
-        this.viBindings.get(0)
+        viBindings.get(0)
                 .binding(0)
                 .stride(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH)
                 .inputRate(VK_VERTEX_INPUT_RATE_VERTEX);
 
-        this.vi
+        vi
                 .sType(VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
-                .pVertexBindingDescriptions(this.viBindings)
-                .pVertexAttributeDescriptions(this.viAttrs);
+                .pVertexBindingDescriptions(viBindings)
+                .pVertexAttributeDescriptions(viAttrs);
     }
 
-    public void cleanUp() {
-        this.vi.free();
-        this.viBindings.free();
-        this.viAttrs.free();
+    public void cleanup() {
+        vi.free();
+        viBindings.free();
+        viAttrs.free();
     }
 
     public VkPipelineVertexInputStateCreateInfo getVi() {

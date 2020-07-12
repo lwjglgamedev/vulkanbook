@@ -6,7 +6,7 @@ import org.lwjgl.vulkan.VkPipelineCacheCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class PipelineCache {
@@ -24,20 +24,20 @@ public class PipelineCache {
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreatePipelineCache(device.getVkDevice(), createInfo, null, lp),
                     "Error creating pipeline cache");
-            this.vkPipelineCache = lp.get(0);
+            vkPipelineCache = lp.get(0);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying pipeline cache");
-        vkDestroyPipelineCache(this.device.getVkDevice(), this.vkPipelineCache, null);
+        vkDestroyPipelineCache(device.getVkDevice(), vkPipelineCache, null);
     }
 
     public Device getDevice() {
-        return this.device;
+        return device;
     }
 
     public long getVkPipelineCache() {
-        return this.vkPipelineCache;
+        return vkPipelineCache;
     }
 }

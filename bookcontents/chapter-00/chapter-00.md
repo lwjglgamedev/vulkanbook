@@ -4,7 +4,6 @@ So what is Vulkan? Here's the definition for the Vulkan standard landing page:
 
 > Vulkan is a new generation graphics and compute API that provides high-efficiency, cross-platform access to modern GPUs used in a wide variety of devices from PCs and consoles to mobile phones and embedded platforms.
 
-
 Vulkan is a standard developed by the [Khronos group](https://www.khronos.org/), which is an open industry consortium behind many other well-known standards such as [OpenGL](https://www.khronos.org/opengl/) and [OpenCL](https://www.khronos.org/opencl/).
 
 ## Why Vulkan?

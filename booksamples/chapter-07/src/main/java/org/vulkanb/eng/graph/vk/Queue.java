@@ -7,7 +7,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Queue {
@@ -24,7 +24,7 @@ public class Queue {
             PointerBuffer pQueue = stack.mallocPointer(1);
             vkGetDeviceQueue(device.getVkDevice(), queueFamilyIndex, queueIndex, pQueue);
             long queue = pQueue.get(0);
-            this.vkQueue = new VkQueue(queue, device.getVkDevice());
+            vkQueue = new VkQueue(queue, device.getVkDevice());
         }
     }
 
@@ -52,13 +52,13 @@ public class Queue {
             }
             long fenceHandle = fence != null ? fence.getVkFence() : VK_NULL_HANDLE;
 
-            vkCheck(vkQueueSubmit(this.vkQueue, submitInfo, fenceHandle),
+            vkCheck(vkQueueSubmit(vkQueue, submitInfo, fenceHandle),
                     "Failed to submit command to queue");
         }
     }
 
     public void waitIdle() {
-        vkQueueWaitIdle(this.vkQueue);
+        vkQueueWaitIdle(vkQueue);
     }
 
     public static class GraphicsQueue extends Queue {

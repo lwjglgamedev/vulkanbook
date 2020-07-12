@@ -7,7 +7,7 @@ import org.lwjgl.vulkan.*;
 import java.nio.LongBuffer;
 import java.util.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class DescriptorPool {
@@ -46,20 +46,20 @@ public class DescriptorPool {
             LongBuffer pDescriptorPool = stack.mallocLong(1);
             vkCheck(vkCreateDescriptorPool(device.getVkDevice(), descriptorPoolInfo, null, pDescriptorPool),
                     "Failed to create descriptor pool");
-            this.vkDescriptorPool = pDescriptorPool.get(0);
+            vkDescriptorPool = pDescriptorPool.get(0);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying descriptor pool");
-        vkDestroyDescriptorPool(this.device.getVkDevice(), this.vkDescriptorPool, null);
+        vkDestroyDescriptorPool(device.getVkDevice(), vkDescriptorPool, null);
     }
 
     public Device getDevice() {
-        return this.device;
+        return device;
     }
 
     public long getVkDescriptorPool() {
-        return this.vkDescriptorPool;
+        return vkDescriptorPool;
     }
 }

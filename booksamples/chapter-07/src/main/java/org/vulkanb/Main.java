@@ -22,7 +22,7 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void cleanUp() {
+    public void cleanup() {
         // To be implemented
     }
 
@@ -32,8 +32,8 @@ public class Main implements IAppLogic {
         if (angle >= 360) {
             angle = angle - 360;
         }
-        this.cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
-        this.cubeEntity.updateModelMatrix();
+        cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
+        cubeEntity.updateModelMatrix();
     }
 
     @Override
@@ -77,8 +77,8 @@ public class Main implements IAppLogic {
         MeshData meshData = new MeshData(meshId, positions, textCoords, indices);
         render.loadMeshes(new MeshData[]{meshData});
 
-        this.cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
-        this.cubeEntity.setPosition(0, 0, -2);
-        scene.addEntity(this.cubeEntity);
+        cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        cubeEntity.setPosition(0, 0, -2);
+        scene.addEntity(cubeEntity);
     }
 }

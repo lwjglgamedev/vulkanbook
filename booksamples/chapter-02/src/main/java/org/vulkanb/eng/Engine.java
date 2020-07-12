@@ -20,10 +20,10 @@ public class Engine {
         this.appLogic.init(this.window, this.scene, this.render);
     }
 
-    private void cleanUp() {
-        this.appLogic.cleanUp();
-        this.render.cleanUp();
-        this.window.cleanUp();
+    private void cleanup() {
+        this.appLogic.cleanup();
+        this.render.cleanup();
+        this.window.cleanup();
     }
 
     public void run() {
@@ -51,7 +51,7 @@ public class Engine {
             this.render.render(this.window, this.scene);
         }
 
-        cleanUp();
+        cleanup();
     }
 
     public void start() {

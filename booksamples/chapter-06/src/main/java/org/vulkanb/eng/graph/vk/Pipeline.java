@@ -6,7 +6,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Pipeline {
@@ -17,7 +17,7 @@ public class Pipeline {
 
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         LOGGER.debug("Creating pipeline");
-        this.device = pipelineCache.getDevice();
+        device = pipelineCache.getDevice();
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
 
@@ -82,7 +82,7 @@ public class Pipeline {
 
             vkCheck(vkCreatePipelineLayout(device.getVkDevice(), pPipelineLayoutCreateInfo, null, lp),
                     "Failed to create pipeline layout");
-            this.vkPipelineLayout = lp.get(0);
+            vkPipelineLayout = lp.get(0);
 
             VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
                     .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
@@ -94,33 +94,33 @@ public class Pipeline {
                     .pMultisampleState(vkPipelineMultisampleStateCreateInfo)
                     .pColorBlendState(colorBlendState)
                     .pDynamicState(vkPipelineDynamicStateCreateInfo)
-                    .layout(this.vkPipelineLayout)
+                    .layout(vkPipelineLayout)
                     .renderPass(pipeLineCreationInfo.vkRenderPass);
 
             vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), pipelineCache.getVkPipelineCache(), pipeline, null, lp),
                     "Error creating graphics pipeline");
-            this.vkPipeline = lp.get(0);
+            vkPipeline = lp.get(0);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying pipeline");
-        vkDestroyPipelineLayout(this.device.getVkDevice(), this.vkPipelineLayout, null);
-        vkDestroyPipeline(this.device.getVkDevice(), this.vkPipeline, null);
+        vkDestroyPipelineLayout(device.getVkDevice(), vkPipelineLayout, null);
+        vkDestroyPipeline(device.getVkDevice(), vkPipeline, null);
     }
 
     public long getVkPipeline() {
-        return this.vkPipeline;
+        return vkPipeline;
     }
 
     public long getVkPipelineLayout() {
-        return this.vkPipelineLayout;
+        return vkPipelineLayout;
     }
 
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
                                        VertexBufferStructure vertexBufferStructure) {
-        public void cleanUp() {
-            vertexBufferStructure.cleanUp();
+        public void cleanup() {
+            vertexBufferStructure.cleanup();
         }
     }
 }

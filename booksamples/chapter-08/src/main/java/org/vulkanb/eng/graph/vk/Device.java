@@ -7,7 +7,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.FloatBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Device {
@@ -30,8 +30,8 @@ public class Device {
             // Set up required features
             VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.callocStack(stack);
             VkPhysicalDeviceFeatures supportedFeatures = this.physicalDevice.getVkPhysicalDeviceFeatures();
-            this.samplerAnisotropy = supportedFeatures.samplerAnisotropy();
-            if (this.samplerAnisotropy) {
+            samplerAnisotropy = supportedFeatures.samplerAnisotropy();
+            if (samplerAnisotropy) {
                 features.samplerAnisotropy(true);
             }
 
@@ -56,13 +56,13 @@ public class Device {
             PointerBuffer pp = stack.mallocPointer(1);
             vkCheck(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),
                     "Failed to create device");
-            this.vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
+            vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying Vulkan device");
-        vkDestroyDevice(this.vkDevice, null);
+        vkDestroyDevice(vkDevice, null);
     }
 
     public PhysicalDevice getPhysicalDevice() {
@@ -74,10 +74,10 @@ public class Device {
     }
 
     public boolean isSamplerAnisotropy() {
-        return this.samplerAnisotropy;
+        return samplerAnisotropy;
     }
 
     public void waitIdle() {
-        vkDeviceWaitIdle(this.vkDevice);
+        vkDeviceWaitIdle(vkDevice);
     }
 }

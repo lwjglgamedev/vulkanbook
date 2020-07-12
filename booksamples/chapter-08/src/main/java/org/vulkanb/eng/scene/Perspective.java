@@ -11,15 +11,15 @@ public class Perspective {
     private Matrix4f perspectiveMatrix;
 
     public Perspective() {
-        this.perspectiveMatrix = new Matrix4f();
+        perspectiveMatrix = new Matrix4f();
     }
 
     public Matrix4f getPerspectiveMatrix() {
-        return this.perspectiveMatrix;
+        return perspectiveMatrix;
     }
 
     public void resize(int width, int height) {
-        this.perspectiveMatrix.identity();
-        this.perspectiveMatrix.perspective(FOV, (float) width / (float) height, Z_NEAR, Z_FAR, true);
+        perspectiveMatrix.identity();
+        perspectiveMatrix.perspective(FOV, (float) width / (float) height, Z_NEAR, Z_FAR, true);
     }
 }

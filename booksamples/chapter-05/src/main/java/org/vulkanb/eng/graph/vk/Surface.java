@@ -20,16 +20,16 @@ public class Surface {
             LongBuffer pSurface = stack.mallocLong(1);
             GLFWVulkan.glfwCreateWindowSurface(this.physicalDevice.getVkPhysicalDevice().getInstance(), windowHandle,
                     null, pSurface);
-            this.vkSurface = pSurface.get(0);
+            vkSurface = pSurface.get(0);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying Vulkan surface");
-        KHRSurface.vkDestroySurfaceKHR(this.physicalDevice.getVkPhysicalDevice().getInstance(), this.vkSurface, null);
+        KHRSurface.vkDestroySurfaceKHR(physicalDevice.getVkPhysicalDevice().getInstance(), vkSurface, null);
     }
 
     public long getVkSurface() {
-        return this.vkSurface;
+        return vkSurface;
     }
 }

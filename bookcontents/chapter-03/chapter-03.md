@@ -13,40 +13,54 @@ A physical device represents any piece of hardware that provides a complete impl
 So let's go back to coding and start by encapsulating all the code for selecting and creating a physical device in a new class named `Physdevice` (in the package `org.vulkanb.eng.graph.vk`). As it has been said before, we may have more than one Vulkan physical devices in our host machine. In order to get the most appropriate one, this class provides a `static` method to do that selection and construct the associated object for us. This method method, named `createPhysicalDevice`, iterates over all the available devices and picks the most suitable one. The method starts like this:
 
 ```java
-public static PhysicalDevice createPhysicalDevice(Instance instance, String prefferredDeviceName) {
-    LOGGER.debug("Selecting physical devices");
-    PhysicalDevice selectedPhysicalDevice = null;
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        // Get available devices
-        PointerBuffer pPhysicalDevices = getPhysicalDevices(instance, stack);
-        int numDevices = pPhysicalDevices != null ? pPhysicalDevices.capacity() : 0;
-        if (numDevices <= 0) {
-            throw new RuntimeException("No physical devices found");
-        }
+public class PhysicalDevice {
+    ...
+    public static PhysicalDevice createPhysicalDevice(Instance instance, String prefferredDeviceName) {
+        LOGGER.debug("Selecting physical devices");
+        PhysicalDevice selectedPhysicalDevice = null;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            // Get available devices
+            PointerBuffer pPhysicalDevices = getPhysicalDevices(instance, stack);
+            int numDevices = pPhysicalDevices != null ? pPhysicalDevices.capacity() : 0;
+            if (numDevices <= 0) {
+                throw new RuntimeException("No physical devices found");
+            }
+        ...
+    }
+    ...
+}
 ```
 
 We start by getting a pointer with the list of available physical devices, by calling the method `getPhysicalDevices`. Once we get that list, if there are no suitable devices we just throw a `RuntimeException` (no sense in going on). That list contains the handles that will allow us to create Vulkan physical devices. After that, we start a loop to iterate over that list and create a `VkPhysicalDevice` instance for each of those handles. The `VkPhysicalDevice` class models an opaque handle to the physical device. This is the code for that loop:
 
 ```java
-        // Populate available devices
-        List<PhysicalDevice> devices = new ArrayList<>();
-        for (int i = 0; i < numDevices; i++) {
-            VkPhysicalDevice vkPhysicalDevice = new VkPhysicalDevice(pPhysicalDevices.get(i), instance.getVkInstance());
-            PhysicalDevice physicalDevice = new PhysicalDevice(vkPhysicalDevice);
+public class PhysicalDevice {
+    ...
+    public static PhysicalDevice createPhysicalDevice(Instance instance, String prefferredDeviceName) {
+        ...
+            // Populate available devices
+            List<PhysicalDevice> devices = new ArrayList<>();
+            for (int i = 0; i < numDevices; i++) {
+                VkPhysicalDevice vkPhysicalDevice = new VkPhysicalDevice(pPhysicalDevices.get(i), instance.getVkInstance());
+                PhysicalDevice physicalDevice = new PhysicalDevice(vkPhysicalDevice);
 
-            String deviceName = physicalDevice.getDeviceName();
-            if (physicalDevice.hasGraphicsQueueFamily() && physicalDevice.hasKHRSwapChainExtension()) {
-                LOGGER.debug("Device [{}] supports required extensions", deviceName);
-                if (prefferredDeviceName != null && prefferredDeviceName.equals(deviceName)) {
-                   selectedPhysicalDevice = physicalDevice;
-                   break;
+                String deviceName = physicalDevice.getDeviceName();
+                if (physicalDevice.hasGraphicsQueueFamily() && physicalDevice.hasKHRSwapChainExtension()) {
+                    LOGGER.debug("Device [{}] supports required extensions", deviceName);
+                    if (prefferredDeviceName != null && prefferredDeviceName.equals(deviceName)) {
+                        selectedPhysicalDevice = physicalDevice;
+                        break;
+                    }
+                    devices.add(physicalDevice);
+                } else {
+                    LOGGER.debug("Device [{}] does not support required extensions", deviceName);
+                    physicalDevice.cleanup();
                 }
-                devices.add(physicalDevice);
-            } else {
-                LOGGER.debug("Device [{}] does not support required extensions", deviceName);
-                physicalDevice.cleanUp();
             }
-        }
+        ...
+    }
+    ...
+}
 ```
 
 Each `PhysicalDevice` instance will retrieve all the properties and features we need to use it and to support the device selection. We need to check for two things:
@@ -61,41 +75,51 @@ If the device fulfills both conditions, we then check if its name matches the pr
 Once we have finished with the loop, if we have not selected a device yet we just pick the first one from the list. You can add more sophistication to this selection process trying to pick the most capable one, but at this moment this approach should be enough. If no device has been selected we throw another `RuntimeException`.
 
 ```java
-        // No preferred device or it does not meet requirements, just pick the first one
-        selectedPhysicalDevice = selectedPhysicalDevice == null && !devices.isEmpty() ? devices.remove(0) : selectedPhysicalDevice;
+public class PhysicalDevice {
+    ...
+    public static PhysicalDevice createPhysicalDevice(Instance instance, String prefferredDeviceName) {
+        ...
+            // No preferred device or it does not meet requirements, just pick the first one
+            selectedPhysicalDevice = selectedPhysicalDevice == null && !devices.isEmpty() ? devices.remove(0) : selectedPhysicalDevice;
 
-        // Clean up non-selected devices
-        for (PhysicalDevice physicalDevice : devices) {
-            physicalDevice.cleanUp();
+            // Clean up non-selected devices
+            for (PhysicalDevice physicalDevice : devices) {
+                physicalDevice.cleanup();
+            }
+
+            if (selectedPhysicalDevice == null) {
+                throw new RuntimeException("No suitable physical devices found");
+            }
+            LOGGER.debug("Selected device: [{}]", selectedPhysicalDevice.getDeviceName());
         }
 
-        if (selectedPhysicalDevice == null) {
-            throw new RuntimeException("No suitable physical devices found");
-        }
-        LOGGER.debug("Selected device: [{}]", selectedPhysicalDevice.getDeviceName());
+        return selectedPhysicalDevice;
     }
-
-    return selectedPhysicalDevice;
+    ...
 }
 ```
 
 Here's the definition of the `getPhysicalDevices` method used in the code listed above.
 
 ```java
-protected static PointerBuffer getPhysicalDevices(Instance instance, MemoryStack stack) {
-    PointerBuffer pPhysicalDevices;
-    // Get number of physical devices
-    IntBuffer intBuffer = stack.mallocInt(1);
-    vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, null),
-           "Failed to get number of physical devices");
-    int numDevices = intBuffer.get(0);
-    LOGGER.debug("Detected {} physical device(s)", numDevices);
+public class PhysicalDevice {
+    ...
+    protected static PointerBuffer getPhysicalDevices(Instance instance, MemoryStack stack) {
+        PointerBuffer pPhysicalDevices;
+        // Get number of physical devices
+        IntBuffer intBuffer = stack.mallocInt(1);
+        vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, null),
+                "Failed to get number of physical devices");
+        int numDevices = intBuffer.get(0);
+        LOGGER.debug("Detected {} physical device(s)", numDevices);
 
-    // Populate physical devices list pointer
-    pPhysicalDevices = stack.mallocPointer(numDevices);
-    vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, pPhysicalDevices),
-          "Failed to get physical devices");
-    return pPhysicalDevices;
+        // Populate physical devices list pointer
+        pPhysicalDevices = stack.mallocPointer(numDevices);
+        vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, pPhysicalDevices),
+                "Failed to get physical devices");
+        return pPhysicalDevices;
+    }
+    ...
 }
 ```
 
@@ -104,13 +128,17 @@ It is just another static method that enumerates the available physical devices 
 Let's now review the definition of the instance attributes and methods of the `PhysicalDevice` class itself. Let's start with attributes.
 
 ```java
-private static final Logger LOGGER = LogManager.getLogger();
-private VkExtensionProperties.Buffer vkDeviceExtensions;
-private VkPhysicalDeviceMemoryProperties vkMemoryProperties;
-private VkPhysicalDevice vkPhysicalDevice;
-private VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
-private VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
-private VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
+public class PhysicalDevice {
+
+    private static final Logger LOGGER = LogManager.getLogger();
+    private VkExtensionProperties.Buffer vkDeviceExtensions;
+    private VkPhysicalDeviceMemoryProperties vkMemoryProperties;
+    private VkPhysicalDevice vkPhysicalDevice;
+    private VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
+    private VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
+    private VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
+    ...
+}
 ```
 
 Let's explain the different attributes:
@@ -124,95 +152,110 @@ Let's explain the different attributes:
 The constructor basically populates these structures, with the exception of the `VkPhysicalDevice` which is passed as a parameter:
 
 ```java
-private PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        this.vkPhysicalDevice = vkPhysicalDevice;
+public class PhysicalDevice {
+    ...
+    private PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            this.vkPhysicalDevice = vkPhysicalDevice;
 
-        IntBuffer intBuffer = stack.mallocInt(1);
+            IntBuffer intBuffer = stack.mallocInt(1);
 
-        // Get device properties
-        this.vkPhysicalDeviceProperties = VkPhysicalDeviceProperties.calloc();
-        vkGetPhysicalDeviceProperties(this.vkPhysicalDevice, this.vkPhysicalDeviceProperties);
+            // Get device properties
+            vkPhysicalDeviceProperties = VkPhysicalDeviceProperties.calloc();
+            vkGetPhysicalDeviceProperties(this.vkPhysicalDevice, vkPhysicalDeviceProperties);
 
-        // Get device extensions
-        vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, null),
-                "Failed to get number of device extension properties");
-        this.vkDeviceExtensions = VkExtensionProperties.calloc(intBuffer.get(0));
-        vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, this.vkDeviceExtensions),
-                "Failed to get extension properties");
+            // Get device extensions
+            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, null),
+                    "Failed to get number of device extension properties");
+            vkDeviceExtensions = VkExtensionProperties.calloc(intBuffer.get(0));
+            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
+                    "Failed to get extension properties");
 
-        // Get Queue family properties
-        vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, null);
-        this.vkQueueFamilyProps = VkQueueFamilyProperties.calloc(intBuffer.get(0));
-        vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, this.vkQueueFamilyProps);
+            // Get Queue family properties
+            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, null);
+            vkQueueFamilyProps = VkQueueFamilyProperties.calloc(intBuffer.get(0));
+            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, vkQueueFamilyProps);
 
-        this.vkPhysicalDeviceFeatures = VkPhysicalDeviceFeatures.calloc();
-        vkGetPhysicalDeviceFeatures(this.vkPhysicalDevice, this.vkPhysicalDeviceFeatures);
+            vkPhysicalDeviceFeatures = VkPhysicalDeviceFeatures.calloc();
+            vkGetPhysicalDeviceFeatures(this.vkPhysicalDevice, vkPhysicalDeviceFeatures);
 
-        // Get Memory information and properties
-        this.vkMemoryProperties = VkPhysicalDeviceMemoryProperties.calloc();
-        vkGetPhysicalDeviceMemoryProperties(this.vkPhysicalDevice, this.vkMemoryProperties);
+            // Get Memory information and properties
+            vkMemoryProperties = VkPhysicalDeviceMemoryProperties.calloc();
+            vkGetPhysicalDeviceMemoryProperties(this.vkPhysicalDevice, vkMemoryProperties);
+        }
     }
+    ...
 }
 ```
 
-The class provides a `cleanUp` method, to free its resources:
+The class provides a `cleanup` method, to free its resources:
 
 ```java
-public void cleanUp() {
-    if (LOGGER.isDebugEnabled()) {
-        LOGGER.debug("Destroying physical device [{}]", this.vkPhysicalDeviceProperties.deviceNameString());
+public class PhysicalDevice {
+    ...
+    public void cleanup() {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
+        }
+        vkMemoryProperties.free();
+        vkPhysicalDeviceFeatures.free();
+        vkQueueFamilyProps.free();
+        vkDeviceExtensions.free();
+        vkPhysicalDeviceProperties.free();
     }
-    this.vkMemoryProperties.free();
-    this.vkPhysicalDeviceFeatures.free();
-    this.vkQueueFamilyProps.free();
-    this.vkDeviceExtensions.free();
-    this.vkPhysicalDeviceProperties.free();
+    ...
 }
 ```
 
 Additionally, it also provides the *getters* for the properties described above:
 
 ```java
-public String getDeviceName() {
-    return this.vkPhysicalDeviceProperties.deviceNameString();
-}
+public class PhysicalDevice {
+    ...
+    public String getDeviceName() {
+        return vkPhysicalDeviceProperties.deviceNameString();
+    }
 
-public VkPhysicalDeviceMemoryProperties getVkMemoryProperties() {
-    return this.vkMemoryProperties;
-}
+    public VkPhysicalDeviceMemoryProperties getVkMemoryProperties() {
+        return vkMemoryProperties;
+    }
 
-public VkPhysicalDevice getVkPhysicalDevice() {
-    return this.vkPhysicalDevice;
-}
+    public VkPhysicalDevice getVkPhysicalDevice() {
+        return vkPhysicalDevice;
+    }
 
-public VkPhysicalDeviceFeatures getVkPhysicalDeviceFeatures() {
-    return this.vkPhysicalDeviceFeatures;
-}
+    public VkPhysicalDeviceFeatures getVkPhysicalDeviceFeatures() {
+        return vkPhysicalDeviceFeatures;
+    }
 
-public VkPhysicalDeviceProperties getVkPhysicalDeviceProperties() {
-    return this.vkPhysicalDeviceProperties;
-}
+    public VkPhysicalDeviceProperties getVkPhysicalDeviceProperties() {
+        return vkPhysicalDeviceProperties;
+    }
 
-public VkQueueFamilyProperties.Buffer getVkQueueFamilyProps() {
-    return this.vkQueueFamilyProps;
+    public VkQueueFamilyProperties.Buffer getVkQueueFamilyProps() {
+        return vkQueueFamilyProps;
+    }
+    ...
 }
 ```
 
 Now we can check the implementation of the method that checks if the device supports the KHR Swapchain extension. That is, the method that checks if this device is capable of rendering images to the screen. This method, named `vkDeviceExtensions` basically iterates over the supported extensions checking if there's one named `KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME`:
 
 ```java
-private boolean hasKHRSwapChainExtension() {
-    boolean result = false;
-    int numExtensions = this.vkDeviceExtensions != null ? vkDeviceExtensions.capacity() : 0;
-    for (int i = 0; i < numExtensions; i++) {
-        String extensionName = this.vkDeviceExtensions.get(i).extensionNameString();
-        if (KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME.equals(extensionName)) {
-            result = true;
-            break;
+public class PhysicalDevice {
+    ...
+    private boolean hasKHRSwapChainExtension() {
+        boolean result = false;
+        int numExtensions = vkDeviceExtensions != null ? vkDeviceExtensions.capacity() : 0;
+        for (int i = 0; i < numExtensions; i++) {
+            String extensionName = vkDeviceExtensions.get(i).extensionNameString();
+            if (KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME.equals(extensionName)) {
+                result = true;
+                break;
+            }
         }
+        return result;
     }
-    return result;
 }
 ```
 
@@ -221,17 +264,21 @@ private boolean hasKHRSwapChainExtension() {
 Since the only pending method to present now is the one named `hasGraphicsQueueFamily` it is now the moment to talk a little bit about Vulkan queues. In Vulkan, any work is performed by submitting commands buffers through specific queues. We do not command the GPU to immediately draw a specific shape, we submit a command to a queue which contains the instructions to render that shape. Commands in those queues are consumed and executed asynchronously. Devices have different types of queues, which are organized in families. Each queue family only accepts a specif set of command types. For example, we may have graphic commands used to render and compute commands, each of these command types may require to be submitted to different types of queue. In our case, we want to be sure that the selected device is capable of handling graphics commands, which is what we check within the `hasGraphicsQueueFamily` method: 
 
 ```java
-private boolean hasGraphicsQueueFamily() {
-    boolean result = false;
-    int numQueueFamilies = this.vkQueueFamilyProps != null ? vkQueueFamilyProps.capacity() : 0;
-    for (int i = 0; i < numQueueFamilies; i++) {
-        VkQueueFamilyProperties familyProps = this.vkQueueFamilyProps.get(i);
-        if ((familyProps.queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            result = true;
-            break;
+public class PhysicalDevice {
+    ...
+    private boolean hasGraphicsQueueFamily() {
+        boolean result = false;
+        int numQueueFamilies = vkQueueFamilyProps != null ? vkQueueFamilyProps.capacity() : 0;
+        for (int i = 0; i < numQueueFamilies; i++) {
+            VkQueueFamilyProperties familyProps = vkQueueFamilyProps.get(i);
+            if ((familyProps.queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0) {
+                result = true;
+                break;
+            }
         }
+        return result;
     }
-    return result;
+    ...
 }
 ```
 
@@ -248,6 +295,8 @@ In case you wonder, you may create more than one logical device, it is another l
 As in our previous samples, we will create a new class, named `Device` to wrap device creation and some utility methods around it. So let's update our class diagram. The `Device` class starts like this:
 
 ```java
+package org.vulkanb.eng.graph.vk;
+
 import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
@@ -255,7 +304,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.FloatBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Device {
@@ -268,19 +317,34 @@ public class Device {
 The Vulkan structure `VkDevice` is the one that will hold or Vulkan logical device. We will use that structure for the creation of the resources we will need later on. We will hold also a reference to the `PhysicalDevice` instance (which will be passed in the constructor) for convenience (some calls will require later on both the logical and the physical devices). It is turn now for the constructor, which starts like this:
 
 ```java
-public Device(PhysicalDevice physicalDevice) {
-    LOGGER.debug("Creating device");
+public class Device {
+    ...
+    public Device(PhysicalDevice physicalDevice) {
+        LOGGER.debug("Creating device");
 
-    this.physicalDevice = physicalDevice;
-    try (MemoryStack stack = MemoryStack.stackPush()) {
+        this.physicalDevice = physicalDevice;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            ...
+        }
+    }
+    ...
+}
 ```
 
 As anticipated before, we first store a reference to the physical device and start the familiar try/catch block to allocate short-lived objects in the LWJGL stack. The next thing we will do is define the extensions that our device is going to use.
 
 ```java
-        // Define required extensions
-        PointerBuffer requiredExtensions = stack.mallocPointer(1);
-        requiredExtensions.put(0, stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+public class Device {
+    ...
+    public Device(PhysicalDevice physicalDevice) {
+        ...
+            // Define required extensions
+            PointerBuffer requiredExtensions = stack.mallocPointer(1);
+            requiredExtensions.put(0, stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+        ...
+    }
+    ...
+}
 ```
 
 If you recall, when selecting the physical device we checked if it supported the KHR Swap chain extension, now it is the turn to explicitly say that we are going to use it. In order to define that we create a `PointerBuffer` which will hold a list of `null` terminated strings.
@@ -288,23 +352,40 @@ If you recall, when selecting the physical device we checked if it supported the
 After that, we need set the features that we want to use. Features are certain capabilities which can be present or not in your physical device. For the ones that are present we can choose which ones to enable for our logical device. Some features control if compressed textures are enabled or not, if 64 bit floats are supported, etc. We could just simple use the set of features already supported by our physical device but doing this we may affect performance.  By now we will not be enabling any feature, so we just allocate an empty structure.
 
 ```java
-        // Set up required features
-        VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.callocStack(stack);
+public class Device {
+    ...
+    public Device(PhysicalDevice physicalDevice) {
+        ...
+            // Set up required features
+            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.callocStack(stack);
+        ...
+    }
+    ...
+}
 ```
 
 Then we need to enable the queues families that this logical device will use. Later on, when we create queues, we will need to specify the queue family which it belongs to. If that queue family has been not be enabled for the logical device we will get an error.  In this case we will opt for enabling all the supported queues families (which is an structure that we obtained while creating the physical device).
 
 ```java
-        VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
-        int numQueuesFamilies = queuePropsBuff.capacity();
-        VkDeviceQueueCreateInfo.Buffer queueCreationInfoBuf = VkDeviceQueueCreateInfo.callocStack(numQueuesFamilies, stack);
-        for (int i = 0; i < numQueuesFamilies; i++) {
-            FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
-            queueCreationInfoBuf.get(i)
-                .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
-                .queueFamilyIndex(i)
-                .pQueuePriorities(priorities );
-        }
+public class Device {
+    ...
+    public Device(PhysicalDevice physicalDevice) {
+        ...
+            // Enable all the queue families
+            VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
+            int numQueuesFamilies = queuePropsBuff.capacity();
+            VkDeviceQueueCreateInfo.Buffer queueCreationInfoBuf = VkDeviceQueueCreateInfo.callocStack(numQueuesFamilies, stack);
+            for (int i = 0; i < numQueuesFamilies; i++) {
+                FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
+                queueCreationInfoBuf.get(i)
+                        .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
+                        .queueFamilyIndex(i)
+                        .pQueuePriorities(priorities);
+            }
+        ...
+    }
+    ...
+}
 ```
 
 We basically create a `Buffer` of `VkDeviceQueueCreateInfo` structures which will hold the index of each queue family and its priority. The priority is mechanism that allows us to instruct the driver to prioritize the work submitted by using the priorities assigned to each queue family. However, this is prioritization mechanism is not mandated in the specification. Drivers are free to apply the algorithms they consider in order to balance the work. Therefore, in our case we will just set priorities to a fixed value of `0.0` (which is the default value  for the lowest priority, we simply don't care).
@@ -314,67 +395,63 @@ However, if you examine the code, for the priorities attribute, we are using a `
 With all of the above we can fill up the structure required to create a logical device, which is called `VkDeviceCreateInfo`:
 
 ```java
-        VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.callocStack(stack)
-                .sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
-                .ppEnabledExtensionNames(requiredExtensions)
-                .pEnabledFeatures(features)
-                .pQueueCreateInfos(queueCreationInfoBuf);
+public class Device {
+    ...
+    public Device(PhysicalDevice physicalDevice) {
+        ...
+            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
+                    .ppEnabledExtensionNames(requiredExtensions)
+                    .pEnabledFeatures(features)
+                    .pQueueCreateInfos(queueCreationInfoBuf);
+        ...
+    }
+    ...
+}
 ```
 
 Now we are ready to create the logical device by using the `vkCreateDevice` function which will receive the structure we have just created and a pointer to get a handle as the result. Finally, we use all that data to create an instance of the class `VkDevice`:
 
 ```java
+public class Device {
+    ...
+    public Device(PhysicalDevice physicalDevice) {
+        ...
             PointerBuffer pp = stack.mallocPointer(1);
             vkCheck(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),
                     "Failed to create device");
-            this.vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
+            vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
         }
     }
+    ...
+}
 ```
 
 To complete the `Device` class, here are the rest of the methods:
 
 ```java
-public void cleanUp() {
-    LOGGER.debug("Destroying Vulkan device");
-    vkDestroyDevice(this.vkDevice, null);
-}
+public class Device {
+    ...
+    public void cleanup() {
+        LOGGER.debug("Destroying Vulkan device");
+        vkDestroyDevice(vkDevice, null);
+    }
 
-public PhysicalDevice getPhysicalDevice() {
-    return physicalDevice;
-}
+    public PhysicalDevice getPhysicalDevice() {
+        return physicalDevice;
+    }
 
-public VkDevice getVkDevice() {
-    return vkDevice;
-}
+    public VkDevice getVkDevice() {
+        return vkDevice;
+    }
 
-public void waitIdle() {
-    vkDeviceWaitIdle(this.vkDevice);
-}
-```
-
-As you can see they are basically some *getters* and a `cleanUp` method to free resources plus one additional method name `waitIdle` which will be used later on. This method just calls the Vulkan `vkDeviceWaitIdle` function which waits that all the pending operations on any queue for that device complete.
-
-## Final steps
-
-We can now instantiate it in our render class and properly free it in the `cleanUp` method:
-
-```java
-// ...
-public void cleanUp() {
-    this.device.cleanUp();
-    this.physicalDevice.cleanUp();
-    this.instance.cleanUp();
-}
-
-// ..
-public void init(Window window) {
-    EngineProperties engProps = EngineProperties.getInstance();
-    this.instance = new Instance(engProps.isValidate());
-    this.physicalDevice = PhysicalDevice.createPhysicalDevice(this.instance, engProps.getPhysDeviceName());
-    this.device = new Device(this.physicalDevice);
+    public void waitIdle() {
+        vkDeviceWaitIdle(vkDevice);
+    }
 }
 ```
+
+As you can see they are basically some *getters* and a `cleanup` method to free resources plus one additional method name `waitIdle` which will be used later on. This method just calls the Vulkan `vkDeviceWaitIdle` function which waits that all the pending operations on any queue for that device complete.
 
 ## Surface
 
@@ -396,18 +473,15 @@ package org.vulkanb.eng.graph.vk;
 import org.apache.logging.log4j.*;
 import org.lwjgl.glfw.GLFWVulkan;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.*;
+import org.lwjgl.vulkan.KHRSurface;
 
 import java.nio.LongBuffer;
-
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Surface {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private PhysicalDevice physicalDevice;
     private long vkSurface;
-    private VkSurfaceCapabilitiesKHR vkSurfaceCapabilities;
 
     public Surface(PhysicalDevice physicalDevice, long windowHandle) {
         LOGGER.debug("Creating Vulkan surface");
@@ -416,31 +490,22 @@ public class Surface {
             LongBuffer pSurface = stack.mallocLong(1);
             GLFWVulkan.glfwCreateWindowSurface(this.physicalDevice.getVkPhysicalDevice().getInstance(), windowHandle,
                     null, pSurface);
-            this.vkSurface = pSurface.get(0);
-
-            this.vkSurfaceCapabilities = VkSurfaceCapabilitiesKHR.calloc();
-            vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.getVkPhysicalDevice(),
-                    this.vkSurface, this.vkSurfaceCapabilities), "Failed to get surface capabilities");
+            vkSurface = pSurface.get(0);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying Vulkan surface");
-        this.vkSurfaceCapabilities.free();
-        KHRSurface.vkDestroySurfaceKHR(this.physicalDevice.getVkPhysicalDevice().getInstance(), this.vkSurface, null);
+        KHRSurface.vkDestroySurfaceKHR(physicalDevice.getVkPhysicalDevice().getInstance(), vkSurface, null);
     }
 
     public long getVkSurface() {
-        return this.vkSurface;
-    }
-
-    public VkSurfaceCapabilitiesKHR getVkSurfaceCapabilities() {
-        return vkSurfaceCapabilities;
+        return vkSurface;
     }
 }
 ```
 
-As you can see we just use the method `glfwCreateWindowSurface` from the `GLFWVulkan` class to create the surface. The handle obtained in this method will be used later on to be able to construct the artifacts required to render something in the screen. We also retrieve the surface capabilities by calling the `vkGetPhysicalDeviceSurfaceCapabilitiesKHR` function. The `Surface`class also provide a `cleanUp` methods to free the allocated resources after its usage.
+As you can see we just use the method `glfwCreateWindowSurface` from the `GLFWVulkan` class to create the surface. The handle obtained in this method will be used later on to be able to construct the artifacts required to render something in the screen. We also retrieve the surface capabilities by calling the `vkGetPhysicalDeviceSurfaceCapabilitiesKHR` function. The `Surface`class also provide a `cleanup` methods to free the allocated resources after its usage.
 
 ## Queues
 
@@ -453,17 +518,12 @@ Again, we will create a new class which models queue retrieval, named `Queue`. T
 ```java
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.KHRSurface;
-import org.lwjgl.vulkan.VkQueue;
-import org.lwjgl.vulkan.VkQueueFamilyProperties;
+import org.lwjgl.vulkan.*;
 
-import java.nio.IntBuffer;
-
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class Queue {
 
@@ -474,17 +534,12 @@ public class Queue {
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
         LOGGER.debug("Creating queue");
 
-        this.queueFamilyIndex = queueFamilyIndex;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pQueue = stack.mallocPointer(1);
             vkGetDeviceQueue(device.getVkDevice(), queueFamilyIndex, queueIndex, pQueue);
             long queue = pQueue.get(0);
-            this.vkQueue = new VkQueue(queue, device.getVkDevice());
+            vkQueue = new VkQueue(queue, device.getVkDevice());
         }
-    }
-
-    public int getQueueFamilyIndex() {
-        return queueFamilyIndex;
     }
 
     public VkQueue getVkQueue() {
@@ -492,9 +547,10 @@ public class Queue {
     }
 
     public void waitIdle() {
-        vkQueueWaitIdle(this.vkQueue);
+        vkQueueWaitIdle(vkQueue);
     }
-    // .... More code here
+    ...
+}
 ```
 
 In the `Queue` constructor we just invoke the `vkGetDeviceQueue` function which receives the following parameters:
@@ -503,68 +559,82 @@ In the `Queue` constructor we just invoke the `vkGetDeviceQueue` function which 
 - The index of the queue family that this queue belongs to. If you remember, when we created the device, we specified the queue families allowed, this index should match one of the indices assigned to those queue families.
 - The index of this queue within the queue family itself. When we created the logical device define the queues that were being pre-created. With this parameter which one of those queues we want to get its handle.
 
-After calling this method we will get a handle to our queue. The rest of the code consist on  a *getter* to get that handle, another *getter* for the queue family index and another useful method to wait for the queue to complete all its pending jobs. You may have noticed that the `Queue` class does not provide a `cleanUp` method. This again due to the fact, that queues were pre-created when the logical device was instantiated, so there is no need to remove them. When the logical device is cleaned up, their queues will also be destroyed.
+After calling this method we will get a handle to our queue. The rest of the code consist on  a *getter* to get that handle, another *getter* for the queue family index and another useful method to wait for the queue to complete all its pending jobs. You may have noticed that the `Queue` class does not provide a `cleanup` method. This again due to the fact, that queues were pre-created when the logical device was instantiated, so there is no need to remove them. When the logical device is cleaned up, their queues will also be destroyed.
 
 In the rest of the code we define an inner class named `GraphicsQueue` which we will use to create queues for submitting render tasks. This class extends the `Queue` class and provides a helper method to select the most appropriate queue family:
 
 ```java
-public static class GraphicsQueue extends Queue {
+public class Queue {
+    ...
+    public static class GraphicsQueue extends Queue {
 
-    public GraphicsQueue(Device device, int queueIndex) {
-        super(device, getGraphicsQueueFamilyIndex(device), queueIndex);
-    }
+        public GraphicsQueue(Device device, int queueIndex) {
+            super(device, getGraphicsQueueFamilyIndex(device), queueIndex);
+        }
 
-    private static int getGraphicsQueueFamilyIndex(Device device) {
-        int index = -1;
-        PhysicalDevice physicalDevice = device.getPhysicalDevice();
-        VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
-        int numQueuesFamilies = queuePropsBuff.capacity();
-        for (int i = 0; i < numQueuesFamilies; i++) {
-            VkQueueFamilyProperties props = queuePropsBuff.get(i);
-            boolean graphicsQueue = (props.queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0;
-            if (graphicsQueue) {
-                index = i;
-                break;
+        private static int getGraphicsQueueFamilyIndex(Device device) {
+            int index = -1;
+            PhysicalDevice physicalDevice = device.getPhysicalDevice();
+            VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
+            int numQueuesFamilies = queuePropsBuff.capacity();
+            for (int i = 0; i < numQueuesFamilies; i++) {
+                VkQueueFamilyProperties props = queuePropsBuff.get(i);
+                boolean graphicsQueue = (props.queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0;
+                if (graphicsQueue) {
+                    index = i;
+                    break;
+                }
             }
-        }
 
-        if (index < 0) {
-            throw new RuntimeException("Failed to get graphics Queue family index");
+            if (index < 0) {
+                throw new RuntimeException("Failed to get graphics Queue family index");
+            }
+            return index;
         }
-        return index;
     }
+    ...
 }
 ```
 
 The `GraphicsQueue`class just calls its parent constructor (`Queue` class) with the appropriate queue family index. That index is obtained through the call to the `getGraphicsQueueFamilyIndex`method. In this method, we iterate over the queue families to check if the queue family has the `VK_QUEUE_GRAPHICS_BIT` flag. 
 
-# Render modifications
+## Render modifications
 
-Now that we have finished our `Surface` and `Queue` classes, we can use them in our render class. We will add two new attributes:
+Now that we have finished our `PhysicalDevice`, `Device`, `Surface` and `Queue` classes, we can use them in our `Render` class. We will add new attributes:
 
 ```java
-private Queue.GraphicsQueue graphQueue;
-//...
-private Surface surface;
+public class Render {
+    ...
+    private Device device;
+    private Queue.GraphicsQueue graphQueue;
+    ...
+    private PhysicalDevice physicalDevice;
+    private Surface surface;
+    ...
+}
 ```
 
-They will be instantiated in the `init` method, and released in the `cleanUp` method as with the case of the `instance` attribute:
+They will be instantiated in the `init` method, and released in the `cleanup` method as with the case of the `instance` attribute:
 
 ```java
-public void cleanUp() {
-    this.surface.cleanUp();
-    this.device.cleanUp();
-    this.physicalDevice.cleanUp();
-    this.instance.cleanUp();
-}
+public class Render {
+    ...
+    public void cleanup() {
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
+    }
 
-public void init(Window window) {
-    EngineProperties engProps = EngineProperties.getInstance();
-    this.instance = new Instance(engProps.isValidate());
-    this.physicalDevice = PhysicalDevice.createPhysicalDevice(this.instance, engProps.getPhysDeviceName());
-    this.surface = new Surface(this.instance, window.getHandle());
-    this.graphQueue = new Queue.GraphicsQueue(this.device, 0);
-}
+    public void init(Window window) {
+        EngineProperties engProps = EngineProperties.getInstance();
+        instance = new Instance(engProps.isValidate());
+        physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
+        device = new Device(physicalDevice);
+        surface = new Surface(physicalDevice, window.getWindowHandle());
+        graphQueue = new Queue.GraphicsQueue(device, 0);
+    }
+    ...
 ```
 
 That's all for this chapter, we are slowly defining the classes that we need in order to render something. We have still a long road ahead of us, but i hope the pieces will start to make sense soon.

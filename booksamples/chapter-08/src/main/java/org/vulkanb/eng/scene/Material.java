@@ -14,16 +14,16 @@ public class Material {
     }
 
     public Material(String texturePath, Vector4f diffuseColor) {
-        this.setTexturePath(texturePath);
+        setTexturePath(texturePath);
         this.diffuseColor = diffuseColor;
     }
 
     public Vector4f getDiffuseColor() {
-        return this.diffuseColor;
+        return diffuseColor;
     }
 
     public String getTexturePath() {
-        return this.texturePath;
+        return texturePath;
     }
 
     public boolean hasTexture() {
@@ -36,6 +36,6 @@ public class Material {
 
     public void setTexturePath(String texturePath) {
         this.texturePath = texturePath;
-        this.hasTexture = this.texturePath != null && this.texturePath.trim().length() > 0;
+        hasTexture = this.texturePath != null && this.texturePath.trim().length() > 0;
     }
 }

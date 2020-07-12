@@ -6,7 +6,7 @@ import org.lwjgl.vulkan.VkCommandPoolCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandPool {
@@ -28,19 +28,19 @@ public class CommandPool {
             vkCheck(vkCreateCommandPool(device.getVkDevice(), cmdPoolInfo, null, lp),
                     "Failed to create command pool");
 
-            this.vkCommandPool = lp.get(0);
+            vkCommandPool = lp.get(0);
         }
     }
 
-    public void cleanUp() {
-        vkDestroyCommandPool(this.device.getVkDevice(), this.vkCommandPool, null);
+    public void cleanup() {
+        vkDestroyCommandPool(device.getVkDevice(), vkCommandPool, null);
     }
 
     public Device getDevice() {
-        return this.device;
+        return device;
     }
 
     public long getVkCommandPool() {
-        return this.vkCommandPool;
+        return vkCommandPool;
     }
 }

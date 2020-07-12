@@ -15,49 +15,49 @@ public class Entity {
         this.id = id;
         this.meshId = meshId;
         this.position = position;
-        this.scale = 1;
-        this.rotation = new Quaternionf();
-        this.modelMatrix = new Matrix4f();
+        scale = 1;
+        rotation = new Quaternionf();
+        modelMatrix = new Matrix4f();
         updateModelMatrix();
     }
 
     public String getId() {
-        return this.id;
+        return id;
     }
 
     public String getMeshId() {
-        return this.meshId;
+        return meshId;
     }
 
     public Matrix4f getModelMatrix() {
-        return this.modelMatrix;
+        return modelMatrix;
     }
 
     public Vector3f getPosition() {
-        return this.position;
+        return position;
     }
 
     public Quaternionf getRotation() {
-        return this.rotation;
+        return rotation;
     }
 
     public float getScale() {
-        return this.scale;
+        return scale;
     }
 
     public final void setPosition(float x, float y, float z) {
-        this.position.x = x;
-        this.position.y = y;
-        this.position.z = z;
-        this.updateModelMatrix();
+        position.x = x;
+        position.y = y;
+        position.z = z;
+        updateModelMatrix();
     }
 
     public void setScale(float scale) {
         this.scale = scale;
-        this.updateModelMatrix();
+        updateModelMatrix();
     }
 
     public void updateModelMatrix() {
-        this.modelMatrix.identity().translationRotateScale(this.position, this.rotation, this.scale);
+        modelMatrix.identity().translationRotateScale(position, rotation, scale);
     }
 }

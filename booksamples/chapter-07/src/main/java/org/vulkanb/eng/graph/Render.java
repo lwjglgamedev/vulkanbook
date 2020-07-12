@@ -24,56 +24,56 @@ public class Render {
     private Surface surface;
     private SwapChain swapChain;
 
-    public void cleanUp() {
-        this.presentQueue.waitIdle();
-        this.graphQueue.waitIdle();
-        this.device.waitIdle();
-        this.meshList.forEach(VulkanMesh::cleanUp);
-        this.pipelineCache.cleanUp();
-        this.fwdRenderActivity.cleanUp();
-        this.commandPool.cleanUp();
-        this.swapChain.cleanUp();
-        this.surface.cleanUp();
-        this.device.cleanUp();
-        this.physicalDevice.cleanUp();
-        this.instance.cleanUp();
+    public void cleanup() {
+        presentQueue.waitIdle();
+        graphQueue.waitIdle();
+        device.waitIdle();
+        meshList.forEach(VulkanMesh::cleanup);
+        pipelineCache.cleanup();
+        fwdRenderActivity.cleanup();
+        commandPool.cleanup();
+        swapChain.cleanup();
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
     }
 
     public void init(Window window) {
         EngineProperties engProps = EngineProperties.getInstance();
-        this.instance = new Instance(engProps.isValidate());
-        this.physicalDevice = PhysicalDevice.createPhysicalDevice(this.instance, engProps.getPhysDeviceName());
-        this.device = new Device(this.physicalDevice);
-        this.surface = new Surface(this.physicalDevice, window.getWindowHandle());
-        this.graphQueue = new Queue.GraphicsQueue(this.device, 0);
-        this.presentQueue = new Queue.PresentQueue(this.device, this.surface, 0);
-        this.swapChain = new SwapChain(this.device, this.surface, window, engProps.getRequestedImages(),
+        instance = new Instance(engProps.isValidate());
+        physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
+        device = new Device(physicalDevice);
+        surface = new Surface(physicalDevice, window.getWindowHandle());
+        graphQueue = new Queue.GraphicsQueue(device, 0);
+        presentQueue = new Queue.PresentQueue(device, surface, 0);
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
-        this.commandPool = new CommandPool(this.device, this.graphQueue.getQueueFamilyIndex());
-        this.pipelineCache = new PipelineCache(this.device);
-        this.fwdRenderActivity = new ForwardRenderActivity(this.swapChain, this.commandPool, this.pipelineCache);
-        this.meshList = new ArrayList<>();
+        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
+        pipelineCache = new PipelineCache(device);
+        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool, pipelineCache);
+        meshList = new ArrayList<>();
     }
 
     public void loadMeshes(MeshData[] meshDataList) {
         LOGGER.debug("Loading {} meshe(s)", meshDataList.length);
-        VulkanMesh[] meshes = VulkanMesh.loadMeshes(this.commandPool, this.graphQueue, meshDataList);
+        VulkanMesh[] meshes = VulkanMesh.loadMeshes(commandPool, graphQueue, meshDataList);
         LOGGER.debug("Loaded {} meshe(s)", meshes.length);
-        this.meshList.addAll(Arrays.asList(meshes));
+        meshList.addAll(Arrays.asList(meshes));
     }
 
     public void render(Window window, Scene scene) {
-        if (window.isResized() || this.swapChain.acquireNextImage()) {
+        if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);
             scene.getPerspective().resize(window.getWidth(), window.getHeight());
-            this.swapChain.acquireNextImage();
+            swapChain.acquireNextImage();
         }
 
-        this.fwdRenderActivity.recordCommandBuffers(this.meshList, scene);
-        this.fwdRenderActivity.submit(this.presentQueue);
+        fwdRenderActivity.recordCommandBuffers(meshList, scene);
+        fwdRenderActivity.submit(presentQueue);
 
-        if (this.swapChain.presentImage(this.graphQueue)) {
+        if (swapChain.presentImage(graphQueue)) {
             window.setResized(true);
         }
     }
@@ -81,32 +81,32 @@ public class Render {
     private void resize(Window window) {
         EngineProperties engProps = EngineProperties.getInstance();
 
-        this.device.waitIdle();
-        this.graphQueue.waitIdle();
+        device.waitIdle();
+        graphQueue.waitIdle();
 
-        this.swapChain.cleanUp();
+        swapChain.cleanup();
 
-        this.swapChain = new SwapChain(this.device, this.surface, window, engProps.getRequestedImages(),
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
-        this.fwdRenderActivity.resize(this.swapChain);
+        fwdRenderActivity.resize(swapChain);
     }
 
     public void unloadMesh(String id) {
-        Iterator<VulkanMesh> it = this.meshList.iterator();
+        Iterator<VulkanMesh> it = meshList.iterator();
         while (it.hasNext()) {
             VulkanMesh mesh = it.next();
             if (mesh.getId().equals(id)) {
-                mesh.cleanUp();
+                mesh.cleanup();
                 it.remove();
             }
         }
     }
 
     public void unloadMeshes() {
-        this.device.waitIdle();
-        for (VulkanMesh vulkanMesh : this.meshList) {
-            vulkanMesh.cleanUp();
+        device.waitIdle();
+        for (VulkanMesh vulkanMesh : meshList) {
+            vulkanMesh.cleanup();
         }
-        this.meshList.clear();
+        meshList.clear();
     }
 }

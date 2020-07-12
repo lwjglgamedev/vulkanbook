@@ -17,7 +17,7 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void cleanUp() {
+    public void cleanup() {
         // To be implemented
     }
 

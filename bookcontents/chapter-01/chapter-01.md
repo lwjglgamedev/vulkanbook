@@ -30,13 +30,12 @@ public class Main implements IAppLogic {
 
     public static void main(String[] args) {
         LOGGER.info("Starting application");
-
         Engine engine = new Engine("Vulkanbook", new Main());
         engine.start();
     }
 
     @Override
-    public void cleanUp() {
+    public void cleanup() {
         // To be implemented
     }
 
@@ -56,7 +55,7 @@ As you can see, in the `main` method, we just start our render/game engine, mode
 
 - `init`: Invoked upon application startup to create the required resources (meshes, textures, etc).
 - `handelInput`: Which is invoked periodically so that the application can update its stated reacting to user input.
-- `cleanUp`: Which is invoked when the application finished to properly release the acquired resources.
+- `cleanup`: Which is invoked when the application finished to properly release the acquired resources.
 
 ## Engine
 
@@ -224,48 +223,61 @@ package org.vulkanb.eng;
 import org.lwjgl.glfw.*;
 import org.lwjgl.system.MemoryUtil;
 
-public class Window {
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
-    private GLFWKeyCallback keyCallback;
+public class Window implements GLFWFramebufferSizeCallbackI {
+
+    private int height;
+    private GLFWKeyCallbackI keyCallback;
     private MouseInput mouseInput;
     private boolean resized;
-    private int height;
     private int width;
     private long windowHandle;
 
     public Window(String title) {
-        if (!GLFW.glfwInit()) {
+        this(title, null);
+    }
+
+    public Window(String title, GLFWKeyCallbackI keyCallback) {
+        this.keyCallback = keyCallback;
+        if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
 
-        if (!GLFWVulkan.glfwVulkanSupported()) {
+        if (!glfwVulkanSupported()) {
             throw new IllegalStateException("Cannot find a compatible Vulkan installable client driver (ICD)");
         }
 
-        GLFWVidMode vidMode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
+        GLFWVidMode vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
         width = vidMode.width();
         height = vidMode.height();
 
-        GLFW.glfwDefaultWindowHints();
-        GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_NO_API);
-        GLFW.glfwWindowHint(GLFW.GLFW_MAXIMIZED, GLFW.GLFW_FALSE);
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
 
         // Create the window
-        windowHandle = GLFW.glfwCreateWindow(width, height, title, MemoryUtil.NULL, MemoryUtil.NULL);
+        windowHandle = glfwCreateWindow(width, height, title, MemoryUtil.NULL, MemoryUtil.NULL);
         if (windowHandle == MemoryUtil.NULL) {
             throw new RuntimeException("Failed to create the GLFW window");
         }
 
-        GLFW.glfwSetFramebufferSizeCallback(windowHandle, (window, width, height) -> resize(width, height));
-                
-        GLFW.glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
-            if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
-                GLFW.glfwSetWindowShouldClose(window, true);
+        glfwSetFramebufferSizeCallback(windowHandle, (window, width, height) -> resize(width, height));
+
+        glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
+                glfwSetWindowShouldClose(window, true);
+            }
+            if (keyCallback != null) {
+                keyCallback.invoke(window, key, scancode, action, mods);
             }
         });
 
         mouseInput = new MouseInput(windowHandle);
     }
+    ...
+}
 ```
 
 The code it's self-explanatory, we basically initialize GLFW, set up the window size to the primary monitor dimensions, create the window, set up key call backs (with a special case for signaling when window should close) and create a handler for mouse input. But at the very beginning, there's a little fragment which checks if Vulkan is supported: 
@@ -279,9 +291,11 @@ if (!GLFWVulkan.glfwVulkanSupported()) {
 The code above, will test if the minimal requirements to use Vulkan are available (the Vulkan loader and a minimal functional ICD). This does not imply that Vulkan will work properly, but it is a minimum. Without this there is no sense in going on. The rest of the methods are basic ones to free resources, handling window resizing, etc.
 
 ```java
-    public void cleanUp() {
-        GLFW.glfwDestroyWindow(windowHandle);
-        GLFW.glfwTerminate();
+public class Window implements GLFWFramebufferSizeCallbackI {
+    ...
+    public void cleanup() {
+        glfwDestroyWindow(windowHandle);
+        glfwTerminate();
     }
 
     public int getHeight() {
@@ -300,12 +314,21 @@ The code above, will test if the minimal requirements to use Vulkan are availabl
         return windowHandle;
     }
 
+    @Override
+    public void invoke(long handle, int width, int height) {
+        resize(width, height);
+    }
+    
+    public boolean isKeyPressed(int keyCode) {
+        return glfwGetKey(windowHandle, keyCode) == GLFW_PRESS;
+    }
+
     public boolean isResized() {
         return resized;
     }
 
     public void pollEvents() {
-        GLFW.glfwPollEvents();
+        glfwPollEvents();
         mouseInput.input();
     }
 
@@ -317,15 +340,14 @@ The code above, will test if the minimal requirements to use Vulkan are availabl
         resized = true;
         this.width = width;
         this.height = height;
-        GLFW.glfwSetWindowSize(windowHandle, width, height);
     }
 
     public void setResized(boolean resized) {
         this.resized = resized;
     }
-    
+
     public boolean shouldClose() {
-        return GLFW.glfwWindowShouldClose(windowHandle);
+        return glfwWindowShouldClose(windowHandle);
     }
 }
 ```
@@ -404,7 +426,7 @@ public class MouseInput {
 }
 ```
 
-How you want to handle user input is largely up to you. In order to get them, just use `glfwSet*Callback()`. This is all the freedom you'll get, so embrace it while you can.
+How you want to handle user input is largely up to you. In order to get them, you can the pass a `GLFWKeyCallbackI` callback, use the `glfwSet*Callback()` or invoke the `isKeyPressed` method.
 
 If you run the sample you will get a nice black window that you can resize, move and close. With that, this chapter comes to its end. In the next chapter we will start viewing the first basic Vulkan concepts.
 

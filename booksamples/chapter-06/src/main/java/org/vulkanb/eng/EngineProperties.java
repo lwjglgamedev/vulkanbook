@@ -24,12 +24,12 @@ public class EngineProperties {
 
         try (InputStream stream = EngineProperties.class.getResourceAsStream("/" + FILENAME)) {
             props.load(stream);
-            this.ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
-            this.validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
-            this.physDeviceName = props.getProperty("physdeviceName");
-            this.requestedImages = Integer.parseInt(props.getOrDefault("requestedImages", DEFAULT_REQUESTED_IMAGES).toString());
-            this.vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
-            this.shaderRecompilation = Boolean.parseBoolean(props.getOrDefault("shaderRecompilation", false).toString());
+            ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
+            validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
+            physDeviceName = props.getProperty("physdeviceName");
+            requestedImages = Integer.parseInt(props.getOrDefault("requestedImages", DEFAULT_REQUESTED_IMAGES).toString());
+            vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
+            shaderRecompilation = Boolean.parseBoolean(props.getOrDefault("shaderRecompilation", false).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -43,7 +43,7 @@ public class EngineProperties {
     }
 
     public String getPhysDeviceName() {
-        return this.physDeviceName;
+        return physDeviceName;
     }
 
     public int getRequestedImages() {
@@ -51,7 +51,7 @@ public class EngineProperties {
     }
 
     public int getUps() {
-        return this.ups;
+        return ups;
     }
 
     public boolean isShaderRecompilation() {
@@ -59,11 +59,11 @@ public class EngineProperties {
     }
 
     public boolean isValidate() {
-        return this.validate;
+        return validate;
     }
 
     public boolean isvSync() {
-        return this.vSync;
+        return vSync;
     }
 
 }

@@ -7,7 +7,7 @@ import org.vulkanb.eng.Window;
 
 import java.nio.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class SwapChain {
@@ -32,7 +32,7 @@ public class SwapChain {
 
             int numImages = calcNumImages(surfCapabilities, requestedImages);
 
-            this.surfaceFormat = calcSurfaceFormat(physicalDevice, surface);
+            surfaceFormat = calcSurfaceFormat(physicalDevice, surface);
 
             VkExtent2D swapChainExtent = calcSwapChainExtent(stack, window, surfCapabilities);
 
@@ -40,8 +40,8 @@ public class SwapChain {
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)
                     .surface(surface.getVkSurface())
                     .minImageCount(numImages)
-                    .imageFormat(this.surfaceFormat.imageFormat())
-                    .imageColorSpace(this.surfaceFormat.colorSpace())
+                    .imageFormat(surfaceFormat.imageFormat())
+                    .imageColorSpace(surfaceFormat.colorSpace())
                     .imageExtent(swapChainExtent)
                     .imageArrayLayers(1)
                     .imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
@@ -57,9 +57,9 @@ public class SwapChain {
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(KHRSwapchain.vkCreateSwapchainKHR(device.getVkDevice(), vkSwapchainCreateInfo, null, lp),
                     "Failed to create swap chain");
-            this.vkSwapChain = lp.get(0);
+            vkSwapChain = lp.get(0);
 
-            this.imageViews = createImageViews(stack, device, this.vkSwapChain, this.surfaceFormat.imageFormat);
+            imageViews = createImageViews(stack, device, vkSwapChain, surfaceFormat.imageFormat);
         }
     }
 
@@ -109,8 +109,8 @@ public class SwapChain {
         return new SurfaceFormat(imageFormat, colorSpace);
     }
 
-    public VkExtent2D calcSwapChainExtent(MemoryStack stack, Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
-        VkExtent2D swapChainExtent = VkExtent2D.callocStack(stack);
+    public VkExtent2D calcSwapChainExtent(Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
+        VkExtent2D result = VkExtent2D.calloc();
         if (surfCapabilities.currentExtent().width() == 0xFFFFFFFF) {
             // Surface size undefined. Set to the window size if within bounds
             int width = Math.min(window.getWidth(), surfCapabilities.maxImageExtent().width());
@@ -119,23 +119,23 @@ public class SwapChain {
             int height = Math.min(window.getHeight(), surfCapabilities.maxImageExtent().height());
             height = Math.max(height, surfCapabilities.minImageExtent().height());
 
-            swapChainExtent.width(width);
-            swapChainExtent.height(height);
+            result.width(width);
+            result.height(height);
         } else {
             // Surface already defined, just use that for the swap chain
-            swapChainExtent.set(surfCapabilities.currentExtent());
+            result.set(surfCapabilities.currentExtent());
         }
-        return swapChainExtent;
+        return result;
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying Vulkan SwapChain");
         int size = imageViews != null ? imageViews.length : 0;
         for (int i = 0; i < size; i++) {
-            imageViews[i].cleanUp();
+            imageViews[i].cleanup();
         }
 
-        KHRSwapchain.vkDestroySwapchainKHR(this.device.getVkDevice(), this.vkSwapChain, null);
+        KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
     }
 
     private ImageView[] createImageViews(MemoryStack stack, Device device, long swapChain, int format) {
@@ -159,19 +159,19 @@ public class SwapChain {
     }
 
     public ImageView[] getImageViews() {
-        return this.imageViews;
+        return imageViews;
     }
 
     public int getNumImages() {
-        return this.imageViews.length;
+        return imageViews.length;
     }
 
     public SurfaceFormat getSurfaceFormat() {
-        return this.surfaceFormat;
+        return surfaceFormat;
     }
 
     public long getVkSwapChain() {
-        return this.vkSwapChain;
+        return vkSwapChain;
     }
 
     record SurfaceFormat(int imageFormat, int colorSpace) {

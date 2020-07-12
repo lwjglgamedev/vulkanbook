@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class TextureDescriptorSet {
@@ -27,7 +27,7 @@ public class TextureDescriptorSet {
             vkCheck(vkAllocateDescriptorSets(device.getVkDevice(), allocInfo, pDescriptorSet),
                     "Failed to create descriptor set");
 
-            this.vkDescriptorSet = pDescriptorSet.get(0);
+            vkDescriptorSet = pDescriptorSet.get(0);
 
             VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
                     .imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
@@ -38,7 +38,7 @@ public class TextureDescriptorSet {
 
             descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
-                    .dstSet(this.vkDescriptorSet)
+                    .dstSet(vkDescriptorSet)
                     .dstBinding(binding)
                     .dstArrayElement(0)
                     .descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
@@ -50,6 +50,6 @@ public class TextureDescriptorSet {
     }
 
     public long getVkDescriptorSet() {
-        return this.vkDescriptorSet;
+        return vkDescriptorSet;
     }
 }

@@ -1,20 +1,26 @@
 package org.vulkanb.eng;
 
-import org.lwjgl.glfw.GLFWVidMode;
+import org.lwjgl.glfw.*;
 import org.lwjgl.system.MemoryUtil;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.glfw.GLFWVulkan.*;
+import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
-public class Window {
+public class Window implements GLFWFramebufferSizeCallbackI {
 
+    private int height;
+    private GLFWKeyCallbackI keyCallback;
     private MouseInput mouseInput;
     private boolean resized;
-    private int height;
     private int width;
     private long windowHandle;
 
     public Window(String title) {
+        this(title, null);
+    }
+
+    public Window(String title, GLFWKeyCallbackI keyCallback) {
+        this.keyCallback = keyCallback;
         if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
@@ -43,6 +49,9 @@ public class Window {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
                 glfwSetWindowShouldClose(window, true);
             }
+            if (keyCallback != null) {
+                keyCallback.invoke(window, key, scancode, action, mods);
+            }
         });
 
         mouseInput = new MouseInput(windowHandle);
@@ -69,6 +78,15 @@ public class Window {
         return windowHandle;
     }
 
+    @Override
+    public void invoke(long handle, int width, int height) {
+        resize(width, height);
+    }
+
+    public boolean isKeyPressed(int keyCode) {
+        return glfwGetKey(windowHandle, keyCode) == GLFW_PRESS;
+    }
+
     public boolean isResized() {
         return resized;
     }
@@ -83,10 +101,9 @@ public class Window {
     }
 
     public void resize(int width, int height) {
-        this.resized = true;
+        resized = true;
         this.width = width;
         this.height = height;
-        glfwSetWindowSize(windowHandle, width, height);
     }
 
     public void setResized(boolean resized) {

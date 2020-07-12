@@ -11,14 +11,14 @@ public class TextureCache {
     private Map<String, Texture> textureMap;
 
     public TextureCache() {
-        this.textureMap = new HashMap<>();
+        textureMap = new HashMap<>();
     }
 
-    public synchronized void cleanUp() {
+    public synchronized void cleanup() {
         for (Map.Entry<String, Texture> entry : textureMap.entrySet()) {
-            entry.getValue().cleanUp();
+            entry.getValue().cleanup();
         }
-        this.textureMap.clear();
+        textureMap.clear();
     }
 
     public synchronized Texture createTexture(CommandPool commandPool, Queue queue, String texturePath, int format) {
@@ -27,15 +27,15 @@ public class TextureCache {
             EngineProperties engProperties = EngineProperties.getInstance();
             path = engProperties.getDefaultTexturePath();
         }
-        Texture texture = this.textureMap.get(path);
+        Texture texture = textureMap.get(path);
         if (texture == null) {
             texture = new Texture(commandPool, queue, path, format);
-            this.textureMap.put(path, texture);
+            textureMap.put(path, texture);
         }
         return texture;
     }
 
     public Texture getTexture(String texturePath) {
-        return this.textureMap.get(texturePath.trim());
+        return textureMap.get(texturePath.trim());
     }
 }

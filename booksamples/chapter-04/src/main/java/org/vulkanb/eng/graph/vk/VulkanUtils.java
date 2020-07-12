@@ -1,6 +1,6 @@
 package org.vulkanb.eng.graph.vk;
 
-import static org.lwjgl.vulkan.VK10.VK_SUCCESS;
+import static org.lwjgl.vulkan.VK11.VK_SUCCESS;
 
 public class VulkanUtils {
 

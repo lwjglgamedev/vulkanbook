@@ -14,12 +14,12 @@ public class MouseInput {
     private boolean rightButtonPressed;
 
     public MouseInput(long windowHandle) {
-        this.previousPos = new Vector2f(-1, -1);
-        this.currentPos = new Vector2f();
-        this.displVec = new Vector2f();
-        this.leftButtonPressed = false;
-        this.rightButtonPressed = false;
-        this.inWindow = false;
+        previousPos = new Vector2f(-1, -1);
+        currentPos = new Vector2f();
+        displVec = new Vector2f();
+        leftButtonPressed = false;
+        rightButtonPressed = false;
+        inWindow = false;
 
         glfwSetCursorPosCallback(windowHandle, (handle, xpos, ypos) -> {
             currentPos.x = (float) xpos;
@@ -33,7 +33,7 @@ public class MouseInput {
     }
 
     public Vector2f getCurrentPos() {
-        return this.currentPos;
+        return currentPos;
     }
 
     public Vector2f getDisplVec() {

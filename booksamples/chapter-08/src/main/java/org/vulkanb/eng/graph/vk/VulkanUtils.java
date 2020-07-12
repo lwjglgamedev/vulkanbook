@@ -2,7 +2,7 @@ package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.vulkan.VkMemoryType;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class VulkanUtils {
 

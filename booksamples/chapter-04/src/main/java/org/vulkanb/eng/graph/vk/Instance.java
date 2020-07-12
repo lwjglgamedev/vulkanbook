@@ -9,7 +9,7 @@ import org.lwjgl.vulkan.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Instance {
@@ -48,7 +48,7 @@ public class Instance {
                     .applicationVersion(1)
                     .pEngineName(appShortName)
                     .engineVersion(0)
-                    .apiVersion(VK_MAKE_VERSION(1, 2, 0));
+                    .apiVersion(VK_API_VERSION_1_1);
 
             // Validation layers
             String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;
@@ -108,13 +108,13 @@ public class Instance {
 
             PointerBuffer pInstance = stack.mallocPointer(1);
             vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
-            this.vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
+            vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying Vulkan instance");
-        vkDestroyInstance(this.vkInstance, null);
+        vkDestroyInstance(vkInstance, null);
     }
 
     private String[] getSupportedValidationLayers(MemoryStack stack) {

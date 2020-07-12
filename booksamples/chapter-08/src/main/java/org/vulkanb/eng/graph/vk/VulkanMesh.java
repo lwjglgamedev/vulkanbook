@@ -8,7 +8,7 @@ import org.vulkanb.eng.scene.*;
 
 import java.nio.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class VulkanMesh {
@@ -30,7 +30,7 @@ public class VulkanMesh {
     private static TransferBuffers createIndicesBuffers(Device device, MeshData meshData) {
         int[] indices = meshData.indices();
         int numIndices = indices.length;
-        int bufferSize = numIndices * GraphConstants.FLOAT_LENGTH;
+        int bufferSize = numIndices * GraphConstants.INT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -73,12 +73,12 @@ public class VulkanMesh {
             int rows = positions.length / 3;
             FloatBuffer data = pp.getFloatBuffer(0, numElements);
             for (int row = 0; row < rows; row++) {
-                int starPos = row * 3;
+                int startPos = row * 3;
                 int startTextCoord = row * 2;
-                data.put(positions[starPos + 0]);
-                data.put(positions[starPos + 1]);
-                data.put(positions[starPos + 2]);
-                data.put(textCoords[startTextCoord + 0]);
+                data.put(positions[startPos]);
+                data.put(positions[startPos + 1]);
+                data.put(positions[startPos + 2]);
+                data.put(textCoords[startTextCoord]);
                 data.put(textCoords[startTextCoord + 1]);
             }
 
@@ -122,11 +122,11 @@ public class VulkanMesh {
             fence.reset();
             queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
             fence.fenceWait();
-            fence.cleanUp();
+            fence.cleanup();
 
             for (int i = 0; i < numMeshes; i++) {
-                positionTransferBuffers[i].cleanUp();
-                indicesTransferBuffers[i].cleanUp();
+                positionTransferBuffers[i].cleanup();
+                indicesTransferBuffers[i].cleanup();
             }
         }
 
@@ -142,9 +142,9 @@ public class VulkanMesh {
         }
     }
 
-    public void cleanUp() {
-        this.indicesBuffer.cleanUp();
-        this.verticesBuffer.cleanUp();
+    public void cleanup() {
+        indicesBuffer.cleanup();
+        verticesBuffer.cleanup();
     }
 
     public String getId() {
@@ -152,7 +152,7 @@ public class VulkanMesh {
     }
 
     public VulkanBuffer getIndicesBuffer() {
-        return this.indicesBuffer;
+        return indicesBuffer;
     }
 
     public int getIndicesCount() {
@@ -164,7 +164,7 @@ public class VulkanMesh {
     }
 
     public VulkanBuffer getVerticesBuffer() {
-        return this.verticesBuffer;
+        return verticesBuffer;
     }
 
     private record TransferBuffers(VulkanBuffer srcBuffer, VulkanBuffer dstBuffer) {

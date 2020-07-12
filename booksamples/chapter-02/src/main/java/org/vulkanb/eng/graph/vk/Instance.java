@@ -1,25 +1,15 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWVulkan;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.vulkan.EXTDebugReport;
-import org.lwjgl.vulkan.VkApplicationInfo;
-import org.lwjgl.vulkan.VkDebugReportCallbackCreateInfoEXT;
-import org.lwjgl.vulkan.VkDebugReportCallbackEXT;
-import org.lwjgl.vulkan.VkInstance;
-import org.lwjgl.vulkan.VkInstanceCreateInfo;
-import org.lwjgl.vulkan.VkLayerProperties;
+import org.lwjgl.system.*;
+import org.lwjgl.vulkan.*;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Instance {
@@ -58,7 +48,7 @@ public class Instance {
                     .applicationVersion(1)
                     .pEngineName(appShortName)
                     .engineVersion(0)
-                    .apiVersion(VK_API_VERSION_1_0);
+                    .apiVersion(VK_API_VERSION_1_1);
 
             // Validation layers
             String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;
@@ -118,13 +108,13 @@ public class Instance {
 
             PointerBuffer pInstance = stack.mallocPointer(1);
             vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
-            this.vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
+            vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying Vulkan instance");
-        vkDestroyInstance(this.vkInstance, null);
+        vkDestroyInstance(vkInstance, null);
     }
 
     private String[] getSupportedValidationLayers(MemoryStack stack) {

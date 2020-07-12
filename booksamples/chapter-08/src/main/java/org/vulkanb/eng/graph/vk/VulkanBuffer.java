@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class VulkanBuffer {
@@ -18,7 +18,7 @@ public class VulkanBuffer {
 
     public VulkanBuffer(Device device, long size, int usage, int reqMask) {
         this.device = device;
-        this.requestedSize = size;
+        requestedSize = size;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
@@ -27,10 +27,10 @@ public class VulkanBuffer {
                     .sharingMode(VK_SHARING_MODE_EXCLUSIVE);
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateBuffer(device.getVkDevice(), bufferCreateInfo, null, lp), "Failed to create vertices buffer");
-            this.buffer = lp.get(0);
+            buffer = lp.get(0);
 
             VkMemoryRequirements memReqs = VkMemoryRequirements.mallocStack(stack);
-            vkGetBufferMemoryRequirements(device.getVkDevice(), this.buffer, memReqs);
+            vkGetBufferMemoryRequirements(device.getVkDevice(), buffer, memReqs);
 
             VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
@@ -39,16 +39,16 @@ public class VulkanBuffer {
                             memReqs.memoryTypeBits(), reqMask));
 
             vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
-            this.allocationSize = memAlloc.allocationSize();
-            this.memory = lp.get(0);
+            allocationSize = memAlloc.allocationSize();
+            memory = lp.get(0);
 
-            vkCheck(vkBindBufferMemory(device.getVkDevice(), this.buffer, this.memory, 0), "Failed to bind buffer memory");
+            vkCheck(vkBindBufferMemory(device.getVkDevice(), buffer, memory, 0), "Failed to bind buffer memory");
         }
     }
 
-    public void cleanUp() {
-        vkDestroyBuffer(this.device.getVkDevice(), this.buffer, null);
-        vkFreeMemory(this.device.getVkDevice(), this.memory, null);
+    public void cleanup() {
+        vkDestroyBuffer(device.getVkDevice(), buffer, null);
+        vkFreeMemory(device.getVkDevice(), memory, null);
     }
 
     public long getAllocationSize() {

@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.VkImageViewCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ImageView {
@@ -31,12 +31,12 @@ public class ImageView {
 
             vkCheck(vkCreateImageView(device.getVkDevice(), viewCreateInfo, null, lp),
                     "Failed to create image view");
-            this.vkImageView = lp.get(0);
+            vkImageView = lp.get(0);
         }
     }
 
-    public void cleanUp() {
-        vkDestroyImageView(this.device.getVkDevice(), this.vkImageView, null);
+    public void cleanup() {
+        vkDestroyImageView(device.getVkDevice(), vkImageView, null);
     }
 
     public long getVkImageView() {
