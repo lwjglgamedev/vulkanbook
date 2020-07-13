@@ -40,10 +40,21 @@ public class Texture {
             mipLevels = 1;
 
             VulkanBuffer bufferData = createImage(stack, device, buf, imageFormat);
-            transitionImageLayout(stack, commandPool, queue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            copyBufferToImage(stack, commandPool, queue, bufferData);
-            transitionImageLayout(stack, commandPool, queue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
+            cmd.beginRecording();
+            transitionImageLayout(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            copyBufferToImage(stack, cmd, bufferData);
+            transitionImageLayout(stack, cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+
+            cmd.endRecording();
+            Fence fence = new Fence(device, true);
+            fence.reset();
+            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
+            fence.fenceWait();
+            fence.cleanup();
+
+            cmd.cleanup();
 
             bufferData.cleanup();
         }
@@ -56,10 +67,7 @@ public class Texture {
         image.cleanup();
     }
 
-    void copyBufferToImage(MemoryStack stack, CommandPool commandPool, Queue queue, VulkanBuffer bufferData) {
-
-        CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
-        cmd.beginRecording();
+    void copyBufferToImage(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
         VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
                 .bufferOffset(0)
@@ -76,11 +84,6 @@ public class Texture {
 
         vkCmdCopyBufferToImage(cmd.getVkCommandBuffer(), bufferData.getBuffer(), image.getVkImage(),
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, region);
-
-        cmd.endRecording();
-        queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, null);
-        queue.waitIdle();
-        cmd.cleanup();
     }
 
     private VulkanBuffer createImage(MemoryStack stack, Device device, ByteBuffer data, int imageFormat) {
@@ -112,11 +115,7 @@ public class Texture {
         return imageView;
     }
 
-    private void transitionImageLayout(MemoryStack stack, CommandPool commandPool, Queue queue,
-                                       int oldLayout, int newLayout) {
-
-        CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
-        cmd.beginRecording();
+    private void transitionImageLayout(MemoryStack stack, CommandBuffer cmd, int oldLayout, int newLayout) {
 
         VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.callocStack(1, stack)
                 .sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
@@ -158,10 +157,5 @@ public class Texture {
                 null,
                 null,
                 barrier);
-
-        cmd.endRecording();
-        queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, null);
-        queue.waitIdle();
-        cmd.cleanup();
     }
 }

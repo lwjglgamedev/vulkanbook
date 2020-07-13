@@ -131,7 +131,6 @@ public class ForwardRenderActivity {
         descriptorSetMap.remove(vulkanMesh.getTextureId());
     }
 
-    // TODO: BINDING
     public void meshesLoaded(VulkanMesh[] meshes, TextureCache textureCache) {
         for (VulkanMesh vulkanMesh : meshes) {
             TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(vulkanMesh.getTextureId());
