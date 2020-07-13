@@ -387,6 +387,7 @@ public class VulkanMesh {
             queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
             fence.fenceWait();
             fence.cleanup();
+            cmd.cleanup();
 
             for (int i = 0; i < numMeshes; i++) {
                 positionTransferBuffers[i].cleanup();
