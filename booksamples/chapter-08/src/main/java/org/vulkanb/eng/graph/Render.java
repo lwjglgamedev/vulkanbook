@@ -8,7 +8,6 @@ import org.vulkanb.eng.scene.*;
 
 import java.util.*;
 
-// TODO: Paralelize texture loading
 public class Render {
 
     private static final Logger LOGGER = LogManager.getLogger();

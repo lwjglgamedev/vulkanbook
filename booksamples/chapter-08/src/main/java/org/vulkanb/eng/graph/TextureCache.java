@@ -1,7 +1,6 @@
 package org.vulkanb.eng.graph;
 
 import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.util.*;
@@ -21,7 +20,7 @@ public class TextureCache {
         textureMap.clear();
     }
 
-    public synchronized Texture createTexture(CommandPool commandPool, Queue queue, String texturePath, int format) {
+    public synchronized Texture createTexture(Device device, String texturePath, int format) {
         String path = texturePath;
         if (texturePath == null || texturePath.trim().isEmpty()) {
             EngineProperties engProperties = EngineProperties.getInstance();
@@ -29,7 +28,7 @@ public class TextureCache {
         }
         Texture texture = textureMap.get(path);
         if (texture == null) {
-            texture = new Texture(commandPool, queue, path, format);
+            texture = new Texture(device, path, format);
             textureMap.put(path, texture);
         }
         return texture;

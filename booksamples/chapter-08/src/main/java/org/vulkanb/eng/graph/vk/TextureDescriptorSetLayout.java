@@ -1,9 +1,8 @@
-package org.vulkanb.eng.graph;
+package org.vulkanb.eng.graph.vk;
 
 import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
 

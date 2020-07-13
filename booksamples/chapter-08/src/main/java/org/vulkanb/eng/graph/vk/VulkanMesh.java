@@ -108,13 +108,14 @@ public class VulkanMesh {
                 indicesTransferBuffers[i] = indicesBuffers.srcBuffer();
 
                 Material material = meshData.material();
-                Texture texture = textureCache.createTexture(commandPool, queue, material.getTexturePath(),
+                Texture texture = textureCache.createTexture(device, material.getTexturePath(),
                         VK_FORMAT_R8G8B8A8_SRGB);
 
                 meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
                         meshData.indices().length, texture.getFileName());
                 recordTransferCommand(cmd, verticesBuffers);
                 recordTransferCommand(cmd, indicesBuffers);
+                texture.recordTextureTransition(cmd);
             }
 
             cmd.endRecording();
@@ -128,6 +129,7 @@ public class VulkanMesh {
             for (int i = 0; i < numMeshes; i++) {
                 positionTransferBuffers[i].cleanup();
                 indicesTransferBuffers[i].cleanup();
+                textureCache.getTexture(meshes[i].getTextureId()).cleanupTmpBuffer();
             }
         }
 
