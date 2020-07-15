@@ -41,7 +41,7 @@ public class Render {
         instance.cleanup();
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
@@ -53,7 +53,7 @@ public class Render {
                 engProps.isvSync());
         commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
         pipelineCache = new PipelineCache(device);
-        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool, pipelineCache);
+        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool, pipelineCache, scene);
         meshList = new ArrayList<>();
         textureCache = new TextureCache();
     }
@@ -70,7 +70,7 @@ public class Render {
     public void render(Window window, Scene scene) {
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
-            resize(window);
+            resize(window, scene);
             scene.getPerspective().resize(window.getWidth(), window.getHeight());
             swapChain.acquireNextImage();
         }
@@ -83,7 +83,7 @@ public class Render {
         }
     }
 
-    private void resize(Window window) {
+    private void resize(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
 
         device.waitIdle();
@@ -93,7 +93,7 @@ public class Render {
 
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
-        fwdRenderActivity.resize(swapChain);
+        fwdRenderActivity.resize(swapChain, scene);
     }
 
     public void unloadMesh(String id) {

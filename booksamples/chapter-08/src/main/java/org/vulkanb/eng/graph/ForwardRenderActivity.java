@@ -1,7 +1,8 @@
 package org.vulkanb.eng.graph;
 
 import org.joml.Matrix4f;
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.PointerBuffer;
+import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
@@ -13,6 +14,7 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
+import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ForwardRenderActivity {
 
@@ -27,20 +29,24 @@ public class ForwardRenderActivity {
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
+    private Device device;
     private Fence[] fences;
     private FrameBuffer[] frameBuffers;
     private ShaderProgram fwdShaderProgram;
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
+    private VulkanBuffer projMatrixUniform;
     private SwapChainRenderPass renderPass;
     private SwapChain swapChain;
     private TextureDescriptorSetLayout textureDescriptorSetLayout;
     private TextureSampler textureSampler;
+    private UniformsDescriptorSet uniformsDescriptorSet;
+    private UniformsDescriptorSetLayout uniformsDescriptorSetLayout;
 
-    public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache) {
+    public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
-        Device device = swapChain.getDevice();
+        device = swapChain.getDevice();
 
         int numImages = swapChain.getImageViews().length;
         createDepthImages();
@@ -58,8 +64,10 @@ public class ForwardRenderActivity {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, FRAGMENT_SHADER_FILE_SPV),
                 });
 
+        uniformsDescriptorSetLayout = new UniformsDescriptorSetLayout(device, 0);
         textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
         descriptorSetLayouts = new DescriptorSetLayout[]{
+                uniformsDescriptorSetLayout,
                 textureDescriptorSetLayout,
         };
 
@@ -78,9 +86,14 @@ public class ForwardRenderActivity {
         descriptorPool = new DescriptorPool(device, MAX_DESCRIPTORS, 0);
         descriptorSetMap = new HashMap<>();
         textureSampler = new TextureSampler(device, 1);
+        projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        uniformsDescriptorSet = new UniformsDescriptorSet(descriptorPool, uniformsDescriptorSetLayout, projMatrixUniform);
+        setProjectionUniform(scene.getPerspective().getPerspectiveMatrix());
     }
 
     public void cleanup() {
+        projMatrixUniform.cleanup();
         textureSampler.cleanup();
         descriptorPool.cleanup();
         pipeLine.cleanup();
@@ -95,7 +108,6 @@ public class ForwardRenderActivity {
     }
 
     private void createDepthImages() {
-        Device device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
         VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
         int mipLevels = 1;
@@ -111,7 +123,6 @@ public class ForwardRenderActivity {
 
     private void createFrameBuffers() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            Device device = swapChain.getDevice();
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             ImageView[] imageViews = swapChain.getImageViews();
             int numImages = imageViews.length;
@@ -195,7 +206,10 @@ public class ForwardRenderActivity {
 
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
-            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE * 2);
+            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
+
+            LongBuffer descriptorSets = stack.mallocLong(2)
+                    .put(0, uniformsDescriptorSet.getVkDescriptorSet());
             for (VulkanMesh mesh : meshes) {
                 LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
@@ -205,13 +219,11 @@ public class ForwardRenderActivity {
                 TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTextureId());
                 List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
                 for (Entity entity : entities) {
-                    LongBuffer descriptorSets = stack.mallocLong(1)
-                            .put(0, textureDescriptorSet.getVkDescriptorSet());
+                    descriptorSets.put(1, textureDescriptorSet.getVkDescriptorSet());
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-                    setPushConstants(cmdHandle, scene.getPerspective().getPerspectiveMatrix(), entity.getModelMatrix(),
-                            pushConstantBuffer);
+                    setPushConstants(cmdHandle, entity.getModelMatrix(), pushConstantBuffer);
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
             }
@@ -221,7 +233,8 @@ public class ForwardRenderActivity {
         }
     }
 
-    public void resize(SwapChain swapChain) {
+    public void resize(SwapChain swapChain, Scene scene) {
+        setProjectionUniform(scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         for (FrameBuffer frameBuffer : frameBuffers) {
             frameBuffer.cleanup();
@@ -236,10 +249,20 @@ public class ForwardRenderActivity {
         createFrameBuffers();
     }
 
-    private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f projMatrix, Matrix4f modelMatrix,
-                                  ByteBuffer pushConstantBuffer) {
-        projMatrix.get(pushConstantBuffer);
-        modelMatrix.get(GraphConstants.MAT4X4_SIZE, pushConstantBuffer);
+    private void setProjectionUniform(Matrix4f projectionMatrix) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            PointerBuffer pointerBuffer = stack.mallocPointer(1);
+            vkCheck(vkMapMemory(device.getVkDevice(), projMatrixUniform.getMemory(), 0, projMatrixUniform.getAllocationSize(),
+                    0, pointerBuffer), "Failed to map UBO memory");
+            long data = pointerBuffer.get(0);
+            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) projMatrixUniform.getAllocationSize());
+            projectionMatrix.get(0, matrixBuffer);
+            vkUnmapMemory(device.getVkDevice(), projMatrixUniform.getMemory());
+        }
+    }
+
+    private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f modelMatrix, ByteBuffer pushConstantBuffer) {
+        modelMatrix.get(0, pushConstantBuffer);
         vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
                 VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
     }
