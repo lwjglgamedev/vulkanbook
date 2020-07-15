@@ -9,7 +9,6 @@ import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 public class Window implements GLFWFramebufferSizeCallbackI {
 
     private int height;
-    private GLFWKeyCallbackI keyCallback;
     private MouseInput mouseInput;
     private boolean resized;
     private int width;
@@ -20,7 +19,6 @@ public class Window implements GLFWFramebufferSizeCallbackI {
     }
 
     public Window(String title, GLFWKeyCallbackI keyCallback) {
-        this.keyCallback = keyCallback;
         if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }

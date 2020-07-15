@@ -34,7 +34,7 @@ public class SwapChain {
 
             surfaceFormat = calcSurfaceFormat(physicalDevice, surface);
 
-            VkExtent2D swapChainExtent = calcSwapChainExtent(stack, window, surfCapabilities);
+            VkExtent2D swapChainExtent = calcSwapChainExtent(window, surfCapabilities);
 
             VkSwapchainCreateInfoKHR vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.callocStack(stack)
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)

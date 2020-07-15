@@ -240,7 +240,6 @@ public class Window implements GLFWFramebufferSizeCallbackI {
     }
 
     public Window(String title, GLFWKeyCallbackI keyCallback) {
-        this.keyCallback = keyCallback;
         if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }

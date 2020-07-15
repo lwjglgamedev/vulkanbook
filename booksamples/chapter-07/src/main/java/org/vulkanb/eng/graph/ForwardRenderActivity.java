@@ -23,6 +23,7 @@ public class ForwardRenderActivity {
     private CommandBuffer[] commandBuffers;
     private ImageView[] depthImageViews;
     private Image[] depthImages;
+    private Device device;
     private Fence[] fences;
     private FrameBuffer[] frameBuffers;
     private ShaderProgram fwdShaderProgram;
@@ -34,6 +35,8 @@ public class ForwardRenderActivity {
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
+        device = swapChain.getDevice();
+
         Device device = swapChain.getDevice();
 
         int numImages = swapChain.getImageViews().length;
@@ -79,7 +82,6 @@ public class ForwardRenderActivity {
     }
 
     private void createDepthImages() {
-        Device device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
         VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
         int mipLevels = 1;
@@ -95,7 +97,6 @@ public class ForwardRenderActivity {
 
     private void createFrameBuffers() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            Device device = swapChain.getDevice();
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             ImageView[] imageViews = swapChain.getImageViews();
             int numImages = imageViews.length;

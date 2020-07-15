@@ -662,7 +662,7 @@ public class ForwardRenderActivity {
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
-        Device device = swapChain.getDevice();
+        this.device = swapChain.getDevice();
 
         int numImages = swapChain.getImageViews().length;
         createDepthImages();
@@ -680,7 +680,6 @@ We have created a new method to initialize the depth images and their associated
 public class ForwardRenderActivity {
     ...
     private void createDepthImages() {
-        Device device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
         VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
         int mipLevels = 1;
@@ -704,7 +703,6 @@ public class ForwardRenderActivity {
     ...
     private void createFrameBuffers() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            Device device = swapChain.getDevice();
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             ImageView[] imageViews = swapChain.getImageViews();
             int numImages = imageViews.length;
