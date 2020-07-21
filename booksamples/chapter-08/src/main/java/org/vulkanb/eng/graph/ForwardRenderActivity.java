@@ -20,7 +20,6 @@ public class ForwardRenderActivity {
 
     private static final String FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/fwd_fragment.glsl";
     private static final String FRAGMENT_SHADER_FILE_SPV = FRAGMENT_SHADER_FILE_GLSL + ".spv";
-    private static final int MAX_DESCRIPTORS = 100;
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/fwd_vertex.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
     private CommandBuffer[] commandBuffers;
@@ -64,8 +63,8 @@ public class ForwardRenderActivity {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, FRAGMENT_SHADER_FILE_SPV),
                 });
 
-        uniformsDescriptorSetLayout = new UniformsDescriptorSetLayout(device);
-        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device);
+        uniformsDescriptorSetLayout = new UniformsDescriptorSetLayout(device, 0);
+        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformsDescriptorSetLayout,
                 textureDescriptorSetLayout,
@@ -142,7 +141,10 @@ public class ForwardRenderActivity {
     }
 
     public void meshUnLoaded(VulkanMesh vulkanMesh) {
-        descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
+        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
+        if (textureDescriptorSet != null) {
+            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
+        }
     }
 
     public void meshesLoaded(VulkanMesh[] meshes, TextureCache textureCache) {
@@ -210,7 +212,6 @@ public class ForwardRenderActivity {
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
-
             LongBuffer descriptorSets = stack.mallocLong(2)
                     .put(0, uniformsDescriptorSet.getVkDescriptorSet());
             for (VulkanMesh mesh : meshes) {
@@ -239,15 +240,9 @@ public class ForwardRenderActivity {
     public void resize(SwapChain swapChain, Scene scene) {
         setProjectionUniform(scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
-        for (FrameBuffer frameBuffer : frameBuffers) {
-            frameBuffer.cleanup();
-        }
-        for (ImageView imageView : depthImageViews) {
-            imageView.cleanup();
-        }
-        for (Image image : depthImages) {
-            image.cleanup();
-        }
+        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.stream(depthImageViews).forEach(ImageView::cleanup);
+        Arrays.stream(depthImages).forEach(Image::cleanup);
         createDepthImages();
         createFrameBuffers();
     }

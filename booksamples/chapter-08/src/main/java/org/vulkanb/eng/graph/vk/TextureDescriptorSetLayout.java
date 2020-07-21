@@ -13,13 +13,13 @@ public class TextureDescriptorSetLayout extends DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public TextureDescriptorSetLayout(Device device) {
+    public TextureDescriptorSetLayout(Device device, int binding) {
         super(device);
 
         LOGGER.debug("Creating texture descriptor set layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack)
-                    .binding(0)
+                    .binding(binding)
                     .descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                     .descriptorCount(1)
                     .stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);

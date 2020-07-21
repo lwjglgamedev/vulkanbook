@@ -32,6 +32,7 @@ public class DescriptorPool {
 
             VkDescriptorPoolCreateInfo descriptorPoolInfo = VkDescriptorPoolCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
+                    .flags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
                     .pPoolSizes(typeCounts)
                     .maxSets(maxSets);
 
@@ -45,6 +46,16 @@ public class DescriptorPool {
     public void cleanup() {
         LOGGER.debug("Destroying descriptor pool");
         vkDestroyDescriptorPool(device.getVkDevice(), vkDescriptorPool, null);
+    }
+
+    public void freeDescriptorSet(long vkDescriptorSet) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            LongBuffer longBuffer = stack.mallocLong(1);
+            longBuffer.put(0, vkDescriptorSet);
+
+            vkCheck(vkFreeDescriptorSets(device.getVkDevice(), vkDescriptorPool, longBuffer),
+                    "Failed to free descriptor set");
+        }
     }
 
     public Device getDevice() {
