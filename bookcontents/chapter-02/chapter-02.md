@@ -83,6 +83,7 @@ public class Instance {
 ```
 
 The structure type parameter sType, which, as its names suggests, defines its type. That is, what information it models from. In this case we are defining our application information with the structure `VkApplicationInfo`. As you can see, we cannot create the usual Java objects, but rather we allocate it through the stack and use the following attributes:
+
 - `sType`: Structure type. In this case: `VK_STRUCTURE_TYPE_APPLICATION_INFO`.
 - `pApplicationName`: It is basically just some text that will identify the application that uses this instance. In this case we use another helper method from the stack class to create a `ByteBuffer` that points to a null-terminated string.
 - `applicationVersion`: The version of our application. You can use the method `VK_VERSION_MAJOR/MINOR/PATCH()` methods to create a more detailed version.
@@ -118,7 +119,7 @@ public class Instance {
 }
 ```
 
-We will get the supported validation layers by invoking the `getSupportedValidationLayers`. If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution. Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
+We will get the supported validation layers by invoking the `getSupportedValidationLayers`. If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution. In order to use validation layers you need to install the [Vulkan SDK]([Vulkan® SDK - What&#039;s in the SDK - Where to Download](https://www.lunarg.com/vulkan-sdk/)). Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
 
 ```java
 public class Instance {
@@ -136,6 +137,7 @@ public class Instance {
 ```
 
 We first need to get the number of supported layers, by invoking the `vkEnumerateInstanceLayerProperties` function. This function receives two parameters:
+
 - The number of layers.
 - A pointer to a buffer that will hold all the layers properties.
 
@@ -330,6 +332,7 @@ public class Instance {
 This method just logs the message reported using an appropriate severity level.
 
 Finally, we have everything we need in order to create the Vulkan instance. In order to do so, we need to setup yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
+
 - Structure type: `VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO`.
 - Next extension: In our case, the debug extension configuration structure or `NULL` if no validation is requested or supported.
 - The application information structure that we created at the beginning of the chapter.
@@ -403,12 +406,12 @@ Finally, we can use the Instance class in our `Render` class, in the `init` and 
 public class Render {
     ...
     public void cleanup() {
-        this.instance.cleanup();
+        instance.cleanup();
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
-        this.instance = new Instance(engProps.isValidate());
+        instance = new Instance(engProps.isValidate());
     }
     ...
 }

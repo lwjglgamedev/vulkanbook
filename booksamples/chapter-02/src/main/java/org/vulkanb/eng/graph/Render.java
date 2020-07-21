@@ -9,12 +9,12 @@ public class Render {
     private Instance instance;
 
     public void cleanup() {
-        this.instance.cleanup();
+        instance.cleanup();
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
-        this.instance = new Instance(engProps.isValidate());
+        instance = new Instance(engProps.isValidate());
     }
 
     public void render(Window window, Scene scene) {

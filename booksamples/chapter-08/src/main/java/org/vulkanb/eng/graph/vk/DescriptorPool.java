@@ -5,7 +5,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
 import java.nio.LongBuffer;
-import java.util.*;
+import java.util.List;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -16,32 +16,24 @@ public class DescriptorPool {
     private Device device;
     private long vkDescriptorPool;
 
-    public DescriptorPool(Device device, int numStaticSets, int numDynamicSets) {
+    public DescriptorPool(Device device, List<DescriptorTypeCount> descriptorTypeCounts) {
         LOGGER.debug("Creating descriptor pool");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            List<Integer> typeList = new ArrayList<>();
-            List<Integer> countList = new ArrayList<>();
-            if (numStaticSets > 0) {
-                typeList.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-                countList.add(numStaticSets);
-            }
-            if (numDynamicSets > 0) {
-                typeList.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
-                countList.add(numDynamicSets);
-            }
-            int numTypes = typeList.size();
+            int maxSets = 0;
+            int numTypes = descriptorTypeCounts.size();
             VkDescriptorPoolSize.Buffer typeCounts = VkDescriptorPoolSize.callocStack(numTypes, stack);
             for (int i = 0; i < numTypes; i++) {
+                maxSets += descriptorTypeCounts.get(i).count();
                 typeCounts.get(i)
-                        .type(typeList.get(i))
-                        .descriptorCount(countList.get(i));
+                        .type(descriptorTypeCounts.get(i).descriptorType())
+                        .descriptorCount(descriptorTypeCounts.get(i).count());
             }
 
             VkDescriptorPoolCreateInfo descriptorPoolInfo = VkDescriptorPoolCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
                     .pPoolSizes(typeCounts)
-                    .maxSets(numStaticSets + numDynamicSets);
+                    .maxSets(maxSets);
 
             LongBuffer pDescriptorPool = stack.mallocLong(1);
             vkCheck(vkCreateDescriptorPool(device.getVkDevice(), descriptorPoolInfo, null, pDescriptorPool),
@@ -61,5 +53,8 @@ public class DescriptorPool {
 
     public long getVkDescriptorPool() {
         return vkDescriptorPool;
+    }
+
+    public record DescriptorTypeCount(int count, int descriptorType) {
     }
 }

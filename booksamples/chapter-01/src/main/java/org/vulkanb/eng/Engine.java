@@ -5,9 +5,9 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Engine {
 
-    private boolean running;
     private IAppLogic appLogic;
     private Render render;
+    private boolean running;
     private Scene scene;
     private Window window;
 
@@ -16,7 +16,7 @@ public class Engine {
         render = new Render();
         appLogic = gameLogic;
         scene = new Scene(window);
-        render.init(window);
+        render.init(window, scene);
         appLogic.init(window, scene, render);
     }
 

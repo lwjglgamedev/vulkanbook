@@ -14,7 +14,7 @@ public class UniformsDescriptorSetLayout extends DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public UniformsDescriptorSetLayout(Device device, int binding) {
+    public UniformsDescriptorSetLayout(Device device) {
         super(device);
 
         LOGGER.debug("Creating uniforms descriptor set layout");
@@ -22,7 +22,7 @@ public class UniformsDescriptorSetLayout extends DescriptorSetLayout {
             VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
             // Projection  matrix
             layoutBindings.get(0)
-                    .binding(binding)
+                    .binding(0)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     .descriptorCount(1)
                     .stageFlags(VK_SHADER_STAGE_VERTEX_BIT);

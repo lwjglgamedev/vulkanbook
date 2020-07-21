@@ -39,7 +39,7 @@ public class Render {
         instance.cleanup();
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());

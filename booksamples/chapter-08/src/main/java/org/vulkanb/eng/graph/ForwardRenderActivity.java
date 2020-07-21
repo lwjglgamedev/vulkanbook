@@ -64,8 +64,8 @@ public class ForwardRenderActivity {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, FRAGMENT_SHADER_FILE_SPV),
                 });
 
-        uniformsDescriptorSetLayout = new UniformsDescriptorSetLayout(device, 0);
-        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
+        uniformsDescriptorSetLayout = new UniformsDescriptorSetLayout(device);
+        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformsDescriptorSetLayout,
                 textureDescriptorSetLayout,
@@ -83,7 +83,10 @@ public class ForwardRenderActivity {
             commandBuffers[i] = new CommandBuffer(commandPool, true, false);
             fences[i] = new Fence(device, true);
         }
-        descriptorPool = new DescriptorPool(device, MAX_DESCRIPTORS, 0);
+        List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1));
+        descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
         descriptorSetMap = new HashMap<>();
         textureSampler = new TextureSampler(device, 1);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -139,17 +142,17 @@ public class ForwardRenderActivity {
     }
 
     public void meshUnLoaded(VulkanMesh vulkanMesh) {
-        descriptorSetMap.remove(vulkanMesh.getTextureId());
+        descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
     }
 
     public void meshesLoaded(VulkanMesh[] meshes, TextureCache textureCache) {
         for (VulkanMesh vulkanMesh : meshes) {
-            TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(vulkanMesh.getTextureId());
+            String textureFileName = vulkanMesh.getTexture().getFileName();
+            TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
             if (textureDescriptorSet == null) {
-                Texture texture = textureCache.getTexture(vulkanMesh.getTextureId());
                 textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
-                        texture, textureSampler, 0);
-                descriptorSetMap.put(vulkanMesh.getTextureId(), textureDescriptorSet);
+                        vulkanMesh.getTexture(), textureSampler, 0);
+                descriptorSetMap.put(textureFileName, textureDescriptorSet);
             }
         }
     }
@@ -216,7 +219,7 @@ public class ForwardRenderActivity {
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                 vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTextureId());
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
                 List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
                 for (Entity entity : entities) {
                     descriptorSets.put(1, textureDescriptorSet.getVkDescriptorSet());

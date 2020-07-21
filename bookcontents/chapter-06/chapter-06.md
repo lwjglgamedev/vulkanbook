@@ -1006,7 +1006,7 @@ public class Render {
         ...
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         ...
         meshList = new ArrayList<>();
     }

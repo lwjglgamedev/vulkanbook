@@ -80,7 +80,7 @@ public class Engine {
         render = new Render();
         appLogic = gameLogic;
         scene = new Scene(window);
-        render.init(window);
+        render.init(window, scene);
         appLogic.init(window, scene, render);
     }
 
@@ -191,7 +191,7 @@ public class Render {
         // To be implemented
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         // To be implemented
     }
 

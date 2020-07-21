@@ -369,7 +369,7 @@ public class Render {
         ...
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         ...
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());

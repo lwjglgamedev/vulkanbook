@@ -75,12 +75,12 @@ public class ModelLoader {
         return indices;
     }
 
-    protected static void processMaterial(AIMaterial aiMaterial, List<Material> materials, String texturesDir) {
+    private static void processMaterial(AIMaterial aiMaterial, List<Material> materials, String texturesDir) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             AIColor4D colour = AIColor4D.create();
 
             AIString aiTexturePath = AIString.callocStack(stack);
-            Assimp.aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
+            aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
                     null, null, null, null, null);
             String texturePath = aiTexturePath.dataString();
             if (texturePath != null && texturePath.length() > 0) {

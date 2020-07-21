@@ -21,7 +21,7 @@ public class Texture {
     private Image image;
     private ImageView imageView;
     private int mipLevels;
-    private VulkanBuffer tmpBuffer;
+    private VulkanBuffer stgBuffer;
     private int width;
 
     public Texture(Device device, String fileName, int imageFormat) {
@@ -42,7 +42,9 @@ public class Texture {
             height = h.get();
             mipLevels = 1;
 
-            tmpBuffer = createImage(stack, device, buf, imageFormat);
+            createStgBuffer(stack, device, buf);
+            image = new Image(device, width, height, imageFormat, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                    mipLevels, 1);
             imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
         }
 
@@ -50,19 +52,42 @@ public class Texture {
     }
 
     public void cleanup() {
-        cleanupTmpBuffer();
+        cleanupStgBuffer();
         imageView.cleanup();
         image.cleanup();
     }
 
-    public void cleanupTmpBuffer() {
-        if (tmpBuffer != null) {
-            tmpBuffer.cleanup();
-            tmpBuffer = null;
+    public void cleanupStgBuffer() {
+        if (stgBuffer != null) {
+            stgBuffer.cleanup();
+            stgBuffer = null;
         }
     }
 
-    void copyBufferToImage(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
+    private void createStgBuffer(MemoryStack stack, Device device, ByteBuffer data) {
+        int size = width * height * BYTES_PER_PIXEL;
+        stgBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        PointerBuffer pp = stack.mallocPointer(1);
+        vkCheck(vkMapMemory(device.getVkDevice(), stgBuffer.getMemory(), 0,
+                stgBuffer.getAllocationSize(), 0, pp), "Failed to map memory");
+
+        ByteBuffer buffer = pp.getByteBuffer(size);
+        buffer.put(data);
+        data.flip();
+
+        vkUnmapMemory(device.getVkDevice(), stgBuffer.getMemory());
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public ImageView getImageView() {
+        return imageView;
+    }
+
+    void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
         VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
                 .bufferOffset(0)
@@ -81,35 +106,6 @@ public class Texture {
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, region);
     }
 
-    private VulkanBuffer createImage(MemoryStack stack, Device device, ByteBuffer data, int imageFormat) {
-        int size = width * height * BYTES_PER_PIXEL;
-        VulkanBuffer vulkanBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        PointerBuffer pp = stack.mallocPointer(1);
-        vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0,
-                vulkanBuffer.getAllocationSize(), 0, pp), "Failed to map memory");
-
-        ByteBuffer buffer = pp.getByteBuffer(size);
-        buffer.put(data);
-        data.flip();
-
-        vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-
-        image = new Image(device, width, height, imageFormat,
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                mipLevels, 1);
-
-        return vulkanBuffer;
-    }
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    public ImageView getImageView() {
-        return imageView;
-    }
-
     private void recordImageTransition(MemoryStack stack, CommandBuffer cmd, int oldLayout, int newLayout) {
 
         VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.callocStack(1, stack)
@@ -126,40 +122,37 @@ public class Texture {
                         .baseArrayLayer(0)
                         .layerCount(1));
 
-        int sourceStage;
-        int destinationStage;
+        int srcStage;
+        int srcAccessMask;
+        int dstAccessMask;
+        int dstStage;
 
         if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-            barrier.srcAccessMask(0);
-            barrier.dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT);
-
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            srcAccessMask = 0;
+            dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            barrier.srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT);
-            barrier.dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
-
-            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         } else {
             throw new RuntimeException("Unsupported layout transition");
         }
 
-        vkCmdPipelineBarrier(
-                cmd.getVkCommandBuffer(),
-                sourceStage, destinationStage,
-                0,
-                null,
-                null,
-                barrier);
+        barrier.srcAccessMask(srcAccessMask);
+        barrier.dstAccessMask(dstAccessMask);
+
+        vkCmdPipelineBarrier(cmd.getVkCommandBuffer(), srcStage, dstStage, 0, null, null, barrier);
     }
 
     public void recordTextureTransition(CommandBuffer cmd) {
-        if (tmpBuffer != null) {
+        if (stgBuffer != null) {
             LOGGER.debug("Recording transition for texture [{}]", fileName);
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-                copyBufferToImage(stack, cmd, tmpBuffer);
+                recordCopyBuffer(stack, cmd, stgBuffer);
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
         } else {
