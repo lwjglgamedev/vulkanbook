@@ -440,8 +440,6 @@ public class Texture {
 
 This method first records the transition of the image layout to one where we can copy the staging buffer contents. That is, we transition from `VK_IMAGE_LAYOUT_UNDEFINED` to `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL` layout by calling the `recordImageTransition`. After that, it records the commands to copy the staging buffer contents to the image, by calling the `recordCopyBuffer`. Finally, we record the commands to transition the layout from `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL` to `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` by calling again the `recordImageTransition` method. The texture will be used in a shader, no one will be writing to it after we have finished with the staging buffer, therefore, the `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` is the appropriate state.
 
-
-
 An important issue to highlight is that we are recording commands that can be submitted to a queue. In this way, we can group the commands associated to several textures and submit them using a single call, instead of going one by one. This should  reduce the loading time when dealing with several textures. We can view now the definition of the `recordImageTransition` method:
 
 ```java
@@ -1185,8 +1183,8 @@ public class ForwardRenderActivity {
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         ...
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
         descriptorSetMap = new HashMap<>();
         textureSampler = new TextureSampler(device, 1);

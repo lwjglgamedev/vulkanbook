@@ -83,8 +83,8 @@ public class ForwardRenderActivity {
             fences[i] = new Fence(device, true);
         }
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
         descriptorSetMap = new HashMap<>();
         textureSampler = new TextureSampler(device, 1);
