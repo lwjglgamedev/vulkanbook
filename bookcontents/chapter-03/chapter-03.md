@@ -349,7 +349,7 @@ public class Device {
 
 If you recall, when selecting the physical device we checked if it supported the KHR Swap chain extension, now it is the turn to explicitly say that we are going to use it. In order to define that we create a `PointerBuffer` which will hold a list of `null` terminated strings.
 
-After that, we need set the features that we want to use. Features are certain capabilities which can be present or not in your physical device. For the ones that are present we can choose which ones to enable for our logical device. Some features control if compressed textures are enabled or not, if 64 bit floats are supported, etc. We could just simple use the set of features already supported by our physical device but doing this we may affect performance.  By now we will not be enabling any feature, so we just allocate an empty structure.
+After that, we need set the features that we want to use. Features are certain capabilities which can be present or not in your physical device. For the ones that are present we can choose which ones to enable for our logical device. Some features control if compressed textures are enabled or not, if 64 bit floats are supported, etc. We could just simple use the set of features already supported by our physical device but doing this we may affect performance. By now we will not be enabling any feature, so we just allocate an empty structure.
 
 ```java
 public class Device {
