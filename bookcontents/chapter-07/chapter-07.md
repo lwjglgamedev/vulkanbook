@@ -327,12 +327,9 @@ If we are going to represent 3D scenes, we need to project from the 3D world int
 package org.vulkanb.eng.scene;
 
 import org.joml.Matrix4f;
+import org.vulkanb.eng.EngineProperties;
 
 public class Perspective {
-
-    private static final float FOV = (float) Math.toRadians(60.0f);
-    private static final float Z_FAR = 100.f;
-    private static final float Z_NEAR = 0.01f;
 
     private Matrix4f perspectiveMatrix;
 
@@ -345,14 +342,46 @@ public class Perspective {
     }
 
     public void resize(int width, int height) {
+        EngineProperties engProps = EngineProperties.getInstance();
         perspectiveMatrix.identity();
-        perspectiveMatrix.perspective(FOV, (float) width / (float) height, Z_NEAR, Z_FAR, true);
+        perspectiveMatrix.perspective(engProps.getFov(), (float) width / (float) height,
+                engProps.getZNear(), engProps.getZFar(), true);
     }
 }
 ```
 
 We are using the [JOML](https://github.com/JOML-CI/JOML) library to create a `Matrix4f` which will hold the projection matrix. The `resize`should be called, at least once, to initialize the parameters of the matrix with the correct parameters (by invoking the `Matrix4f` `perspective`method). The `perspective` method receives the usual arguments, the field of view (in  radians), the aspect ratio and the near and far planes. You may have noticed that it receives an extra argument, which in JOML documentation is named `zZeroToOne`. We have already talked about that Vulkan uses a different coordinate System where y axis point downwards. Vulkan also defines a different range for z coordinates. The Normalized Device Coordinates (NDC), in OpenGL use the range [-1, 1] to represent screen coordinates and also for the z value. Anything outside that range is considered to be out of the field of view and will not be presented. In Vulkan, and also in Direct3D, the NDC range used for the z coordinates is [0, 1]. We need to set the `zZeroToOne` parameter to true to be compliant with Vulkan coordinates System.
 
+The parameters of the perspective matrix can be configured in the `eng.properties` file, so we need to update the `EngineProperties` class:
+```java
+public class EngineProperties {
+    private static final float DEFAULT_FOV = 60.0f;
+    ...
+    private static final float DEFAULT_Z_FAR = 100.f;
+    private static final float DEFAULT_Z_NEAR = 1.0f;
+    ...
+    private EngineProperties() {
+        ...
+            fov = (float) Math.toRadians(Float.parseFloat(props.getOrDefault("fov", DEFAULT_FOV).toString()));
+            zNear = Float.parseFloat(props.getOrDefault("zNear", DEFAULT_Z_NEAR).toString());
+            zFar = Float.parseFloat(props.getOrDefault("zFar", DEFAULT_Z_FAR).toString());
+       ...
+    }
+    ...
+    public float getFov() {
+        return fov;
+    }
+    ...
+    public float getZFar() {
+        return zFar;
+    }
+
+    public float getZNear() {
+        return zNear;
+    }
+    ...
+}
+```
 We are going also to introduce a new concept for the engine that will allow to define game entities and use the same `Mesh` to render multiple elements. Instead of rendering meshes, we will have entities which have some properties, such as their scale, position and rotation and will be associated to a mesh. They can model a player, NPCs or scene objects and will be managed by a class named `Entity`, which is defined like this:
 
 ```java

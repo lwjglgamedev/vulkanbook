@@ -91,7 +91,7 @@ public class ForwardRenderActivity {
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         uniformsDescriptorSet = new UniformsDescriptorSet(descriptorPool, uniformsDescriptorSetLayout, projMatrixUniform);
-        setProjectionUniform(scene.getPerspective().getPerspectiveMatrix());
+        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
 
     public void cleanup() {
@@ -107,6 +107,18 @@ public class ForwardRenderActivity {
         renderPass.cleanup();
         Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
         Arrays.stream(fences).forEach(Fence::cleanup);
+    }
+
+    private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            PointerBuffer pointerBuffer = stack.mallocPointer(1);
+            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0, vulkanBuffer.getAllocationSize(),
+                    0, pointerBuffer), "Failed to map UBO memory");
+            long data = pointerBuffer.get(0);
+            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
+            matrix.get(0, matrixBuffer);
+            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
+        }
     }
 
     private void createDepthImages() {
@@ -238,25 +250,13 @@ public class ForwardRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        setProjectionUniform(scene.getPerspective().getPerspectiveMatrix());
+        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         Arrays.stream(depthImageViews).forEach(ImageView::cleanup);
         Arrays.stream(depthImages).forEach(Image::cleanup);
         createDepthImages();
         createFrameBuffers();
-    }
-
-    private void setProjectionUniform(Matrix4f projectionMatrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), projMatrixUniform.getMemory(), 0, projMatrixUniform.getAllocationSize(),
-                    0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) projMatrixUniform.getAllocationSize());
-            projectionMatrix.get(0, matrixBuffer);
-            vkUnmapMemory(device.getVkDevice(), projMatrixUniform.getMemory());
-        }
     }
 
     private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f modelMatrix, ByteBuffer pushConstantBuffer) {

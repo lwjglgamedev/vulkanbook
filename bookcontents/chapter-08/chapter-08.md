@@ -1191,7 +1191,7 @@ public class ForwardRenderActivity {
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         uniformsDescriptorSet = new UniformsDescriptorSet(descriptorPool, uniformsDescriptorSetLayout, projMatrixUniform);
-        setProjectionUniform(scene.getPerspective().getPerspectiveMatrix());
+        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
     ...
 }
@@ -1199,27 +1199,27 @@ public class ForwardRenderActivity {
 
 First we create the descriptor pool. In this case we will create just one descriptor for a single texture and a single descriptor for the projection matrix. We also create a texture sampler. Warning note: If the uniform could be updated in each frame, we would need as many descriptors as swap chain images we have. If not, we could be updating the descriptor set contents while still being used in rendering another frame. We also create a map, that we will use for the textures. We will store the descriptors associated to each texture indexed by the file used to load it.
 
-The projection matrix only will be updated when resizing and when that occurs we will not be drawing anything, so it is safe to have just one. We initialize the buffer associated to the projection uniform by calling the `setProjectionUniform` which is defined like this:
+The projection matrix only will be updated when resizing and when that occurs we will not be drawing anything, so it is safe to have just one. We initialize the buffer associated to the projection uniform by calling the `copyMatrixToBuffer` which is defined like this:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    private void setProjectionUniform(Matrix4f projectionMatrix) {
+    private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), projMatrixUniform.getMemory(), 0, projMatrixUniform.getAllocationSize(),
+            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0, vulkanBuffer.getAllocationSize(),
                     0, pointerBuffer), "Failed to map UBO memory");
             long data = pointerBuffer.get(0);
-            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) projMatrixUniform.getAllocationSize());
-            projectionMatrix.get(0, matrixBuffer);
-            vkUnmapMemory(device.getVkDevice(), projMatrixUniform.getMemory());
+            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
+            matrix.get(0, matrixBuffer);
+            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
         }
     }
     ...
 }
 ```
 
-The `setProjectionUniform` method is quite simple, we just map the memory associated to a buffer and copy the projection matrix to that region. We need also to modify the `cleanup` method to free the new resources:
+The `copyMatrixToBuffer` method is quite simple, we just map the memory associated to a buffer and copy the  matrix passed as parameter to that region. We need also to modify the `cleanup` method to free the new resources:
 
 ```java
 public class ForwardRenderActivity {
@@ -1314,7 +1314,7 @@ The `resize` method needs also to be modified ti update the buffer that will bac
 public class ForwardRenderActivity {
     ...
     public void resize(SwapChain swapChain, Scene scene) {
-        setProjectionUniform(scene.getPerspective().getPerspectiveMatrix());
+        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         ...
     }
     ...

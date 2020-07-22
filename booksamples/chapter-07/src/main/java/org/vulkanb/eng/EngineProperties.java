@@ -6,17 +6,23 @@ import java.io.*;
 import java.util.Properties;
 
 public class EngineProperties {
+    private static final float DEFAULT_FOV = 60.0f;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final int DEFAULT_UPS = 30;
+    private static final float DEFAULT_Z_FAR = 100.f;
+    private static final float DEFAULT_Z_NEAR = 1.0f;
     private static final String FILENAME = "eng.properties";
     private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
+    private float fov;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
     private int ups;
     private boolean vSync;
     private boolean validate;
+    private float zFar;
+    private float zNear;
 
     private EngineProperties() {
         // Singleton
@@ -30,6 +36,9 @@ public class EngineProperties {
             requestedImages = Integer.parseInt(props.getOrDefault("requestedImages", DEFAULT_REQUESTED_IMAGES).toString());
             vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
             shaderRecompilation = Boolean.parseBoolean(props.getOrDefault("shaderRecompilation", false).toString());
+            fov = (float) Math.toRadians(Float.parseFloat(props.getOrDefault("fov", DEFAULT_FOV).toString()));
+            zNear = Float.parseFloat(props.getOrDefault("zNear", DEFAULT_Z_NEAR).toString());
+            zFar = Float.parseFloat(props.getOrDefault("zFar", DEFAULT_Z_FAR).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -40,6 +49,10 @@ public class EngineProperties {
             instance = new EngineProperties();
         }
         return instance;
+    }
+
+    public float getFov() {
+        return fov;
     }
 
     public String getPhysDeviceName() {
@@ -54,6 +67,14 @@ public class EngineProperties {
         return ups;
     }
 
+    public float getZFar() {
+        return zFar;
+    }
+
+    public float getZNear() {
+        return zNear;
+    }
+
     public boolean isShaderRecompilation() {
         return shaderRecompilation;
     }
@@ -65,5 +86,4 @@ public class EngineProperties {
     public boolean isvSync() {
         return vSync;
     }
-
 }
