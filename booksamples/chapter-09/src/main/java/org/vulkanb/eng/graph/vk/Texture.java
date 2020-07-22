@@ -17,6 +17,7 @@ public class Texture {
     private static final int BYTES_PER_PIXEL = 4;
     private static final Logger LOGGER = LogManager.getLogger();
     private String fileName;
+    private boolean hasTransparencies;
     private int height;
     private Image image;
     private ImageView imageView;
@@ -42,6 +43,7 @@ public class Texture {
             height = h.get();
             mipLevels = 1;
 
+            setHasTransparencies(buf);
             createStgBuffer(stack, device, buf);
             image = new Image(device, width, height, imageFormat, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                     mipLevels, 1);
@@ -85,6 +87,10 @@ public class Texture {
 
     public ImageView getImageView() {
         return imageView;
+    }
+
+    public boolean hasTransparencies() {
+        return hasTransparencies;
     }
 
     void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
@@ -157,6 +163,20 @@ public class Texture {
             }
         } else {
             LOGGER.debug("Texture [{}] has already been transitioned", fileName);
+        }
+    }
+
+    private void setHasTransparencies(ByteBuffer buf) {
+        int numPixels = buf.capacity() / 4;
+        int offset = 0;
+        hasTransparencies = false;
+        for (int i = 0; i < numPixels; i++) {
+            int a = (0xFF & buf.get(offset + 3));
+            if (a < 255) {
+                hasTransparencies = true;
+                break;
+            }
+            offset += 4;
         }
     }
 }

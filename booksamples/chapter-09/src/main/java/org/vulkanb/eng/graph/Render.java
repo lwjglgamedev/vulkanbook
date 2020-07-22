@@ -64,6 +64,9 @@ public class Render {
         LOGGER.debug("Loaded {} meshe(s)", meshes.length);
         meshList.addAll(Arrays.asList(meshes));
 
+        // Reorder meshes
+        Collections.sort(meshList, (a, b) -> Boolean.compare(a.getTexture().hasTransparencies(), b.getTexture().hasTransparencies()));
+
         fwdRenderActivity.meshesLoaded(meshes, textureCache);
     }
 
