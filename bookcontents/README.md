@@ -10,3 +10,5 @@ The book is structured in the following chapters:
 - [Chapter 05](chapter-05/chapter-05.md): In this chapter we will setup the basic structures for rendering (render passes, command buffers and the synchronization mechanisms). 
 - [Chapter 06](chapter-06/chapter-06.md): In this chapter we define the classes required to define the vertices, use the graphics pipeline and create shaders. We will draw our first shape to the screen (a triangle).
 - [Chapter 07](chapter-07/chapter-07.md): In this chapter we go 3D by implementing depth testing and add windows resizing support.
+- [Chapter 08](chapter-08/chapter-08.md): In this chapter we add support for loading complex 3D models using Assimp and textures.
+- [Chapter 09](chapter-09/chapter-09.md): Pending.
