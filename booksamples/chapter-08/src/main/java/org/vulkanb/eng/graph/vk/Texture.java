@@ -87,7 +87,7 @@ public class Texture {
         return imageView;
     }
 
-    void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
+    private void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
         VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
                 .bufferOffset(0)

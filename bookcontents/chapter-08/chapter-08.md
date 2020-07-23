@@ -526,7 +526,7 @@ The only missing method in t he `Texture` class is the `recordCopyBuffer`:
 ```java
 public class Texture {
     ...
-    void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
+    private void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
         VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
                 .bufferOffset(0)
