@@ -41,11 +41,12 @@ public class Texture {
 
             width = w.get();
             height = h.get();
-            mipLevels = 1;
+            mipLevels = (int) Math.floor(log2(Math.min(width, height))) + 1;
 
             setHasTransparencies(buf);
             createStgBuffer(stack, device, buf);
-            image = new Image(device, width, height, imageFormat, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            image = new Image(device, width, height, imageFormat,
+                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                     mipLevels, 1);
             imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
         }
@@ -93,7 +94,11 @@ public class Texture {
         return hasTransparencies;
     }
 
-    void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
+    private double log2(int n) {
+        return Math.log(n) / Math.log(2);
+    }
+
+    private void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
         VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
                 .bufferOffset(0)
@@ -110,6 +115,91 @@ public class Texture {
 
         vkCmdCopyBufferToImage(cmd.getVkCommandBuffer(), bufferData.getBuffer(), image.getVkImage(),
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, region);
+    }
+
+    private void recordGenerateMipMaps(MemoryStack stack, CommandBuffer cmd) {
+        VkImageSubresourceRange subResourceRange = VkImageSubresourceRange.callocStack(stack)
+                .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                .baseArrayLayer(0)
+                .layerCount(1)
+                .levelCount(1)
+                .layerCount(1);
+
+        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.callocStack(1, stack)
+                .sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
+                .image(image.getVkImage())
+                .srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                .dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                .subresourceRange(subResourceRange);
+
+        int mipWidth = width;
+        int mipHeight = height;
+
+        for (int i = 1; i < mipLevels; i++) {
+            int auxi = i;
+            subResourceRange.baseMipLevel(i - 1);
+            barrier.subresourceRange(subResourceRange)
+                    .oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                    .newLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+                    .srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                    .dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT);
+
+            vkCmdPipelineBarrier(cmd.getVkCommandBuffer(),
+                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                    null, null, barrier);
+
+            VkOffset3D srcOffset0 = VkOffset3D.callocStack(stack)
+                    .x(0).y(0).z(0);
+            VkOffset3D srcOffset1 = VkOffset3D.callocStack(stack)
+                    .x(mipWidth).y(mipHeight).z(1);
+            VkOffset3D dstOffset0 = VkOffset3D.callocStack(stack)
+                    .x(0).y(0).z(0);
+            VkOffset3D dstOffset1 = VkOffset3D.callocStack(stack)
+                    .x(mipWidth > 1 ? mipWidth / 2 : 1).y(mipHeight > 1 ? mipHeight / 2 : 1).z(1);
+            VkImageBlit.Buffer blit = VkImageBlit.callocStack(1, stack)
+                    .srcOffsets(0, srcOffset0)
+                    .srcOffsets(1, srcOffset1)
+                    .srcSubresource(it -> it
+                            .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                            .mipLevel(auxi - 1)
+                            .baseArrayLayer(0)
+                            .layerCount(1))
+                    .dstOffsets(0, dstOffset0)
+                    .dstOffsets(1, dstOffset1)
+                    .dstSubresource(it -> it
+                            .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                            .mipLevel(auxi)
+                            .baseArrayLayer(0)
+                            .layerCount(1));
+
+            vkCmdBlitImage(cmd.getVkCommandBuffer(),
+                    image.getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    image.getVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    blit, VK_FILTER_LINEAR);
+
+            barrier.oldLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+                    .newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+                    .srcAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
+                    .dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
+
+            vkCmdPipelineBarrier(cmd.getVkCommandBuffer(),
+                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                    null, null, barrier);
+
+            if (mipWidth > 1) mipWidth /= 2;
+            if (mipHeight > 1) mipHeight /= 2;
+        }
+
+        barrier.subresourceRange(it -> it
+                .baseMipLevel(mipLevels - 1))
+                .oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                .newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+                .srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
+                .dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
+
+        vkCmdPipelineBarrier(cmd.getVkCommandBuffer(),
+                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                null, null, barrier);
     }
 
     private void recordImageTransition(MemoryStack stack, CommandBuffer cmd, int oldLayout, int newLayout) {
@@ -159,7 +249,7 @@ public class Texture {
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 recordCopyBuffer(stack, cmd, stgBuffer);
-                recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                recordGenerateMipMaps(stack, cmd);
             }
         } else {
             LOGGER.debug("Texture [{}] has already been transitioned", fileName);
