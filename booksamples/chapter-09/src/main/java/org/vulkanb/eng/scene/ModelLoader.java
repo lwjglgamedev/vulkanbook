@@ -79,19 +79,19 @@ public class ModelLoader {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             AIColor4D colour = AIColor4D.create();
 
+            Vector4f diffuse = Material.DEFAULT_COLOR;
+            int result = aiGetMaterialColor(aiMaterial, AI_MATKEY_COLOR_DIFFUSE, aiTextureType_NONE, 0,
+                    colour);
+            if (result == aiReturn_SUCCESS) {
+                diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
+            }
             AIString aiTexturePath = AIString.callocStack(stack);
             aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
                     null, null, null, null, null);
             String texturePath = aiTexturePath.dataString();
             if (texturePath != null && texturePath.length() > 0) {
                 texturePath = texturesDir + File.separator + new File(texturePath).getName();
-            }
-
-            Vector4f diffuse = Material.DEFAULT_COLOR;
-            int result = aiGetMaterialColor(aiMaterial, AI_MATKEY_COLOR_DIFFUSE, aiTextureType_NONE, 0,
-                    colour);
-            if (result == aiReturn_SUCCESS) {
-                diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
+                diffuse = new Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
             }
 
             Material material = new Material(texturePath, diffuse);

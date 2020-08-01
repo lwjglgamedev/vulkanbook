@@ -7,6 +7,7 @@ import java.util.Properties;
 
 public class EngineProperties {
     private static final float DEFAULT_FOV = 60.0f;
+    private static final int DEFAULT_MAX_MATERIALS = 500;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final int DEFAULT_UPS = 30;
     private static final float DEFAULT_Z_FAR = 100.f;
@@ -16,6 +17,7 @@ public class EngineProperties {
     private static EngineProperties instance;
     private String defaultTexturePath;
     private float fov;
+    private int maxMaterials;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -41,6 +43,7 @@ public class EngineProperties {
             zNear = Float.parseFloat(props.getOrDefault("zNear", DEFAULT_Z_NEAR).toString());
             zFar = Float.parseFloat(props.getOrDefault("zFar", DEFAULT_Z_FAR).toString());
             defaultTexturePath = props.getProperty("defaultTexturePath");
+            maxMaterials = Integer.parseInt(props.getOrDefault("maxMaterials", DEFAULT_MAX_MATERIALS).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -59,6 +62,10 @@ public class EngineProperties {
 
     public float getFov() {
         return fov;
+    }
+
+    public int getMaxMaterials() {
+        return maxMaterials;
     }
 
     public String getPhysDeviceName() {

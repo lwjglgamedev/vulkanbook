@@ -32,17 +32,21 @@ public class ForwardRenderActivity {
     private Fence[] fences;
     private FrameBuffer[] frameBuffers;
     private ShaderProgram fwdShaderProgram;
+    private MaterialDescriptorSetLayout materialDescriptorSetLayout;
+    private MaterialDescriptorSet[] materialDescriptorSets;
+    private int materialSize;
+    private VulkanBuffer[] materialsBuffer;
+    private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
+    private MatrixDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
     private SwapChainRenderPass renderPass;
     private SwapChain swapChain;
     private TextureDescriptorSetLayout textureDescriptorSetLayout;
     private TextureSampler textureSampler;
-    private UniformsDescriptorSet uniformsDescriptorSet;
-    private UniformsDescriptorSetLayout uniformsDescriptorSetLayout;
     private VulkanBuffer[] viewMatricesBuffer;
-    private UniformsDescriptorSet[] viewMatricesDescriptorSet;
+    private MatrixDescriptorSet[] viewMatricesDescriptorSets;
 
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
@@ -65,13 +69,8 @@ public class ForwardRenderActivity {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, FRAGMENT_SHADER_FILE_SPV),
                 });
 
-        uniformsDescriptorSetLayout = new UniformsDescriptorSetLayout(device, 0);
-        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
-        descriptorSetLayouts = new DescriptorSetLayout[]{
-                uniformsDescriptorSetLayout,
-                uniformsDescriptorSetLayout,
-                textureDescriptorSetLayout,
-        };
+        materialSize = calcMaterialsUniformSize(device.getPhysicalDevice());
+        createDescriptorSets(numImages);
 
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 renderPass.getVkRenderPass(), fwdShaderProgram, 1, true, GraphConstants.MAT4X4_SIZE * 2,
@@ -79,39 +78,33 @@ public class ForwardRenderActivity {
         pipeLine = new Pipeline(this.pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
 
-        List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(500, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
-        descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
-        descriptorSetMap = new HashMap<>();
-        textureSampler = new TextureSampler(device, 1);
-        projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        uniformsDescriptorSet = new UniformsDescriptorSet(descriptorPool, uniformsDescriptorSetLayout, projMatrixUniform);
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
-
         commandBuffers = new CommandBuffer[numImages];
         fences = new Fence[numImages];
-        viewMatricesDescriptorSet = new UniformsDescriptorSet[numImages];
-        viewMatricesBuffer = new VulkanBuffer[numImages];
+
         for (int i = 0; i < numImages; i++) {
             commandBuffers[i] = new CommandBuffer(commandPool, true, false);
             fences[i] = new Fence(device, true);
-            viewMatricesBuffer[i] = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-            viewMatricesDescriptorSet[i] = new UniformsDescriptorSet(descriptorPool, uniformsDescriptorSetLayout,
-                    viewMatricesBuffer[i]);
         }
+
+        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+    }
+
+    private int calcMaterialsUniformSize(PhysicalDevice physDevice) {
+        long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
+        long mult = GraphConstants.VEC4_SIZE / minUboAlignment + 1;
+        return (int) (mult * minUboAlignment);
     }
 
     public void cleanup() {
+        Arrays.stream(materialsBuffer).forEach(VulkanBuffer::cleanup);
         Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
         descriptorPool.cleanup();
         pipeLine.cleanup();
-        uniformsDescriptorSetLayout.cleanup();
+        matrixDescriptorSetLayout.cleanup();
         textureDescriptorSetLayout.cleanup();
+        materialDescriptorSetLayout.cleanup();
         Arrays.stream(depthImageViews).forEach(ImageView::cleanup);
         Arrays.stream(depthImages).forEach(Image::cleanup);
         fwdShaderProgram.cleanup();
@@ -147,6 +140,45 @@ public class ForwardRenderActivity {
         }
     }
 
+    private void createDescriptorSets(int numImages) {
+        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0);
+        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
+        materialDescriptorSetLayout = new MaterialDescriptorSetLayout(device, 0);
+        descriptorSetLayouts = new DescriptorSetLayout[]{
+                matrixDescriptorSetLayout,
+                matrixDescriptorSetLayout,
+                textureDescriptorSetLayout,
+                materialDescriptorSetLayout,
+        };
+
+        EngineProperties engineProps = EngineProperties.getInstance();
+        List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() + 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC));
+        descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
+        descriptorSetMap = new HashMap<>();
+        textureSampler = new TextureSampler(device, 1);
+        projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        projMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
+
+        viewMatricesDescriptorSets = new MatrixDescriptorSet[numImages];
+        viewMatricesBuffer = new VulkanBuffer[numImages];
+        materialDescriptorSets = new MaterialDescriptorSet[numImages];
+        materialsBuffer = new VulkanBuffer[numImages];
+        for (int i = 0; i < numImages; i++) {
+            viewMatricesBuffer[i] = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            viewMatricesDescriptorSets[i] = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
+                    viewMatricesBuffer[i], 0);
+            materialsBuffer[i] = new VulkanBuffer(device, materialSize * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            materialDescriptorSets[i] = new MaterialDescriptorSet(descriptorPool, materialDescriptorSetLayout,
+                    materialsBuffer[i], materialSize, 0);
+        }
+    }
+
     private void createFrameBuffers() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
@@ -171,7 +203,7 @@ public class ForwardRenderActivity {
         }
     }
 
-    public void meshesLoaded(VulkanMesh[] meshes, TextureCache textureCache) {
+    public void meshesLoaded(VulkanMesh[] meshes) {
         for (VulkanMesh vulkanMesh : meshes) {
             String textureFileName = vulkanMesh.getTexture().getFileName();
             TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
@@ -236,11 +268,17 @@ public class ForwardRenderActivity {
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
-            LongBuffer descriptorSets = stack.mallocLong(3)
-                    .put(0, uniformsDescriptorSet.getVkDescriptorSet())
-                    .put(1, viewMatricesDescriptorSet[idx].getVkDescriptorSet());
+            LongBuffer descriptorSets = stack.mallocLong(4)
+                    .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
+                    .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
+                    .put(3, materialDescriptorSets[idx].getVkDescriptorSet());
             copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+            IntBuffer dynDescrSetOffset = stack.callocInt(1);
+            int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
+                int materialOffset = meshCount * materialSize;
+                updateMaterial(device, materialsBuffer[idx], mesh.getMaterial(), materialOffset);
+                dynDescrSetOffset.put(0, materialOffset);
                 LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
@@ -251,11 +289,13 @@ public class ForwardRenderActivity {
                 for (Entity entity : entities) {
                     descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
 
                     setPushConstants(cmdHandle, entity.getModelMatrix(), pushConstantBuffer);
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
+
+                meshCount++;
             }
 
             vkCmdEndRenderPass(cmdHandle);
@@ -289,6 +329,18 @@ public class ForwardRenderActivity {
                     stack.longs(syncSemaphores.imgAcquisitionSemaphores().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
                     stack.longs(syncSemaphores.renderCompleteSemaphores().getVkSemaphore()), currentFence);
+        }
+    }
+
+    private void updateMaterial(Device device, VulkanBuffer vulkanBuffer, Material material, int offset) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            PointerBuffer pointerBuffer = stack.mallocPointer(1);
+            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), offset, materialSize,
+                    0, pointerBuffer), "Failed to map UBO memory");
+            long data = pointerBuffer.get(0);
+            ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
+            material.getDiffuseColor().get(0, materialBuffer);
+            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
         }
     }
 }

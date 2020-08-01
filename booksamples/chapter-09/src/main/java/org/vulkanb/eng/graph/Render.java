@@ -67,7 +67,7 @@ public class Render {
         // Reorder meshes
         Collections.sort(meshList, (a, b) -> Boolean.compare(a.getTexture().hasTransparencies(), b.getTexture().hasTransparencies()));
 
-        fwdRenderActivity.meshesLoaded(meshes, textureCache);
+        fwdRenderActivity.meshesLoaded(meshes);
     }
 
     public void render(Window window, Scene scene) {

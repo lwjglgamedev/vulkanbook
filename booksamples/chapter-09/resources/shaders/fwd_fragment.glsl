@@ -5,8 +5,12 @@ layout(location = 0) out vec4 uFragColor;
 
 layout(set = 2, binding = 0) uniform sampler2D textSampler;
 
+layout(set = 3, binding = 0) uniform MaterialUniform {
+    vec4 diffuseColor;
+} material;
+
 void main()
 {
-    uFragColor = texture(textSampler, textCoords);
+    uFragColor = material.diffuseColor + texture(textSampler, textCoords);
 }
 

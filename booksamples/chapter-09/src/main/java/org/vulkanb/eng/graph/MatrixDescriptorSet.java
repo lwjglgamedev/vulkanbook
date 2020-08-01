@@ -9,12 +9,10 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-public class UniformsDescriptorSet {
+public class MatrixDescriptorSet extends DescriptorSet {
 
-    private long vkDescriptorSet;
-
-    public UniformsDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
-                                 VulkanBuffer projMatrixBuffer) {
+    public MatrixDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
+                               VulkanBuffer projMatrixBuffer, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = descriptorPool.getDevice();
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
@@ -37,11 +35,11 @@ public class UniformsDescriptorSet {
 
             VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
 
-            // Projection matrix
+            // Matrix uniform
             descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
                     .dstSet(vkDescriptorSet)
-                    .dstBinding(0)
+                    .dstBinding(binding)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     .descriptorCount(1)
                     .pBufferInfo(projBufferInfo);
@@ -49,9 +47,4 @@ public class UniformsDescriptorSet {
             vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
         }
     }
-
-    public long getVkDescriptorSet() {
-        return vkDescriptorSet;
-    }
-
 }
