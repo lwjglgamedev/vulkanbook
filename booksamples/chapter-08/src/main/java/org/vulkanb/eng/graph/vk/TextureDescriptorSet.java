@@ -8,9 +8,7 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-public class TextureDescriptorSet {
-
-    private long vkDescriptorSet;
+public class TextureDescriptorSet extends DescriptorSet {
 
     public TextureDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
                                 Texture texture, TextureSampler textureSampler, int binding) {
@@ -44,9 +42,5 @@ public class TextureDescriptorSet {
 
             vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
         }
-    }
-
-    public long getVkDescriptorSet() {
-        return vkDescriptorSet;
     }
 }

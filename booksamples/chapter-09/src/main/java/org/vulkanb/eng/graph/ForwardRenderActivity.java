@@ -204,7 +204,9 @@ public class ForwardRenderActivity {
     }
 
     public void meshesLoaded(VulkanMesh[] meshes) {
+        int meshCount = 0;
         for (VulkanMesh vulkanMesh : meshes) {
+            int materialOffset = meshCount * materialSize;
             String textureFileName = vulkanMesh.getTexture().getFileName();
             TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
             if (textureDescriptorSet == null) {
@@ -212,6 +214,10 @@ public class ForwardRenderActivity {
                         vulkanMesh.getTexture(), textureSampler, 0);
                 descriptorSetMap.put(textureFileName, textureDescriptorSet);
             }
+            for (VulkanBuffer materialBuffer : materialsBuffer) {
+                updateMaterial(device, materialBuffer, vulkanMesh.getMaterial(), materialOffset);
+            }
+            meshCount++;
         }
     }
 
@@ -277,7 +283,6 @@ public class ForwardRenderActivity {
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
                 int materialOffset = meshCount * materialSize;
-                updateMaterial(device, materialsBuffer[idx], mesh.getMaterial(), materialOffset);
                 dynDescrSetOffset.put(0, materialOffset);
                 LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());

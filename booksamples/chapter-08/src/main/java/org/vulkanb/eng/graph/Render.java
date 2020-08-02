@@ -64,7 +64,7 @@ public class Render {
         LOGGER.debug("Loaded {} meshe(s)", meshes.length);
         meshList.addAll(Arrays.asList(meshes));
 
-        fwdRenderActivity.meshesLoaded(meshes, textureCache);
+        fwdRenderActivity.meshesLoaded(meshes);
     }
 
     public void render(Window window, Scene scene) {

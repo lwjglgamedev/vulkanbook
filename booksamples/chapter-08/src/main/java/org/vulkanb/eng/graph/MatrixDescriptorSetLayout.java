@@ -10,17 +10,17 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-public class UniformsDescriptorSetLayout extends DescriptorSetLayout {
+public class MatrixDescriptorSetLayout extends DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public UniformsDescriptorSetLayout(Device device, int binding) {
+    public MatrixDescriptorSetLayout(Device device, int binding) {
         super(device);
 
-        LOGGER.debug("Creating uniforms descriptor set layout");
+        LOGGER.debug("Creating matrix descriptor set layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
-            // Projection  matrix
+            // Matrix
             layoutBindings.get(0)
                     .binding(binding)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
@@ -33,7 +33,7 @@ public class UniformsDescriptorSetLayout extends DescriptorSetLayout {
 
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateDescriptorSetLayout(device.getVkDevice(), layoutInfo, null, lp),
-                    "Failed to create uniforms descriptor set layout");
+                    "Failed to create matrix descriptor set layout");
             super.vkDescriptorLayout = lp.get(0);
         }
     }

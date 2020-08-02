@@ -923,10 +923,23 @@ public class Device {
 }
 ```
 
-It is turn now to create the texture descriptor set by defining a new class named `TextureDescriptorSet`. Its constructor starts like this:
+It is turn now to create the texture descriptor set. We will first create an abstract class named `DescriptorSet` which will contain the handle for a descriptor set. This class will be extended by each descriptor set type we will create.
+```java
+package org.vulkanb.eng.graph.vk;
+
+public abstract class DescriptorSet {
+
+    protected long vkDescriptorSet;
+
+    public long getVkDescriptorSet() {
+        return vkDescriptorSet;
+    }
+}
+```
+Then we can define a new class named `TextureDescriptorSet` for handling descriptor sets associated to textures. Its constructor starts like this:
 
 ```java
-public class TextureDescriptorSet {
+public class TextureDescriptorSet extends DescriptorSet {
     ...
     public TextureDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
                                 Texture texture, TextureSampler textureSampler, int binding) {
@@ -953,7 +966,7 @@ public class TextureDescriptorSet {
 We start by allocating the descriptor set. In order to that, we need to invoke the `vkAllocateDescriptorSets` Vulkan function which requires a `VkDescriptorSetAllocateInfo` structure. This structure needs a handle to a descriptor pool and a handle to the layout which describes the descriptor set. After that, we need to link this descriptor set with texture (the image view) and the sampler previously created:
 
 ```java
-public class TextureDescriptorSet {
+public class TextureDescriptorSet extends DescriptorSet {
     ...
     public TextureDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
                                 Texture texture, TextureSampler textureSampler, int binding) {
@@ -994,7 +1007,7 @@ We are using a `VkDescriptorImageInfo` structure to specify the descriptor image
 
 ## Uniforms
 
-One way of passing data to shaders are uniforms. In Vulkan, regular uniforms (not talking about samplers here) are just buffers that get exposed to the shaders through descriptors. In this case, we will be using to pass the projection matrix to shaders. Up to now, we have been using push constants to pass the projection matrix along with the model matrix. This is not very efficient, since we need to record those push constants every time we are recording the draw of a mesh. The projection matrix shall not change unless the window is resized. We can use uniforms for that while leaving the push constants for the model matrix. As in the case of textures, we first need to define the descriptor layout associated to the structure that will hold that matrix. We will create a new class named `UniformsDescriptorSetLayout` for that:
+One way of passing data to shaders are uniforms. In Vulkan, regular uniforms (not talking about samplers here) are just buffers that get exposed to the shaders through descriptors. In this case, we will be using to pass the projection matrix to shaders. Up to now, we have been using push constants to pass the projection matrix along with the model matrix. This is not very efficient, since we need to record those push constants every time we are recording the draw of a mesh. The projection matrix shall not change unless the window is resized. We can use uniforms for that while leaving the push constants for the model matrix. As in the case of textures, we first need to define the descriptor layout associated to the structure that will hold that matrix. We will create a new class named `MatrixDescriptorSetLayout` for that:
 
 ```java
 package org.vulkanb.eng.graph;
@@ -1009,17 +1022,17 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-public class UniformsDescriptorSetLayout extends DescriptorSetLayout {
+public class MatrixDescriptorSetLayout extends DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public UniformsDescriptorSetLayout(Device device, int binding) {
+    public MatrixDescriptorSetLayout(Device device, int binding) {
         super(device);
 
-        LOGGER.debug("Creating uniforms descriptor set layout");
+        LOGGER.debug("Creating matrix descriptor set layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
-            // Projection  matrix
+            // Matrix
             layoutBindings.get(0)
                     .binding(binding)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
@@ -1032,7 +1045,7 @@ public class UniformsDescriptorSetLayout extends DescriptorSetLayout {
 
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateDescriptorSetLayout(device.getVkDevice(), layoutInfo, null, lp),
-                    "Failed to create uniforms descriptor set layout");
+                    "Failed to create matrix descriptor set layout");
             super.vkDescriptorLayout = lp.get(0);
         }
     }
@@ -1041,7 +1054,7 @@ public class UniformsDescriptorSetLayout extends DescriptorSetLayout {
 
 The code is quite similar to the one used in textures, but in this case we are using a different descriptor type: `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` to state that this descriptor will be associated directly to a buffer. We are also stating that this will be used in a vertex shader by using the `VK_SHADER_STAGE_VERTEX_BIT` flag.
 
-We need also to create the descriptor set associated to the uniform that will hold the projection matrix, in a new class named `UniformsDescriptorSet`:
+We need also to create the descriptor set associated to the uniform that will hold the projection matrix, in a new class named `MatrixDescriptorSet`:
 
 ```java
 package org.vulkanb.eng.graph;
@@ -1055,12 +1068,10 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-public class UniformsDescriptorSet {
+public class MatrixDescriptorSet extends DescriptorSet {
 
-    private long vkDescriptorSet;
-
-    public UniformsDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
-                                 VulkanBuffer projMatrixBuffer) {
+    public MatrixDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
+                               VulkanBuffer projMatrixBuffer, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = descriptorPool.getDevice();
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
@@ -1083,21 +1094,17 @@ public class UniformsDescriptorSet {
 
             VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
 
-            // Projection matrix
+            // Matrix uniform
             descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
                     .dstSet(vkDescriptorSet)
-                    .dstBinding(0)
+                    .dstBinding(binding)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     .descriptorCount(1)
                     .pBufferInfo(projBufferInfo);
 
             vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
         }
-    }
-
-    public long getVkDescriptorSet() {
-        return vkDescriptorSet;
     }
 }
 ```
@@ -1158,12 +1165,7 @@ public class ForwardRenderActivity {
     ...
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         ...
-        uniformsDescriptorSetLayout = new UniformsDescriptorSetLayout(device, 0);
-        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
-        descriptorSetLayouts = new DescriptorSetLayout[]{
-                uniformsDescriptorSetLayout,
-                textureDescriptorSetLayout,
-        };
+        createDescriptorSets();
 
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 renderPass.getVkRenderPass(), fwdShaderProgram, 1, true, GraphConstants.MAT4X4_SIZE * 2,
@@ -1175,13 +1177,19 @@ public class ForwardRenderActivity {
 }
 ```
 
-We create the descriptor layouts for the textures and the uniform that will hold the projection matrix. These descriptor set layouts will be packed into an array and added to the `pipeLineCreationInfo` record to properly configure the pipeline. In the constructor we need also to create the descriptor sets:
+We create the descriptor layouts for the textures and the uniform that will hold the projection matrix in a new method called `createDescriptorSets`. These descriptor set layouts will be packed into an array and added to the `pipeLineCreationInfo` record to properly configure the pipeline. In that method we need also to create the descriptor sets:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
-        ...
+    private void createDescriptorSets() {
+        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0);
+        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
+        descriptorSetLayouts = new DescriptorSetLayout[]{
+                matrixDescriptorSetLayout,
+                textureDescriptorSetLayout,
+        };
+
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
@@ -1190,20 +1198,24 @@ public class ForwardRenderActivity {
         textureSampler = new TextureSampler(device, 1);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        uniformsDescriptorSet = new UniformsDescriptorSet(descriptorPool, uniformsDescriptorSetLayout, projMatrixUniform);
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        matrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
     }
     ...
 }
 ```
 
-First we create the descriptor pool. In this case we will create just one descriptor for a single texture and a single descriptor for the projection matrix. We also create a texture sampler. Warning note: If the uniform could be updated in each frame, we would need as many descriptors as swap chain images we have. If not, we could be updating the descriptor set contents while still being used in rendering another frame. We also create a map, that we will use for the textures. We will store the descriptors associated to each texture indexed by the file used to load it.
+First we create the descriptor set layouts. Once we have those, we can create the descriptor pool. In this case we will create just one descriptor for a single texture and a single descriptor for the projection matrix. We also create a texture sampler. Warning note: If the uniform could be updated in each frame, we would need as many descriptors as swap chain images we have. If not, we could be updating the descriptor set contents while still being used in rendering another frame. We also create a map, that we will use for the textures. We will store the descriptors associated to each texture indexed by the file used to load it.
 
-The projection matrix only will be updated when resizing and when that occurs we will not be drawing anything, so it is safe to have just one. We initialize the buffer associated to the projection uniform by calling the `copyMatrixToBuffer` which is defined like this:
+Going back to the `ForwardRenderActivity` constructor, the projection matrix only will be updated when resizing and when that occurs we will not be drawing anything, so it is safe to have just one. We initialize the buffer associated to the projection uniform by calling the `copyMatrixToBuffer` which is defined like this:
 
 ```java
 public class ForwardRenderActivity {
     ...
+    public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
+        ...
+        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+    }
+
     private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pointerBuffer = stack.mallocPointer(1);
@@ -1218,7 +1230,6 @@ public class ForwardRenderActivity {
     ...
 }
 ```
-
 The `copyMatrixToBuffer` method is quite simple, we just map the memory associated to a buffer and copy the  matrix passed as parameter to that region. We need also to modify the `cleanup` method to free the new resources:
 
 ```java
@@ -1248,7 +1259,7 @@ public class ForwardRenderActivity {
         }
     }
 
-    public void meshesLoaded(VulkanMesh[] meshes, TextureCache textureCache) {
+    public void meshesLoaded(VulkanMesh[] meshes) {
         for (VulkanMesh vulkanMesh : meshes) {
             String textureFileName = vulkanMesh.getTexture().getFileName();
             TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
@@ -1274,7 +1285,7 @@ public class ForwardRenderActivity {
         ...
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
             LongBuffer descriptorSets = stack.mallocLong(2)
-                    .put(0, uniformsDescriptorSet.getVkDescriptorSet());
+                    .put(0, matrixDescriptorSet.getVkDescriptorSet());
             for (VulkanMesh mesh : meshes) {
                 ...
                 TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
@@ -1390,7 +1401,7 @@ public class Render {
         LOGGER.debug("Loaded {} meshe(s)", meshes.length);
         meshList.addAll(Arrays.asList(meshes));
 
-        fwdRenderActivity.meshesLoaded(meshes, textureCache);
+        fwdRenderActivity.meshesLoaded(meshes);
     }
 
     public void render(Window window, Scene scene) {
