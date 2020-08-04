@@ -115,7 +115,7 @@ public class VulkanMesh {
                         VK_FORMAT_R8G8B8A8_SRGB);
 
                 meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
-                        meshData.indices().length, texture, meshData.material());
+                        meshData.indices().length, texture, material);
                 recordTransferCommand(cmd, verticesBuffers);
                 recordTransferCommand(cmd, indicesBuffers);
                 texture.recordTextureTransition(cmd);

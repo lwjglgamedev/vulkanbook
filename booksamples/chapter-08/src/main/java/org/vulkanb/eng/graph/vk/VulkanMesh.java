@@ -16,15 +16,18 @@ public class VulkanMesh {
     private String id;
     private VulkanBuffer indicesBuffer;
     private int indicesCount;
+    private Material material;
     private Texture texture;
     private VulkanBuffer verticesBuffer;
 
-    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount, Texture texture) {
+    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount,
+                      Texture texture, Material material) {
         this.id = id;
         this.verticesBuffer = verticesBuffer;
         this.indicesBuffer = indicesBuffer;
         this.indicesCount = indicesCount;
         this.texture = texture;
+        this.material = material;
     }
 
     private static TransferBuffers createIndicesBuffers(Device device, MeshData meshData) {
@@ -112,7 +115,7 @@ public class VulkanMesh {
                         VK_FORMAT_R8G8B8A8_SRGB);
 
                 meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
-                        meshData.indices().length, texture);
+                        meshData.indices().length, texture, material);
                 recordTransferCommand(cmd, verticesBuffers);
                 recordTransferCommand(cmd, indicesBuffers);
                 texture.recordTextureTransition(cmd);
@@ -160,6 +163,10 @@ public class VulkanMesh {
 
     public int getIndicesCount() {
         return indicesCount;
+    }
+
+    public Material getMaterial() {
+        return material;
     }
 
     public Texture getTexture() {

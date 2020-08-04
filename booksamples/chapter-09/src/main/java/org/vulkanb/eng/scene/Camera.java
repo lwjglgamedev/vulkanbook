@@ -1,8 +1,6 @@
 package org.vulkanb.eng.scene;
 
-import org.joml.Matrix4f;
-import org.joml.Vector2f;
-import org.joml.Vector3f;
+import org.joml.*;
 
 public class Camera {
 
@@ -14,73 +12,73 @@ public class Camera {
     private Matrix4f viewMatrix;
 
     public Camera() {
-        this.direction = new Vector3f();
-        this.right = new Vector3f();
-        this.up = new Vector3f();
-        this.position = new Vector3f();
-        this.viewMatrix = new Matrix4f();
-        this.rotation = new Vector2f();
+        direction = new Vector3f();
+        right = new Vector3f();
+        up = new Vector3f();
+        position = new Vector3f();
+        viewMatrix = new Matrix4f();
+        rotation = new Vector2f();
     }
 
     public void addRotation(float x, float y) {
-        this.rotation.add(x, y);
+        rotation.add(x, y);
         recalculate();
     }
 
     public Matrix4f getViewMatrix() {
-        return this.viewMatrix;
+        return viewMatrix;
     }
 
     public void moveBackwards(float inc) {
-        this.viewMatrix.positiveZ(this.direction).negate().mul(inc);
-        this.position.sub(this.direction);
+        viewMatrix.positiveZ(direction).negate().mul(inc);
+        position.sub(direction);
         recalculate();
     }
 
     public void moveDown(float inc) {
-        this.viewMatrix.positiveY(this.up).mul(inc);
-        this.position.sub(this.up);
+        viewMatrix.positiveY(up).mul(inc);
+        position.sub(up);
         recalculate();
     }
 
     public void moveForward(float inc) {
-        this.viewMatrix.positiveZ(this.direction).negate().mul(inc);
-        this.position.add(this.direction);
+        viewMatrix.positiveZ(direction).negate().mul(inc);
+        position.add(direction);
         recalculate();
     }
 
     public void moveLeft(float inc) {
-        this.viewMatrix.positiveX(this.right).mul(inc);
-        this.position.sub(this.right);
+        viewMatrix.positiveX(right).mul(inc);
+        position.sub(right);
         recalculate();
     }
 
     public void moveRight(float inc) {
-        this.viewMatrix.positiveX(this.right).mul(inc);
-        this.position.add(this.right);
+        viewMatrix.positiveX(right).mul(inc);
+        position.add(right);
         recalculate();
     }
 
     public void moveUp(float inc) {
-        this.viewMatrix.positiveY(this.up).mul(inc);
-        this.position.add(this.up);
+        viewMatrix.positiveY(up).mul(inc);
+        position.add(up);
         recalculate();
     }
 
     private void recalculate() {
-        this.viewMatrix.identity()
-                .rotateX(this.rotation.x)
-                .rotateY(this.rotation.y)
-                .translate(-this.position.x, -this.position.y, -this.position.z);
+        viewMatrix.identity()
+                .rotateX(rotation.x)
+                .rotateY(rotation.y)
+                .translate(-position.x, -position.y, -position.z);
     }
 
     public void setPosition(float x, float y, float z) {
-        this.position.set(x, y, z);
+        position.set(x, y, z);
         recalculate();
     }
 
     public void setRotation(float x, float y) {
-        this.rotation.set(x, y);
+        rotation.set(x, y);
         recalculate();
     }
 }

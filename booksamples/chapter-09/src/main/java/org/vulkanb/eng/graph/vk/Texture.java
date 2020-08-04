@@ -38,12 +38,12 @@ public class Texture {
             if (buf == null) {
                 throw new RuntimeException("Image file [" + fileName + "] not loaded: " + stbi_failure_reason());
             }
+            setHasTransparencies(buf);
 
             width = w.get();
             height = h.get();
             mipLevels = (int) Math.floor(log2(Math.min(width, height))) + 1;
 
-            setHasTransparencies(buf);
             createStgBuffer(stack, device, buf);
             image = new Image(device, width, height, imageFormat,
                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -121,7 +121,6 @@ public class Texture {
         VkImageSubresourceRange subResourceRange = VkImageSubresourceRange.callocStack(stack)
                 .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
                 .baseArrayLayer(0)
-                .layerCount(1)
                 .levelCount(1)
                 .layerCount(1);
 
@@ -136,7 +135,6 @@ public class Texture {
         int mipHeight = height;
 
         for (int i = 1; i < mipLevels; i++) {
-            int auxi = i;
             subResourceRange.baseMipLevel(i - 1);
             barrier.subresourceRange(subResourceRange)
                     .oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
@@ -148,12 +146,10 @@ public class Texture {
                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                     null, null, barrier);
 
-            VkOffset3D srcOffset0 = VkOffset3D.callocStack(stack)
-                    .x(0).y(0).z(0);
-            VkOffset3D srcOffset1 = VkOffset3D.callocStack(stack)
-                    .x(mipWidth).y(mipHeight).z(1);
-            VkOffset3D dstOffset0 = VkOffset3D.callocStack(stack)
-                    .x(0).y(0).z(0);
+            int auxi = i;
+            VkOffset3D srcOffset0 = VkOffset3D.callocStack(stack).x(0).y(0).z(0);
+            VkOffset3D srcOffset1 = VkOffset3D.callocStack(stack).x(mipWidth).y(mipHeight).z(1);
+            VkOffset3D dstOffset0 = VkOffset3D.callocStack(stack).x(0).y(0).z(0);
             VkOffset3D dstOffset1 = VkOffset3D.callocStack(stack)
                     .x(mipWidth > 1 ? mipWidth / 2 : 1).y(mipHeight > 1 ? mipHeight / 2 : 1).z(1);
             VkImageBlit.Buffer blit = VkImageBlit.callocStack(1, stack)

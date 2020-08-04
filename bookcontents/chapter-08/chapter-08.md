@@ -107,19 +107,19 @@ public class ModelLoader {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             AIColor4D colour = AIColor4D.create();
 
+            Vector4f diffuse = Material.DEFAULT_COLOR;
+            int result = aiGetMaterialColor(aiMaterial, AI_MATKEY_COLOR_DIFFUSE, aiTextureType_NONE, 0,
+                    colour);
+            if (result == aiReturn_SUCCESS) {
+                diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
+            }
+
             AIString aiTexturePath = AIString.callocStack(stack);
             aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
                     null, null, null, null, null);
             String texturePath = aiTexturePath.dataString();
             if (texturePath != null && texturePath.length() > 0) {
                 texturePath = texturesDir + File.separator + new File(texturePath).getName();
-            }
-
-            Vector4f diffuse = Material.DEFAULT_COLOR;
-            int result = aiGetMaterialColor(aiMaterial, AI_MATKEY_COLOR_DIFFUSE, aiTextureType_NONE, 0,
-                    colour);
-            if (result == aiReturn_SUCCESS) {
-                diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
             }
 
             Material material = new Material(texturePath, diffuse);
@@ -624,16 +624,18 @@ public class TextureCache {
 }
 ```
 
-The next step is to update the `VukanMesh` class to include texture loading into the model loading process. This class now receives a new parameter which will hold the texture (remember that we are using a default texture for those models that do not define any):
+The next step is to update the `VukanMesh` class to include texture loading into the model loading process. This class now receives new parameters which will hold the texture (remember that we are using a default texture for those models that do not define any) and the material:
 
 ```java
 public class VulkanMesh {
     ...
     private Texture texture;
     ...
-    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount, Texture texture) {
+    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount,
+                      Texture texture, Material material) {
         ...
         this.texture = texture;
+        this.material = material;
     }
     ...
 }
@@ -652,7 +654,7 @@ public class VulkanMesh {
                 Texture texture = textureCache.createTexture(device, material.getTexturePath(),
                         VK_FORMAT_R8G8B8A8_SRGB);
                 meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
-                        meshData.indices().length, texture);
+                        meshData.indices().length, texture, material);
                 recordTransferCommand(cmd, verticesBuffers);
                 recordTransferCommand(cmd, indicesBuffers);
                 texture.recordTextureTransition(cmd);
@@ -1198,7 +1200,7 @@ public class ForwardRenderActivity {
         textureSampler = new TextureSampler(device, 1);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        matrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
+        projMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
     }
     ...
 }

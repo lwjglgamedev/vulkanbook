@@ -11,8 +11,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class MaterialDescriptorSet extends DescriptorSet {
 
-    public MaterialDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
-                                 VulkanBuffer materialBuffer, int materialSize, int binding) {
+    public MaterialDescriptorSet(DescriptorPool descriptorPool, MaterialDescriptorSetLayout descriptorSetLayout,
+                                 VulkanBuffer materialBuffer, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = descriptorPool.getDevice();
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
@@ -31,11 +31,11 @@ public class MaterialDescriptorSet extends DescriptorSet {
             VkDescriptorBufferInfo.Buffer matBufferInfo = VkDescriptorBufferInfo.callocStack(1, stack)
                     .buffer(materialBuffer.getBuffer())
                     .offset(0)
-                    .range(materialSize);
+                    .range(descriptorSetLayout.getMaterialSize());
 
             VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
 
-            // Matrix uniform
+            // Material uniform
             descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
                     .dstSet(vkDescriptorSet)

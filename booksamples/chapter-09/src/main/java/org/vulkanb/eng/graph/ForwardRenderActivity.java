@@ -33,9 +33,8 @@ public class ForwardRenderActivity {
     private FrameBuffer[] frameBuffers;
     private ShaderProgram fwdShaderProgram;
     private MaterialDescriptorSetLayout materialDescriptorSetLayout;
-    private MaterialDescriptorSet[] materialDescriptorSets;
-    private int materialSize;
-    private VulkanBuffer[] materialsBuffer;
+    private VulkanBuffer materialsBuffer;
+    private MaterialDescriptorSet materialsDescriptorSet;
     private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
@@ -69,7 +68,6 @@ public class ForwardRenderActivity {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, FRAGMENT_SHADER_FILE_SPV),
                 });
 
-        materialSize = calcMaterialsUniformSize(device.getPhysicalDevice());
         createDescriptorSets(numImages);
 
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
@@ -89,14 +87,8 @@ public class ForwardRenderActivity {
         copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
 
-    private int calcMaterialsUniformSize(PhysicalDevice physDevice) {
-        long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
-        long mult = GraphConstants.VEC4_SIZE / minUboAlignment + 1;
-        return (int) (mult * minUboAlignment);
-    }
-
     public void cleanup() {
-        Arrays.stream(materialsBuffer).forEach(VulkanBuffer::cleanup);
+        materialsBuffer.cleanup();
         Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
@@ -155,7 +147,7 @@ public class ForwardRenderActivity {
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() + 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
         descriptorSetMap = new HashMap<>();
         textureSampler = new TextureSampler(device, 1);
@@ -165,17 +157,15 @@ public class ForwardRenderActivity {
 
         viewMatricesDescriptorSets = new MatrixDescriptorSet[numImages];
         viewMatricesBuffer = new VulkanBuffer[numImages];
-        materialDescriptorSets = new MaterialDescriptorSet[numImages];
-        materialsBuffer = new VulkanBuffer[numImages];
+        materialsBuffer = new VulkanBuffer(device, materialDescriptorSetLayout.getMaterialSize() * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        materialsDescriptorSet = new MaterialDescriptorSet(descriptorPool, materialDescriptorSetLayout,
+                materialsBuffer, 0);
         for (int i = 0; i < numImages; i++) {
             viewMatricesBuffer[i] = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
             viewMatricesDescriptorSets[i] = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
                     viewMatricesBuffer[i], 0);
-            materialsBuffer[i] = new VulkanBuffer(device, materialSize * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-            materialDescriptorSets[i] = new MaterialDescriptorSet(descriptorPool, materialDescriptorSetLayout,
-                    materialsBuffer[i], materialSize, 0);
         }
     }
 
@@ -204,9 +194,10 @@ public class ForwardRenderActivity {
     }
 
     public void meshesLoaded(VulkanMesh[] meshes) {
+        device.waitIdle();
         int meshCount = 0;
         for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialSize;
+            int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
             String textureFileName = vulkanMesh.getTexture().getFileName();
             TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
             if (textureDescriptorSet == null) {
@@ -214,9 +205,7 @@ public class ForwardRenderActivity {
                         vulkanMesh.getTexture(), textureSampler, 0);
                 descriptorSetMap.put(textureFileName, textureDescriptorSet);
             }
-            for (VulkanBuffer materialBuffer : materialsBuffer) {
-                updateMaterial(device, materialBuffer, vulkanMesh.getMaterial(), materialOffset);
-            }
+            updateMaterial(device, materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
             meshCount++;
         }
     }
@@ -277,12 +266,12 @@ public class ForwardRenderActivity {
             LongBuffer descriptorSets = stack.mallocLong(4)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
-                    .put(3, materialDescriptorSets[idx].getVkDescriptorSet());
+                    .put(3, materialsDescriptorSet.getVkDescriptorSet());
             copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialSize;
+                int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
                 dynDescrSetOffset.put(0, materialOffset);
                 LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
@@ -340,8 +329,8 @@ public class ForwardRenderActivity {
     private void updateMaterial(Device device, VulkanBuffer vulkanBuffer, Material material, int offset) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), offset, materialSize,
-                    0, pointerBuffer), "Failed to map UBO memory");
+            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), offset,
+                    materialDescriptorSetLayout.getMaterialSize(), 0, pointerBuffer), "Failed to map UBO memory");
             long data = pointerBuffer.get(0);
             ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
             material.getDiffuseColor().get(0, materialBuffer);

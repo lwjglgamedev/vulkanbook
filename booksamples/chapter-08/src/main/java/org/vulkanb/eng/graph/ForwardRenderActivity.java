@@ -32,10 +32,10 @@ public class ForwardRenderActivity {
     private Fence[] fences;
     private FrameBuffer[] frameBuffers;
     private ShaderProgram fwdShaderProgram;
-    private MatrixDescriptorSet matrixDescriptorSet;
     private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
+    private MatrixDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
     private SwapChainRenderPass renderPass;
     private SwapChain swapChain;
@@ -136,7 +136,7 @@ public class ForwardRenderActivity {
         textureSampler = new TextureSampler(device, 1);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        matrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
+        projMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
     }
 
     private void createFrameBuffers() {
@@ -229,7 +229,7 @@ public class ForwardRenderActivity {
             offsets.put(0, 0L);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
             LongBuffer descriptorSets = stack.mallocLong(2)
-                    .put(0, matrixDescriptorSet.getVkDescriptorSet());
+                    .put(0, projMatrixDescriptorSet.getVkDescriptorSet());
             for (VulkanMesh mesh : meshes) {
                 LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
