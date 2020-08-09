@@ -168,6 +168,49 @@ public class Image {
 }
 ```
 
+## Attachment
+
+In order to use the depth image we will also to setup an `ImageView`. Both the depth `Image` and the associated `ImageView` will constitute an attachment, a depth attachment. Since we will handle both objects together, we will create a new class, named `Attachment`, that will handle their creation and will be handy for next chapters. The definition is quite simple:
+```java
+package org.vulkanb.eng.graph.vk;
+
+import static org.lwjgl.vulkan.VK11.*;
+
+public class Attachment {
+
+    private Image image;
+    private ImageView imageView;
+
+    public Attachment(Device device, int width, int height, int format, int usage) {
+        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);
+
+        int aspectMask = 0;
+        if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
+            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        }
+        if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) {
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+
+        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), aspectMask, 1);
+    }
+
+    public void cleanup() {
+        imageView.cleanup();
+        image.cleanup();
+    }
+
+    public Image getImage() {
+        return image;
+    }
+
+    public ImageView getImageView() {
+        return imageView;
+    }
+}
+```
+We just create and image and the associated image view. Depending on the type of image (color or depth image), we setup the aspect mask accordingly.
+
 ## Changing vertices structure
 
 In the previous chapter, we defined the structure of our vertices, which basically stated that our vertices were composed by x, y and z positions. Therefore, we would not need anything more to display 3D models. However, displaying a 3D model just using a single color (without shadows or light effects), makes difficult to verify if the model is being loaded property. So, we will add extra components that we will reuse in next chapters, we will add texture coordinates. Although we will not be handling textures in this chapter, we can use those components to pass some color information (at lest for two color channels). We need to modify the `VertexBufferStructure`  in this way:
@@ -672,13 +715,12 @@ In the `render` method, we first check if the window has been resized or the cur
 
 The new `resize` method, waits for the device and graphics queue to be idle, clean ups the swap chain resources and creates a new one. This implies the creation of new swap chain images adapted to new window size. It also invokes the `resize` method form the `ForwardRenderActivity` class. Let's review the changes required in that class.
 
-We need to create two new attributes in the `ForwardRenderActivity`  class to store the images and the image views for the depth data:
+We need to create two a new attribute in the `ForwardRenderActivity` class to store the depth attachments:
 
 ```java
 public class ForwardRenderActivity {
 ...
-    private ImageView[] depthImageViews;
-    private Image[] depthImages;
+    private Attachment[] depthAttachments;
 ```
 
 In some other tutorials, you will see that they use a single image and image view for the depth data. The argument used to justify this is, in some cases, that since the depth images are only used internally, while rendering, there's no need to use separate resources. This argument is not correct, render operations in different frames may overlap, so we need to use separate resources or use the proper synchronization mechanisms to prevent that. Probably, the samples used in those tutorial work, because they have a different synchronizations schema that prevent this form happening, but the argument to justify that is not correct. There's an excellent analysis of this in this [Stack overflow](https://stackoverflow.com/questions/62371266/why-is-a-single-depth-buffer-sufficient-for-this-vulkan-swapchain-render-loop) question. In that question, a different approach is proposed, use an additional subpass dependency (as in the case for controlling the swap chain images transitions). However by now, we will choose to use  a simpler approach, just use separate resources.
@@ -695,7 +737,7 @@ public class ForwardRenderActivity {
 
         int numImages = swapChain.getImageViews().length;
         createDepthImages();
-        renderPass = new SwapChainRenderPass(swapChain, depthImages[0].getFormat());
+        renderPass = new SwapChainRenderPass(swapChain, depthAttachments[0].getImage().getFormat());
         createFrameBuffers();
         ...
     }
@@ -711,21 +753,17 @@ public class ForwardRenderActivity {
     private void createDepthImages() {
         int numImages = swapChain.getNumImages();
         VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
-        int mipLevels = 1;
-        depthImages = new Image[numImages];
-        depthImageViews = new ImageView[numImages];
+        depthAttachments = new Attachment[numImages];
         for (int i = 0; i < numImages; i++) {
-            depthImages[i] = new Image(device, swapChainExtent.width(), swapChainExtent.height(),
-                    VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, mipLevels);
-            depthImageViews[i] = new ImageView(device, depthImages[i].getVkImage(),
-                    depthImages[i].getFormat(), VK_IMAGE_ASPECT_DEPTH_BIT, mipLevels);
+            depthAttachments[i] = new Attachment(device, swapChainExtent.width(), swapChainExtent.height(),
+                    VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         }
     }
     ...
 }
 ```
 
-We create as many images and image views as images are in the swap chain. We use the format `VK_FORMAT_D32_SFLOAT` for the depth values (32 bits signed floats), and specify that the images are going to be used as a depth / stencil attachment by the usage flag `VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT`. The code for the frame buffers creation has not been modified, just extracted to the `createFrameBuffers` method:
+We create as many depth attachments (as many images and image views) as images are in the swap chain. We use the format `VK_FORMAT_D32_SFLOAT` for the depth values (32 bits signed floats). The code for the frame buffers creation has not been modified, just extracted to the `createFrameBuffers` method:
 
 ```java
 public class ForwardRenderActivity {
@@ -740,7 +778,7 @@ public class ForwardRenderActivity {
             frameBuffers = new FrameBuffer[numImages];
             for (int i = 0; i < numImages; i++) {
                 pAttachments.put(0, imageViews[i].getVkImageView());
-                pAttachments.put(1, depthImageViews[i].getVkImageView());
+                pAttachments.put(1, depthAttachments[i].getImageView().getVkImageView());
                 frameBuffers[i] = new FrameBuffer(device, swapChainExtent.width(), swapChainExtent.height(),
                         pAttachments, renderPass.getVkRenderPass());
             }
@@ -750,15 +788,14 @@ public class ForwardRenderActivity {
 }
 ```
 
-The `cleanup`method needs also to be modified to free the image and image view resources:
+The `cleanup`method needs also to be modified to free the depth attachments:
 
 ```java
 public class ForwardRenderActivity {
     ...
     public void cleanup() {
         ...
-        Arrays.stream(depthImageViews).forEach(ImageView::cleanup);
-        Arrays.stream(depthImages).forEach(Image::cleanup);
+        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
         ...
     }
     ...
@@ -826,7 +863,7 @@ public class ForwardRenderActivity {
 }
 ```
 
-The method receives the projection and model matrices and a buffer. It just copies the data contained in those matrices into the buffer. Then we call the `vkCmdPushConstants` function to update the values of the push constants. Finally, in the `resize` method, we just clean the frame buffers, the images and image views and recreate them again.
+The method receives the projection and model matrices and a buffer. It just copies the data contained in those matrices into the buffer. Then we call the `vkCmdPushConstants` function to update the values of the push constants. Finally, in the `resize` method, we just clean the frame buffers, the depth attachments and recreate them again.
 
 ```java
 public class ForwardRenderActivity {
@@ -834,8 +871,7 @@ public class ForwardRenderActivity {
     public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
-        Arrays.stream(depthImageViews).forEach(ImageView::cleanup);
-        Arrays.stream(depthImages).forEach(Image::cleanup);
+        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
         createDepthImages();
         createFrameBuffers();
     }

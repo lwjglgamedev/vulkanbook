@@ -23,8 +23,7 @@ public class ForwardRenderActivity {
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/fwd_vertex.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
     private CommandBuffer[] commandBuffers;
-    private ImageView[] depthImageViews;
-    private Image[] depthImages;
+    private Attachment[] depthAttachments;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
@@ -49,7 +48,7 @@ public class ForwardRenderActivity {
 
         int numImages = swapChain.getImageViews().length;
         createDepthImages();
-        renderPass = new SwapChainRenderPass(swapChain, depthImages[0].getFormat());
+        renderPass = new SwapChainRenderPass(swapChain, depthAttachments[0].getImage().getFormat());
         createFrameBuffers();
 
         EngineProperties engineProperties = EngineProperties.getInstance();
@@ -85,8 +84,7 @@ public class ForwardRenderActivity {
         descriptorPool.cleanup();
         pipeLine.cleanup();
         Arrays.stream(descriptorSetLayouts).forEach(DescriptorSetLayout::cleanup);
-        Arrays.stream(depthImageViews).forEach(ImageView::cleanup);
-        Arrays.stream(depthImages).forEach(Image::cleanup);
+        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
         fwdShaderProgram.cleanup();
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         renderPass.cleanup();
@@ -109,14 +107,10 @@ public class ForwardRenderActivity {
     private void createDepthImages() {
         int numImages = swapChain.getNumImages();
         VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
-        int mipLevels = 1;
-        depthImages = new Image[numImages];
-        depthImageViews = new ImageView[numImages];
+        depthAttachments = new Attachment[numImages];
         for (int i = 0; i < numImages; i++) {
-            depthImages[i] = new Image(device, swapChainExtent.width(), swapChainExtent.height(),
-                    VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, mipLevels);
-            depthImageViews[i] = new ImageView(device, depthImages[i].getVkImage(),
-                    depthImages[i].getFormat(), VK_IMAGE_ASPECT_DEPTH_BIT, mipLevels);
+            depthAttachments[i] = new Attachment(device, swapChainExtent.width(), swapChainExtent.height(),
+                    VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         }
     }
 
@@ -149,7 +143,7 @@ public class ForwardRenderActivity {
             frameBuffers = new FrameBuffer[numImages];
             for (int i = 0; i < numImages; i++) {
                 pAttachments.put(0, imageViews[i].getVkImageView());
-                pAttachments.put(1, depthImageViews[i].getVkImageView());
+                pAttachments.put(1, depthAttachments[i].getImageView().getVkImageView());
                 frameBuffers[i] = new FrameBuffer(device, swapChainExtent.width(), swapChainExtent.height(),
                         pAttachments, renderPass.getVkRenderPass());
             }
@@ -257,8 +251,7 @@ public class ForwardRenderActivity {
         copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
-        Arrays.stream(depthImageViews).forEach(ImageView::cleanup);
-        Arrays.stream(depthImages).forEach(Image::cleanup);
+        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
         createDepthImages();
         createFrameBuffers();
     }
