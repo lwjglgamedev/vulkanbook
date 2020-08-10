@@ -326,7 +326,7 @@ public record MeshData(String id, float[]positions, int[]indices) {
 }
 ```
 
-The `loadMeshes` method will do the will return as many `VulkanMesh`instances as `MeshData` instances received. It will encapsulate all the buffers and data copy creations operations. As it has been shown before, each `VulkanMesh`instance has two buffers, one for positions and another one for the indices. These buffers will be used by the GPU while rendering but we need to access them form the CPU in order to load the data into them. We could use buffers that are accessible from both the CPU and the GPU, but the performance would be worse than buffers that can only used by the GPU. So, how do we solve this? The answer is by using intermediate buffers:
+The `loadMeshes` method will return as many `VulkanMesh`instances as `MeshData` instances received. It will encapsulate all the buffers and data copy creations operations. As it has been shown before, each `VulkanMesh` instance has two buffers, one for positions and another one for the indices. These buffers will be used by the GPU while rendering but we need to access them form the CPU in order to load the data into them. We could use buffers that are accessible from both the CPU and the GPU, but the performance would be worse than buffers that can only used by the GPU. So, how do we solve this? The answer is by using intermediate buffers:
 
 1. We first create an intermediate buffer (or staging buffer) that can be accessed both by the CPU and the GPU. This will be our source buffer.
 2. We create another buffer that can be accessed only from the GPU. This will be our destination buffer.
@@ -401,14 +401,14 @@ public class VulkanMesh {
 }
 ```
 
-The `createVerticesBuffers` method creates the intermediate buffer, loads the positions into it and also creates the final (GPU accessible only) buffer. The source and destination buffers are returned encapsulated into a `record` named `TransferBuffers`.
+For each of these meshes instances, we get the vertices and the indices and record the commands that will copy from the staging buffer to the destination buffer. The `createVerticesBuffers` method creates the intermediate buffer, loads the positions into it and also creates the final (GPU accessible only) buffer. The source and destination buffers are returned encapsulated into a `record` named `TransferBuffers`.
 
 ```java
 private record TransferBuffers(VulkanBuffer srcBuffer, VulkanBuffer dstBuffer) {
 }
 ```
 
-The same operation is done for the indices buffers. We the create a `VulkanMesh` instance using the destination buffers and record the copy commands for both buffers by calling the `recordTransferCommand` method. Let's review the `createVerticesBuffers` method:
+The same operation is done for the indices buffers. We the create a `VulkanMesh` instance using the destination buffers and record the copy commands for both buffers by calling the `recordTransferCommand` method. Let's review first the `createVerticesBuffers` method:
 
 ```java
 public class VulkanMesh {
@@ -480,8 +480,24 @@ public class VulkanMesh {
     ...
 }
 ```
-
 The major difference is that, in this case, the usage flag is `VK_BUFFER_USAGE_INDEX_BUFFER_BIT` for the destination buffer.
+
+The definition of the `recordTransferCommand` method is like this:
+```java
+public class VulkanMesh {
+    ...
+    private static void recordTransferCommand(CommandBuffer cmd, TransferBuffers transferBuffers) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkBufferCopy.Buffer copyRegion = VkBufferCopy.callocStack(1, stack)
+                    .srcOffset(0).dstOffset(0).size(transferBuffers.srcBuffer().getRequestedSize());
+            vkCmdCopyBuffer(cmd.getVkCommandBuffer(), transferBuffers.srcBuffer().getBuffer(),
+                    transferBuffers.dstBuffer().getBuffer(), copyRegion);
+        }
+    }
+    ...
+}
+```
+We firs define a copy region, by filling up a `VkBufferCopy` buffer,  which will have the whole size of the staging buffer. Then we record the copy command, the `vkCmdCopyBuffer` function.
 
 ## Graphics pipeline overview
 
