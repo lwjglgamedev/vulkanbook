@@ -1170,7 +1170,7 @@ public class ForwardRenderActivity {
         createDescriptorSets();
 
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                renderPass.getVkRenderPass(), fwdShaderProgram, 1, true, GraphConstants.MAT4X4_SIZE * 2,
+                renderPass.getVkRenderPass(), fwdShaderProgram, 1, true, GraphConstants.MAT4X4_SIZE,
                 new VertexBufferStructure(), descriptorSetLayouts);
         pipeLine = new Pipeline(this.pipelineCache, pipeLineCreationInfo);
         ...
