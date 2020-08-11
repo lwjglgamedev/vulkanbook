@@ -827,9 +827,9 @@ public class ForwardRenderActivity {
         ...
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
+            LongBuffer vertexBuffer = stack.mallocLong(1);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE * 2);
             for (VulkanMesh mesh : meshes) {
-                LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                 vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
