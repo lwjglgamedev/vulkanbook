@@ -8,7 +8,6 @@ import org.vulkanb.eng.graph.TextureCache;
 import org.vulkanb.eng.graph.geometry.*;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.*;
 
 import java.nio.LongBuffer;
 import java.util.*;
@@ -34,7 +33,6 @@ public class LightingRenderActivity {
     private LightingFrameBuffer lightingFrameBuffer;
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
-    private VulkanMesh quadMesh;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
 
@@ -51,15 +49,12 @@ public class LightingRenderActivity {
         createDescriptorSets(geometryFrameBuffer);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
-        MeshData[] quadData = ModelLoader.loadMeshes("QUAD", "resources/models/quad/quad.obj", "resources/models/quad");
-        quadMesh = VulkanMesh.loadMeshes(textureCache, commandPool, queue, quadData)[0];
     }
 
     public void cleanup() {
         attachmentsDescriptorSet.cleanup();
         attachmentsLayout.cleanup();
         descriptorPool.cleanup();
-        quadMesh.cleanup();
         pipeline.cleanup();
         lightingFrameBuffer.cleanup();
         shaderProgram.cleanup();
@@ -96,7 +91,7 @@ public class LightingRenderActivity {
     private void createPipeline() {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false, 0,
-                new VertexBufferStructure(), descriptorSetLayouts);
+                new EmptyVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
@@ -174,13 +169,7 @@ public class LightingRenderActivity {
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            LongBuffer offsets = stack.callocLong(1);
-            offsets.put(0, 0L);
-            LongBuffer vertexBuffer = stack.mallocLong(1);
-            vertexBuffer.put(0, quadMesh.getVerticesBuffer().getBuffer());
-            vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-            vkCmdBindIndexBuffer(cmdHandle, quadMesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(cmdHandle, quadMesh.getIndicesCount(), 1, 0, 0, 0);
+            vkCmdDraw(cmdHandle, 3, 1, 0, 0);
 
             vkCmdEndRenderPass(cmdHandle);
             commandBuffer.endRecording();

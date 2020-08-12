@@ -102,7 +102,7 @@ public class GeometryRenderActivity {
         EngineProperties engineProps = EngineProperties.getInstance();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials() * 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
@@ -114,6 +114,8 @@ public class GeometryRenderActivity {
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
                 matrixDescriptorSetLayout,
                 matrixDescriptorSetLayout,
+                textureDescriptorSetLayout,
+                textureDescriptorSetLayout,
                 textureDescriptorSetLayout,
                 materialDescriptorSetLayout,
         };
@@ -170,6 +172,14 @@ public class GeometryRenderActivity {
         if (textureDescriptorSet != null) {
             descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
         }
+        textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getNormalMapTexture().getFileName());
+        if (textureDescriptorSet != null) {
+            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
+        }
+        textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getMetalRoughTexture().getFileName());
+        if (textureDescriptorSet != null) {
+            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
+        }
     }
 
     public void meshesLoaded(VulkanMesh[] meshes) {
@@ -177,13 +187,9 @@ public class GeometryRenderActivity {
         int meshCount = 0;
         for (VulkanMesh vulkanMesh : meshes) {
             int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
-            String textureFileName = vulkanMesh.getTexture().getFileName();
-            TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
-            if (textureDescriptorSet == null) {
-                textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
-                        vulkanMesh.getTexture(), textureSampler, 0);
-                descriptorSetMap.put(textureFileName, textureDescriptorSet);
-            }
+            updateTextureDescriptorSet(vulkanMesh.getTexture());
+            updateTextureDescriptorSet(vulkanMesh.getNormalMapTexture());
+            updateTextureDescriptorSet(vulkanMesh.getMetalRoughTexture());
             updateMaterial(device, materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
             meshCount++;
         }
@@ -250,10 +256,10 @@ public class GeometryRenderActivity {
             offsets.put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
-            LongBuffer descriptorSets = stack.mallocLong(4)
+            LongBuffer descriptorSets = stack.mallocLong(6)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
-                    .put(3, materialsDescriptorSet.getVkDescriptorSet());
+                    .put(5, materialsDescriptorSet.getVkDescriptorSet());
             copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
@@ -265,9 +271,13 @@ public class GeometryRenderActivity {
                 vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
                 TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
+                TextureDescriptorSet normalMapDescriptorSet = descriptorSetMap.get(mesh.getNormalMapTexture().getFileName());
+                TextureDescriptorSet metalRoughDescriptorSet = descriptorSetMap.get(mesh.getMetalRoughTexture().getFileName());
                 List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
                 for (Entity entity : entities) {
                     descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
+                    descriptorSets.put(3, normalMapDescriptorSet.getVkDescriptorSet());
+                    descriptorSets.put(4, metalRoughDescriptorSet.getVkDescriptorSet());
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
 
@@ -317,8 +327,24 @@ public class GeometryRenderActivity {
             long data = pointerBuffer.get(0);
             ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
             material.getDiffuseColor().get(0, materialBuffer);
+            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 4, material.hasTexture() ? 1.0f : 0.0f);
+            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 5, material.hasNormalMap() ? 1.0f : 0.0f);
+            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 6, material.hasMetalRoughMap() ? 1.0f : 0.0f);
+            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 7, material.getRoughnessFactor());
+            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 8, material.getMetallicFactor());
             vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
         }
+    }
+
+    private void updateTextureDescriptorSet(Texture texture) {
+        String textureFileName = texture.getFileName();
+        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
+        if (textureDescriptorSet == null) {
+            textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
+                    texture, textureSampler, 0);
+            descriptorSetMap.put(textureFileName, textureDescriptorSet);
+        }
+
     }
 
 }

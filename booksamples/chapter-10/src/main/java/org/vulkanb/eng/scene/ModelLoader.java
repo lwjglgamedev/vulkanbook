@@ -61,6 +61,18 @@ public class ModelLoader {
                 aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace);
     }
 
+    private static List<Float> processBitangents(AIMesh aiMesh) {
+        List<Float> biTangents = new ArrayList<>();
+        AIVector3D.Buffer aiBitangents = aiMesh.mBitangents();
+        while (aiBitangents != null && aiBitangents.remaining() > 0) {
+            AIVector3D aiBitangent = aiBitangents.get();
+            biTangents.add(aiBitangent.x());
+            biTangents.add(aiBitangent.y());
+            biTangents.add(aiBitangent.z());
+        }
+        return biTangents;
+    }
+
     protected static List<Integer> processIndices(AIMesh aiMesh) {
         List<Integer> indices = new ArrayList<>();
         int numFaces = aiMesh.mNumFaces();
@@ -94,7 +106,37 @@ public class ModelLoader {
                 diffuse = new Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
             }
 
-            Material material = new Material(texturePath, diffuse);
+            AIString aiNormalMapPath = AIString.callocStack(stack);
+            Assimp.aiGetMaterialTexture(aiMaterial, aiTextureType_NORMALS, 0, aiNormalMapPath, (IntBuffer) null,
+                    null, null, null, null, null);
+            String normalMapPath = aiNormalMapPath.dataString();
+            if (normalMapPath != null && normalMapPath.length() > 0) {
+                normalMapPath = texturesDir + File.separator + new File(normalMapPath).getName();
+            }
+
+            AIString aiMetallicRoughnessPath = AIString.callocStack(stack);
+            Assimp.aiGetMaterialTexture(aiMaterial, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, 0, aiMetallicRoughnessPath, (IntBuffer) null,
+                    null, null, null, null, null);
+            String metallicRoughnessPath = aiMetallicRoughnessPath.dataString();
+            if (metallicRoughnessPath != null && metallicRoughnessPath.length() > 0) {
+                metallicRoughnessPath = texturesDir + File.separator + new File(metallicRoughnessPath).getName();
+            }
+
+            float[] metallicArr = new float[]{0.0f};
+            int[] pMax = new int[]{1};
+            result = aiGetMaterialFloatArray(aiMaterial, aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, aiTextureType_NONE, 0, metallicArr, pMax);
+            if (result != aiReturn_SUCCESS) {
+                metallicArr[0] = 1.0f;
+            }
+
+            float[] roughnessArr = new float[]{0.0f};
+            result = aiGetMaterialFloatArray(aiMaterial, aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, aiTextureType_NONE, 0, roughnessArr, pMax);
+            if (result != aiReturn_SUCCESS) {
+                roughnessArr[0] = 1.0f;
+            }
+
+            Material material = new Material(texturePath, normalMapPath, metallicRoughnessPath, diffuse,
+                    roughnessArr[0], metallicArr[0]);
             materials.add(material);
         }
     }
@@ -102,6 +144,8 @@ public class ModelLoader {
     private static MeshData processMesh(String id, AIMesh aiMesh, List<Material> materials) {
         List<Float> vertices = processVertices(aiMesh);
         List<Float> normals = processNormals(aiMesh);
+        List<Float> tangents = processTangents(aiMesh);
+        List<Float> biTangents = processBitangents(aiMesh);
         List<Float> textCoords = processTextCoords(aiMesh);
         List<Integer> indices = processIndices(aiMesh);
 
@@ -120,8 +164,8 @@ public class ModelLoader {
         } else {
             material = new Material();
         }
-        return new MeshData(id, listToArray(vertices), listToArray(normals), listToArray(textCoords), listIntToArray(indices),
-                material);
+        return new MeshData(id, listToArray(vertices), listToArray(normals), listToArray(tangents),
+                listToArray(biTangents), listToArray(textCoords), listIntToArray(indices), material);
     }
 
     private static List<Float> processNormals(AIMesh aiMesh) {
@@ -135,6 +179,18 @@ public class ModelLoader {
             normals.add(aiNormal.z());
         }
         return normals;
+    }
+
+    private static List<Float> processTangents(AIMesh aiMesh) {
+        List<Float> tangents = new ArrayList<>();
+        AIVector3D.Buffer aiTangents = aiMesh.mTangents();
+        while (aiTangents != null && aiTangents.remaining() > 0) {
+            AIVector3D aiTangent = aiTangents.get();
+            tangents.add(aiTangent.x());
+            tangents.add(aiTangent.y());
+            tangents.add(aiTangent.z());
+        }
+        return tangents;
     }
 
     private static List<Float> processTextCoords(AIMesh aiMesh) {
