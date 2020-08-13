@@ -14,7 +14,7 @@ import org.vulkanb.eng.scene.*;
 import java.nio.*;
 import java.util.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class GeometryRenderActivity {
@@ -57,7 +57,7 @@ public class GeometryRenderActivity {
         createDescriptorSets(numImages);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
 
     public void cleanup() {
@@ -74,18 +74,6 @@ public class GeometryRenderActivity {
         geometryFrameBuffer.cleanup();
         Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
         Arrays.stream(fences).forEach(Fence::cleanup);
-    }
-
-    private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0, vulkanBuffer.getAllocationSize(),
-                    0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            matrix.get(0, matrixBuffer);
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
     }
 
     private void createCommandBuffers(CommandPool commandPool, int numImages) {
@@ -108,7 +96,7 @@ public class GeometryRenderActivity {
     }
 
     private void createDescriptorSets(int numImages) {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0);
+        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
         materialDescriptorSetLayout = new MaterialDescriptorSetLayout(device, 0);
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
@@ -260,7 +248,7 @@ public class GeometryRenderActivity {
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(5, materialsDescriptorSet.getVkDescriptorSet());
-            copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+            VulkanUtils.copyMatrixToBuffer(device, viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
@@ -294,7 +282,7 @@ public class GeometryRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         geometryFrameBuffer.cleanup();
         geometryFrameBuffer = new GeometryFrameBuffer(swapChain);

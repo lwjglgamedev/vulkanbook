@@ -7,15 +7,14 @@ import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-public class AttachmentsDescriptorSet {
+public class AttachmentsDescriptorSet extends DescriptorSet {
 
     private int binding;
     private Device device;
     private TextureSampler textureSampler;
-    private long vkDescriptorSet;
 
     public AttachmentsDescriptorSet(DescriptorPool descriptorPool, AttachmentsLayout descriptorSetLayout,
                                     GeometryFrameBuffer geometryFrameBuffer, int binding) {
@@ -45,6 +44,7 @@ public class AttachmentsDescriptorSet {
         textureSampler.cleanup();
     }
 
+    @Override
     public long getVkDescriptorSet() {
         return vkDescriptorSet;
     }
@@ -59,8 +59,12 @@ public class AttachmentsDescriptorSet {
                 Attachment attachment = attachments[i];
                 VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
                         .sampler(textureSampler.getVkSampler())
-                        .imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
                         .imageView(attachment.getImageView().getVkImageView());
+                if (attachment.isDepthAttachment()) {
+                    imageInfo.imageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+                } else {
+                    imageInfo.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                }
 
                 descrBuffer.get(i)
                         .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)

@@ -59,8 +59,8 @@ public class Render {
         textureCache = new TextureCache();
         meshList = new ArrayList<>();
         geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
-        lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, textureCache,
-                graphQueue, geometryRenderActivity.getGeometryFrameBuffer());
+        lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache,
+                geometryRenderActivity.getGeometryFrameBuffer(), scene);
     }
 
     public void loadMeshes(MeshData[] meshDataList) {
@@ -85,7 +85,7 @@ public class Render {
 
         geometryRenderActivity.recordCommandBuffers(meshList, scene);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.recordCommandBuffer();
+        lightingRenderActivity.recordCommandBuffer(scene);
         lightingRenderActivity.submit(graphQueue);
 
         if (swapChain.presentImage(graphQueue)) {
@@ -104,7 +104,7 @@ public class Render {
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
         geometryRenderActivity.resize(swapChain, scene);
-        lightingRenderActivity.resize(swapChain, geometryRenderActivity.getGeometryFrameBuffer());
+        lightingRenderActivity.resize(swapChain, geometryRenderActivity.getGeometryFrameBuffer(), scene);
     }
 
     public void unloadMesh(String id) {

@@ -1,4 +1,4 @@
-package org.vulkanb.eng.graph;
+package org.vulkanb.eng.graph.lighting;
 
 import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
@@ -7,26 +7,28 @@ import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-public class InputDescriptorLayout extends DescriptorSetLayout {
-
+public class LightsDescriptorSetLayout extends DescriptorSetLayout {
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public InputDescriptorLayout(Device device, int startBinding, int numBindings) {
+    // 2 uniforms: lights, ambient light
+    private static final int NUM_UNIFORMS = 2;
+
+    public LightsDescriptorSetLayout(Device device) {
         super(device);
 
-        LOGGER.debug("Creating input attachment descriptor set layout");
+        LOGGER.debug("Creating Lights descriptor set Layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(numBindings, stack);
-            for (int i = 0; i < numBindings; i++) {
-                layoutBindings.get(i).binding(i + startBinding)
-                        .descriptorType(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(NUM_UNIFORMS, stack);
+            for (int i = 0; i < NUM_UNIFORMS; i++) {
+                layoutBindings.get(i)
+                        .binding(i)
+                        .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                         .descriptorCount(1)
                         .stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
             }
-
             VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
                     .pBindings(layoutBindings);
@@ -34,7 +36,7 @@ public class InputDescriptorLayout extends DescriptorSetLayout {
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateDescriptorSetLayout(device.getVkDevice(), layoutInfo, null, lp),
                     "Failed to create descriptor set layout");
-            super.vkDescriptorLayout = lp.get(0);
+            vkDescriptorLayout = lp.get(0);
         }
     }
 }

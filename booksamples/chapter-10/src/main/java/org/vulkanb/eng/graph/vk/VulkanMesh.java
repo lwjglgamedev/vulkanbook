@@ -131,7 +131,7 @@ public class VulkanMesh {
                 Texture texture = textureCache.createTexture(device, texturePath, VK_FORMAT_R8G8B8A8_SRGB);
 
                 String normalMapPath = material != null ? material.getNormalMapPath() : null;
-                Texture normalMapTexture = textureCache.createTexture(device, normalMapPath, VK_FORMAT_R8G8B8A8_SRGB);
+                Texture normalMapTexture = textureCache.createTexture(device, normalMapPath, VK_FORMAT_R8G8B8A8_UNORM);
 
                 String metalRoughPath = material != null ? material.getMetalRoughPath() : null;
                 Texture metalRougTexture = textureCache.createTexture(device, metalRoughPath, VK_FORMAT_R8G8B8A8_SRGB);

@@ -4,7 +4,7 @@ import org.vulkanb.eng.graph.vk.*;
 
 import java.util.Arrays;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class GeometryAttachments {
 
@@ -44,10 +44,6 @@ public class GeometryAttachments {
         Arrays.stream(attachments).forEach(Attachment::cleanup);
     }
 
-    public Attachment getAlbedoAttachment() {
-        return attachments[0];
-    }
-
     public Attachment[] getAttachments() {
         return attachments;
     }
@@ -55,13 +51,4 @@ public class GeometryAttachments {
     public Attachment getDepthAttachment() {
         return attachments[3];
     }
-
-    public Attachment getNormalsAttachment() {
-        return attachments[1];
-    }
-
-    public Attachment getPBRAttachment() {
-        return this.attachments[2];
-    }
-
 }
