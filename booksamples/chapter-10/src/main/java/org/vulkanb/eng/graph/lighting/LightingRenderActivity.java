@@ -169,7 +169,7 @@ public class LightingRenderActivity {
 
             commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
-            clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
+            clearValues.apply(0, v -> v.color().float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 1));
 
             VkRect2D renderArea = VkRect2D.callocStack(stack);
             renderArea.offset().set(0, 0);
@@ -191,8 +191,8 @@ public class LightingRenderActivity {
 
             VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
                     .x(0)
-                    .y(0)
-                    .height(height)
+                    .y(height)
+                    .height(-height)
                     .width(width)
                     .minDepth(0.0f)
                     .maxDepth(1.0f);

@@ -1,5 +1,4 @@
 #version 450
-precision highp float;
 
 const int MAX_LIGHTS = 10;
 const float PI = 3.14159265359;
@@ -128,7 +127,7 @@ void main() {
     float metallic = pbrSampledValue.b;
 
     // Retrieve position from depth
-    vec4 clip    = vec4(inTextCoord * 2.0 - 1.0, texture(depthSampler, inTextCoord).x, 1.0);
+    vec4 clip    = vec4(inTextCoord.x * 2.0 - 1.0, inTextCoord.y * -2.0 + 1.0, texture(depthSampler, inTextCoord).x, 1.0);
     vec4 world_w = projUniform.invProjectionMatrix * clip;
     vec3 pos     = world_w.xyz / world_w.w;
 
