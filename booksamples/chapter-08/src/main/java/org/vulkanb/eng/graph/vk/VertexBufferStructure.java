@@ -31,7 +31,7 @@ public class VertexBufferStructure {
         viAttrs.get(i)
                 .binding(0)
                 .location(i)
-                .format(VK_FORMAT_R32G32B32_SFLOAT)
+                .format(VK_FORMAT_R32G32_SFLOAT)
                 .offset(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
 
         viBindings.get(0)
