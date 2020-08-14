@@ -9,7 +9,6 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-// TODO: Samples
 public class GeometryRenderPass {
 
     private static final int MAX_SAMPLES = 1;

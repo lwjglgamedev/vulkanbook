@@ -18,9 +18,6 @@ import java.util.*;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-// TODO: Pre-record commands
-// TODO: Update lights method
-// TODO: Update lights Uniform per swap chain image?
 public class LightingRenderActivity {
 
     private static final String LIGHTING_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/lighting_fragment.glsl";
@@ -40,9 +37,9 @@ public class LightingRenderActivity {
     private VulkanBuffer invProjBuffer;
     private MatrixDescriptorSet invProjMatrixDescriptorSet;
     private LightingFrameBuffer lightingFrameBuffer;
-    private VulkanBuffer lightsBuffer;
-    private LightsDescriptorSet lightsDescriptorSet;
+    private VulkanBuffer[] lightsBuffers;
     private LightsDescriptorSetLayout lightsDescriptorSetLayout;
+    private LightsDescriptorSet[] lightsDescriptorSets;
     private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
@@ -60,12 +57,15 @@ public class LightingRenderActivity {
         int numImages = swapChain.getNumImages();
         createShaders();
         createDescriptorPool();
-        createUniforms();
-        createDescriptorSets(geometryFrameBuffer);
+        createUniforms(numImages);
+        createDescriptorSets(geometryFrameBuffer, numImages);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
+        updateInvProjMatrix(scene);
 
-        VulkanUtils.copyMatrixToBuffer(device, invProjBuffer, scene.getPerspective().getPerspectiveMatrix());
+        for (int i = 0; i < numImages; i++) {
+            preRecordCommandBuffer(i);
+        }
     }
 
     public void cleanup() {
@@ -75,7 +75,7 @@ public class LightingRenderActivity {
         attachmentsLayout.cleanup();
         descriptorPool.cleanup();
         ambientLightBuffer.cleanup();
-        lightsBuffer.cleanup();
+        Arrays.stream(lightsBuffers).forEach(VulkanBuffer::cleanup);
         pipeline.cleanup();
         invProjBuffer.cleanup();
         lightingFrameBuffer.cleanup();
@@ -101,7 +101,7 @@ public class LightingRenderActivity {
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
-    private void createDescriptorSets(GeometryFrameBuffer geometryFrameBuffer) {
+    private void createDescriptorSets(GeometryFrameBuffer geometryFrameBuffer, int numImages) {
         attachmentsLayout = new AttachmentsLayout(device, GeometryAttachments.NUMBER_ATTACHMENTS);
         lightsDescriptorSetLayout = new LightsDescriptorSetLayout(device);
         matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -113,10 +113,14 @@ public class LightingRenderActivity {
 
         attachmentsDescriptorSet = new AttachmentsDescriptorSet(descriptorPool, attachmentsLayout,
                 geometryFrameBuffer, 0);
-        lightsDescriptorSet = new LightsDescriptorSet(descriptorPool, lightsDescriptorSetLayout,
-                lightsBuffer, ambientLightBuffer, 0);
         invProjMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
                 invProjBuffer, 0);
+
+        lightsDescriptorSets = new LightsDescriptorSet[numImages];
+        for (int i = 0; i < numImages; i++) {
+            lightsDescriptorSets[i] = new LightsDescriptorSet(descriptorPool, lightsDescriptorSetLayout,
+                    lightsBuffers[i], ambientLightBuffer, 0);
+        }
     }
 
     private void createPipeline() {
@@ -140,32 +144,28 @@ public class LightingRenderActivity {
                 });
     }
 
-    private void createUniforms() {
+    private void createUniforms(int numImages) {
         ambientLightBuffer = new VulkanBuffer(device, GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        lightsBuffer = new VulkanBuffer(device,
-                GraphConstants.INT_LENGTH * 4 + GraphConstants.VEC4_SIZE * 2 * GraphConstants.MAX_LIGHTS,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         invProjBuffer = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+        lightsBuffers = new VulkanBuffer[numImages];
+        for (int i = 0; i < numImages; i++) {
+            lightsBuffers[i] = new VulkanBuffer(device,
+                    GraphConstants.INT_LENGTH * 4 + GraphConstants.VEC4_SIZE * 2 * GraphConstants.MAX_LIGHTS,
+                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        }
     }
 
-    public void recordCommandBuffer(Scene scene) {
-        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix());
-
+    public void preRecordCommandBuffer(int idx) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
             int height = swapChainExtent.height();
-            int idx = swapChain.getCurrentFrame();
 
             FrameBuffer frameBuffer = lightingFrameBuffer.getFrameBuffers()[idx];
-
-            Fence fence = fences[idx];
             CommandBuffer commandBuffer = commandBuffers[idx];
-
-            fence.fenceWait();
-            fence.reset();
 
             commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
@@ -209,7 +209,7 @@ public class LightingRenderActivity {
 
             LongBuffer descriptorSets = stack.mallocLong(3)
                     .put(0, attachmentsDescriptorSet.getVkDescriptorSet())
-                    .put(1, lightsDescriptorSet.getVkDescriptorSet())
+                    .put(1, lightsDescriptorSets[idx].getVkDescriptorSet())
                     .put(2, invProjMatrixDescriptorSet.getVkDescriptorSet());
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeline.getVkPipelineLayout(), 0, descriptorSets, null);
@@ -221,6 +221,17 @@ public class LightingRenderActivity {
         }
     }
 
+    public void recordCommandBuffer(Scene scene) {
+        int idx = swapChain.getCurrentFrame();
+        Fence fence = fences[idx];
+
+        fence.fenceWait();
+        fence.reset();
+
+        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(),
+                lightsBuffers[idx]);
+    }
+
     public void resize(SwapChain swapChain, GeometryFrameBuffer geometryFrameBuffer, Scene scene) {
         lightingFrameBuffer.cleanup();
         pipeline.cleanup();
@@ -228,8 +239,12 @@ public class LightingRenderActivity {
 
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         createPipeline();
+        updateInvProjMatrix(scene);
 
-        VulkanUtils.copyMatrixToBuffer(device, invProjBuffer, scene.getPerspective().getPerspectiveMatrix());
+        int numImages = swapChain.getNumImages();
+        for (int i = 0; i < numImages; i++) {
+            preRecordCommandBuffer(i);
+        }
     }
 
     public void submit(Queue queue) {
@@ -245,7 +260,13 @@ public class LightingRenderActivity {
         }
     }
 
-    private void updateLights(Vector4f ambientLight, Light[] lights, Matrix4f viewMatrix) {
+    private void updateInvProjMatrix(Scene scene) {
+        Matrix4f invProj = new Matrix4f(scene.getPerspective().getPerspectiveMatrix()).invert();
+        VulkanUtils.copyMatrixToBuffer(device, invProjBuffer, invProj);
+    }
+
+    private void updateLights(Vector4f ambientLight, Light[] lights, Matrix4f viewMatrix,
+                              VulkanBuffer lightsBuffer) {
         VulkanUtils.copyVectortoBuffer(device, ambientLightBuffer, ambientLight);
 
         try (MemoryStack stack = MemoryStack.stackPush()) {

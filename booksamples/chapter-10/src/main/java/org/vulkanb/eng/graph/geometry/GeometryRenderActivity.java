@@ -205,7 +205,7 @@ public class GeometryRenderActivity {
                 if (attachments[i].isDepthAttachment()) {
                     clearValues.apply(i, v -> v.depthStencil().depth(1.0f));
                 } else {
-                    clearValues.apply(i, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
+                    clearValues.apply(i, v -> v.color().float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 1));
                 }
             }
 

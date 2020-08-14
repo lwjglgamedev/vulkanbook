@@ -1,4 +1,5 @@
 #version 450
+precision highp float;
 
 const int MAX_LIGHTS = 10;
 const float PI = 3.14159265359;

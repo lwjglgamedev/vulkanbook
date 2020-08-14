@@ -37,17 +37,21 @@ void main()
 {
     outAlbedo = material.diffuseColor + texture(textSampler, inTextCoords);
 
+    // Hack to avoid transparent PBR artifacts
+    if (outAlbedo.a < 0.5) {
+        discard;
+    }
+
     mat3 TBN = mat3(inTangent, inBitangent, inNormal);
     vec3 newNormal = calcNormal(material.hasNormalMap, inNormal, inTextCoords, TBN);
     // Transform normals from [-1, 1] to [0, 1]
     outNormal = vec4(0.5 * newNormal + 0.5, 1.0);
 
-    float ao = 1.0f;
+    float ao = 0.5f;
     float roughnessFactor = 0.0f;
     float metallicFactor = 0.0f;
     if (material.hasMetalRoughMap > 0) {
         vec4 metRoughValue = texture(metRoughSampler, inTextCoords);
-        ao = metRoughValue.r;
         roughnessFactor = metRoughValue.g;
         metallicFactor = metRoughValue.b;
     } else {

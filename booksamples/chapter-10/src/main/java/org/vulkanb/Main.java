@@ -108,7 +108,7 @@ public class Main implements IAppLogic {
         Light light = new Light();
         light.getPosition().set(0, 40, 0, 1.0f);
         light.getColor().set(0.0f, 1.0f, 0.0f, 1.0f);
-        //lights.add(light);
+        lights.add(light);
 
         Light[] lightArr = new Light[lights.size()];
         lightArr = lights.toArray(lightArr);

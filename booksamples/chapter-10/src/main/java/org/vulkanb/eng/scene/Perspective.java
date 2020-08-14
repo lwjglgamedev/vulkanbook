@@ -5,16 +5,10 @@ import org.vulkanb.eng.EngineProperties;
 
 public class Perspective {
 
-    private Matrix4f invPerspectiveMatrix;
     private Matrix4f perspectiveMatrix;
 
     public Perspective() {
         perspectiveMatrix = new Matrix4f();
-        invPerspectiveMatrix = new Matrix4f();
-    }
-
-    public Matrix4f getInvPerspectiveMatrix() {
-        return invPerspectiveMatrix;
     }
 
     public Matrix4f getPerspectiveMatrix() {
@@ -26,6 +20,5 @@ public class Perspective {
         perspectiveMatrix.identity();
         perspectiveMatrix.perspective(engProps.getFov(), (float) width / (float) height,
                 engProps.getZNear(), engProps.getZFar(), true);
-        perspectiveMatrix.invert(invPerspectiveMatrix);
     }
 }
