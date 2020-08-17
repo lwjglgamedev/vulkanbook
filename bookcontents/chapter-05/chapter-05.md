@@ -541,17 +541,15 @@ public class SwapChain {
 ```
 
 We create to types of semaphores:
-
-- `imgAcquisitionSemaphores`: They will be used to signal image acquisition.
-
-- `renderCompleteSemaphores`: They will be used to signal that the command submitted have been completed. 
+- `imgAcquisitionSemaphore`: It will be used to signal image acquisition.
+- `renderCompleteSemaphore`: It will be used to signal that the command submitted have been completed. 
 
 These semaphores are stored together under a record:
   
 ```java
 public class SwapChain {
     ...
-    public record SyncSemaphores(Semaphore imgAcquisitionSemaphores, Semaphore renderCompleteSemaphores) {
+    public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore renderCompleteSemaphore) {
     }
     ...
 }
@@ -567,7 +565,7 @@ public class SwapChain {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer ip = stack.mallocInt(1);
             int err = KHRSwapchain.vkAcquireNextImageKHR(device.getVkDevice(), vkSwapChain, ~0L,
-                    syncSemaphoresList[currentFrame].imgAcquisitionSemaphores().getVkSemaphore(), MemoryUtil.NULL, ip);
+                    syncSemaphoresList[currentFrame].imgAcquisitionSemaphore().getVkSemaphore(), MemoryUtil.NULL, ip);
             if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
                 resize = true;
             } else if (err == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
@@ -604,7 +602,7 @@ public class SwapChain {
             VkPresentInfoKHR present = VkPresentInfoKHR.callocStack(stack)
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR)
                     .pWaitSemaphores(stack.longs(
-                            syncSemaphoresList[currentFrame].renderCompleteSemaphores().getVkSemaphore()))
+                            syncSemaphoresList[currentFrame].renderCompleteSemaphore().getVkSemaphore()))
                     .swapchainCount(1)
                     .pSwapchains(stack.longs(vkSwapChain))
                     .pImageIndices(stack.ints(currentFrame));
@@ -740,9 +738,9 @@ public class ForwardRenderActivity {
             currentFence.reset();
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.imgAcquisitionSemaphores().getVkSemaphore()),
+                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.renderCompleteSemaphores().getVkSemaphore()), currentFence);
+                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
 
         }
     }
@@ -750,7 +748,7 @@ public class ForwardRenderActivity {
 }
 ```
 
-This method, gets the `CommandBuffer` instance that should be used for the frame that we are in (for the image that we are rendering to). It also gets the `Fence`associated to that `CommandBuffer`. We invoke the `fenceAit` and the `reset`  one to prevent submitting a `CommandBuffer` which is still been used. Finally, we submit the command to the queue, retrieving also the semaphore that has been used to signal the acquisition of the current swap chain image. This is done by invoking a new method in the `Queue` class, named `submit`. The meaning of the arguments of this method will be explained when we analyzed its definition:
+This method, gets the `CommandBuffer` instance that should be used for the frame that we are in (for the image that we are rendering to). It also gets the `Fence`associated to that `CommandBuffer`. We invoke the `fenceWait` and the `reset` one to prevent submitting a `CommandBuffer` which is still been used. Finally, we submit the command to the queue, retrieving also the semaphore that has been used to signal the acquisition of the current swap chain image. This is done by invoking a new method in the `Queue` class, named `submit`. The meaning of the arguments of this method will be explained when we analyzed its definition:
 
 ```java
 public class Queue {

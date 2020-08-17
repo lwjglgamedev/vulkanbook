@@ -178,6 +178,7 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Attachment {
 
+    private boolean depthAttachment;
     private Image image;
     private ImageView imageView;
 
@@ -187,9 +188,11 @@ public class Attachment {
         int aspectMask = 0;
         if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            depthAttachment = false;
         }
         if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) {
             aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            depthAttachment = true;
         }
 
         imageView = new ImageView(device, image.getVkImage(), image.getFormat(), aspectMask, 1);
@@ -207,16 +210,20 @@ public class Attachment {
     public ImageView getImageView() {
         return imageView;
     }
+
+    public boolean isDepthAttachment() {
+        return depthAttachment;
+    }
 }
 ```
-We just create and image and the associated image view. Depending on the type of image (color or depth image), we setup the aspect mask accordingly.
+We just create and image and the associated image view. Depending on the type of image (color or depth image), we setup the aspect mask accordingly. We also have defined a `boolean` attribute, named `depthAttachment` to identify if it is a depth attachment or not.
 
 ## Changing vertices structure
 
 In the previous chapter, we defined the structure of our vertices, which basically stated that our vertices were composed by x, y and z positions. Therefore, we would not need anything more to display 3D models. However, displaying a 3D model just using a single color (without shadows or light effects), makes difficult to verify if the model is being loaded property. So, we will add extra components that we will reuse in next chapters, we will add texture coordinates. Although we will not be handling textures in this chapter, we can use those components to pass some color information (at lest for two color channels). We need to modify the `VertexBufferStructure`  in this way:
 
 ```java
-public class VertexBufferStructure {
+public class VertexBufferStructure extends VertexInputStateInfo {
 
     public static final int TEXT_COORD_COMPONENTS = 2;
     private static final int NUMBER_OF_ATTRIBUTES = 2;
@@ -568,9 +575,9 @@ public class Pipeline {
     ...
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
         boolean hasDepthAttachment, int pushConstantsSize,
-        VertexBufferStructure vertexBufferStructure) {
+        VertexInputStateInfo viInputStateInfo) {
         public void cleanup() {
-            vertexBufferStructure.cleanup();
+            viInputStateInfo.cleanup();
         }
     }
     ...

@@ -142,7 +142,15 @@ public class SwapChain {
 }
 ```
 
-The first thing we do is retrieve the number of formats our surface supports by calling the `vkGetPhysicalDeviceSurfaceFormatsKHR` Vulkan function. As with many other Vulkan samples, we first call that function to get the total number of formats supported and then we create a buffer of structures, `VkSurfaceFormatKHR` in this case, to retrieve the data by calling the same function again. Once we have all that data, we iterate over the formats trying to check if `VK_FORMAT_B8G8R8A8_UNORM`(8 bits for RGBA channels normalized) and SRGB non linear color space are supported. `SurfaceFormat` is just a `record` which stores the image format and the color space.
+The first thing we do is retrieve the number of formats our surface supports by calling the `vkGetPhysicalDeviceSurfaceFormatsKHR` Vulkan function. As with many other Vulkan samples, we first call that function to get the total number of formats supported and then we create a buffer of structures, `VkSurfaceFormatKHR` in this case, to retrieve the data by calling the same function again. Once we have all that data, we iterate over the formats trying to check if `VK_FORMAT_B8G8R8A8_UNORM`(8 bits for RGBA channels normalized) and SRGB non linear color space are supported. `SurfaceFormat` is just a `record` which stores the image format and the color space:
+```java
+public class SwapChain {
+    ...
+    public record SurfaceFormat(int imageFormat, int colorSpace) {
+    }
+    ...
+}
+```
 
 It is turn again to go back to the constructor. We need to calculate now the extent of the images of the swap chain:
 

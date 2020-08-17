@@ -159,14 +159,33 @@ public class VulkanBuffer {
 
 ## Vertex description
 
-We have now created the buffers required to hold the data for vertices, the next step is to describe to Vulkan the format of that data. In order to do that, we will create a new class named `VertexBufferStructure` which will be used by Vulkan to know hot to extract that data from the underlying buffer. The class starts like this:
+We have now created the buffers required to hold the data for vertices, the next step is to describe to Vulkan the format of that data. As you can guess, depending on the specific case, the structure of that data may change, we may have just position coordinates, or position with texture coordinates and normals, etc. Some of the vulkan elements that we will define later on, will need a handle to that structure. In order to support this, we will create an abstract class named `VertexInputStateInfo`, which just stores the handle to a `VkPipelineVertexInputStateCreateInfo` structure:
+```java
+package org.vulkanb.eng.graph.vk;
+
+import org.lwjgl.vulkan.VkPipelineVertexInputStateCreateInfo;
+
+public abstract class VertexInputStateInfo {
+
+    protected VkPipelineVertexInputStateCreateInfo vi;
+
+    public void cleanup() {
+        vi.free();
+    }
+
+    public VkPipelineVertexInputStateCreateInfo getVi() {
+        return vi;
+    }
+}
+```
+
+Now we can extend from tha class to define specific vertex formats. We will create a new class named `VertexBufferStructure` which will be used by Vulkan to know hot to extract that data from the underlying buffer. The class starts like this:
 
 ```java
-public class VertexBufferStructure {
+public class VertexBufferStructure extends VertexInputStateInfo {
 
     private static final int NUMBER_OF_ATTRIBUTES = 1;
     private static final int POSITION_COMPONENTS = 3;
-    private VkPipelineVertexInputStateCreateInfo vi;
     private VkVertexInputAttributeDescription.Buffer viAttrs;
     private VkVertexInputBindingDescription.Buffer viBindings;
 
@@ -259,15 +278,10 @@ The rest of the methods are the usual suspects, the `cleanup` one  to free the r
 public class VertexBufferStructure {
     ...
     public void cleanup() {
-        vi.free();
+        super.cleanup();
         viBindings.free();
         viAttrs.free();
     }
-
-    public VkPipelineVertexInputStateCreateInfo getVi() {
-        return vi;
-    }
-    ...
 }
 ```
 
@@ -750,9 +764,9 @@ Now it is the turn to create the pipeline, which will be encapsulated in a new c
 ```java
 public class Pipeline {
     ...
-    public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments, VertexBufferStructure vertexBufferStructure) {
+    public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments, VertexInputStateInfo viInputStateInfo) {
         public void cleanup() {
-            vertexBufferStructure.cleanup();
+            viInputStateInfo.cleanup();
         }
     }
     ...
@@ -945,7 +959,7 @@ public class Pipeline {
             VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
                     .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
                     .pStages(shaderStages)
-                    .pVertexInputState(pipeLineCreationInfo.vertexBufferStructure().getVi())
+                    .pVertexInputState(pipeLineCreationInfo.viInputStateInfo().getVi())
                     .pInputAssemblyState(vkPipelineInputAssemblyStateCreateInfo)
                     .pViewportState(vkPipelineViewportStateCreateInfo)
                     .pRasterizationState(vkPipelineRasterizationStateCreateInfo)

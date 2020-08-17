@@ -18,13 +18,15 @@ public class Pipeline {
             for (int i = 0; i < pipeLineCreationInfo.numColorAttachments(); i++) {
                 blendAttState.get(i)
                         .colorWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT)
-                        .blendEnable(true)
-                        .colorBlendOp(VK_BLEND_OP_ADD)
-                        .alphaBlendOp(VK_BLEND_OP_ADD)
-                        .srcColorBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA)
-                        .dstColorBlendFactor(VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-                        .srcAlphaBlendFactor(VK_BLEND_FACTOR_ONE)
-                        .dstAlphaBlendFactor(VK_BLEND_FACTOR_ZERO);
+                        .blendEnable(pipeLineCreationInfo.useBlend());
+                if (pipeLineCreationInfo.useBlend()) {
+                    blendAttState.get(i).colorBlendOp(VK_BLEND_OP_ADD)
+                            .alphaBlendOp(VK_BLEND_OP_ADD)
+                            .srcColorBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA)
+                            .dstColorBlendFactor(VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+                            .srcAlphaBlendFactor(VK_BLEND_FACTOR_ONE)
+                            .dstAlphaBlendFactor(VK_BLEND_FACTOR_ZERO);
+                }
             }
        ...
     }
@@ -33,7 +35,6 @@ public class Pipeline {
 ```
 
 For each of the output color attachments, we need to setup the blending by filing up a `VkPipelineColorBlendAttachmentState` structure. Up to now, we just had set up the `colorWriteMask`. Now we need to set up the following attributes:
-
 - `blendEnable`: We need to enable blending to support transparent objects. By setting this attribute to `true` the colors are mixed when rendering.
 - `colorBlendOp`: Defines the blending operation for the RGB components. In this case, we are adding source and destination colors, so the resulting color components will be calculated according to this formula: `R = Rs0 × Sr + Rd × Dr`, `G = Gs0 × Sg + Gd × Dg` and `B = Bs0 × Sb + Bd × Db`. As you can see, source and destination colors are added modulated by some factors (`Sx` for source colors and `Dx` for destination colors). Source color is the new color to be mixed, and destination color is the one already present in the color attachment.
 - `alphaBlendOp`: Defines the blending operation for the alpha components. In this case we are also adding source and destination colors: `As0 × Sa + Ad × Da`. As you can see, again, source and destination colors are added modulated by some factors (`Sa` for source and `Da` for destination). 
@@ -42,7 +43,19 @@ For each of the output color attachments, we need to setup the blending by filin
 - `srcAlphaBlendFactor`: This controls the blend factor to be used for the alpha source component (`Sa`). In our case, we set it to the value `VK_BLEND_FACTOR_ONE`, that is, it will have a one.
 - `dstAlphaBlendFactor`: This controls the blend factor to be used for the alpha destination component (`Da`). In our case, we set it to the value `VK_BLEND_FACTOR_ZERO`, that is, it will have a zero, ignoring the alpha value of the destination color.
 
-You can try different factors and operations to better match your needs, but, in principle, this is all what is needed to support color blending. However, if you rendered a scene with just these changes, you may experience strange artifacts. Depending on the order that objects are rendering, you may have a transparent object, closer to the camera that gets rendered first than objects that are behind. This will make that the transparent object gets blended with the background, because the distant objects will be discarded in the depth test. The next figure shows this effect.
+You can try different factors and operations to better match your needs, but, in principle, this is all what is needed to support color blending. This change requires also a modification of the `PipeLineCreationInfo` record. We need to add a new attribute to activate / deactivate the blending named `useBlend`:
+```java
+    public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
+                                       boolean hasDepthAttachment, boolean useBlend,
+                                       int pushConstantsSize, VertexInputStateInfo viInputStateInfo,
+                                       DescriptorSetLayout[] descriptorSetLayouts) {
+        public void cleanup() {
+            viInputStateInfo.cleanup();
+        }
+    }
+```
+
+However, if you rendered a scene with just these changes, you may experience strange artifacts. Depending on the order that objects are rendering, you may have a transparent object, closer to the camera that gets rendered first than objects that are behind. This will make that the transparent object gets blended with the background, because the distant objects will be discarded in the depth test. The next figure shows this effect.
 
 <img src="transparent-artifact.png" title="" alt="Screen Shot" data-align="center">
 
@@ -617,7 +630,7 @@ We need to modify the `createDescriptorSets` method:
 public class ForwardRenderActivity {
     ...
     private void createDescriptorSets(int numImages) {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0);
+        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
         materialDescriptorSetLayout = new MaterialDescriptorSetLayout(device, 0);
         descriptorSetLayouts = new DescriptorSetLayout[]{
@@ -756,7 +769,7 @@ public class ForwardRenderActivity {
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(3, materialsDescriptorSet.getVkDescriptorSet());
-            copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+            VulkanUtils.copyMatrixToBuffer(device, viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {

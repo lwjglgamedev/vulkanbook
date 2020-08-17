@@ -174,6 +174,6 @@ public class SwapChain {
         return vkSwapChain;
     }
 
-    record SurfaceFormat(int imageFormat, int colorSpace) {
+    public record SurfaceFormat(int imageFormat, int colorSpace) {
     }
 }

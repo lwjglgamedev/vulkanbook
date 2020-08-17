@@ -77,7 +77,7 @@ public class SwapChain {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer ip = stack.mallocInt(1);
             int err = KHRSwapchain.vkAcquireNextImageKHR(device.getVkDevice(), vkSwapChain, ~0L,
-                    syncSemaphoresList[currentFrame].imgAcquisitionSemaphores().getVkSemaphore(), MemoryUtil.NULL, ip);
+                    syncSemaphoresList[currentFrame].imgAcquisitionSemaphore().getVkSemaphore(), MemoryUtil.NULL, ip);
             if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
                 resize = true;
             } else if (err == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
@@ -164,8 +164,8 @@ public class SwapChain {
         for (int i = 0; i < size; i++) {
             imageViews[i].cleanup();
             SyncSemaphores syncSemaphores = syncSemaphoresList[i];
-            syncSemaphores.imgAcquisitionSemaphores().cleanup();
-            syncSemaphores.renderCompleteSemaphores().cleanup();
+            syncSemaphores.imgAcquisitionSemaphore().cleanup();
+            syncSemaphores.renderCompleteSemaphore().cleanup();
         }
 
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
@@ -229,7 +229,7 @@ public class SwapChain {
             VkPresentInfoKHR present = VkPresentInfoKHR.callocStack(stack)
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR)
                     .pWaitSemaphores(stack.longs(
-                            syncSemaphoresList[currentFrame].renderCompleteSemaphores().getVkSemaphore()))
+                            syncSemaphoresList[currentFrame].renderCompleteSemaphore().getVkSemaphore()))
                     .swapchainCount(1)
                     .pSwapchains(stack.longs(vkSwapChain))
                     .pImageIndices(stack.ints(currentFrame));
@@ -247,9 +247,9 @@ public class SwapChain {
         return resize;
     }
 
-    record SurfaceFormat(int imageFormat, int colorSpace) {
+    public record SurfaceFormat(int imageFormat, int colorSpace) {
     }
 
-    public record SyncSemaphores(Semaphore imgAcquisitionSemaphores, Semaphore renderCompleteSemaphores) {
+    public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore renderCompleteSemaphore) {
     }
 }

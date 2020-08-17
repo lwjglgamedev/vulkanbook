@@ -74,13 +74,15 @@ public class Pipeline {
             for (int i = 0; i < pipeLineCreationInfo.numColorAttachments(); i++) {
                 blendAttState.get(i)
                         .colorWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT)
-                        .blendEnable(true)
-                        .colorBlendOp(VK_BLEND_OP_ADD)
-                        .alphaBlendOp(VK_BLEND_OP_ADD)
-                        .srcColorBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA)
-                        .dstColorBlendFactor(VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-                        .srcAlphaBlendFactor(VK_BLEND_FACTOR_ONE)
-                        .dstAlphaBlendFactor(VK_BLEND_FACTOR_ZERO);
+                        .blendEnable(pipeLineCreationInfo.useBlend());
+                if (pipeLineCreationInfo.useBlend()) {
+                    blendAttState.get(i).colorBlendOp(VK_BLEND_OP_ADD)
+                            .alphaBlendOp(VK_BLEND_OP_ADD)
+                            .srcColorBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA)
+                            .dstColorBlendFactor(VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+                            .srcAlphaBlendFactor(VK_BLEND_FACTOR_ONE)
+                            .dstAlphaBlendFactor(VK_BLEND_FACTOR_ZERO);
+                }
             }
             VkPipelineColorBlendStateCreateInfo colorBlendState =
                     VkPipelineColorBlendStateCreateInfo.callocStack(stack)
@@ -122,7 +124,7 @@ public class Pipeline {
             VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
                     .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
                     .pStages(shaderStages)
-                    .pVertexInputState(pipeLineCreationInfo.vertexBufferStructure().getVi())
+                    .pVertexInputState(pipeLineCreationInfo.viInputStateInfo().getVi())
                     .pInputAssemblyState(vkPipelineInputAssemblyStateCreateInfo)
                     .pViewportState(vkPipelineViewportStateCreateInfo)
                     .pRasterizationState(vkPipelineRasterizationStateCreateInfo)
@@ -155,11 +157,11 @@ public class Pipeline {
     }
 
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
-                                       boolean hasDepthAttachment, int pushConstantsSize,
-                                       VertexBufferStructure vertexBufferStructure,
+                                       boolean hasDepthAttachment, boolean useBlend,
+                                       int pushConstantsSize, VertexInputStateInfo viInputStateInfo,
                                        DescriptorSetLayout[] descriptorSetLayouts) {
         public void cleanup() {
-            vertexBufferStructure.cleanup();
+            viInputStateInfo.cleanup();
         }
     }
 }

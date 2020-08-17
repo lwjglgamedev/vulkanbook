@@ -1028,7 +1028,7 @@ public class MatrixDescriptorSetLayout extends DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public MatrixDescriptorSetLayout(Device device, int binding) {
+    public MatrixDescriptorSetLayout(Device device, int binding, int stage) {
         super(device);
 
         LOGGER.debug("Creating matrix descriptor set layout");
@@ -1039,7 +1039,7 @@ public class MatrixDescriptorSetLayout extends DescriptorSetLayout {
                     .binding(binding)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     .descriptorCount(1)
-                    .stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
+                    .stageFlags(stage);
 
             VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
@@ -1054,7 +1054,7 @@ public class MatrixDescriptorSetLayout extends DescriptorSetLayout {
 }
 ```
 
-The code is quite similar to the one used in textures, but in this case we are using a different descriptor type: `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` to state that this descriptor will be associated directly to a buffer. We are also stating that this will be used in a vertex shader by using the `VK_SHADER_STAGE_VERTEX_BIT` flag.
+The code is quite similar to the one used in textures, but in this case we are using a different descriptor type: `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` to state that this descriptor will be associated directly to a buffer. The class receives also a stage parameter which states which pipeline stage the descriptor sets will be used. In our case, as we will see later on, we will use it in a vertex shader, so we will be using the `VK_SHADER_STAGE_VERTEX_BIT` flag.
 
 We need also to create the descriptor set associated to the uniform that will hold the projection matrix, in a new class named `MatrixDescriptorSet`:
 
@@ -1125,10 +1125,10 @@ public class Pipeline {
     ...
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
                                        boolean hasDepthAttachment, int pushConstantsSize,
-                                       VertexBufferStructure vertexBufferStructure,
+                                       VertexInputStateInfo viInputStateInfo,
                                        DescriptorSetLayout[]descriptorSetLayouts) {
         public void cleanup() {
-            vertexBufferStructure.cleanup();
+            viInputStateInfo.cleanup();
         }
     }
 }
@@ -1185,7 +1185,7 @@ We create the descriptor layouts for the textures and the uniform that will hold
 public class ForwardRenderActivity {
     ...
     private void createDescriptorSets() {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0);
+        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 matrixDescriptorSetLayout,
@@ -1208,16 +1208,21 @@ public class ForwardRenderActivity {
 
 First we create the descriptor set layouts. Once we have those, we can create the descriptor pool. In this case we will create just one descriptor for a single texture and a single descriptor for the projection matrix. We also create a texture sampler. Warning note: If the uniform could be updated in each frame, we would need as many descriptors as swap chain images we have. If not, we could be updating the descriptor set contents while still being used in rendering another frame. We also create a map, that we will use for the textures. We will store the descriptors associated to each texture indexed by the file used to load it.
 
-Going back to the `ForwardRenderActivity` constructor, the projection matrix only will be updated when resizing and when that occurs we will not be drawing anything, so it is safe to have just one. We initialize the buffer associated to the projection uniform by calling the `copyMatrixToBuffer` which is defined like this:
-
+Going back to the `ForwardRenderActivity` constructor, the projection matrix only will be updated when resizing and when that occurs we will not be drawing anything, so it is safe to have just one. We initialize the buffer associated to the projection uniform by calling the `copyMatrixToBuffer` method from the `VulkanUtils` class:
 ```java
 public class ForwardRenderActivity {
     ...
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         ...
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
-
+    ...
+}
+```
+The `copyMatrixToBuffer` method  is defined like this:
+```java
+public class VulkanUtils {
+    ...
     private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pointerBuffer = stack.mallocPointer(1);
@@ -1321,13 +1326,13 @@ public class ForwardRenderActivity {
 }
 ```
 
-The `resize` method needs also to be modified ti update the buffer that will back the projection matrix uniform:
+The `resize` method needs also to be modified to update the buffer that will back the projection matrix uniform:
 
 ```java
 public class ForwardRenderActivity {
     ...
     public void resize(SwapChain swapChain, Scene scene) {
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         ...
     }
     ...

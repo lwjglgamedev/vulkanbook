@@ -107,7 +107,7 @@ public class Pipeline {
             VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
                     .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
                     .pStages(shaderStages)
-                    .pVertexInputState(pipeLineCreationInfo.vertexBufferStructure().getVi())
+                    .pVertexInputState(pipeLineCreationInfo.viInputStateInfo().getVi())
                     .pInputAssemblyState(vkPipelineInputAssemblyStateCreateInfo)
                     .pViewportState(vkPipelineViewportStateCreateInfo)
                     .pRasterizationState(vkPipelineRasterizationStateCreateInfo)
@@ -141,9 +141,9 @@ public class Pipeline {
 
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
                                        boolean hasDepthAttachment, int pushConstantsSize,
-                                       VertexBufferStructure vertexBufferStructure) {
+                                       VertexInputStateInfo viInputStateInfo) {
         public void cleanup() {
-            vertexBufferStructure.cleanup();
+            viInputStateInfo.cleanup();
         }
     }
 }

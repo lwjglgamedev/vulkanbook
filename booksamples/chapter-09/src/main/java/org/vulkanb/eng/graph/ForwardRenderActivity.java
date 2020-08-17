@@ -70,7 +70,7 @@ public class ForwardRenderActivity {
         createDescriptorSets(numImages);
 
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                renderPass.getVkRenderPass(), fwdShaderProgram, 1, true, GraphConstants.MAT4X4_SIZE,
+                renderPass.getVkRenderPass(), fwdShaderProgram, 1, true, true, GraphConstants.MAT4X4_SIZE,
                 new VertexBufferStructure(), descriptorSetLayouts);
         pipeLine = new Pipeline(this.pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
@@ -83,7 +83,7 @@ public class ForwardRenderActivity {
             fences[i] = new Fence(device, true);
         }
 
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
 
     public void cleanup() {
@@ -104,18 +104,6 @@ public class ForwardRenderActivity {
         Arrays.stream(fences).forEach(Fence::cleanup);
     }
 
-    private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0, vulkanBuffer.getAllocationSize(),
-                    0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            matrix.get(0, matrixBuffer);
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
-    }
-
     private void createDepthImages() {
         int numImages = swapChain.getNumImages();
         VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
@@ -127,7 +115,7 @@ public class ForwardRenderActivity {
     }
 
     private void createDescriptorSets(int numImages) {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0);
+        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
         materialDescriptorSetLayout = new MaterialDescriptorSetLayout(device, 0);
         descriptorSetLayouts = new DescriptorSetLayout[]{
@@ -262,7 +250,7 @@ public class ForwardRenderActivity {
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(3, materialsDescriptorSet.getVkDescriptorSet());
-            copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+            VulkanUtils.copyMatrixToBuffer(device, viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
@@ -292,7 +280,7 @@ public class ForwardRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
@@ -313,9 +301,9 @@ public class ForwardRenderActivity {
             Fence currentFence = fences[idx];
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.imgAcquisitionSemaphores().getVkSemaphore()),
+                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.renderCompleteSemaphores().getVkSemaphore()), currentFence);
+                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
         }
     }
 

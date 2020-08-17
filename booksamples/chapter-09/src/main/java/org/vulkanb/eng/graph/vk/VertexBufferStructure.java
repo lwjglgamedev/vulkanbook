@@ -4,12 +4,11 @@ import org.lwjgl.vulkan.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-public class VertexBufferStructure {
+public class VertexBufferStructure extends VertexInputStateInfo {
 
     public static final int TEXT_COORD_COMPONENTS = 2;
     private static final int NUMBER_OF_ATTRIBUTES = 2;
     private static final int POSITION_COMPONENTS = 3;
-    private VkPipelineVertexInputStateCreateInfo vi;
     private VkVertexInputAttributeDescription.Buffer viAttrs;
     private VkVertexInputBindingDescription.Buffer viBindings;
 
@@ -46,13 +45,10 @@ public class VertexBufferStructure {
                 .pVertexAttributeDescriptions(viAttrs);
     }
 
+    @Override
     public void cleanup() {
-        vi.free();
+        super.cleanup();
         viBindings.free();
         viAttrs.free();
-    }
-
-    public VkPipelineVertexInputStateCreateInfo getVi() {
-        return vi;
     }
 }

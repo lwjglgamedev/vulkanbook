@@ -1,8 +1,7 @@
 package org.vulkanb.eng.graph;
 
 import org.joml.Matrix4f;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.*;
+import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
@@ -14,7 +13,6 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ForwardRenderActivity {
 
@@ -75,7 +73,7 @@ public class ForwardRenderActivity {
             commandBuffers[i] = new CommandBuffer(commandPool, true, false);
             fences[i] = new Fence(device, true);
         }
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
 
     public void cleanup() {
@@ -92,18 +90,6 @@ public class ForwardRenderActivity {
         Arrays.stream(fences).forEach(Fence::cleanup);
     }
 
-    private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0, vulkanBuffer.getAllocationSize(),
-                    0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            matrix.get(0, matrixBuffer);
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
-    }
-
     private void createDepthImages() {
         int numImages = swapChain.getNumImages();
         VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
@@ -115,7 +101,7 @@ public class ForwardRenderActivity {
     }
 
     private void createDescriptorSets() {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0);
+        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 matrixDescriptorSetLayout,
@@ -248,7 +234,7 @@ public class ForwardRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
@@ -269,9 +255,9 @@ public class ForwardRenderActivity {
             Fence currentFence = fences[idx];
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.imgAcquisitionSemaphores().getVkSemaphore()),
+                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.renderCompleteSemaphores().getVkSemaphore()), currentFence);
+                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
         }
     }
 }

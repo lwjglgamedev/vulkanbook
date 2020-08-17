@@ -14,7 +14,7 @@ public class MatrixDescriptorSetLayout extends DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public MatrixDescriptorSetLayout(Device device, int binding) {
+    public MatrixDescriptorSetLayout(Device device, int binding, int stage) {
         super(device);
 
         LOGGER.debug("Creating matrix descriptor set layout");
@@ -25,7 +25,7 @@ public class MatrixDescriptorSetLayout extends DescriptorSetLayout {
                     .binding(binding)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     .descriptorCount(1)
-                    .stageFlags(VK_SHADER_STAGE_VERTEX_BIT);
+                    .stageFlags(stage);
 
             VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
