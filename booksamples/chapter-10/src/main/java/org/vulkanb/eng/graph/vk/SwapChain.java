@@ -18,7 +18,7 @@ public class SwapChain {
     private ImageView[] imageViews;
     private SurfaceFormat surfaceFormat;
     private VkExtent2D swapChainExtent;
-    private SyncSemaphores syncSemaphoresList;
+    private SyncSemaphores[] syncSemaphoresList;
     private long vkSwapChain;
 
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
@@ -63,7 +63,11 @@ public class SwapChain {
             vkSwapChain = lp.get(0);
 
             imageViews = createImageViews(stack, device, vkSwapChain, surfaceFormat.imageFormat);
-            syncSemaphoresList = new SyncSemaphores(new Semaphore(device), new Semaphore(device), new Semaphore(device));
+            numImages = imageViews.length;
+            syncSemaphoresList = new SyncSemaphores[numImages];
+            for (int i = 0; i < numImages; i++) {
+                syncSemaphoresList[i] = new SyncSemaphores(new Semaphore(device), new Semaphore(device));
+            }
             currentFrame = 0;
         }
     }
@@ -73,7 +77,7 @@ public class SwapChain {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer ip = stack.mallocInt(1);
             int err = KHRSwapchain.vkAcquireNextImageKHR(device.getVkDevice(), vkSwapChain, ~0L,
-                    syncSemaphoresList.imgAcquisitionSemaphore().getVkSemaphore(), MemoryUtil.NULL, ip);
+                    syncSemaphoresList[currentFrame].imgAcquisitionSemaphore().getVkSemaphore(), MemoryUtil.NULL, ip);
             if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
                 resize = true;
             } else if (err == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
@@ -159,8 +163,10 @@ public class SwapChain {
         int size = imageViews != null ? imageViews.length : 0;
         for (int i = 0; i < size; i++) {
             imageViews[i].cleanup();
+            SyncSemaphores syncSemaphores = syncSemaphoresList[i];
+            syncSemaphores.imgAcquisitionSemaphore().cleanup();
+            syncSemaphores.renderCompleteSemaphore().cleanup();
         }
-        syncSemaphoresList.cleanup();
 
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
     }
@@ -209,7 +215,7 @@ public class SwapChain {
         return swapChainExtent;
     }
 
-    public SyncSemaphores getSyncSemaphoresList() {
+    public SyncSemaphores[] getSyncSemaphoresList() {
         return syncSemaphoresList;
     }
 
@@ -223,7 +229,7 @@ public class SwapChain {
             VkPresentInfoKHR present = VkPresentInfoKHR.callocStack(stack)
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR)
                     .pWaitSemaphores(stack.longs(
-                            syncSemaphoresList.lightingCompleteSemaphore().getVkSemaphore()))
+                            syncSemaphoresList[currentFrame].renderCompleteSemaphore().getVkSemaphore()))
                     .swapchainCount(1)
                     .pSwapchains(stack.longs(vkSwapChain))
                     .pImageIndices(stack.ints(currentFrame));
@@ -244,12 +250,6 @@ public class SwapChain {
     public record SurfaceFormat(int imageFormat, int colorSpace) {
     }
 
-    public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore geometryCompleteSemaphore,
-                                 Semaphore lightingCompleteSemaphore) {
-        public void cleanup() {
-            imgAcquisitionSemaphore().cleanup();
-            geometryCompleteSemaphore().cleanup();
-            lightingCompleteSemaphore().cleanup();
-        }
+    public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore renderCompleteSemaphore) {
     }
 }

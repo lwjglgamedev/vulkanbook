@@ -117,7 +117,7 @@ public class GeometryRenderActivity {
 
         viewMatricesDescriptorSets = new MatrixDescriptorSet[numImages];
         viewMatricesBuffer = new VulkanBuffer[numImages];
-        materialsBuffer = new VulkanBuffer(device, materialDescriptorSetLayout.getMaterialSize() * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        materialsBuffer = new VulkanBuffer(device, (long) materialDescriptorSetLayout.getMaterialSize() * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         materialsDescriptorSet = new MaterialDescriptorSet(descriptorPool, materialDescriptorSetLayout,
                 materialsBuffer, 0);
@@ -299,11 +299,11 @@ public class GeometryRenderActivity {
             int idx = swapChain.getCurrentFrame();
             CommandBuffer commandBuffer = commandBuffers[idx];
             Fence currentFence = fences[idx];
-            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList();
+            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
                     stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()), currentFence);
+                    null, currentFence);
         }
     }
 

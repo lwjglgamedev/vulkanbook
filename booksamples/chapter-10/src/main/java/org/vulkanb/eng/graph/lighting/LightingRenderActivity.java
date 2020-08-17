@@ -252,11 +252,11 @@ public class LightingRenderActivity {
             int idx = swapChain.getCurrentFrame();
             CommandBuffer commandBuffer = commandBuffers[idx];
             Fence currentFence = fences[idx];
-            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList();
+            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()),
+                    null,
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.lightingCompleteSemaphore().getVkSemaphore()), currentFence);
+                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
         }
     }
 
