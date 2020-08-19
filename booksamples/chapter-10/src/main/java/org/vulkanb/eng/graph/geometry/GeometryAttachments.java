@@ -11,6 +11,7 @@ public class GeometryAttachments {
     public static final int NUMBER_ATTACHMENTS = 4;
     public static final int NUMBER_COLOR_ATTACHMENTS = NUMBER_ATTACHMENTS - 1;
     private Attachment[] attachments;
+    private int depthAttachmentPos;
 
     public GeometryAttachments(Device device, int width, int height) {
         attachments = new Attachment[NUMBER_ATTACHMENTS];
@@ -38,6 +39,7 @@ public class GeometryAttachments {
         attachment = new Attachment(device, width, height,
                 VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         attachments[i] = attachment;
+        depthAttachmentPos = i;
     }
 
     public void cleanup() {
@@ -49,6 +51,6 @@ public class GeometryAttachments {
     }
 
     public Attachment getDepthAttachment() {
-        return attachments[3];
+        return attachments[depthAttachmentPos];
     }
 }

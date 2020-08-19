@@ -76,6 +76,7 @@ public class Render {
     }
 
     public void render(Window window, Scene scene) {
+        // TODO: MISSING SEMAPHORE TO PREVENT LIGHTING STAGE TO START
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window, scene);

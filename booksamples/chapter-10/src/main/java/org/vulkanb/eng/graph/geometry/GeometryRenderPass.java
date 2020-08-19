@@ -15,10 +15,9 @@ public class GeometryRenderPass {
     private Device device;
     private long vkRenderPass;
 
-    public GeometryRenderPass(Device device, GeometryAttachments offscreenAttachments) {
+    public GeometryRenderPass(Device device, Attachment[] attachments) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            Attachment[] attachments = offscreenAttachments.getAttachments();
             int numAttachments = attachments.length;
             VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(numAttachments, stack);
             int depthAttachmentPos = 0;
@@ -39,7 +38,6 @@ public class GeometryRenderPass {
                 }
             }
 
-            // Create color references
             VkAttachmentReference.Buffer colorReferences = VkAttachmentReference.callocStack(GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
                     stack);
             for (int i = 0; i < GeometryAttachments.NUMBER_COLOR_ATTACHMENTS; i++) {

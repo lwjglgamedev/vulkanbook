@@ -66,7 +66,7 @@ public class SwapChain {
             numImages = imageViews.length;
             syncSemaphoresList = new SyncSemaphores[numImages];
             for (int i = 0; i < numImages; i++) {
-                syncSemaphoresList[i] = new SyncSemaphores(new Semaphore(device), new Semaphore(device));
+                syncSemaphoresList[i] = new SyncSemaphores(new Semaphore(device), new Semaphore(device), new Semaphore(device));
             }
             currentFrame = 0;
         }
@@ -165,6 +165,7 @@ public class SwapChain {
             imageViews[i].cleanup();
             SyncSemaphores syncSemaphores = syncSemaphoresList[i];
             syncSemaphores.imgAcquisitionSemaphore().cleanup();
+            syncSemaphores.geometryCompleteSemaphore().cleanup();
             syncSemaphores.renderCompleteSemaphore().cleanup();
         }
 
@@ -250,6 +251,7 @@ public class SwapChain {
     public record SurfaceFormat(int imageFormat, int colorSpace) {
     }
 
-    public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore renderCompleteSemaphore) {
+    public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore geometryCompleteSemaphore,
+                                 Semaphore renderCompleteSemaphore) {
     }
 }

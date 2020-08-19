@@ -233,6 +233,7 @@ public class LightingRenderActivity {
     }
 
     public void resize(SwapChain swapChain, GeometryFrameBuffer geometryFrameBuffer, Scene scene) {
+        this.swapChain = swapChain;
         lightingFrameBuffer.cleanup();
         pipeline.cleanup();
         attachmentsDescriptorSet.update(geometryFrameBuffer);
@@ -254,9 +255,10 @@ public class LightingRenderActivity {
             Fence currentFence = fences[idx];
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    null,
+                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
+                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()),
+                    currentFence);
         }
     }
 

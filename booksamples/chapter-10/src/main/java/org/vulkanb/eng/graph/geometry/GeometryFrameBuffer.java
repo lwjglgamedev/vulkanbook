@@ -25,7 +25,7 @@ public class GeometryFrameBuffer {
             int height = extent2D.height();
 
             geometryAttachments = new GeometryAttachments(device, width, height);
-            geometryRenderPass = new GeometryRenderPass(device, geometryAttachments);
+            geometryRenderPass = new GeometryRenderPass(device, geometryAttachments.getAttachments());
 
             Attachment[] attachments = geometryAttachments.getAttachments();
             int numAttachments = attachments.length;
