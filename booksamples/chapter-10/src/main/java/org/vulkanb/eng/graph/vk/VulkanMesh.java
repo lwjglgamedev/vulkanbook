@@ -17,20 +17,16 @@ public class VulkanMesh {
     private VulkanBuffer indicesBuffer;
     private int indicesCount;
     private Material material;
-    private Texture metalRoughTexture;
-    private Texture normalMapTexture;
     private Texture texture;
     private VulkanBuffer verticesBuffer;
 
     public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount,
-                      Texture texture, Texture normalMapTexture, Texture metalRoughTexture, Material material) {
+                      Texture texture, Material material) {
         this.id = id;
         this.verticesBuffer = verticesBuffer;
         this.indicesBuffer = indicesBuffer;
         this.indicesCount = indicesCount;
         this.texture = texture;
-        this.normalMapTexture = normalMapTexture;
-        this.metalRoughTexture = metalRoughTexture;
         this.material = material;
     }
 
@@ -60,14 +56,11 @@ public class VulkanMesh {
 
     private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
         float[] positions = meshData.positions();
-        float[] normals = meshData.normals();
-        float[] tangents = meshData.tangents();
-        float[] biTangents = meshData.biTangents();
         float[] textCoords = meshData.textCoords();
         if (textCoords == null || textCoords.length == 0) {
             textCoords = new float[(positions.length / 3) * 2];
         }
-        int numElements = positions.length + normals.length + +tangents.length + biTangents.length + textCoords.length;
+        int numElements = positions.length + textCoords.length;
         int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
@@ -88,15 +81,6 @@ public class VulkanMesh {
                 data.put(positions[startPos]);
                 data.put(positions[startPos + 1]);
                 data.put(positions[startPos + 2]);
-                data.put(normals[startPos]);
-                data.put(normals[startPos + 1]);
-                data.put(normals[startPos + 2]);
-                data.put(tangents[startPos]);
-                data.put(tangents[startPos + 1]);
-                data.put(tangents[startPos + 2]);
-                data.put(biTangents[startPos]);
-                data.put(biTangents[startPos + 1]);
-                data.put(biTangents[startPos + 2]);
                 data.put(textCoords[startTextCoord]);
                 data.put(textCoords[startTextCoord + 1]);
             }
@@ -127,22 +111,14 @@ public class VulkanMesh {
                 indicesTransferBuffers[i] = indicesBuffers.srcBuffer();
 
                 Material material = meshData.material();
-                String texturePath = material != null ? material.getTexturePath() : null;
-                Texture texture = textureCache.createTexture(device, texturePath, VK_FORMAT_R8G8B8A8_SRGB);
-
-                String normalMapPath = material != null ? material.getNormalMapPath() : null;
-                Texture normalMapTexture = textureCache.createTexture(device, normalMapPath, VK_FORMAT_R8G8B8A8_UNORM);
-
-                String metalRoughPath = material != null ? material.getMetalRoughPath() : null;
-                Texture metalRougTexture = textureCache.createTexture(device, metalRoughPath, VK_FORMAT_R8G8B8A8_SRGB);
+                Texture texture = textureCache.createTexture(device, material.getTexturePath(),
+                        VK_FORMAT_R8G8B8A8_SRGB);
 
                 meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
-                        meshData.indices().length, texture, normalMapTexture, metalRougTexture, material);
+                        meshData.indices().length, texture, material);
                 recordTransferCommand(cmd, verticesBuffers);
                 recordTransferCommand(cmd, indicesBuffers);
                 texture.recordTextureTransition(cmd);
-                normalMapTexture.recordTextureTransition(cmd);
-                metalRougTexture.recordTextureTransition(cmd);
             }
 
             cmd.endRecording();
@@ -191,14 +167,6 @@ public class VulkanMesh {
 
     public Material getMaterial() {
         return material;
-    }
-
-    public Texture getMetalRoughTexture() {
-        return metalRoughTexture;
-    }
-
-    public Texture getNormalMapTexture() {
-        return normalMapTexture;
     }
 
     public Texture getTexture() {

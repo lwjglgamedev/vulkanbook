@@ -1,17 +1,13 @@
 package org.vulkanb.eng.scene;
 
-import org.joml.Vector4f;
 import org.vulkanb.eng.Window;
-import org.vulkanb.eng.graph.vk.GraphConstants;
 
 import java.util.*;
 
 public class Scene {
 
-    private Vector4f ambientLight;
     private Camera camera;
     private Map<String, List<Entity>> entitiesMap;
-    private Light[] lights;
     private Perspective perspective;
 
     public Scene(Window window) {
@@ -19,7 +15,6 @@ public class Scene {
         perspective = new Perspective();
         perspective.resize(window.getWidth(), window.getHeight());
         camera = new Camera();
-        ambientLight = new Vector4f();
     }
 
     public void addEntity(Entity entity) {
@@ -29,10 +24,6 @@ public class Scene {
             entitiesMap.put(entity.getMeshId(), entities);
         }
         entities.add(entity);
-    }
-
-    public Vector4f getAmbientLight() {
-        return ambientLight;
     }
 
     public Camera getCamera() {
@@ -45,10 +36,6 @@ public class Scene {
 
     public Map<String, List<Entity>> getEntitiesMap() {
         return entitiesMap;
-    }
-
-    public Light[] getLights() {
-        return this.lights;
     }
 
     public Perspective getPerspective() {
@@ -64,13 +51,5 @@ public class Scene {
         if (entities != null) {
             entities.removeIf(e -> e.getId().equals(entity.getId()));
         }
-    }
-
-    public void setLights(Light[] lights) {
-        int numLights = lights != null ? lights.length : 0;
-        if (numLights > GraphConstants.MAX_LIGHTS) {
-            throw new RuntimeException("Maximum number of lights set to: " + GraphConstants.MAX_LIGHTS);
-        }
-        this.lights = lights;
     }
 }

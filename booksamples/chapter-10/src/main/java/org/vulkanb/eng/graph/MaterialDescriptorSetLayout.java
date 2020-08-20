@@ -43,7 +43,7 @@ public class MaterialDescriptorSetLayout extends DescriptorSetLayout {
 
     private static int calcMaterialsUniformSize(PhysicalDevice physDevice) {
         long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
-        long mult = (GraphConstants.VEC4_SIZE * 9) / minUboAlignment + 1;
+        long mult = GraphConstants.VEC4_SIZE / minUboAlignment + 1;
         return (int) (mult * minUboAlignment);
     }
 

@@ -56,11 +56,11 @@ public class Render {
                 engProps.isvSync());
         commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
         pipelineCache = new PipelineCache(device);
-        textureCache = new TextureCache();
         meshList = new ArrayList<>();
+        textureCache = new TextureCache();
         geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache,
-                geometryRenderActivity.getGeometryFrameBuffer(), scene);
+                geometryRenderActivity.getAttachments());
     }
 
     public void loadMeshes(MeshData[] meshDataList) {
@@ -76,7 +76,6 @@ public class Render {
     }
 
     public void render(Window window, Scene scene) {
-        // TODO: MISSING SEMAPHORE TO PREVENT LIGHTING STAGE TO START
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window, scene);
@@ -86,7 +85,7 @@ public class Render {
 
         geometryRenderActivity.recordCommandBuffers(meshList, scene);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.recordCommandBuffer(scene);
+        lightingRenderActivity.prepareCommandBuffers();
         lightingRenderActivity.submit(graphQueue);
 
         if (swapChain.presentImage(graphQueue)) {
@@ -105,7 +104,7 @@ public class Render {
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
         geometryRenderActivity.resize(swapChain, scene);
-        lightingRenderActivity.resize(swapChain, geometryRenderActivity.getGeometryFrameBuffer(), scene);
+        lightingRenderActivity.resize(swapChain, geometryRenderActivity.getAttachments());
     }
 
     public void unloadMesh(String id) {
