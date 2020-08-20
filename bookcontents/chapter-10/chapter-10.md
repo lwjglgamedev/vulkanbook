@@ -1,18 +1,32 @@
 # Deferred shading (I)
 
-DRAFT: Review pending.
-
-In this chapter we will setup the basis to implement deferred shading. We will split the rendering into two phases. one to render the geometry and relevant parameters of the scene and another one to apply lighting. We will only setup the basis, leaving the changes required to apply lighting for the next chapter in order to reduce the size of the chapter. We will not be introducing new Vulkan concepts, just combine the ones we have described previously to support deferred shading. Therefore, you will see larger chunks of code with an explanatory overview, focusing on the key concepts of Vulkan that need to be applied to implement deferred shading
+In this chapter we will setup the basis to implement deferred shading. We will split the rendering into two phases, one to render the geometry and relevant parameters of the scene and another one to apply lighting. In this chapter we will only setup the basis, leaving the changes required to apply lighting for the next chapter. We will not be introducing new Vulkan concepts, just combine the ones we have described previously to support deferred shading. Therefore, you will see larger chunks of code with an explanatory overview, focusing on the key concepts of Vulkan that need to be applied to implement deferred shading
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-10).
 
 ## Deferred shading
 
-TODO: Describe concepts of deferred render.
+Up to now the way that we are rendering a 3D scene is called forward rendering. Deferred rendering is frequently used when having multiple lights and usually consists of two phases. In the first phase data that is required for shading computation is generated (depth values, albedo colors, material properties, etc.). In the second phase, taking all that information as inputs lighting is applied to each fragment. 
+
+
+
+Hence, with deferred shading we perform two rendering phases. The first one, is the geometry pass, where we render the scene to several attachments that will contain the following information:
+
+- The diffuse colors for each position. We call this the albedo.
+- The normals at each position.
+- Depth values.
+- Other materials information,
+  
+  
+
+All that information is stored in attachments, as the depth attachment used in previous chapters.
+
+The second pass is called the lighting phase. This phase takes a shape that fills up all the screen and generates the final color information, using lighting,  for each fragment using as inputs the attachment outputs generated in the previous phase. When are will performing the lighting pass, the depth test in the geometry phase will have already removed all the scene data that is not be seen. Hence, the number of operations to be done are restricted to what will be displayed on the screen.
 
 ## Attachments
 
 We will start by encapsulating the attachments that we will use as outputs in the geometry pass and as inputs in the lighting pass. We will do this in a new class named `GeometryAttachments` which is defined like this:
+
 ```java
 package org.vulkanb.eng.graph.geometry;
 
@@ -71,15 +85,18 @@ public class GeometryAttachments {
     }
 }
 ```
+
 As you can see, we initialize an array of `Attachment` instances which is composed by the following elements:
-- The first attachment will store the albedo of the scene. We will store that information using an image of `VK_FORMAT_R16G16B16A16_SFLOAT` format (16 bits per RGBA channels). We state that this a color attachment by using the `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT` flag.
+
+- The first attachment will store the albedo of the scene. We will store that information using an image of `VK_FORMAT_R16G16B16A16_SFLOAT` format (16 bits per each RGBA channel). We state that this a color attachment by using the `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT` flag.
 - The second and last attachment (by now) just stores the depth information, and uses the same formats as the depth attachment used in previous chapters.
 
-The class provides methods to access the attachments, to free the resources and to get the depth attachment.
+The class provides methods to access the attachments, to get the size of them, to free the resources and  to get the reference to the depth attachment.
 
 ## Geometry render pass
 
 The next step is to define the render pass used to render the geometry. We will create a new class named `GeometryRenderPass` for that. The class starts like this:
+
 ```java
 public class GeometryRenderPass {
 
@@ -115,9 +132,11 @@ public class GeometryRenderPass {
     ...
 }
 ```
-We need to create a `VkAttachmentDescription` structure to describe each of the output attachments. The format used will be the same format as the one used in the underlying image. We want each attachment to be cleared at the beginning of the subpass, so we use the `VK_ATTACHMENT_LOAD_OP_CLEAR` for the `loadOp` attribute. The contents of the attachments will be used in the lighting render pass, therefore, we need those contents to be preserved at the end of the subpass. This is why we use the `VK_ATTACHMENT_STORE_OP_STORE` value for the `storeOp` attribute. We don't care about the stencil components so we use the `VK_ATTACHMENT_LOAD_OP_DONT_CARE` flag. When tis render pass finishes, the attachments will be used as read only inputs in the lighting render pass. This is why we set the `VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL` for color attachments and `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` for the depth attachment as the final layout to transition into when the render pass finishes.
 
-The next step is to define the color and depth references that will be used in the render subpasses. In our case, we will be using just one subpass, and we should provide the reference to the attachments that will be used with the layout used during that subpass:
+We need to create a `VkAttachmentDescription` structure to describe each of the output attachments. The format used will be the same format as the one of the underlying image. We want each attachment to be cleared at the beginning of the subpass, so we use the `VK_ATTACHMENT_LOAD_OP_CLEAR` for the `loadOp` attribute. The contents of the attachments will be used in the lighting render pass, therefore, we need those contents to be preserved at the end of the subpass. This is why we use the `VK_ATTACHMENT_STORE_OP_STORE` value for the `storeOp` attribute. Since we don't care about the stencil components so we use the `VK_ATTACHMENT_LOAD_OP_DONT_CARE` flag. When this render pass finishes, the attachments will be used as read only inputs in the lighting render pass. This is why we set the `VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL` for color attachments and `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` for the depth attachment as the final layout to transition into when the render pass finishes.
+
+The next step is to define the color and depth references that will be used in the render subpasses. In our case, we will be using just one subpass. As explained in previous chapters, we should provide the reference to the attachments that will be used with the layout used during that subpass:
+
 ```java
 public class GeometryRenderPass {
     ...
@@ -149,9 +168,11 @@ public class GeometryRenderPass {
     ...
 }
 ```
+
 During the subpass, the color attachments will be in the `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` layout while the depth attachment will be in the `VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL` layout. With that information we can describe the subpass by filling up a `VkSubpassDescription` structure.
 
-Now we need to define the subpass dependencies. Prior to describing them, we will clarify some concepts. We will not be creating separate sets of attachments per swap chain image. This would consume too much memory in our GPU. Therefore, we need to prevent the output attachments to be written concurrently per different render loops. While we are using the attachments in the lighting render phase, we do not want them to be modified by the next geometry render phase. Let's review how the dependencies are defined:
+Now we need to define the subpass dependencies. Prior to describing them, we will clarify some concepts. We will not be creating separate sets of attachments per swap chain image. This would consume too much memory in our GPU. Therefore, we need to prevent the output attachments to be written concurrently per different render loops. While we are using the attachments in the lighting render phase, we do not want them to be modified by the next loop in the geometry render phase. Let's review how the dependencies are defined:
+
 ```java
 public class GeometryRenderPass {
     ...
@@ -184,11 +205,13 @@ public class GeometryRenderPass {
     ...
 }
 ```
-Ths first dependency, defines an external dependency for the subpass at position `0` (the only subpass that we have). It states that any in-flight command shall reach the `VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT` stage. That is, shall complete its journey through the pipeline when performing read memory accesses (`VK_ACCESS_MEMORY_READ_BIT`). This will affect any command reaching the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` pipeline stage for read and write access. This dependencies, prevent the geometry rendering to write to the output attachments if there are previous commands in-flight, that is, if the lighting render phase commands are still in use.
+
+The first dependency, defines an external dependency for the subpass at position `0` (the only subpass that we have). It states that any in-flight command shall reach the `VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT` stage. That is, shall complete its journey through the pipeline when performing read memory accesses (`VK_ACCESS_MEMORY_READ_BIT`). This will block any command reaching the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` pipeline stage for read and write access. This dependency, prevents the geometry rendering phase to write to the output attachments if there are previous commands in-flight, that is, if the lighting render phase commands are still in use.
 
 The second dependency, its used to control the layout transition of the attachments to `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` and `VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL`. These layout transitions must not happen until the in-flight commands have completed the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` stage. Note that we are note preventing the lighting phase to start before the geometry phase has finished with this configuration. We will do this later on.
 
 With that information we can create the render pass:
+
 ```java
 public class GeometryRenderPass {
     ...
@@ -220,7 +243,8 @@ public class GeometryRenderPass {
 }
 ```
 
-We now have all the components ofr defining the frame buffer used in the geometry render stage. We will do this inside a new class named `GeometryFrameBuffer`, which is defined like this:
+We now have all the components required for defining the frame buffer used in the geometry render phase. We will do this inside a new class named `GeometryFrameBuffer`, which is defined like this:
+
 ```java
 package org.vulkanb.eng.graph.geometry;
 
@@ -294,12 +318,14 @@ public class GeometryFrameBuffer {
     }
 }
 ```
-This class creates in its constructor (y calling the `createAttachments` method) the output attachments, the rendre pass and the framebuffer itself (by calling the `createFrameBuffer` method). The reference to the `SwapChain`, received in the constructor is used to get the size of the rendering area. Remember that there are no separate sets per swap chain image. It also provides a method to support resizing (`resize`), which recreates the attachments and the frame buffer. There is no need to recreate the render pass since the format and the number of attachments will not change.
 
-We weill create a new class responsible of rendering the firs render pass (geometry phase) named `GeometryRenderActivity` which starts like this:
+This class creates in its constructor (by calling the `createAttachments` method) the output attachments, the render pass and the frame buffer itself (by calling the `createFrameBuffer` method). The reference to the `SwapChain`, received in the constructor is used to get the size of the rendering area. Remember that there are no separate sets per swap chain image. It also provides a method to support resizing (`resize`), which recreates the attachments and the frame buffer. There is no need to recreate the render pass since the format and the number of attachments will not change.
+
+We will create a new class responsible of rendering the first render pass (geometry phase) named `GeometryRenderActivity` which starts like this:
+
 ```java
 public class GeometryRenderActivity {
-    
+
     private static final String GEOMETRY_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/geometry_fragment.glsl";
     private static final String GEOMETRY_FRAGMENT_SHADER_FILE_SPV = GEOMETRY_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String GEOMETRY_VERTEX_SHADER_FILE_GLSL = "resources/shaders/geometry_vertex.glsl";
@@ -341,9 +367,11 @@ public class GeometryRenderActivity {
     ...
 }
 ```
+
 We will be using a new pair of shaders (which we will see later on), and create them in the constructor. The constructor also instantiates the `GeometryFrameBuffer` which contains the attachments and the render pass,  along with the descriptor pool, the descriptor sets, the pipeline, the command buffers and update the projection matrix uniform buffer in the constructor. The class also provides a `cleanup` method to free the allocated resources when they are no longer needed.
 
 The `createShaders` method just checks if the shaders need to be recompiled an loads them:
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -364,12 +392,17 @@ public class GeometryRenderActivity {
 ```
 
 The `createDescriptorPool` method just creates the descriptor pool. We will need:
-- Uniform buffers (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER): one for the perspective matrix and one per swap chain image for the view matrix.
-- Texture samples (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER): one for the textures of each of the potential materials.
-- Dynamic uniform buffers (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC): One dynamic buffer will hold all the materials data.
-Therefore the `createDescriptorPool` method is defined like this:
+
+- Uniform buffers (`VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER`): one for the perspective matrix and one per swap chain image for the view matrix.
+
+- Texture samples (`VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER`): one for the textures of each of the potential materials.
+
+- Dynamic uniform buffers (`VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC`): One dynamic buffer will hold all the materials data.
+  
+  Therefore the `createDescriptorPool` method is defined like this:
+
 ```java
-public class GeometryRenderActivity {
+  public class GeometryRenderActivity {
     ...
     private void createDescriptorPool() {
         EngineProperties engineProps = EngineProperties.getInstance();
@@ -380,10 +413,11 @@ public class GeometryRenderActivity {
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
     ...
-}
+  }
 ```
 
 The `createDescriptorSets` method is defined like this:
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -421,9 +455,11 @@ public class GeometryRenderActivity {
     ...
 }
 ```
+
 This method is similar to the one used in previous chapters. We start by creating the descriptor layouts, instantiating the usual ones for matrix buffers, texture samplers and materials uniform. Then we create the different descriptor sets needed.
 
 The `createPipeline` is quite similar to the code used previously. It is defined like this:
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -438,7 +474,9 @@ public class GeometryRenderActivity {
     ...
 }
 ```
+
 To finish with the methods called in the constructor, the `createCommandBuffers` is also similar to the code in the previous chapters, we just instantiate one command buffer and their associated fences per swap chain image:
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -456,6 +494,7 @@ public class GeometryRenderActivity {
 ```
 
 This class also will be notified when meshes are loaded and unloaded. As you can see, the `GeometryRenderActivity` is quiet similar to the `ForwardRenderActivity` class in previous chapter
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -500,9 +539,11 @@ public class GeometryRenderActivity {
     }
 }
 ```
+
 The `updateMaterial` method is used to update material descriptor sets when new meshes are loaded. The `updateTextureDescriptorSet` method is used to associate the texture descriptor set with a concrete texture sampler.
 
 The `GeometryRenderActivity` also provides a method to record the command buffers which will be invoked in the render loop. This is the definition of that method:
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -602,7 +643,9 @@ public class GeometryRenderActivity {
     ...
 }
 ```
-This method is almost identical than the one used in the `ForwardRenderActivity`. We have just changed a little bit the way we set the clear values to prepare it for the next chapters when we will have more than one color attachment. This class also provides a method to support window resizing, in this case, besides updating the perspective matrix, we just simply call the `resize` method in the `GeometryFrameBuffer` class which recreates the attachments and the frame buffer. This will ensure that the output attachments will match the screen size. The method to set the model matrix, thorough a push constant is also identical to the one used in the `ForwardRenderActivity` class.
+
+This method is almost identical than the one used in the `ForwardRenderActivity`. class in previous chapters. We have just changed a little bit the way we set the clear values to prepare it for the next chapters when we will have more than one color attachment. This class also provides a method to support window resizing, in this case, besides updating the perspective matrix, we just simply call the `resize` method in the `GeometryFrameBuffer` class which recreates the attachments and the frame buffer. This will ensure that the output attachments will match the screen size. The method to set the model matrix, thorough a push constant is also identical to the one used in the `ForwardRenderActivity` class.
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -622,6 +665,7 @@ public class GeometryRenderActivity {
 ```
 
 Finally, the `GeometryRenderActivity` also defines a method to submit the recorded commands which is defined like this:
+
 ```java
 public class GeometryRenderActivity {
     ...
@@ -640,7 +684,9 @@ public class GeometryRenderActivity {
     ...
 }
 ```
-There's a subtle, but important, change in the this method regarding the one used in the `ForwardRenderActivity` class. We are using an extra semaphore to be signaled when the commands submitted finished. This semaphore will be used for waiting when submitting the commands for the lighting phase. Therefore, we have updated the synchronization semaphores hosted in the `SwapChain` class to add this new element:
+
+There's a subtle, but important, change in this method with respect to the similar method used in the `ForwardRenderActivity` class. We are using a new semaphore to be signaled when the commands submitted finishes. Instead of signalling a semaphore that  blocks image presentation, we have introduced a new one. This semaphore will be used for waiting when submitting the commands for the lighting phase. This is what will prevent the lighting phase to start reading the attachments while they are still being generated. Since we have defined new semaphores, we have updated the synchronization semaphores hosted in the `SwapChain` class to add this new element:
+
 ```java
 public class SwapChain {
     ...
@@ -670,6 +716,7 @@ public class SwapChain {
 ```
 
 The final step are thew new shaders for the geometry phase. The vertex shader (`geometry_vertex.glsl`). By now, it is exactly the same code than in t he previous chapter:
+
 ```glsl
 #version 450
 
@@ -696,7 +743,8 @@ void main()
 }
 ```
 
-The fragment shader is also identical (we have just changed the output attachment name by `outAlbedo`). If you think a little bit about it, it makes sense. From the geometry phase point of view, we have just almost not changed anything. We just changed the swap chain image output attachment by another image  that can be sampled later one, but we are rendering everything in the same way.
+The fragment shader is also identical (we have just changed the output attachment name by `outAlbedo`). If you think a little bit about it, it makes sense. From the geometry phase point of view, we have not changed anything. We have just changed the swap chain image output attachment by another image  that can be sampled later one, but we are rendering everything in the same way.
+
 ```glsl
 #version 450
 
@@ -717,7 +765,8 @@ void main()
 
 ## Lighting render pass
 
-We will create a new class named `LightingRenderPass` to manage the definition and creation of the render pass used in this phase. The class is defined like this:
+We are ready now to develop the code needed to support the lighting phase. As a first step, we will create a new class named `LightingRenderPass` to manage the definition and creation of the render pass used in this phase. The class is defined like this:
+
 ```java
 package org.vulkanb.eng.graph.lighting;
 
@@ -791,9 +840,11 @@ public class LightingRenderPass {
     }
 }
 ```
-In this case, we use a single output attachment, a color attachment which will be backed by a swap chain image. In this case, unlike previous chapters, we are not using an output attachment for depth values, we do not need it as we will see later on. We are still setting the same dependencies as in the render pass used for forward rendering to properly control the layout transition.
+
+In this case, we use a single output attachment, a color attachment, which will be backed by a swap chain image. In this case, unlike previous chapters, we are not using an output attachment for depth values, we do not need it as we will see later on. We are still setting the same dependencies as in the render pass used for forward rendering (`SwapChainRenderPass`) to properly control the layout transition.
 
 The next step is to define a class to manage the frame buffer used in this lighting phase:
+
 ```java
 package org.vulkanb.eng.graph.lighting;
 
@@ -853,9 +904,11 @@ public class LightingFrameBuffer {
     }
 }
 ```
+
 We just link the render pass and each of the swap chain images to create a frame buffer for each of them. Nothing new here.
 
 The rendering tasks of the lighting phase will be done in a new class named `LightingRenderActivity` which starts like this:
+
 ```java
 public class LightingRenderActivity {
 
@@ -901,9 +954,11 @@ public class LightingRenderActivity {
     ...
 }
 ```
-The constructor is similar to the one used in `GeometryRenderActivity`, we create the lighting buffer and then proceed initializing the shaders, the descriptor pool, the descriptor sets, the pipeline and the command buffers. At the end of the constructor, we pre-record the command buffers (we will see why we can do this in this phase). The class, as usual, provides a `cleanup` method to free the resources when finished.
+
+The constructor is similar to the one used in `GeometryRenderActivity`, we create the lighting buffer and then proceed to initialize the shaders, the descriptor pool, the descriptor sets, the pipeline and the command buffers. At the end of the constructor, we prerecord the command buffers (we will see later on why we can do this in this phase). The class, as usual, provides a `cleanup` method to free the resources when finished.
 
 The `createShaders` method, as in the `GeometryRenderActivity` class, just checks if the shaders need to be recompiled an loads them:
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -924,6 +979,7 @@ public class LightingRenderActivity {
 ```
 
 In the `createDescriptorPool` method, we initialize the descriptor pool properly sized to the different types of descriptor sets:
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -936,9 +992,11 @@ public class LightingRenderActivity {
     ...
 }
 ```
+
 We will need texture samplers to access the attachments filled up in the geometry phase, therefore we will need as many samplers as input attachments we have (Remember that the input attachments in this phase are the output attachments in the previous one).
 
 The `createDescriptorSets` method just creates the descriptor set layout and the descriptor set that defines the samplers needed to access the attachments in the lighting phase:
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -954,7 +1012,9 @@ public class LightingRenderActivity {
     ...
 }
 ```
-We are using two new classes, `AttachmentsLayout` to manage de descriptor set layout for the attachments and `AttachmentsDescriptorSet` for management of the descriptor set itself. Let's start with the `AttachmentsLayout` class:
+
+We are using two new classes, `AttachmentsLayout` to manage the descriptor set layout for the attachments and `AttachmentsDescriptorSet` for management of the descriptor set itself. Let's start with the `AttachmentsLayout` class:
+
 ```java
 package org.vulkanb.eng.graph.lighting;
 
@@ -996,9 +1056,11 @@ public class AttachmentsLayout extends DescriptorSetLayout {
     }
 }
 ```
+
 We need to create as many `VkDescriptorSetLayoutBinding` structures as attachments we will have. By now, we just have the color and depth attachments. Their contents will be accessed by a texture sampler in the lighting fragment shader.
 
 The `AttachmentsDescriptorSet` class is defined like this:
+
 ```java
 package org.vulkanb.eng.graph.lighting;
 
@@ -1079,9 +1141,11 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
     }
 }
 ```
-Nothing new here, we are just creating a single descriptor composed by two samplers that will access the attachments as textures. We alo store the sampler used to configure how we are going to access the texture here in this class for convenience (although this is not a descriptor set, it is handy to have it here). In the `update` method we link the descriptor set elements with each of the attachments and the texture sampler.
+
+Nothing new here, we are just creating a single descriptor composed by two images that will allow to access the attachments. We also create the sampler used to control how we are going to access the texture in this class for convenience (although this is not a descriptor set, it is handy to have it here). In the `update` method we link the descriptor set elements with each of the attachments and the texture sampler.
 
 Going back to the `LightingRenderActivity` class, the `createPipeline` is almost identical than the one used in the `GeometryRenderActivity` class:
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -1095,9 +1159,11 @@ public class LightingRenderActivity {
     ...
 }
 ```
-The only differences, with the obvious exception that we are using different shaders, are that we are not using depth testing and hav disabled blending. We are not using depth testing, because what we will do is render a shape that covers the whole string and sample the input attachments for each of the fragments applying lighting to them. No need to depth test. We don't need also to enable blending since this has already been done in the geometry phase. We will see later on the effect that blending could have now. However, we are still using the depth attachment as an input, we will use it in the next chapter, but not for depth testing. You may have noticed that we are using a different class to describe the structure of the vertex buffer, an instance of the `EmptyVertexBufferStructure` class. Let's put this aside at this moment, we will explain it when we describe how we are going to render in the lighting phase.
+
+The only differences, with the obvious exception that we are using different shaders, are that we are not using depth testing and have disabled blending. We are not using depth testing, because what we will do is render a shape that covers the whole screen and sample the input attachments for each of the fragments applying lighting to them. There is no need to depth test for that. We don't need also to enable blending since this has already been done in the geometry phase. However, we are still using the depth attachment as an input because we will use it in the next chapter, but not for depth testing. You may also have noticed that we are using a different class to describe the structure of the vertex buffer, an instance of the `EmptyVertexBufferStructure` class. Let's put this aside at this moment, we will explain it when we describe how we are going to render the shape that fills the whole screen later on.
 
 The `createCommandBuffers` just creates one command buffer and fence per swap chain image, as in previous chapters:
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -1114,13 +1180,16 @@ public class LightingRenderActivity {
 }
 ```
 
-How are we going to render in the lighting phase? We have mentioned it briefly before, we are going to draw a shape that fills the whole screen, for example a quad or two triangles whose coordinates math the vertices of the screen. Ok, so let's create a mesh for a quad with the proper coordinates and that's it, right? Not so fast, we can do it even better. We can achieve the same result drawing a single triangle with the following position coordinates (z coordinates have been omitted since they will be constant):
+How are we going to render in the lighting phase? We have mentioned it briefly before, we are going to draw a shape that fills the whole screen, for example a quad or two triangles whose coordinates math the vertices of the screen. Therefore, let's create a mesh for a quad with the proper coordinates and that's it, right? Not so fast, we can do it even better. We can achieve the same result drawing a single triangle with the following position coordinates (z coordinates have been omitted since they will be constant):
 
 ![Triangle coordinates](triangle-pos.svg)
 
-As you can see in the triangle covers the whole screen (represented as a dsashed saquare in the range [-1, 1], [1, -1]. The texture coordinates for each of the vertices of that triangle will be (0, 0), (2, 0) and (0.2), which will result in the quad that forms the screen to have the coordinates in the range [0, 0] and [1, 1] (Remember that upper left corner has coordinates (0,0) in texture space).
+As you can see in the triangle covers the whole screen (represented as a dashed square in the range [-1, 1], [1, -1]. The texture coordinates for each of the vertices of that triangle will be (0, 0), (2, 0) and (0, 2), which will result in the quad that forms the screen to have the coordinates in the range [0, 0] and [1, 1] (Remember that upper left corner has coordinates (0,0) in texture space).
+
+![Triangle coordinates](triangle-text.svg)
 
 Let's view the `preRecordCommandBuffer` method:
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -1187,9 +1256,11 @@ public class LightingRenderActivity {
     ...
 }
 ```
-We just reset the command buffer, clear the color output attachment (the swap chain image), begin the render pass, set up the viewport and the scissor size and bind the descriptor set which contains the input attachments. The main difference is how we are drawing. instead of binding a vertex buffer and the associated indices and invoking the `vkCmdDrawIndexed` function, we call the `vkCmdDraw` function. This function is used to draw a non indexed draw call, we are basically saying that we want to draw three vertices, without passing any coordinates. After that, we finish the render pass and the recording. How are we going to handle this will be shown in the lighting vertex shader. En each render loop we are just rendering the same triangle, this is the reason why we can prerecord the command buffers. We will just need to update some buffers for the uniforms (next chapter), but the rendering commands will always be the same.
+
+We just reset the command buffer, clear the color output attachment (the swap chain image), begin the render pass, set up the viewport and the scissor size and bind the descriptor set which contains the input attachments. The main difference is how we are drawing. Instead of binding a vertex buffer and the associated indices and invoking the `vkCmdDrawIndexed` function, we call the `vkCmdDraw` function. This function is used to draw a non indexed draw call, we are basically saying that we want to draw three vertices, without passing any coordinates. After that, we finish the render pass and the recording. How are we going to handle the drawing of three vertices without coordinates will be explained later on in the lighting vertex shader. What you can clearly see now is that, in each render loop, we are just rendering a single triangle. We are rendering the same triangle again and again. This is the reason why we can prerecord the command buffers. We will just need to update some buffers for the uniforms (next chapter), but the rendering commands will always be the same.
 
 If you recall, when creating the pipeline, we defined a new class for the vertex structure, `EmptyVertexBufferStructure`, which is defined like this:
+
 ```java
 package org.vulkanb.eng.graph.lighting;
 
@@ -1213,9 +1284,11 @@ public class EmptyVertexBufferStructure extends VertexInputStateInfo {
     }
 }
 ```
-We are just defining what the name of the class suggest, an empty definition of the structure of the vertex buffer, because we are not going to pass anything while rendering.
+
+We are just defining what the name of the class suggests, an empty definition of the structure of the vertex buffer, because we are not going to pass anything while rendering.
 
 Since we are prerecording the commands, the equivalent to the `recordCommandBuffers` has been transformed in a method that just blocks in the associated fences and renamed to to `prepareCommandBuffers`:
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -1230,7 +1303,8 @@ public class LightingRenderActivity {
 }
 ```
 
-The `LightingRenderActivity` class also defines a resize method, that invokes the `resize` method on the `LightingFrameBuffer` class because the output attachments, teh swap chian images, have changed and to prerecord the command buffers again because the viewport size has also changed.
+The `LightingRenderActivity` class also defines a resize method. This method invokes the `resize` method on the `LightingFrameBuffer` class because the output attachments, the swap chain images, have changed. It also need to prerecord the command buffers again because the viewport size has also changed.
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -1247,7 +1321,8 @@ public class LightingRenderActivity {
 }
 ```
 
-To finalize with the `LightingRenderActivity` class, we need a method to submit the command buffers. In this case, we need to wait on the semaphore that will be signaled when the geometry phase finishes (`geometryCompleteSemaphore`) and signal the semaphore that will be used to block the presentation of the swap china image (`renderCompleteSemaphore`).
+To finalize with the `LightingRenderActivity` class, we need a method to submit the command buffers. In this case, we need to wait on the semaphore that will be signaled when the geometry phase finishes (`geometryCompleteSemaphore`) and signal the semaphore that will be used to block the presentation of the swap chain image (`renderCompleteSemaphore`).
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -1269,6 +1344,7 @@ public class LightingRenderActivity {
 ```
 
 It is the turn now to view the shaders used in the lighting phase, this is the vertex shader (`lighting_vertex.glsl`):
+
 ```glsl
 #version 450
 
@@ -1280,9 +1356,11 @@ void main()
     gl_Position = vec4(outTextCoord.x * 2.0f - 1.0f, outTextCoord.y * -2.0f + 1.0f, 0.0f, 1.0f);
 }
 ```
-Here you can see how we are able to draw a triangle even if we are not passing the coordinates to the shader. We use the `gl_VertexIndex` builtin variable that will have the number of the vertex that we are drawing. In our case it will have the values `0`, `1` and `3`. You can check that for the first vertex (index `0`) we will get `(-1, 1, 0, 1)` as the position coordinates and `(0, 0)` as the texture coordinates. For the second vertex we will get `(3, 1, 0, 1)` as the position coordinates and `(2, 0)` as the texture coordinates. For the third vertex we will get `(-1, -3, 0, 1)`  as the position coordinates and `(0, 2)` as the texture coordinates.
+
+Here you can see how we are able to draw a triangle even if we are not passing the coordinates to the shader. We use the `gl_VertexIndex` builtin variable that will have the number of the vertex that we are drawing. In our case it will have the values `0`, `1` and `3`. You can check that for the first vertex, index `0`,  we will get `(-1, 1, 0, 1)` as the position coordinates and `(0, 0)` as the texture coordinates. For the second vertex we will get `(3, 1, 0, 1)` as the position coordinates and `(2, 0)` as the texture coordinates. For the third vertex we will get `(-1, -3, 0, 1)`  as the position coordinates and `(0, 2)` as the texture coordinates.
 
 The fragment shader (`lighting_fragment.glsl`) is defined like this:
+
 ```glsl
 #version 450
 
@@ -1297,9 +1375,11 @@ void main() {
     outFragColor = texture(albedoSampler, inTextCoord);
 }
 ```
+
 Since we are not applying lighting we just return the albedo color associated to the current coordinates sampling the attachment that contains albedo information. We are still not using the depth attachment but it will be needed in the next chapter.
 
 Finally, we just need to update the `Render` class to use the `GeometryRenderActivity` and the `LightingRenderActivity` classes instead of the `ForwardRenderActivity` class:
+
 ```java
 public class Render {
     ...
@@ -1368,6 +1448,6 @@ With all these changes, you will get something  like this:
 
 <img src="../chapter-09/screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
-Do not despair, it is exactly the same result as in the previous chapter, you will see in next chapter that we will dramatically improve the visuals. In this chapter we have just set the basis for deferred rendering.
+Do not despair, it is exactly the same result as in the previous chapter, you will see in next chapter how we will dramatically improve the visuals. In this chapter we have just set the basis for deferred rendering.
 
 [Next chapter](../chapter-11/chapter-11.md)
