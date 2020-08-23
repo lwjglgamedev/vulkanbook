@@ -686,27 +686,18 @@ There's a subtle, but important, change in this method with respect to the simil
 ```java
 public class SwapChain {
     ...
-    public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
-        ...
-            for (int i = 0; i < numImages; i++) {
-                syncSemaphoresList[i] = new SyncSemaphores(new Semaphore(device), new Semaphore(device));
-            }
-        ...
-    }    
-    ...
-    public void cleanup() {
-        ...
-        for (int i = 0; i < size; i++) {
-            ...
-            syncSemaphores.geometryCompleteSemaphore().cleanup();
-            ...
-        }
-        ...
-    }
-    ...
     public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore geometryCompleteSemaphore,
                                  Semaphore renderCompleteSemaphore) {
-    }
+
+        public SyncSemaphores(Device device) {
+            this(new Semaphore(device), new Semaphore(device), new Semaphore(device));
+        }
+
+        public void cleanup() {
+            imgAcquisitionSemaphore.cleanup();
+            geometryCompleteSemaphore.cleanup();
+            renderCompleteSemaphore.cleanup();
+        }
     ...
 }
 ```

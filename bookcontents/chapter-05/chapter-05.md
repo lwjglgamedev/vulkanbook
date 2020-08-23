@@ -531,25 +531,38 @@ public class SwapChain {
         ...
             syncSemaphoresList = new SyncSemaphores[numImages];
             for (int i = 0; i < numImages; i++) {
-                syncSemaphoresList[i] = new SyncSemaphores(new Semaphore(device), new Semaphore(device));
+                syncSemaphoresList[i] = new SyncSemaphores(device);
             }
             currentFrame = 0;
         ...
     }
     ...
+    public void cleanup() {
+        ...
+        Arrays.stream(syncSemaphoresList).forEach(SyncSemaphores::cleanup);
+        ...
+    }    
+    ...
 }
 ```
 
-We create to types of semaphores:
+The `SyncSemaphores` record defines to types of semaphores:
 - `imgAcquisitionSemaphore`: It will be used to signal image acquisition.
 - `renderCompleteSemaphore`: It will be used to signal that the command submitted have been completed. 
 
-These semaphores are stored together under a record:
-  
 ```java
 public class SwapChain {
     ...
     public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore renderCompleteSemaphore) {
+
+        public SyncSemaphores(Device device) {
+            this(new Semaphore(device), new Semaphore(device));
+        }
+
+        public void cleanup() {
+            imgAcquisitionSemaphore.cleanup();
+            renderCompleteSemaphore.cleanup();
+        }
     }
     ...
 }

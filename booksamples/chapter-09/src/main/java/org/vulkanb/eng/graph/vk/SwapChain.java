@@ -6,6 +6,7 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.Window;
 
 import java.nio.*;
+import java.util.Arrays;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -66,7 +67,7 @@ public class SwapChain {
             numImages = imageViews.length;
             syncSemaphoresList = new SyncSemaphores[numImages];
             for (int i = 0; i < numImages; i++) {
-                syncSemaphoresList[i] = new SyncSemaphores(new Semaphore(device), new Semaphore(device));
+                syncSemaphoresList[i] = new SyncSemaphores(device);
             }
             currentFrame = 0;
         }
@@ -159,15 +160,8 @@ public class SwapChain {
     public void cleanup() {
         LOGGER.debug("Destroying Vulkan SwapChain");
         swapChainExtent.free();
-
-        int size = imageViews != null ? imageViews.length : 0;
-        for (int i = 0; i < size; i++) {
-            imageViews[i].cleanup();
-            SyncSemaphores syncSemaphores = syncSemaphoresList[i];
-            syncSemaphores.imgAcquisitionSemaphore().cleanup();
-            syncSemaphores.renderCompleteSemaphore().cleanup();
-        }
-
+        Arrays.stream(imageViews).forEach(ImageView::cleanup);
+        Arrays.stream(syncSemaphoresList).forEach(SyncSemaphores::cleanup);
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
     }
 
@@ -251,5 +245,14 @@ public class SwapChain {
     }
 
     public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore renderCompleteSemaphore) {
+
+        public SyncSemaphores(Device device) {
+            this(new Semaphore(device), new Semaphore(device));
+        }
+
+        public void cleanup() {
+            imgAcquisitionSemaphore.cleanup();
+            renderCompleteSemaphore.cleanup();
+        }
     }
 }

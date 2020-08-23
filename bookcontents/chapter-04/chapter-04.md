@@ -364,6 +364,19 @@ public class ImageView {
 }
 ```
 
+Going back to the `Swapchain`class we need also to create a `cleanup` method to free the resources:
+```java
+public class SwapChain {
+    ...
+    public void cleanup() {
+        LOGGER.debug("Destroying Vulkan SwapChain");
+        Arrays.stream(imageViews).forEach(ImageView::cleanup);
+        KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
+    }
+    ...
+}
+```
+
 Now we can use the `Swapchain` class in our `Render`class:
 
 ```java

@@ -66,7 +66,7 @@ public class SwapChain {
             numImages = imageViews.length;
             syncSemaphoresList = new SyncSemaphores[numImages];
             for (int i = 0; i < numImages; i++) {
-                syncSemaphoresList[i] = new SyncSemaphores(new Semaphore(device), new Semaphore(device), new Semaphore(device));
+                syncSemaphoresList[i] = new SyncSemaphores(device);
             }
             currentFrame = 0;
         }
@@ -163,10 +163,7 @@ public class SwapChain {
         int size = imageViews != null ? imageViews.length : 0;
         for (int i = 0; i < size; i++) {
             imageViews[i].cleanup();
-            SyncSemaphores syncSemaphores = syncSemaphoresList[i];
-            syncSemaphores.imgAcquisitionSemaphore().cleanup();
-            syncSemaphores.geometryCompleteSemaphore().cleanup();
-            syncSemaphores.renderCompleteSemaphore().cleanup();
+            syncSemaphoresList[i].cleanup();
         }
 
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
@@ -253,5 +250,15 @@ public class SwapChain {
 
     public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore geometryCompleteSemaphore,
                                  Semaphore renderCompleteSemaphore) {
+
+        public SyncSemaphores(Device device) {
+            this(new Semaphore(device), new Semaphore(device), new Semaphore(device));
+        }
+
+        public void cleanup() {
+            imgAcquisitionSemaphore.cleanup();
+            geometryCompleteSemaphore.cleanup();
+            renderCompleteSemaphore.cleanup();
+        }
     }
 }
