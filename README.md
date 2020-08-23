@@ -6,7 +6,7 @@ This [online book](bookcontents/) will introduce the main concepts required to w
 
 We will use [LWJGL](http://www.lwjgl.org/) as the Java library which provides the required bindings to use Vulkan and any other required APIs. This book is the result of my self learning language, that I think it may help the community.
 
-![Sample screen shot](screen-shot.png)
+![Sample screen shot](./bookcontents/chapter-11/screen-shot.png)
 
 ## Book Code
 

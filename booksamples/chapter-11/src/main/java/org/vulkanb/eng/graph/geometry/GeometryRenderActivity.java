@@ -331,7 +331,5 @@ public class GeometryRenderActivity {
                     texture, textureSampler, 0);
             descriptorSetMap.put(textureFileName, textureDescriptorSet);
         }
-
     }
-
 }

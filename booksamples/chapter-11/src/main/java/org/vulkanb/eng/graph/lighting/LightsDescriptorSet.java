@@ -12,7 +12,7 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class LightsDescriptorSet extends DescriptorSet {
 
     public LightsDescriptorSet(DescriptorPool descriptorPool, LightsDescriptorSetLayout lightsDescriptorSetLayout,
-                               VulkanBuffer lightsBuffer, VulkanBuffer ambientLightBuffer, int binding) {
+                               VulkanBuffer lightsBuffer, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = descriptorPool.getDevice();
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
@@ -33,33 +33,16 @@ public class LightsDescriptorSet extends DescriptorSet {
                     .offset(0)
                     .range(lightsBuffer.getRequestedSize());
 
-            VkDescriptorBufferInfo.Buffer descrAmbientLight = VkDescriptorBufferInfo.callocStack(1, stack)
-                    .buffer(ambientLightBuffer.getBuffer())
-                    .offset(0)
-                    .range(ambientLightBuffer.getRequestedSize());
+            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
 
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(2, stack);
-
-            int i = 0;
-            descrBuffer.get(i)
+            descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
                     .dstSet(vkDescriptorSet)
-                    .dstBinding(binding + i)
+                    .dstBinding(binding)
                     .dstArrayElement(0)
                     .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                     .descriptorCount(1)
                     .pBufferInfo(descrLights);
-            i++;
-
-            // Ambient Light
-            descrBuffer.get(i)
-                    .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
-                    .dstSet(vkDescriptorSet)
-                    .dstBinding(binding + i)
-                    .dstArrayElement(0)
-                    .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                    .descriptorCount(1)
-                    .pBufferInfo(descrAmbientLight);
 
             vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
         }
