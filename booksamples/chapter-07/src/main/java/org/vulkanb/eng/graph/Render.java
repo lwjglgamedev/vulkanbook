@@ -63,6 +63,9 @@ public class Render {
     }
 
     public void render(Window window, Scene scene) {
+        if (window.getWidth() <= 0 && window.getHeight() <= 0) {
+            return;
+        }
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);

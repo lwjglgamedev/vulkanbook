@@ -1412,6 +1412,7 @@ public class Render {
     }
 
     public void render(Window window, Scene scene) {
+        ...
         if (window.isResized() || swapChain.acquireNextImage()) {
             ...
             resize(window, scene);

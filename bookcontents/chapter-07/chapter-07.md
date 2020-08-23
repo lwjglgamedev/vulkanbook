@@ -687,6 +687,9 @@ We have coded all the elements required to support the proper rendering of 3D mo
 public class Render {
 ...
     public void render(Window window, Scene scene) {
+        if (window.getWidth() <= 0 && window.getHeight() <= 0) {
+            return;
+        }
         if (window.isResized() || this.swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);
@@ -718,7 +721,7 @@ public class Render {
 }
 ```
 
-In the `render` method, we first check if the window has been resized or the current swap chain image has not been acquired (because that the size of the window has changed). In this case, we reset the flag that signals that the window has been resized, call the `resize` method and update the projection matrix to adapt it to the new surface dimensions. If we cannot present the image, we just signal the window resize flag and we'll wait for the next loop to perform the process described above.
+In the `render` method, we first check if the size of the window is `0`. This means that the window has been minimized. In this case we do not render anything. After, we check if the window has been resized or the current swap chain image has not been acquired (because that the size of the window has changed). In this case, we reset the flag that signals that the window has been resized, call the `resize` method and update the projection matrix to adapt it to the new surface dimensions. If we cannot present the image, we just signal the window resize flag and we'll wait for the next loop to perform the process described above.
 
 The new `resize` method, waits for the device and graphics queue to be idle, clean ups the swap chain resources and creates a new one. This implies the creation of new swap chain images adapted to new window size. It also invokes the `resize` method form the `ForwardRenderActivity` class. Let's review the changes required in that class.
 
