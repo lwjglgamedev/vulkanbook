@@ -21,7 +21,7 @@ public class VulkanBuffer {
                     .usage(usage)
                     .sharingMode(VK_SHARING_MODE_EXCLUSIVE);
             LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateBuffer(device.getVkDevice(), bufferCreateInfo, null, lp), "Failed to create vertices buffer");
+            vkCheck(vkCreateBuffer(device.getVkDevice(), bufferCreateInfo, null, lp), "Failed to create buffer");
             buffer = lp.get(0);
             ...
         }
