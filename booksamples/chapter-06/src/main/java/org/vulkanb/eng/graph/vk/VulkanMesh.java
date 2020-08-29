@@ -1,14 +1,12 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.*;
 import org.lwjgl.vulkan.VkBufferCopy;
 import org.vulkanb.eng.scene.MeshData;
 
 import java.nio.*;
 
 import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class VulkanMesh {
 
@@ -34,16 +32,10 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
-
-            IntBuffer data = pp.getIntBuffer(0, numIndices);
-            data.put(indices);
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
-        }
+        long mappedMemory = srcBuffer.map();
+        IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        data.put(indices);
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
@@ -58,16 +50,10 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
-
-            FloatBuffer data = pp.getFloatBuffer(0, numPositions);
-            data.put(positions);
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
-        }
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        data.put(positions);
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }

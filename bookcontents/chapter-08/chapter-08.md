@@ -343,7 +343,7 @@ public class Texture {
             height = h.get();
             mipLevels = 1;
 
-            createStgBuffer(stack, device, buf);
+            createStgBuffer(device, buf);
             image = new Image(device, width, height, imageFormat, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                     mipLevels, 1);
             imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
@@ -368,25 +368,21 @@ At the end of the constructor we create an `ImageView` associated to the image a
     // RGBA
     private static final int BYTES_PER_PIXEL = 4;
     ...
-    private void createStgBuffer(MemoryStack stack, Device device, ByteBuffer data) {
+    private void createStgBuffer(Device device, ByteBuffer data) {
         int size = width * height * BYTES_PER_PIXEL;
         stgBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        PointerBuffer pp = stack.mallocPointer(1);
-        vkCheck(vkMapMemory(device.getVkDevice(), stgBuffer.getMemory(), 0,
-                stgBuffer.getAllocationSize(), 0, pp), "Failed to map memory");
-
-        ByteBuffer buffer = pp.getByteBuffer(size);
+        long mappedMemory = stgBuffer.map();
+        ByteBuffer buffer = MemoryUtil.memByteBuffer(mappedMemory, (int) stgBuffer.getRequestedSize());
         buffer.put(data);
         data.flip();
-
-        vkUnmapMemory(device.getVkDevice(), stgBuffer.getMemory());
+        stgBuffer.unMap();
     }
     ...
   }
 ```
 
-We just create a new `VulkanBuffer` instance which size will be calculated assuming a RGBA model with one byte per channel. The buffer will be used to transfer the image data, this is why we use the `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` flag and the `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT` (we will be loading the image from our application). We do not want to perform any flush operation while transferring the data so we also use the `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` flag. After the buffer has been created, we just map the memory associated to it ans we just copy the image contents.
+We just create a new `VulkanBuffer` instance which size will be calculated assuming a RGBA model with one byte per channel. The buffer will be used to transfer the image data, this is why we use the `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` flag and the `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT` (we will be loading the image from our application). We do not want to perform any flush operation while transferring the data so we also use the `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` flag. After the buffer has been created, we just map the memory associated to it and copy the image contents.
 
 The `Texture` class defines a `cleanup` method to free the resources and special method named `cleanupStgBuffer` to free the staging buffer when is no longer needed. It also provides some *getters* to get the path to the file used to load the texture and the image view.
 
@@ -1214,7 +1210,7 @@ public class ForwardRenderActivity {
     ...
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         ...
-        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
     ...
 }
@@ -1223,16 +1219,11 @@ The `copyMatrixToBuffer` method  is defined like this:
 ```java
 public class VulkanUtils {
     ...
-    private void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0, vulkanBuffer.getAllocationSize(),
-                    0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            matrix.get(0, matrixBuffer);
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
+    public static void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
+        long mappedMemory = vulkanBuffer.map();
+        ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
+        matrix.get(0, matrixBuffer);
+        vulkanBuffer.unMap();
     }
     ...
 }
@@ -1332,7 +1323,7 @@ The `resize` method needs also to be modified to update the buffer that will bac
 public class ForwardRenderActivity {
     ...
     public void resize(SwapChain swapChain, Scene scene) {
-        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         ...
     }
     ...

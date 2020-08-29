@@ -1,7 +1,6 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.*;
 import org.lwjgl.vulkan.VkBufferCopy;
 import org.vulkanb.eng.graph.TextureCache;
 import org.vulkanb.eng.scene.*;
@@ -9,7 +8,6 @@ import org.vulkanb.eng.scene.*;
 import java.nio.*;
 
 import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class VulkanMesh {
 
@@ -44,16 +42,10 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
-
-            IntBuffer data = pp.getIntBuffer(0, numIndices);
-            data.put(indices);
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
-        }
+        long mappedMemory = srcBuffer.map();
+        IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        data.put(indices);
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
@@ -75,34 +67,30 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
 
-            int rows = positions.length / 3;
-            FloatBuffer data = pp.getFloatBuffer(0, numElements);
-            for (int row = 0; row < rows; row++) {
-                int startPos = row * 3;
-                int startTextCoord = row * 2;
-                data.put(positions[startPos]);
-                data.put(positions[startPos + 1]);
-                data.put(positions[startPos + 2]);
-                data.put(normals[startPos]);
-                data.put(normals[startPos + 1]);
-                data.put(normals[startPos + 2]);
-                data.put(tangents[startPos]);
-                data.put(tangents[startPos + 1]);
-                data.put(tangents[startPos + 2]);
-                data.put(biTangents[startPos]);
-                data.put(biTangents[startPos + 1]);
-                data.put(biTangents[startPos + 2]);
-                data.put(textCoords[startTextCoord]);
-                data.put(textCoords[startTextCoord + 1]);
-            }
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
+        int rows = positions.length / 3;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 3;
+            int startTextCoord = row * 2;
+            data.put(positions[startPos]);
+            data.put(positions[startPos + 1]);
+            data.put(positions[startPos + 2]);
+            data.put(normals[startPos]);
+            data.put(normals[startPos + 1]);
+            data.put(normals[startPos + 2]);
+            data.put(tangents[startPos]);
+            data.put(tangents[startPos + 1]);
+            data.put(tangents[startPos + 2]);
+            data.put(biTangents[startPos]);
+            data.put(biTangents[startPos + 1]);
+            data.put(biTangents[startPos + 2]);
+            data.put(textCoords[startTextCoord]);
+            data.put(textCoords[startTextCoord + 1]);
         }
+
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }

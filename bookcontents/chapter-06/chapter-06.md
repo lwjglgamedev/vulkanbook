@@ -14,6 +14,7 @@ public class VulkanBuffer {
     public VulkanBuffer(Device device, long size, int usage, int reqMask) {
         this.device = device;
         requestedSize = size;
+        mappedMemory = NULL;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
@@ -31,7 +32,7 @@ public class VulkanBuffer {
 }
 ```
 
-The constructor just receives the `device` that will be used to create this buffer, its size, a parameter named `usage` which will state what this buffer should be used for and a bit mask. This last parameter is use to set the requested memory properties that the data associated to this buffer should use. We will review how these two last parameters are used later on. In order to create a Buffer we need to setup a structure named `VkBufferCreateInfo`, which defines the following attributes:
+The constructor just receives the `device` that will be used to create this buffer, its size, a parameter named `usage` which will state what this buffer should be used for and a bit mask. This last parameter is use to set the requested memory properties that the data associated to this buffer should use. We will review how these two last parameters are used later on. The class also defines an attribute named `mappedMemory` which is a handle that will be used when mapping the buffer memory so it can be accessed from our application (if the buffer is created with the appropriate flags to be accessible from the CPU). In order to create a Buffer we need to setup a structure named `VkBufferCreateInfo`, which defines the following attributes:
 
 - `sType`: It shall have the `VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO` value.
 - `size`: The number of bytes that the buffer will hold.
@@ -99,7 +100,7 @@ public class VulkanUtils {
 }
 ```
 
-The `typeBits` attribute is a bit mask which defines the supported memory types of the physical device. A bit set to `1` means that the type of memory (associated to that index) is supported. The `reqMask` attribute is the type of memory that we need (for example if that memory will be accessed only by the GPU or also by the application). This method basically iterates over all the memory types, checking if that memory index (first condition) is supported by the device and if that it meets the requested type (second condition). Now we can go back to the `VulkanBuffer` constructor and invoke the `vkAllocateMemory` to allocate the memory. After that we can get the finally allocated size and get a handle to that chunk of memory.
+The `typeBits` attribute is a bit mask which defines the supported memory types of the physical device. A bit set to `1` means that the type of memory (associated to that index) is supported. The `reqMask` attribute is the type of memory that we need (for example if that memory will be accessed only by the GPU or also by the application). This method basically iterates over all the memory types, checking if that memory index (first condition) is supported by the device and if that it meets the requested type (second condition). Now we can go back to the `VulkanBuffer` constructor and invoke the `vkAllocateMemory` to allocate the memory. After that we can get the finally allocated size and get a handle to that chunk of memory. We also allocate a `PointerBuffer` which will be used in other methods of the class.
 
 ```java
 public class VulkanBuffer {
@@ -109,6 +110,7 @@ public class VulkanBuffer {
             vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
             allocationSize = memAlloc.allocationSize();
             memory = lp.get(0);
+            pb = PointerBuffer.allocateDirect(1);
         ...
     }
     ...
@@ -139,22 +141,37 @@ public class VulkanBuffer {
         vkFreeMemory(device.getVkDevice(), memory, null);
     }
 
-    public long getAllocationSize() {
-        return allocationSize;
-    }
-
     public long getBuffer() {
         return buffer;
-    }
-
-    public long getMemory() {
-        return memory;
     }
 
     public long getRequestedSize() {
         return requestedSize;
     }
+    ...
 }
+```
+
+To complete the class, we define two methods to map and un-map the memory associated to the buffer so it can be accessed from our application (if they have been created with the flag `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`, more on this later on). The `map` method just calls the `vkMapMemory` function which returns a handle that can be used to get a buffer to read / write its contents. The `unMap` method just calls the `vkUnmapMemory` to un-map the previously mapped buffer memory:
+```java
+public class VulkanBuffer {
+    ...
+    public long map() {
+        if (mappedMemory == NULL) {
+            vkCheck(vkMapMemory(device.getVkDevice(), memory, 0, allocationSize, 0, pb), "Failed to map Buffer");
+            mappedMemory = pb.get(0);
+        }
+        return mappedMemory;
+    }
+
+    public void unMap() {
+        if (mappedMemory != NULL) {
+            vkUnmapMemory(device.getVkDevice(), memory);
+            mappedMemory = NULL;
+        }
+    }
+}
+
 ```
 
 ## Vertex description
@@ -437,16 +454,10 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
-
-            FloatBuffer data = pp.getFloatBuffer(0, numPositions);
-            data.put(positions);
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
-        }
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        data.put(positions);
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
@@ -461,7 +472,7 @@ The intermediate buffer is created with the `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` f
 
 The destination buffer is created with the `VK_BUFFER_USAGE_TRANSFER_DST_BIT` as its usage parameter. With this flag we state that this buffer can used as the destination of a transfer command. We also set the flag `VK_BUFFER_USAGE_VERTEX_BUFFER_BIT` since it will be used for handling vertices data. For the `reqMask` attribute we use the `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT` flag which states that the memory allocated by this buffer will be used by the GPU.
 
-Once the buffers have been created we need to populate the source buffer. In order to do that, we need to map that memory in order to get a pointer to it so we can upload the data. This is done by calling the `vkMapMemory` function. Now we have a pointer to the memory of the buffer which we will use to load the positions. After we have finished copying the data to the source buffer we call the `vkUnmapMemory`.
+Once the buffers have been created we need to populate the source buffer. In order to do that, we need to map that memory in order to get a pointer to it so we can upload the data. This is done by calling the `map` method on the buffer instance. Now we have a pointer to the memory of the buffer which we will use to load the positions. After we have finished copying the data to the source buffer we call the `unMap` method over the buffer.
 
 The definition of the `createIndicesBuffers` is similar:
 
@@ -478,16 +489,10 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
-
-            IntBuffer data = pp.getIntBuffer(0, numIndices);
-            data.put(indices);
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
-        }
+        long mappedMemory = srcBuffer.map();
+        IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        data.put(indices);
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }

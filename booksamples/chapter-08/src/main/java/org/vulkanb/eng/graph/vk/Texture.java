@@ -1,15 +1,13 @@
 package org.vulkanb.eng.graph.vk;
 
 import org.apache.logging.log4j.*;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
 
 import java.nio.*;
 
 import static org.lwjgl.stb.STBImage.*;
 import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Texture {
 
@@ -42,7 +40,7 @@ public class Texture {
             height = h.get();
             mipLevels = 1;
 
-            createStgBuffer(stack, device, buf);
+            createStgBuffer(device, buf);
             image = new Image(device, width, height, imageFormat, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                     mipLevels, 1);
             imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
@@ -64,20 +62,17 @@ public class Texture {
         }
     }
 
-    private void createStgBuffer(MemoryStack stack, Device device, ByteBuffer data) {
+    private void createStgBuffer(Device device, ByteBuffer data) {
         int size = width * height * BYTES_PER_PIXEL;
         stgBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        PointerBuffer pp = stack.mallocPointer(1);
-        vkCheck(vkMapMemory(device.getVkDevice(), stgBuffer.getMemory(), 0,
-                stgBuffer.getAllocationSize(), 0, pp), "Failed to map memory");
-
-        ByteBuffer buffer = pp.getByteBuffer(size);
+        long mappedMemory = stgBuffer.map();
+        ByteBuffer buffer = MemoryUtil.memByteBuffer(mappedMemory, (int) stgBuffer.getRequestedSize());
         buffer.put(data);
         data.flip();
-
-        vkUnmapMemory(device.getVkDevice(), stgBuffer.getMemory());
+        stgBuffer.unMap();
     }
+
 
     public String getFileName() {
         return fileName;

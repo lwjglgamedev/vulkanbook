@@ -1,7 +1,6 @@
 package org.vulkanb.eng.graph;
 
 import org.joml.Matrix4f;
-import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -14,7 +13,6 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ForwardRenderActivity {
 
@@ -83,7 +81,7 @@ public class ForwardRenderActivity {
             fences[i] = new Fence(device, true);
         }
 
-        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
 
     public void cleanup() {
@@ -187,7 +185,7 @@ public class ForwardRenderActivity {
                         vulkanMesh.getTexture(), textureSampler, 0);
                 descriptorSetMap.put(textureFileName, textureDescriptorSet);
             }
-            updateMaterial(device, materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
+            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
             meshCount++;
         }
     }
@@ -250,7 +248,7 @@ public class ForwardRenderActivity {
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(3, materialsDescriptorSet.getVkDescriptorSet());
-            VulkanUtils.copyMatrixToBuffer(device, viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+            VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
@@ -280,7 +278,7 @@ public class ForwardRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
@@ -307,15 +305,10 @@ public class ForwardRenderActivity {
         }
     }
 
-    private void updateMaterial(Device device, VulkanBuffer vulkanBuffer, Material material, int offset) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), offset,
-                    materialDescriptorSetLayout.getMaterialSize(), 0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            material.getDiffuseColor().get(0, materialBuffer);
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
+    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+        long mappedMemory = vulkanBuffer.map();
+        ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
+        material.getDiffuseColor().get(offset, materialBuffer);
+        vulkanBuffer.unMap();
     }
 }

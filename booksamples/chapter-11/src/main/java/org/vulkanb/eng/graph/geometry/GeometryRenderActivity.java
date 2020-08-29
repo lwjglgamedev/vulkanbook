@@ -1,7 +1,6 @@
 package org.vulkanb.eng.graph.geometry;
 
 import org.joml.Matrix4f;
-import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -15,7 +14,6 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class GeometryRenderActivity {
 
@@ -57,7 +55,7 @@ public class GeometryRenderActivity {
         createDescriptorSets(numImages);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
-        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
     }
 
     public void cleanup() {
@@ -178,7 +176,7 @@ public class GeometryRenderActivity {
             updateTextureDescriptorSet(vulkanMesh.getTexture());
             updateTextureDescriptorSet(vulkanMesh.getNormalMapTexture());
             updateTextureDescriptorSet(vulkanMesh.getMetalRoughTexture());
-            updateMaterial(device, materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
+            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
             meshCount++;
         }
     }
@@ -248,7 +246,7 @@ public class GeometryRenderActivity {
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(5, materialsDescriptorSet.getVkDescriptorSet());
-            VulkanUtils.copyMatrixToBuffer(device, viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+            VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
@@ -282,7 +280,7 @@ public class GeometryRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        VulkanUtils.copyMatrixToBuffer(device, projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
         this.swapChain = swapChain;
         geometryFrameBuffer.resize(swapChain);
     }
@@ -306,21 +304,16 @@ public class GeometryRenderActivity {
         }
     }
 
-    private void updateMaterial(Device device, VulkanBuffer vulkanBuffer, Material material, int offset) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), offset,
-                    materialDescriptorSetLayout.getMaterialSize(), 0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            material.getDiffuseColor().get(0, materialBuffer);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 4, material.hasTexture() ? 1.0f : 0.0f);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 5, material.hasNormalMap() ? 1.0f : 0.0f);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 6, material.hasMetalRoughMap() ? 1.0f : 0.0f);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 7, material.getRoughnessFactor());
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 8, material.getMetallicFactor());
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
+    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+        long mappedMemory = vulkanBuffer.map();
+        ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
+        material.getDiffuseColor().get(offset, materialBuffer);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 4, material.hasTexture() ? 1.0f : 0.0f);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 5, material.hasNormalMap() ? 1.0f : 0.0f);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 6, material.hasMetalRoughMap() ? 1.0f : 0.0f);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 7, material.getRoughnessFactor());
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 8, material.getMetallicFactor());
+        vulkanBuffer.unMap();
     }
 
     private void updateTextureDescriptorSet(Texture texture) {

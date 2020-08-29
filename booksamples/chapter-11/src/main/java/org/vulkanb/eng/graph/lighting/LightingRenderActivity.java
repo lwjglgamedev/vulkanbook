@@ -1,7 +1,6 @@
 package org.vulkanb.eng.graph.lighting;
 
 import org.joml.*;
-import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -16,7 +15,6 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class LightingRenderActivity {
 
@@ -148,9 +146,9 @@ public class LightingRenderActivity {
 
         lightsBuffers = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
-            lightsBuffers[i] = new VulkanBuffer(device,
+            lightsBuffers[i] = new VulkanBuffer(device, (long)
                     GraphConstants.INT_LENGTH * 4 + GraphConstants.VEC4_SIZE * 2 * GraphConstants.MAX_LIGHTS +
-                            GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
     }
@@ -258,35 +256,30 @@ public class LightingRenderActivity {
 
     private void updateInvProjMatrix(Scene scene) {
         Matrix4f invProj = new Matrix4f(scene.getPerspective().getPerspectiveMatrix()).invert();
-        VulkanUtils.copyMatrixToBuffer(device, invProjBuffer, invProj);
+        VulkanUtils.copyMatrixToBuffer(invProjBuffer, invProj);
     }
 
     private void updateLights(Vector4f ambientLight, Light[] lights, Matrix4f viewMatrix,
                               VulkanBuffer lightsBuffer) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), lightsBuffer.getMemory(), 0, lightsBuffer.getRequestedSize(),
-                    0, pointerBuffer), "Failed to map lights uniform memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer uniformBuffer = MemoryUtil.memByteBuffer(data, (int) lightsBuffer.getRequestedSize());
+        long mappedMemory = lightsBuffer.map();
+        ByteBuffer uniformBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) lightsBuffer.getRequestedSize());
 
-            ambientLight.get(0, uniformBuffer);
-            int offset = GraphConstants.VEC4_SIZE;
-            int numLights = lights != null ? lights.length : 0;
-            uniformBuffer.putInt(offset, numLights);
+        ambientLight.get(0, uniformBuffer);
+        int offset = GraphConstants.VEC4_SIZE;
+        int numLights = lights != null ? lights.length : 0;
+        uniformBuffer.putInt(offset, numLights);
+        offset += GraphConstants.VEC4_SIZE;
+        for (int i = 0; i < numLights; i++) {
+            Light light = lights[i];
+            auxVec.set(light.getPosition());
+            auxVec.mul(viewMatrix);
+            auxVec.w = light.getPosition().w;
+            auxVec.get(offset, uniformBuffer);
             offset += GraphConstants.VEC4_SIZE;
-            for (int i = 0; i < numLights; i++) {
-                Light light = lights[i];
-                auxVec.set(light.getPosition());
-                auxVec.mul(viewMatrix);
-                auxVec.w = light.getPosition().w;
-                auxVec.get(offset, uniformBuffer);
-                offset += GraphConstants.VEC4_SIZE;
-                light.getColor().get(offset, uniformBuffer);
-                offset += GraphConstants.VEC4_SIZE;
-            }
-
-            vkUnmapMemory(device.getVkDevice(), lightsBuffer.getMemory());
+            light.getColor().get(offset, uniformBuffer);
+            offset += GraphConstants.VEC4_SIZE;
         }
+
+        lightsBuffer.unMap();
     }
 }

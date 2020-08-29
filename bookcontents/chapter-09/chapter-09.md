@@ -728,7 +728,7 @@ public class ForwardRenderActivity {
                         vulkanMesh.getTexture(), textureSampler, 0);
                 descriptorSetMap.put(textureFileName, textureDescriptorSet);
             }
-            updateMaterial(device, materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
+            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
             meshCount++;
         }
     }
@@ -737,25 +737,18 @@ public class ForwardRenderActivity {
 ```
 
 As you can see, we calculate the offset in the buffer, to update the material data by calling the `updateMaterial` data:
-
 ```java
 public class ForwardRenderActivity {
     ...
-    private void updateMaterial(Device device, VulkanBuffer vulkanBuffer, Material material, int offset) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), offset,
-                    materialDescriptorSetLayout.getMaterialSize(), 0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            material.getDiffuseColor().get(0, materialBuffer);
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
+    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+        long mappedMemory = vulkanBuffer.map();
+        ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
+        material.getDiffuseColor().get(offset, materialBuffer);
+        vulkanBuffer.unMap();
     }
     ...
 }
 ```
-
 In the `updateMaterial` method, we just map the buffer and dump the material diffuse color to the appropriate offset. 
 
 Finally, we just need to update a little bit the way we record the commands to bind the additional descriptor sets and to use the dynamic uniform buffers:
@@ -769,7 +762,7 @@ public class ForwardRenderActivity {
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(3, materialsDescriptorSet.getVkDescriptorSet());
-            VulkanUtils.copyMatrixToBuffer(device, viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+            VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {

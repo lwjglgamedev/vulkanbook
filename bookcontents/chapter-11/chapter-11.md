@@ -525,7 +525,7 @@ public class GeometryRenderActivity {
             updateTextureDescriptorSet(vulkanMesh.getTexture());
             updateTextureDescriptorSet(vulkanMesh.getNormalMapTexture());
             updateTextureDescriptorSet(vulkanMesh.getMetalRoughTexture());
-            updateMaterial(device, materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
+            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
             meshCount++;
         }
     }
@@ -584,21 +584,16 @@ Finally, the `updateMaterial` method needs also to be updated to handle the chan
 ```java
 public class GeometryRenderActivity {
     ...
-    private void updateMaterial(Device device, VulkanBuffer vulkanBuffer, Material material, int offset) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), offset,
-                    materialDescriptorSetLayout.getMaterialSize(), 0, pointerBuffer), "Failed to map UBO memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            material.getDiffuseColor().get(0, materialBuffer);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 4, material.hasTexture() ? 1.0f : 0.0f);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 5, material.hasNormalMap() ? 1.0f : 0.0f);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 6, material.hasMetalRoughMap() ? 1.0f : 0.0f);
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 7, material.getRoughnessFactor());
-            materialBuffer.putFloat(GraphConstants.FLOAT_LENGTH * 8, material.getMetallicFactor());
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
+    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+        long mappedMemory = vulkanBuffer.map();
+        ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
+        material.getDiffuseColor().get(offset, materialBuffer);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 4, material.hasTexture() ? 1.0f : 0.0f);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 5, material.hasNormalMap() ? 1.0f : 0.0f);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 6, material.hasMetalRoughMap() ? 1.0f : 0.0f);
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 7, material.getRoughnessFactor());
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 8, material.getMetallicFactor());
+        vulkanBuffer.unMap();
     }
     ...
 }
@@ -994,31 +989,26 @@ public class LightingRenderActivity {
 
     private void updateLights(Vector4f ambientLight, Light[] lights, Matrix4f viewMatrix,
                               VulkanBuffer lightsBuffer) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), lightsBuffer.getMemory(), 0, lightsBuffer.getRequestedSize(),
-                    0, pointerBuffer), "Failed to map lights uniform memory");
-            long data = pointerBuffer.get(0);
-            ByteBuffer uniformBuffer = MemoryUtil.memByteBuffer(data, (int) lightsBuffer.getRequestedSize());
+        long mappedMemory = lightsBuffer.map();
+        ByteBuffer uniformBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) lightsBuffer.getRequestedSize());
 
-            ambientLight.get(0, uniformBuffer);
-            int offset = GraphConstants.VEC4_SIZE;
-            int numLights = lights != null ? lights.length : 0;
-            uniformBuffer.putInt(offset, numLights);
+        ambientLight.get(0, uniformBuffer);
+        int offset = GraphConstants.VEC4_SIZE;
+        int numLights = lights != null ? lights.length : 0;
+        uniformBuffer.putInt(offset, numLights);
+        offset += GraphConstants.VEC4_SIZE;
+        for (int i = 0; i < numLights; i++) {
+            Light light = lights[i];
+            auxVec.set(light.getPosition());
+            auxVec.mul(viewMatrix);
+            auxVec.w = light.getPosition().w;
+            auxVec.get(offset, uniformBuffer);
             offset += GraphConstants.VEC4_SIZE;
-            for (int i = 0; i < numLights; i++) {
-                Light light = lights[i];
-                auxVec.set(light.getPosition());
-                auxVec.mul(viewMatrix);
-                auxVec.w = light.getPosition().w;
-                auxVec.get(offset, uniformBuffer);
-                offset += GraphConstants.VEC4_SIZE;
-                light.getColor().get(offset, uniformBuffer);
-                offset += GraphConstants.VEC4_SIZE;
-            }
-
-            vkUnmapMemory(device.getVkDevice(), lightsBuffer.getMemory());
+            light.getColor().get(offset, uniformBuffer);
+            offset += GraphConstants.VEC4_SIZE;
         }
+
+        lightsBuffer.unMap();
     }
     ...
 ```

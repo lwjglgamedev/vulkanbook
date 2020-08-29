@@ -294,25 +294,21 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
 
-            int rows = positions.length / 3;
-            FloatBuffer data = pp.getFloatBuffer(0, numElements);
-            for (int row = 0; row < rows; row++) {
-                int startPos = row * 3;
-                int startTextCoord = row * 2;
-                data.put(positions[startPos + 0]);
-                data.put(positions[startPos + 1]);
-                data.put(positions[startPos + 2]);
-                data.put(textCoords[startTextCoord + 0]);
-                data.put(textCoords[startTextCoord + 1]);
-            }
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
+        int rows = positions.length / 3;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 3;
+            int startTextCoord = row * 2;
+            data.put(positions[startPos]);
+            data.put(positions[startPos + 1]);
+            data.put(positions[startPos + 2]);
+            data.put(textCoords[startTextCoord]);
+            data.put(textCoords[startTextCoord + 1]);
         }
+
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }

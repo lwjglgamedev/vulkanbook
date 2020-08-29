@@ -1,8 +1,7 @@
 package org.vulkanb.eng.graph.vk;
 
 import org.joml.Matrix4f;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.*;
+import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.VkMemoryType;
 
 import java.nio.ByteBuffer;
@@ -15,16 +14,11 @@ public class VulkanUtils {
         // Utility class
     }
 
-    public static void copyMatrixToBuffer(Device device, VulkanBuffer vulkanBuffer, Matrix4f matrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pointerBuffer = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), vulkanBuffer.getMemory(), 0, vulkanBuffer.getAllocationSize(),
-                    0, pointerBuffer), "Failed to map Buffer");
-            long data = pointerBuffer.get(0);
-            ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(data, (int) vulkanBuffer.getAllocationSize());
-            matrix.get(0, matrixBuffer);
-            vkUnmapMemory(device.getVkDevice(), vulkanBuffer.getMemory());
-        }
+    public static void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
+        long mappedMemory = vulkanBuffer.map();
+        ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
+        matrix.get(0, matrixBuffer);
+        vulkanBuffer.unMap();
     }
 
     public static int memoryTypeFromProperties(PhysicalDevice physDevice, int typeBits, int reqsMask) {
