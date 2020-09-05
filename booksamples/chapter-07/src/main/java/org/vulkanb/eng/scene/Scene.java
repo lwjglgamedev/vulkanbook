@@ -7,12 +7,12 @@ import java.util.*;
 public class Scene {
 
     private Map<String, List<Entity>> entitiesMap;
-    private Perspective perspective;
+    private Projection projection;
 
     public Scene(Window window) {
         entitiesMap = new HashMap<>();
-        perspective = new Perspective();
-        perspective.resize(window.getWidth(), window.getHeight());
+        projection = new Projection();
+        projection.resize(window.getWidth(), window.getHeight());
     }
 
     public void addEntity(Entity entity) {
@@ -32,8 +32,8 @@ public class Scene {
         return entitiesMap;
     }
 
-    public Perspective getPerspective() {
-        return perspective;
+    public Projection getProjection() {
+        return projection;
     }
 
     public void removeAllEntities() {

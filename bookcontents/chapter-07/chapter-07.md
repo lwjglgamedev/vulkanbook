@@ -367,7 +367,7 @@ After that we create a reference to the depth attachment (`VkAttachmentReference
 
 ## Scene changes
 
-If we are going to represent 3D scenes, we need to project from the 3D world into a 2D space (the screen). We will need to use a perspective projection matrix in order to avoid distortions and to represent far away objects smaller than closer ones. We will create a new class that will support its creation and update (due to windows resizing) named `Perspective`, which is defined like this:
+If we are going to represent 3D scenes, we need to project from the 3D world into a 2D space (the screen). We will need to use a perspective projection matrix in order to avoid distortions and to represent far away objects smaller than closer ones. We will create a new class that will support its creation and update (due to windows resizing) named `Projection`, which is defined like this:
 
 ```java
 package org.vulkanb.eng.scene;
@@ -375,28 +375,28 @@ package org.vulkanb.eng.scene;
 import org.joml.Matrix4f;
 import org.vulkanb.eng.EngineProperties;
 
-public class Perspective {
+public class Projection {
 
-    private Matrix4f perspectiveMatrix;
+    private Matrix4f projectionMatrix;
 
-    public Perspective() {
-        perspectiveMatrix = new Matrix4f();
+    public Projection() {
+        projectionMatrix = new Matrix4f();
     }
 
-    public Matrix4f getPerspectiveMatrix() {
-        return perspectiveMatrix;
+    public Matrix4f getProjectionMatrix() {
+        return projectionMatrix;
     }
 
     public void resize(int width, int height) {
         EngineProperties engProps = EngineProperties.getInstance();
-        perspectiveMatrix.identity();
-        perspectiveMatrix.perspective(engProps.getFov(), (float) width / (float) height,
+        projectionMatrix.identity();
+        projectionMatrix.perspective(engProps.getFov(), (float) width / (float) height,
                 engProps.getZNear(), engProps.getZFar(), true);
     }
 }
 ```
 
-We are using the [JOML](https://github.com/JOML-CI/JOML) library to create a `Matrix4f` which will hold the projection matrix. The `resize`should be called, at least once, to initialize the parameters of the matrix with the correct parameters (by invoking the `Matrix4f` `perspective`method). The `perspective` method receives the usual arguments, the field of view (in  radians), the aspect ratio and the near and far planes. You may have noticed that it receives an extra argument, which in JOML documentation is named `zZeroToOne`. We have already talked about that Vulkan uses a different coordinate System where y axis point downwards. Vulkan also defines a different range for z coordinates. The Normalized Device Coordinates (NDC), in OpenGL use the range [-1, 1] to represent screen coordinates and also for the z value. Anything outside that range is considered to be out of the field of view and will not be presented. In Vulkan, and also in Direct3D, the NDC range used for the z coordinates is [0, 1]. We need to set the `zZeroToOne` parameter to true to be compliant with Vulkan coordinates System.
+We are using the [JOML](https://github.com/JOML-CI/JOML) library to create a `Matrix4f` which will hold the projection matrix. The `resize`should be called, at least once, to initialize the parameters of the matrix with the correct parameters (by invoking the `Matrix4f` `Projection`method). The `Projection` method receives the usual arguments, the field of view (in  radians), the aspect ratio and the near and far planes. You may have noticed that it receives an extra argument, which in JOML documentation is named `zZeroToOne`. We have already talked about that Vulkan uses a different coordinate System where y axis point downwards. Vulkan also defines a different range for z coordinates. The Normalized Device Coordinates (NDC), in OpenGL use the range [-1, 1] to represent screen coordinates and also for the z value. Anything outside that range is considered to be out of the field of view and will not be presented. In Vulkan, and also in Direct3D, the NDC range used for the z coordinates is [0, 1]. We need to set the `zZeroToOne` parameter to true to be compliant with Vulkan coordinates System.
 
 The parameters of the perspective matrix can be configured in the `eng.properties` file, so we need to update the `EngineProperties` class:
 ```java
@@ -498,24 +498,24 @@ public class Entity {
 
 Each `Entity` shall have an identifier which should be unique. It is also linked to the mesh that will be used to render it through the `meshId` attribute. An `Entity` will have also a position, a rotation (modeled using a  quaternion) and a scale. With all that information we are able to construct a model matrix by calling the `updateModelMatrix` from the `Matrix4f` class. The `updateModelMatrix` should be called, each time the position, rotation or scale changes.
 
-Now we can setup the required infrastructure to put the `Perspective` and `Entity` classes into work. We will add this to an empty class which has been there since the beginning, the  `Scene` class. The class definition starts like this:
+Now we can setup the required infrastructure to put the `Projection` and `Entity` classes into work. We will add this to an empty class which has been there since the beginning, the  `Scene` class. The class definition starts like this:
 
 ```java
 public class Scene {
 
     private Map<String, List<Entity>> entitiesMap;
-    private Perspective perspective;
+    private Projection projection;
 
     public Scene(Window window) {
         entitiesMap = new HashMap<>();
-        perspective = new Perspective();
-        perspective.resize(window.getWidth(), window.getHeight());
+        projection = new Projection();
+        projection.resize(window.getWidth(), window.getHeight());
     }
     ...
 }
 ```
 
-The constructor receives the a `Window` instance and creates a `Map` of `List`s which will contain `Entity` instances. That map will organized the entities by its `meshId`. The constructor initializes that map and also creates an instance of the `Perspective` class, which will hold the perspective matrix. The next method will be used to add new entities:
+The constructor receives the a `Window` instance and creates a `Map` of `List`s which will contain `Entity` instances. That map will organized the entities by its `meshId`. The constructor initializes that map and also creates an instance of the `Projection` class, which will hold the perspective matrix. The next method will be used to add new entities:
 
 ```java
 public class Scene {
@@ -532,7 +532,7 @@ public class Scene {
 }
 ```
 
-As it can be seen, the entities are organized by their `meshId`. Those entities which share the same `meshId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (suing its identifier) and to get the perspective matrix.
+As it can be seen, the entities are organized by their `meshId`. Those entities which share the same `meshId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (suing its identifier) and to get the projection matrix.
 
 ```java
 public class Scene {
@@ -545,8 +545,8 @@ public class Scene {
         return entitiesMap;
     }
 
-    public Perspective getPerspective() {
-        return perspective;
+    public Projection getProjection() {
+        return projection;
     }
 
     public void removeAllEntities() {
@@ -689,7 +689,7 @@ public class Render {
         if (window.isResized() || this.swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);
-            scene.getPerspective().resize(window.getWidth(), window.getHeight());
+            scene.getProjection().resize(window.getWidth(), window.getHeight());
             swapChain.acquireNextImage();
         }
 
@@ -842,7 +842,7 @@ public class ForwardRenderActivity {
 
                 List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
                 for (Entity entity : entities) {
-                    setPushConstants(cmdHandle, scene.getPerspective().getPerspectiveMatrix(), entity.getModelMatrix(),
+                    setPushConstants(cmdHandle, scene.getProjection().getProjectionMatrix(), entity.getModelMatrix(),
                             pushConstantBuffer);
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }

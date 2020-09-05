@@ -58,7 +58,7 @@ public class GeometryRenderActivity {
         createDescriptorSets(numImages);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
-        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
     }
 
     public void cleanup() {
@@ -283,7 +283,7 @@ public class GeometryRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
         geometryFrameBuffer.resize(swapChain);
     }

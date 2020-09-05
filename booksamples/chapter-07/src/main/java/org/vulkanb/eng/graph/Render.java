@@ -69,7 +69,7 @@ public class Render {
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);
-            scene.getPerspective().resize(window.getWidth(), window.getHeight());
+            scene.getProjection().resize(window.getWidth(), window.getHeight());
             swapChain.acquireNextImage();
         }
 

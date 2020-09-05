@@ -266,7 +266,7 @@ public class LightingRenderActivity {
     }
 
     private void updateInvProjMatrix(Scene scene) {
-        Matrix4f invProj = new Matrix4f(scene.getPerspective().getPerspectiveMatrix()).invert();
+        Matrix4f invProj = new Matrix4f(scene.getProjection().getProjectionMatrix()).invert();
         VulkanUtils.copyMatrixToBuffer(invProjBuffer, invProj);
     }
 

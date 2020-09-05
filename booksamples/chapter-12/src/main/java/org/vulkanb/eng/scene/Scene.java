@@ -12,12 +12,12 @@ public class Scene {
     private Camera camera;
     private Map<String, List<Entity>> entitiesMap;
     private Light[] lights;
-    private Perspective perspective;
+    private Projection projection;
 
     public Scene(Window window) {
         entitiesMap = new HashMap<>();
-        perspective = new Perspective();
-        perspective.resize(window.getWidth(), window.getHeight());
+        projection = new Projection();
+        projection.resize(window.getWidth(), window.getHeight());
         camera = new Camera();
         ambientLight = new Vector4f();
     }
@@ -51,8 +51,8 @@ public class Scene {
         return this.lights;
     }
 
-    public Perspective getPerspective() {
-        return perspective;
+    public Projection getProjection() {
+        return projection;
     }
 
     public void removeAllEntities() {

@@ -167,7 +167,7 @@ public class ForwardRenderActivity {
 
                 List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
                 for (Entity entity : entities) {
-                    setPushConstants(cmdHandle, scene.getPerspective().getPerspectiveMatrix(), entity.getModelMatrix(),
+                    setPushConstants(cmdHandle, scene.getProjection().getProjectionMatrix(), entity.getModelMatrix(),
                             pushConstantBuffer);
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }

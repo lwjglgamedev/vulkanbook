@@ -81,7 +81,7 @@ public class ForwardRenderActivity {
             fences[i] = new Fence(device, true);
         }
 
-        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
     }
 
     public void cleanup() {
@@ -278,7 +278,7 @@ public class ForwardRenderActivity {
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
-        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getPerspective().getPerspectiveMatrix());
+        VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
