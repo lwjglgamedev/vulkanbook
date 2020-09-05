@@ -7,9 +7,11 @@ public class Attachment {
     private boolean depthAttachment;
     private Image image;
     private ImageView imageView;
+    private int samples;
 
-    public Attachment(Device device, int width, int height, int format, int usage) {
-        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);
+    public Attachment(Device device, int width, int height, int format, int usage, int samples) {
+        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, samples);
+        this.samples = samples;
 
         int aspectMask = 0;
         if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
@@ -37,7 +39,15 @@ public class Attachment {
         return imageView;
     }
 
+    public int getSamples() {
+        return samples;
+    }
+
     public boolean isDepthAttachment() {
         return depthAttachment;
+    }
+
+    public void setSamples(int samples) {
+        this.samples = samples;
     }
 }

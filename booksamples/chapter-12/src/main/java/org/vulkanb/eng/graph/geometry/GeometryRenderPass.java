@@ -11,7 +11,6 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class GeometryRenderPass {
 
-    private static final int MAX_SAMPLES = 1;
     private Device device;
     private long vkRenderPass;
 
@@ -28,7 +27,7 @@ public class GeometryRenderPass {
                         .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
                         .stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)
                         .stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
-                        .samples(MAX_SAMPLES)
+                        .samples(attachments[i].getSamples())
                         .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
                 if (attachments[i].isDepthAttachment()) {
                     depthAttachmentPos = i;

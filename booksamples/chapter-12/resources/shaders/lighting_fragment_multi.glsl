@@ -4,6 +4,7 @@
 // https://creativecommons.org/licenses/by-nc/4.0/legalcode
 
 layout (constant_id = 0) const int MAX_LIGHTS = 10;
+layout (constant_id = 1) const int NUM_SAMPLES = 8;
 const float PI = 3.14159265359;
 
 // Always use vec4 (minimum alighnment)
@@ -16,10 +17,10 @@ layout(location = 0) in vec2 inTextCoord;
 
 layout(location = 0) out vec4 outFragColor;
 
-layout(set = 0, binding = 0) uniform sampler2D albedoSampler;
-layout(set = 0, binding = 1) uniform sampler2D normalsSampler;
-layout(set = 0, binding = 2) uniform sampler2D pbrSampler;
-layout(set = 0, binding = 3) uniform sampler2D depthSampler;
+layout(set = 0, binding = 0) uniform sampler2DMS albedoSampler;
+layout(set = 0, binding = 1) uniform sampler2DMS normalsSampler;
+layout(set = 0, binding = 2) uniform sampler2DMS pbrSampler;
+layout(set = 0, binding = 3) uniform sampler2DMS depthSampler;
 layout(set = 1, binding = 0) uniform UBO {
     vec4 ambientLightColor;
     uint count;
@@ -28,6 +29,18 @@ layout(set = 1, binding = 0) uniform UBO {
 layout(set = 2, binding = 0) uniform ProjUniform {
     mat4 invProjectionMatrix;
 } projUniform;
+
+vec4 resolve(sampler2DMS tex, ivec2 uv)
+{
+    vec4 result = vec4(0.0);
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        vec4 val = texelFetch(tex, uv, i);
+        result += val;
+    }
+    // Average resolved samples
+    return result / float(NUM_SAMPLES);
+}
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -120,15 +133,18 @@ float metallic, float roughness) {
 }
 
 void main() {
-    vec3 albedo = texture(albedoSampler, inTextCoord).rgb;
-    vec3 normal = normalize(2.0 * texture(normalsSampler, inTextCoord).rgb  - 1.0);
-    vec3 pbrSampledValue = texture(pbrSampler, inTextCoord).rgb;
+    ivec2 textSize = textureSize(albedoSampler);
+    ivec2 uv = ivec2(inTextCoord * textSize);
+
+    vec3 albedo = resolve(albedoSampler, uv).rgb;
+    vec3 normal = normalize(2.0 * resolve(normalsSampler, uv).rgb  - 1.0);
+    vec3 pbrSampledValue = resolve(pbrSampler, uv).rgb;
     float ao = pbrSampledValue.r;
     float roughness = pbrSampledValue.g;
     float metallic = pbrSampledValue.b;
 
     // Retrieve position from depth
-    vec4 clip    = vec4(inTextCoord.x * 2.0 - 1.0, inTextCoord.y * -2.0 + 1.0, texture(depthSampler, inTextCoord).x, 1.0);
+    vec4 clip    = vec4(inTextCoord.x * 2.0 - 1.0, inTextCoord.y * -2.0 + 1.0, resolve(depthSampler, uv).x, 1.0);
     vec4 world_w = projUniform.invProjectionMatrix * clip;
     vec3 pos     = world_w.xyz / world_w.w;
 

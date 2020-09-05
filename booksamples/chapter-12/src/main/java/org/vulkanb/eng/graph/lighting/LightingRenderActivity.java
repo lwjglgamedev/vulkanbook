@@ -19,6 +19,8 @@ import static org.lwjgl.vulkan.VK11.*;
 public class LightingRenderActivity {
 
     private static final String LIGHTING_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/lighting_fragment.glsl";
+    private static final String LIGHTING_FRAGMENT_SHADER_FILE_MULTI_GLSL = "resources/shaders/lighting_fragment_multi.glsl";
+    private static final String LIGHTING_FRAGMENT_SHADER_FILE_MULTI_SPV = LIGHTING_FRAGMENT_SHADER_FILE_MULTI_GLSL + ".spv";
     private static final String LIGHTING_FRAGMENT_SHADER_FILE_SPV = LIGHTING_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String LIGHTING_VERTEX_SHADER_FILE_GLSL = "resources/shaders/lighting_vertex.glsl";
     private static final String LIGHTING_VERTEX_SHADER_FILE_SPV = LIGHTING_VERTEX_SHADER_FILE_GLSL + ".spv";
@@ -42,6 +44,7 @@ public class LightingRenderActivity {
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
     private ShaderProgram shaderProgram;
+    private SpecializationConstants specializationConstants;
     private SwapChain swapChain;
 
     public LightingRenderActivity(MemoryAllocator memoryAllocator, SwapChain swapChain, CommandPool commandPool,
@@ -51,10 +54,12 @@ public class LightingRenderActivity {
         device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
         auxVec = new Vector4f();
+        int numSamples = attachments[0].getSamples();
+        specializationConstants = new SpecializationConstants(numSamples);
 
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
-        createShaders();
+        createShaders(numSamples);
         createDescriptorPool();
         createUniforms(numImages);
         createDescriptorSets(attachments, numImages);
@@ -75,6 +80,7 @@ public class LightingRenderActivity {
         descriptorPool.cleanup();
         Arrays.stream(lightsBuffers).forEach(VulkanBuffer::cleanup);
         pipeline.cleanup();
+        specializationConstants.cleanup();
         invProjBuffer.cleanup();
         lightingFrameBuffer.cleanup();
         shaderProgram.cleanup();
@@ -124,21 +130,24 @@ public class LightingRenderActivity {
     private void createPipeline() {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false, 0,
-                new EmptyVertexBufferStructure(), descriptorSetLayouts);
+                new EmptyVertexBufferStructure(), descriptorSetLayouts, VK_SAMPLE_COUNT_1_BIT);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
 
-    private void createShaders() {
+    private void createShaders(int numSamples) {
         EngineProperties engineProperties = EngineProperties.getInstance();
         if (engineProperties.isShaderRecompilation()) {
             ShaderCompiler.compileShaderIfChanged(LIGHTING_VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
             ShaderCompiler.compileShaderIfChanged(LIGHTING_FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
+            ShaderCompiler.compileShaderIfChanged(LIGHTING_FRAGMENT_SHADER_FILE_MULTI_GLSL, Shaderc.shaderc_glsl_fragment_shader);
         }
+        String fragmentShaderFile = numSamples > 1 && device.isSampleRateShading() ? LIGHTING_FRAGMENT_SHADER_FILE_MULTI_SPV : LIGHTING_FRAGMENT_SHADER_FILE_SPV;
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, LIGHTING_VERTEX_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, LIGHTING_FRAGMENT_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShaderFile,
+                                specializationConstants.getSpecInfo()),
                 });
     }
 

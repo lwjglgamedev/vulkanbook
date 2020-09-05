@@ -27,11 +27,15 @@ public class Pipeline {
             int numModules = shaderModules.length;
             VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.callocStack(numModules, stack);
             for (int i = 0; i < numModules; i++) {
+                ShaderProgram.ShaderModule shaderModule = shaderModules[i];
                 shaderStages.get(i)
                         .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
-                        .stage(shaderModules[i].shaderStage())
-                        .module(shaderModules[i].handle())
+                        .stage(shaderModule.shaderStage())
+                        .module(shaderModule.handle())
                         .pName(main);
+                if (shaderModule.specInfo() != null) {
+                    shaderStages.get(i).pSpecializationInfo(shaderModule.specInfo());
+                }
             }
 
             VkPipelineInputAssemblyStateCreateInfo vkPipelineInputAssemblyStateCreateInfo =
@@ -56,7 +60,11 @@ public class Pipeline {
             VkPipelineMultisampleStateCreateInfo vkPipelineMultisampleStateCreateInfo =
                     VkPipelineMultisampleStateCreateInfo.callocStack(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO)
-                            .rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
+                            .rasterizationSamples(pipeLineCreationInfo.numSamples);
+            if (pipeLineCreationInfo.numSamples > 1) {
+                vkPipelineMultisampleStateCreateInfo.sampleShadingEnable(true);
+                vkPipelineMultisampleStateCreateInfo.minSampleShading(0.2f);
+            }
 
             VkPipelineDepthStencilStateCreateInfo ds = null;
             if (pipeLineCreationInfo.hasDepthAttachment()) {
@@ -159,7 +167,7 @@ public class Pipeline {
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
                                        boolean hasDepthAttachment, boolean useBlend,
                                        int pushConstantsSize, VertexInputStateInfo viInputStateInfo,
-                                       DescriptorSetLayout[] descriptorSetLayouts) {
+                                       DescriptorSetLayout[] descriptorSetLayouts, int numSamples) {
         public void cleanup() {
             viInputStateInfo.cleanup();
         }

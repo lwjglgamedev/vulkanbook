@@ -14,6 +14,7 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class PhysicalDevice {
 
     private static final Logger LOGGER = LogManager.getLogger();
+    private Set<Integer> suportedSampleCount;
     private VkExtensionProperties.Buffer vkDeviceExtensions;
     private VkPhysicalDeviceMemoryProperties vkMemoryProperties;
     private VkPhysicalDevice vkPhysicalDevice;
@@ -37,6 +38,8 @@ public class PhysicalDevice {
             vkDeviceExtensions = VkExtensionProperties.calloc(intBuffer.get(0));
             vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
                     "Failed to get extension properties");
+
+            suportedSampleCount = calSupportedSampleCount(vkPhysicalDeviceProperties);
 
             // Get Queue family properties
             vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, null);
@@ -116,6 +119,38 @@ public class PhysicalDevice {
         return pPhysicalDevices;
     }
 
+    private Set<Integer> calSupportedSampleCount(VkPhysicalDeviceProperties devProps) {
+        Set<Integer> result = new HashSet<>();
+        long colorCounts = Integer.toUnsignedLong(vkPhysicalDeviceProperties.limits().framebufferColorSampleCounts());
+        LOGGER.debug("Color max samples: {}", colorCounts);
+        long depthCounts = Integer.toUnsignedLong(devProps.limits().framebufferDepthSampleCounts());
+        LOGGER.debug("Depth max samples: {}", depthCounts);
+        int counts = (int) (Math.min(colorCounts, depthCounts));
+        LOGGER.debug("Max samples: {}", depthCounts);
+
+        result.add(VK_SAMPLE_COUNT_1_BIT);
+        if ((counts & VK_SAMPLE_COUNT_64_BIT) > 0) {
+            result.add(VK_SAMPLE_COUNT_64_BIT);
+        }
+        if ((counts & VK_SAMPLE_COUNT_32_BIT) > 0) {
+            result.add(VK_SAMPLE_COUNT_32_BIT);
+        }
+        if ((counts & VK_SAMPLE_COUNT_16_BIT) > 0) {
+            result.add(VK_SAMPLE_COUNT_16_BIT);
+        }
+        if ((counts & VK_SAMPLE_COUNT_8_BIT) > 0) {
+            result.add(VK_SAMPLE_COUNT_8_BIT);
+        }
+        if ((counts & VK_SAMPLE_COUNT_4_BIT) > 0) {
+            result.add(VK_SAMPLE_COUNT_4_BIT);
+        }
+        if ((counts & VK_SAMPLE_COUNT_2_BIT) != 0) {
+            result.add(VK_SAMPLE_COUNT_2_BIT);
+        }
+
+        return result;
+    }
+
     public void cleanup() {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
@@ -175,5 +210,9 @@ public class PhysicalDevice {
             }
         }
         return result;
+    }
+
+    public boolean supportsSampleCount(int numSamples) {
+        return suportedSampleCount.contains(numSamples);
     }
 }

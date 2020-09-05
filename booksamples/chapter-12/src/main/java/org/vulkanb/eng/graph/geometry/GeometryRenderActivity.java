@@ -134,7 +134,7 @@ public class GeometryRenderActivity {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 geometryFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram, GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
                 true, true, GraphConstants.MAT4X4_SIZE,
-                new VertexBufferStructure(), geometryDescriptorSetLayouts);
+                new VertexBufferStructure(), geometryDescriptorSetLayouts, geometryFrameBuffer.getNumSamples());
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
