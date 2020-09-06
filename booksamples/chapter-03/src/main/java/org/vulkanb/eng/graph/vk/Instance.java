@@ -6,36 +6,26 @@ import org.lwjgl.glfw.GLFWVulkan;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
 
-import java.nio.ByteBuffer;
+import java.nio.*;
 import java.util.*;
 
+import static org.lwjgl.vulkan.EXTDebugUtils.*;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Instance {
 
+    public static final int MESSAGE_SEVERITY_BITMASK = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+    public static final int MESSAGE_TYPE_BITMASK = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final VkDebugReportCallbackEXT DBG_FUNC = VkDebugReportCallbackEXT.create(
-            (flags, objectType, object, location, messageCode, pLayerPrefix, pMessage, pUserData) -> {
-                String msg = VkDebugReportCallbackEXT.getString(pMessage);
-                Level logLevel = Level.DEBUG;
-                if ((flags & EXTDebugReport.VK_DEBUG_REPORT_INFORMATION_BIT_EXT) != 0) {
-                    logLevel = Level.INFO;
-                } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT) != 0) {
-                    logLevel = Level.WARN;
-                } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) != 0) {
-                    logLevel = Level.WARN;
-                } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT) != 0) {
-                    logLevel = Level.ERROR;
-                }
-
-                LOGGER.log(logLevel, "VkDebugReportCallbackEXT, messageCode: [{}],  message: [{}]", messageCode, msg);
-
-                return VK_FALSE;
-            }
-    );
 
     private final VkInstance vkInstance;
+    private VkDebugUtilsMessengerCreateInfoEXT debugUtils;
+    private long vkDebugHandle;
 
     public Instance(boolean validate) {
         LOGGER.debug("Creating Vulkan instance");
@@ -78,10 +68,9 @@ public class Instance {
 
             PointerBuffer requiredExtensions;
             if (supportsValidation) {
-                // Debug extension
-                ByteBuffer vkDebugReportExtension = stack.UTF8(EXTDebugReport.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+                ByteBuffer vkDebugUtilsExtension = stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
                 requiredExtensions = stack.mallocPointer(glfwExtensions.remaining() + 1);
-                requiredExtensions.put(glfwExtensions).put(vkDebugReportExtension);
+                requiredExtensions.put(glfwExtensions).put(vkDebugUtilsExtension);
             } else {
                 requiredExtensions = stack.mallocPointer(glfwExtensions.remaining());
                 requiredExtensions.put(glfwExtensions);
@@ -90,12 +79,8 @@ public class Instance {
 
             long extension = MemoryUtil.NULL;
             if (supportsValidation) {
-                VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.callocStack(stack)
-                        .sType(EXTDebugReport.VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
-                        .flags(EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT | EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT)
-                        .pfnCallback(DBG_FUNC)
-                        .pUserData(MemoryUtil.NULL);
-                extension = dbgCreateInfo.address();
+                debugUtils = createDebugCallBack();
+                extension = debugUtils.address();
             }
 
             // Create instance info
@@ -109,11 +94,47 @@ public class Instance {
             PointerBuffer pInstance = stack.mallocPointer(1);
             vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
             vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
+
+            vkDebugHandle = VK_NULL_HANDLE;
+            if (supportsValidation) {
+                LongBuffer longBuff = stack.mallocLong(1);
+                vkCheck(vkCreateDebugUtilsMessengerEXT(vkInstance, debugUtils, null, longBuff), "Error creating debug utils");
+                vkDebugHandle = longBuff.get(0);
+            }
         }
+    }
+
+    private static VkDebugUtilsMessengerCreateInfoEXT createDebugCallBack() {
+        VkDebugUtilsMessengerCreateInfoEXT result = VkDebugUtilsMessengerCreateInfoEXT
+                .calloc()
+                .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
+                .messageSeverity(MESSAGE_SEVERITY_BITMASK)
+                .messageType(MESSAGE_TYPE_BITMASK)
+                .pfnUserCallback((messageSeverity, messageTypes, pCallbackData, pUserData) -> {
+                    VkDebugUtilsMessengerCallbackDataEXT callbackData = VkDebugUtilsMessengerCallbackDataEXT.create(pCallbackData);
+                    Level logLevel = Level.DEBUG;
+                    if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0) {
+                        logLevel = Level.INFO;
+                    } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0) {
+                        logLevel = Level.WARN;
+                    } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
+                        logLevel = Level.ERROR;
+                    }
+
+                    LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                    return VK_FALSE;
+                });
+        return result;
     }
 
     public void cleanup() {
         LOGGER.debug("Destroying Vulkan instance");
+        if (vkDebugHandle != VK_NULL_HANDLE) {
+            vkDestroyDebugUtilsMessengerEXT(vkInstance, vkDebugHandle, null);
+        }
+        if (debugUtils != null) {
+            debugUtils.free();
+        }
         vkDestroyInstance(vkInstance, null);
     }
 

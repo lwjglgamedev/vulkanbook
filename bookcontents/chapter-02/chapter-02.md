@@ -217,7 +217,6 @@ public class Instance {
 ```
 
 Let's get back to the constructor. Now we have a list of the names of the supported layers (array of Strings) we need to transform it to a pointer of a list of null terminated Strings:
-
 ```java
 public class Instance {
     ...
@@ -239,7 +238,6 @@ public class Instance {
 ```
 
 Now that we've setup all the validation layers, we move on to extensions. Because Vulkan is a cross-platform API, links to windowing systems are handled through extensions. In our case we will be using GLFW, which has extensions for Vulkan, so we need to include this as an extension with the following code:
-
 ```java
 public class Instance {
     ...
@@ -256,8 +254,7 @@ public class Instance {
 }
 ```
 
-Depending if we have enabled validation or not we will need to add another extension to support debugging:
-
+Depending if we have enabled validation or not we will need to add the extension used for debugging. We will use the `VK_EXT_debug_utils` extension (which should be used instead of older debug extension such as `VK_EXT_debug_report` and `VK_EXT_debug_marker`).
 ```java
 public class Instance {
     ...
@@ -265,22 +262,21 @@ public class Instance {
         ...
             PointerBuffer requiredExtensions;
             if (supportsValidation) {
-                // Debug extension
-                ByteBuffer vkDebugReportExtension = stack.UTF8(EXTDebugReport.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+                ByteBuffer vkDebugUtilsExtension = stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
                 requiredExtensions = stack.mallocPointer(glfwExtensions.remaining() + 1);
-                requiredExtensions.put(glfwExtensions).put(vkDebugReportExtension);
+                requiredExtensions.put(glfwExtensions).put(vkDebugUtilsExtension);
             } else {
                 requiredExtensions = stack.mallocPointer(glfwExtensions.remaining());
                 requiredExtensions.put(glfwExtensions);
             }
-            requiredExtensions.flip();        ...
+            requiredExtensions.flip();        
+        ...
     }
     ...
 }
 ```
 
-Additionally, if we have enabled the debug extension, we will be interested in setting a callback, so we can, for example, log the information reported. We have already enabled the debugging extension, but we need to configure it. This is done through an extension structure used while creating the Vulkan instance. As mentioned at the beginning, most of Vulkan creation structures reserve an extension parameter which can be used to configure extension-specific data. Therefore, if validation is enabled, we will execute the following code:
-
+Additionally, if we have enabled the debug extension, we will be interested in setting a callback, so we can, for example, log the information reported. We have already enabled the debugging extension, but we need to create it. We also need to pass this extension while creating  the instance to properly log errors while creating and destroying the instance:
 ```java
 public class Instance {
     ...
@@ -288,50 +284,56 @@ public class Instance {
         ...
             long extension = MemoryUtil.NULL;
             if (supportsValidation) {
-                VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.callocStack(stack)
-                        .sType(EXTDebugReport.VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
-                        .flags(EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT | EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT)
-                        .pfnCallback(DBG_FUNC)
-                        .pUserData(MemoryUtil.NULL);
-                extension = dbgCreateInfo.address();
+                debugUtils = createDebugCallBack();
+                extension = debugUtils.address();
             }
         ...
     }
     ...
 }
 ```
-
-We create an instance of the class `VkDebugReportCallbackCreateInfoEXT`, in which, through the flags attribute we restrict the callbacks to error or warning messages. The callback is set using the `pfnCallback` method. In this case, we have created a function which has been defined like this:
-
+This is done in a new method named `createDebugCallBack`:
 ```java
 public class Instance {
     ...
-    private static final VkDebugReportCallbackEXT DBG_FUNC = VkDebugReportCallbackEXT.create(
-            (flags, objectType, object, location, messageCode, pLayerPrefix, pMessage, pUserData) -> {
-                String msg = VkDebugReportCallbackEXT.getString(pMessage);
-                Level logLevel = Level.DEBUG;
-                if ((flags & EXTDebugReport.VK_DEBUG_REPORT_INFORMATION_BIT_EXT) != 0) {
-                    logLevel = Level.INFO;
-                } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT) != 0) {
-                    logLevel = Level.WARN;
-                } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) != 0) {
-                    logLevel = Level.WARN;
-                } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT) != 0) {
-                    logLevel = Level.ERROR;
-                }
+    public static final int MESSAGE_SEVERITY_BITMASK = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+    public static final int MESSAGE_TYPE_BITMASK = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    ...
+    private static VkDebugUtilsMessengerCreateInfoEXT createDebugCallBack() {
+        VkDebugUtilsMessengerCreateInfoEXT result = VkDebugUtilsMessengerCreateInfoEXT
+                .calloc()
+                .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
+                .messageSeverity(MESSAGE_SEVERITY_BITMASK)
+                .messageType(MESSAGE_TYPE_BITMASK)
+                .pfnUserCallback((messageSeverity, messageTypes, pCallbackData, pUserData) -> {
+                    VkDebugUtilsMessengerCallbackDataEXT callbackData = VkDebugUtilsMessengerCallbackDataEXT.create(pCallbackData);
+                    Level logLevel = Level.DEBUG;
+                    if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0) {
+                        logLevel = Level.INFO;
+                    } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0) {
+                        logLevel = Level.WARN;
+                    } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
+                        logLevel = Level.ERROR;
+                    }
 
-                LOGGER.log(logLevel, "VkDebugReportCallbackEXT, messageCode: [{}],  message: [{}]", messageCode, msg);
-
-                return VK_FALSE;
-            }
-    );
+                    LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                    return VK_FALSE;
+                });
+        return result;
+    }
     ...
 }
 ```
+In this method, we instantiate a `VkDebugUtilsMessengerCreateInfoEXT` which is defined by the following attributes:
+- `sType`: The type of the structure: `VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT`.
+- `messageSeverity`: This will hold a bit mask with the levels of the messages that we are interested in receiving. In our case, we will receive error and warning messages.
+- `messageType`: This will hold a bit mask with the types of messages that we are interested in receiving. In our case, we will receive validation and performance messages.
+- `pfnUserCallback`:  The function that will be invoked when a message matches the criteria established by the `messageSeverity` and `messageType` fields. In our case, we just log the message with the proper logging level according to the `messageSeverity` parameter.
 
-This method just logs the message reported using an appropriate severity level.
-
-Finally, we have everything we need in order to create the Vulkan instance. In order to do so, we need to setup yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
+Finally, going back to the constructor, we have everything we need in order to create the Vulkan instance. In order to do so, we need to setup yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
 
 - Structure type: `VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO`.
 - Next extension: In our case, the debug extension configuration structure or `NULL` if no validation is requested or supported.
@@ -357,6 +359,25 @@ public class Instance {
             PointerBuffer pInstance = stack.mallocPointer(1);
             vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
             vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
+            ...
+        }
+    }
+    ...
+}
+```
+
+The last step is to instantiate the debug extension. We have passed its configuration while creating the Vulkan instance, but this will only be used in the instance creation and destruction phases. For the rest of the code, we will need to instantiate by calling the `vkCreateDebugUtilsMessengerEXT` Vulkan function.
+```java
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            vkDebugHandle = VK_NULL_HANDLE;
+            if (supportsValidation) {
+                LongBuffer longBuff = stack.mallocLong(1);
+                vkCheck(vkCreateDebugUtilsMessengerEXT(vkInstance, debugUtils, null, longBuff), "Error creating debug utils");
+                vkDebugHandle = longBuff.get(0);
+            }
         }
     }
     ...
@@ -391,6 +412,12 @@ public class Instance {
     ...
     public void cleanup() {
         LOGGER.debug("Destroying Vulkan instance");
+        if (vkDebugHandle != VK_NULL_HANDLE) {
+            vkDestroyDebugUtilsMessengerEXT(vkInstance, vkDebugHandle, null);
+        }
+        if (debugUtils != null) {
+            debugUtils.free();
+        }
         vkDestroyInstance(vkInstance, null);
     }
     ...
@@ -401,7 +428,6 @@ public class Instance {
 ```
 
 Finally, we can use the Instance class in our `Render` class, in the `init` and `cleanup` methods.
-
 ```java
 public class Render {
     ...
