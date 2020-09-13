@@ -13,12 +13,13 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class Device {
 
     private static final Logger LOGGER = LogManager.getLogger();
+    private MemoryAllocator memoryAllocator;
     private PhysicalDevice physicalDevice;
     private boolean sampleRateShading;
     private boolean samplerAnisotropy;
     private VkDevice vkDevice;
 
-    public Device(PhysicalDevice physicalDevice) {
+    public Device(Instance instance, PhysicalDevice physicalDevice) {
         LOGGER.debug("Creating device");
 
         this.physicalDevice = physicalDevice;
@@ -62,12 +63,19 @@ public class Device {
             vkCheck(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),
                     "Failed to create device");
             vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
+
+            memoryAllocator = new MemoryAllocator(instance, physicalDevice, vkDevice);
         }
     }
 
     public void cleanup() {
         LOGGER.debug("Destroying Vulkan device");
+        memoryAllocator.cleanUp();
         vkDestroyDevice(vkDevice, null);
+    }
+
+    public MemoryAllocator getMemoryAllocator() {
+        return memoryAllocator;
     }
 
     public PhysicalDevice getPhysicalDevice() {

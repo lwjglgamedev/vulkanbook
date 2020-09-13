@@ -33,7 +33,6 @@ public class GeometryRenderActivity {
     private VulkanBuffer materialsBuffer;
     private MaterialDescriptorSet materialsDescriptorSet;
     private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
-    private MemoryAllocator memoryAllocator;
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
     private MatrixDescriptorSet projMatrixDescriptorSet;
@@ -45,9 +44,7 @@ public class GeometryRenderActivity {
     private VulkanBuffer[] viewMatricesBuffer;
     private MatrixDescriptorSet[] viewMatricesDescriptorSets;
 
-    public GeometryRenderActivity(MemoryAllocator memoryAllocator, SwapChain swapChain, CommandPool commandPool,
-                                  PipelineCache pipelineCache, Scene scene) {
-        this.memoryAllocator = memoryAllocator;
+    public GeometryRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
         device = swapChain.getDevice();
@@ -112,18 +109,18 @@ public class GeometryRenderActivity {
         EngineProperties engineProps = EngineProperties.getInstance();
         descriptorSetMap = new HashMap<>();
         textureSampler = new TextureSampler(device, 1);
-        projMatrixUniform = new VulkanBuffer(memoryAllocator, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         projMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
 
         viewMatricesDescriptorSets = new MatrixDescriptorSet[numImages];
         viewMatricesBuffer = new VulkanBuffer[numImages];
-        materialsBuffer = new VulkanBuffer(memoryAllocator, (long) materialDescriptorSetLayout.getMaterialSize() * engineProps.getMaxMaterials(),
+        materialsBuffer = new VulkanBuffer(device, (long) materialDescriptorSetLayout.getMaterialSize() * engineProps.getMaxMaterials(),
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         materialsDescriptorSet = new MaterialDescriptorSet(descriptorPool, materialDescriptorSetLayout,
                 materialsBuffer, 0);
         for (int i = 0; i < numImages; i++) {
-            viewMatricesBuffer[i] = new VulkanBuffer(memoryAllocator, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            viewMatricesBuffer[i] = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
             viewMatricesDescriptorSets[i] = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
                     viewMatricesBuffer[i], 0);

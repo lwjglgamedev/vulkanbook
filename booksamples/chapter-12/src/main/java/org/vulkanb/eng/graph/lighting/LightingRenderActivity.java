@@ -40,16 +40,14 @@ public class LightingRenderActivity {
     private LightsDescriptorSetLayout lightsDescriptorSetLayout;
     private LightsDescriptorSet[] lightsDescriptorSets;
     private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
-    private MemoryAllocator memoryAllocator;
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
     private ShaderProgram shaderProgram;
     private SpecializationConstants specializationConstants;
     private SwapChain swapChain;
 
-    public LightingRenderActivity(MemoryAllocator memoryAllocator, SwapChain swapChain, CommandPool commandPool,
-                                  PipelineCache pipelineCache, Attachment[] attachments, Scene scene) {
-        this.memoryAllocator = memoryAllocator;
+    public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
+                                  Attachment[] attachments, Scene scene) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
@@ -152,12 +150,12 @@ public class LightingRenderActivity {
     }
 
     private void createUniforms(int numImages) {
-        invProjBuffer = new VulkanBuffer(memoryAllocator, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        invProjBuffer = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
         lightsBuffers = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
-            lightsBuffers[i] = new VulkanBuffer(memoryAllocator,
+            lightsBuffers[i] = new VulkanBuffer(device,
                     GraphConstants.INT_LENGTH * 4 + GraphConstants.VEC4_SIZE * 2 * GraphConstants.MAX_LIGHTS +
                             GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);

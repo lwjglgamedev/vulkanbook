@@ -23,7 +23,7 @@ public class Texture {
     private VulkanBuffer stgBuffer;
     private int width;
 
-    public Texture(MemoryAllocator memoryAllocator, String fileName, int imageFormat) {
+    public Texture(Device device, String fileName, int imageFormat) {
         LOGGER.debug("Creating texture [{}]", fileName);
         this.fileName = fileName;
         ByteBuffer buf;
@@ -42,8 +42,7 @@ public class Texture {
             height = h.get();
             mipLevels = (int) Math.floor(log2(Math.min(width, height))) + 1;
 
-            createStgBuffer(memoryAllocator, buf);
-            Device device = memoryAllocator.getDevice();
+            createStgBuffer(device, buf);
             image = new Image(device, width, height, imageFormat,
                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                     mipLevels, 1);
@@ -66,9 +65,9 @@ public class Texture {
         }
     }
 
-    private void createStgBuffer(MemoryAllocator memoryAllocator, ByteBuffer data) {
+    private void createStgBuffer(Device device, ByteBuffer data) {
         int size = width * height * BYTES_PER_PIXEL;
-        stgBuffer = new VulkanBuffer(memoryAllocator, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        stgBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         long mappedMemory = stgBuffer.map();
         ByteBuffer buffer = MemoryUtil.memByteBuffer(mappedMemory, (int) stgBuffer.getRequestedSize());

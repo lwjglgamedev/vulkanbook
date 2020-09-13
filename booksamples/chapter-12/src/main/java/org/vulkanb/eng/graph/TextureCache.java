@@ -20,7 +20,7 @@ public class TextureCache {
         textureMap.clear();
     }
 
-    public Texture createTexture(MemoryAllocator memoryAllocator, String texturePath, int format) {
+    public Texture createTexture(Device device, String texturePath, int format) {
         String path = texturePath;
         if (texturePath == null || texturePath.trim().isEmpty()) {
             EngineProperties engProperties = EngineProperties.getInstance();
@@ -28,7 +28,7 @@ public class TextureCache {
         }
         Texture texture = textureMap.get(path);
         if (texture == null) {
-            texture = new Texture(memoryAllocator, path, format);
+            texture = new Texture(device, path, format);
             textureMap.put(path, texture);
         }
         return texture;

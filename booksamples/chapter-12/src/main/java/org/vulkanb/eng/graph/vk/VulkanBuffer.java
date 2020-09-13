@@ -16,14 +16,14 @@ public class VulkanBuffer {
 
     private long allocation;
     private long buffer;
+    private Device device;
     private long mappedMemory;
-    private MemoryAllocator memoryAllocator;
     private PointerBuffer pb;
     private long requestedSize;
 
-    public VulkanBuffer(MemoryAllocator memoryAllocator, long size, int bufferUsage, int memoryUsage,
+    public VulkanBuffer(Device device, long size, int bufferUsage, int memoryUsage,
                         int requiredFlags) {
-        this.memoryAllocator = memoryAllocator;
+        this.device = device;
         requestedSize = size;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.callocStack(stack)
@@ -38,7 +38,7 @@ public class VulkanBuffer {
 
             PointerBuffer pAllocation = stack.callocPointer(1);
             LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vmaCreateBuffer(memoryAllocator.getVmaAllocator(), bufferCreateInfo, allocInfo, lp,
+            vkCheck(vmaCreateBuffer(device.getMemoryAllocator().getVmaAllocator(), bufferCreateInfo, allocInfo, lp,
                     pAllocation, null), "Failed to create buffer");
             buffer = lp.get(0);
             allocation = pAllocation.get(0);
@@ -49,7 +49,7 @@ public class VulkanBuffer {
     public void cleanup() {
         pb.free();
         unMap();
-        vmaDestroyBuffer(memoryAllocator.getVmaAllocator(), buffer, allocation);
+        vmaDestroyBuffer(device.getMemoryAllocator().getVmaAllocator(), buffer, allocation);
     }
 
     public long getBuffer() {
@@ -62,7 +62,7 @@ public class VulkanBuffer {
 
     public long map() {
         if (mappedMemory == NULL) {
-            vkCheck(vmaMapMemory(memoryAllocator.getVmaAllocator(), allocation, pb),
+            vkCheck(vmaMapMemory(device.getMemoryAllocator().getVmaAllocator(), allocation, pb),
                     "Failed to map allocation");
             mappedMemory = pb.get(0);
         }
@@ -71,7 +71,7 @@ public class VulkanBuffer {
 
     public void unMap() {
         if (mappedMemory != NULL) {
-            vmaUnmapMemory(memoryAllocator.getVmaAllocator(), allocation);
+            vmaUnmapMemory(device.getMemoryAllocator().getVmaAllocator(), allocation);
             mappedMemory = NULL;
         }
     }

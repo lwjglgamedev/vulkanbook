@@ -19,7 +19,6 @@ public class Render {
     private Queue.GraphicsQueue graphQueue;
     private Instance instance;
     private LightingRenderActivity lightingRenderActivity;
-    private MemoryAllocator memoryAllocator;
     private List<VulkanMesh> meshList;
     private PhysicalDevice physicalDevice;
     private PipelineCache pipelineCache;
@@ -40,7 +39,6 @@ public class Render {
         commandPool.cleanup();
         swapChain.cleanup();
         surface.cleanup();
-        memoryAllocator.cleanUp();
         device.cleanup();
         physicalDevice.cleanup();
         instance.cleanup();
@@ -50,8 +48,7 @@ public class Render {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
-        device = new Device(physicalDevice);
-        memoryAllocator = new MemoryAllocator(instance, device);
+        device = new Device(instance, physicalDevice);
         surface = new Surface(physicalDevice, window.getWindowHandle());
         graphQueue = new Queue.GraphicsQueue(device, 0);
         presentQueue = new Queue.PresentQueue(device, surface, 0);
@@ -61,14 +58,14 @@ public class Render {
         pipelineCache = new PipelineCache(device);
         meshList = new ArrayList<>();
         textureCache = new TextureCache();
-        geometryRenderActivity = new GeometryRenderActivity(memoryAllocator, swapChain, commandPool, pipelineCache, scene);
-        lightingRenderActivity = new LightingRenderActivity(memoryAllocator, swapChain, commandPool, pipelineCache,
+        geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
+        lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache,
                 geometryRenderActivity.getAttachments(), scene);
     }
 
     public void loadMeshes(MeshData[] meshDataList) {
         LOGGER.debug("Loading {} meshe(s)", meshDataList.length);
-        VulkanMesh[] meshes = VulkanMesh.loadMeshes(memoryAllocator, textureCache, commandPool, graphQueue, meshDataList);
+        VulkanMesh[] meshes = VulkanMesh.loadMeshes(textureCache, commandPool, graphQueue, meshDataList);
         LOGGER.debug("Loaded {} meshe(s)", meshes.length);
         meshList.addAll(Arrays.asList(meshes));
 

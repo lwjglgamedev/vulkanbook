@@ -32,14 +32,14 @@ public class VulkanMesh {
         this.material = material;
     }
 
-    private static TransferBuffers createIndicesBuffers(MemoryAllocator memoryAllocator, MeshData meshData) {
+    private static TransferBuffers createIndicesBuffers(Device device, MeshData meshData) {
         int[] indices = meshData.indices();
         int numIndices = indices.length;
         int bufferSize = numIndices * GraphConstants.INT_LENGTH;
 
-        VulkanBuffer srcBuffer = new VulkanBuffer(memoryAllocator, bufferSize,
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        VulkanBuffer dstBuffer = new VulkanBuffer(memoryAllocator, bufferSize,
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
         long mapppedMemory = srcBuffer.map();
@@ -50,7 +50,7 @@ public class VulkanMesh {
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
 
-    private static TransferBuffers createVerticesBuffers(MemoryAllocator memoryAllocator, MeshData meshData) {
+    private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
         float[] positions = meshData.positions();
         float[] normals = meshData.normals();
         float[] tangents = meshData.tangents();
@@ -62,9 +62,9 @@ public class VulkanMesh {
         int numElements = positions.length + normals.length + +tangents.length + biTangents.length + textCoords.length;
         int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
 
-        VulkanBuffer srcBuffer = new VulkanBuffer(memoryAllocator, bufferSize,
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        VulkanBuffer dstBuffer = new VulkanBuffer(memoryAllocator, bufferSize,
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
         long mappedMemory = srcBuffer.map();
@@ -95,8 +95,7 @@ public class VulkanMesh {
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
 
-    public static VulkanMesh[] loadMeshes(MemoryAllocator memoryAllocator, TextureCache textureCache,
-                                          CommandPool commandPool, Queue queue, MeshData[] meshDataList) {
+    public static VulkanMesh[] loadMeshes(TextureCache textureCache, CommandPool commandPool, Queue queue, MeshData[] meshDataList) {
         int numMeshes = meshDataList != null ? meshDataList.length : 0;
         VulkanMesh[] meshes = new VulkanMesh[numMeshes];
 
@@ -109,21 +108,21 @@ public class VulkanMesh {
             VulkanBuffer[] indicesTransferBuffers = new VulkanBuffer[numMeshes];
             for (int i = 0; i < numMeshes; i++) {
                 MeshData meshData = meshDataList[i];
-                TransferBuffers verticesBuffers = createVerticesBuffers(memoryAllocator, meshData);
-                TransferBuffers indicesBuffers = createIndicesBuffers(memoryAllocator, meshData);
+                TransferBuffers verticesBuffers = createVerticesBuffers(device, meshData);
+                TransferBuffers indicesBuffers = createIndicesBuffers(device, meshData);
 
                 positionTransferBuffers[i] = verticesBuffers.srcBuffer();
                 indicesTransferBuffers[i] = indicesBuffers.srcBuffer();
 
                 Material material = meshData.material();
                 String texturePath = material != null ? material.getTexturePath() : null;
-                Texture texture = textureCache.createTexture(memoryAllocator, texturePath, VK_FORMAT_R8G8B8A8_SRGB);
+                Texture texture = textureCache.createTexture(device, texturePath, VK_FORMAT_R8G8B8A8_SRGB);
 
                 String normalMapPath = material != null ? material.getNormalMapPath() : null;
-                Texture normalMapTexture = textureCache.createTexture(memoryAllocator, normalMapPath, VK_FORMAT_R8G8B8A8_UNORM);
+                Texture normalMapTexture = textureCache.createTexture(device, normalMapPath, VK_FORMAT_R8G8B8A8_UNORM);
 
                 String metalRoughPath = material != null ? material.getMetalRoughPath() : null;
-                Texture metalRougTexture = textureCache.createTexture(memoryAllocator, metalRoughPath, VK_FORMAT_R8G8B8A8_SRGB);
+                Texture metalRougTexture = textureCache.createTexture(device, metalRoughPath, VK_FORMAT_R8G8B8A8_SRGB);
 
                 meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
                         meshData.indices().length, texture, normalMapTexture, metalRougTexture, material);
