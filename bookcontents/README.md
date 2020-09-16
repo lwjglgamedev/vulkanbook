@@ -12,5 +12,6 @@ The book is structured in the following chapters:
 - [Chapter 07](chapter-07/chapter-07.md): In this chapter we go 3D by implementing depth testing and add windows resizing support.
 - [Chapter 08](chapter-08/chapter-08.md): In this chapter we add support for loading complex 3D models using Assimp and textures.
 - [Chapter 09](chapter-09/chapter-09.md): We will automatically generate mipmaps, add support for transparent objects, add a camera to move around the scene and use dynamic uniform objects.
-- [Chapter 10](chapter-09/chapter-10.md): Deferred rendering (I).
-- [Chapter 10](chapter-09/chapter-11.md): Deferred rendering (II).
+- [Chapter 10](chapter-10/chapter-10.md): Deferred rendering (I).
+- [Chapter 11](chapter-11/chapter-11.md): Deferred rendering (II).
+- [Chapter 12](chapter-12/chapter-12.md): Vulkan Memory Allocator and specialization constants.

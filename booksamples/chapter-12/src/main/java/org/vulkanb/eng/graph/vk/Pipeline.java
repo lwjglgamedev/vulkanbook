@@ -60,11 +60,7 @@ public class Pipeline {
             VkPipelineMultisampleStateCreateInfo vkPipelineMultisampleStateCreateInfo =
                     VkPipelineMultisampleStateCreateInfo.callocStack(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO)
-                            .rasterizationSamples(pipeLineCreationInfo.numSamples);
-            if (pipeLineCreationInfo.numSamples > 1) {
-                vkPipelineMultisampleStateCreateInfo.sampleShadingEnable(true);
-                vkPipelineMultisampleStateCreateInfo.minSampleShading(0.2f);
-            }
+                            .rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
 
             VkPipelineDepthStencilStateCreateInfo ds = null;
             if (pipeLineCreationInfo.hasDepthAttachment()) {
@@ -167,7 +163,7 @@ public class Pipeline {
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
                                        boolean hasDepthAttachment, boolean useBlend,
                                        int pushConstantsSize, VertexInputStateInfo viInputStateInfo,
-                                       DescriptorSetLayout[] descriptorSetLayouts, int numSamples) {
+                                       DescriptorSetLayout[] descriptorSetLayouts) {
         public void cleanup() {
             viInputStateInfo.cleanup();
         }

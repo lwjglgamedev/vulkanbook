@@ -13,20 +13,15 @@ public class SpecializationConstants {
     private VkSpecializationMapEntry.Buffer specEntryMap;
     private VkSpecializationInfo specInfo;
 
-    public SpecializationConstants(int numSamples) {
-        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH * 2);
+    public SpecializationConstants() {
+        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);
         data.putInt(0, GraphConstants.MAX_LIGHTS);
-        data.putInt(GraphConstants.INT_LENGTH, numSamples);
 
-        specEntryMap = VkSpecializationMapEntry.calloc(2);
+        specEntryMap = VkSpecializationMapEntry.calloc(1);
         specEntryMap.get(0)
                 .constantID(0)
                 .size(GraphConstants.INT_LENGTH)
                 .offset(0);
-        specEntryMap.get(1)
-                .constantID(1)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(GraphConstants.INT_LENGTH);
 
         specInfo = VkSpecializationInfo.calloc();
         specInfo.pData(data)

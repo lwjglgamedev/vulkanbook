@@ -15,7 +15,6 @@ public class Device {
     private static final Logger LOGGER = LogManager.getLogger();
     private MemoryAllocator memoryAllocator;
     private PhysicalDevice physicalDevice;
-    private boolean sampleRateShading;
     private boolean samplerAnisotropy;
     private VkDevice vkDevice;
 
@@ -35,10 +34,6 @@ public class Device {
             samplerAnisotropy = supportedFeatures.samplerAnisotropy();
             if (samplerAnisotropy) {
                 features.samplerAnisotropy(true);
-            }
-            sampleRateShading = supportedFeatures.sampleRateShading();
-            if (sampleRateShading) {
-                features.sampleRateShading(true);
             }
 
             // Enable all the queue families
@@ -84,10 +79,6 @@ public class Device {
 
     public VkDevice getVkDevice() {
         return vkDevice;
-    }
-
-    public boolean isSampleRateShading() {
-        return sampleRateShading;
     }
 
     public boolean isSamplerAnisotropy() {

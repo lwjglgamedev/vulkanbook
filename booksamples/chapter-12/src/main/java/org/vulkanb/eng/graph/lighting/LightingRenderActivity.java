@@ -19,8 +19,6 @@ import static org.lwjgl.vulkan.VK11.*;
 public class LightingRenderActivity {
 
     private static final String LIGHTING_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/lighting_fragment.glsl";
-    private static final String LIGHTING_FRAGMENT_SHADER_FILE_MULTI_GLSL = "resources/shaders/lighting_fragment_multi.glsl";
-    private static final String LIGHTING_FRAGMENT_SHADER_FILE_MULTI_SPV = LIGHTING_FRAGMENT_SHADER_FILE_MULTI_GLSL + ".spv";
     private static final String LIGHTING_FRAGMENT_SHADER_FILE_SPV = LIGHTING_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String LIGHTING_VERTEX_SHADER_FILE_GLSL = "resources/shaders/lighting_vertex.glsl";
     private static final String LIGHTING_VERTEX_SHADER_FILE_SPV = LIGHTING_VERTEX_SHADER_FILE_GLSL + ".spv";
@@ -52,12 +50,11 @@ public class LightingRenderActivity {
         device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
         auxVec = new Vector4f();
-        int numSamples = attachments[0].getSamples();
-        specializationConstants = new SpecializationConstants(numSamples);
+        specializationConstants = new SpecializationConstants();
 
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
-        createShaders(numSamples);
+        createShaders();
         createDescriptorPool();
         createUniforms(numImages);
         createDescriptorSets(attachments, numImages);
@@ -128,23 +125,21 @@ public class LightingRenderActivity {
     private void createPipeline() {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false, 0,
-                new EmptyVertexBufferStructure(), descriptorSetLayouts, VK_SAMPLE_COUNT_1_BIT);
+                new EmptyVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
 
-    private void createShaders(int numSamples) {
+    private void createShaders() {
         EngineProperties engineProperties = EngineProperties.getInstance();
         if (engineProperties.isShaderRecompilation()) {
             ShaderCompiler.compileShaderIfChanged(LIGHTING_VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
             ShaderCompiler.compileShaderIfChanged(LIGHTING_FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
-            ShaderCompiler.compileShaderIfChanged(LIGHTING_FRAGMENT_SHADER_FILE_MULTI_GLSL, Shaderc.shaderc_glsl_fragment_shader);
         }
-        String fragmentShaderFile = numSamples > 1 && device.isSampleRateShading() ? LIGHTING_FRAGMENT_SHADER_FILE_MULTI_SPV : LIGHTING_FRAGMENT_SHADER_FILE_SPV;
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, LIGHTING_VERTEX_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShaderFile,
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, LIGHTING_FRAGMENT_SHADER_FILE_SPV,
                                 specializationConstants.getSpecInfo()),
                 });
     }
@@ -155,9 +150,9 @@ public class LightingRenderActivity {
 
         lightsBuffers = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
-            lightsBuffers[i] = new VulkanBuffer(device,
+            lightsBuffers[i] = new VulkanBuffer(device, (long)
                     GraphConstants.INT_LENGTH * 4 + GraphConstants.VEC4_SIZE * 2 * GraphConstants.MAX_LIGHTS +
-                            GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
     }
@@ -272,6 +267,7 @@ public class LightingRenderActivity {
                               VulkanBuffer lightsBuffer) {
         long mappedMemory = lightsBuffer.map();
         ByteBuffer uniformBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) lightsBuffer.getRequestedSize());
+
         ambientLight.get(0, uniformBuffer);
         int offset = GraphConstants.VEC4_SIZE;
         int numLights = lights != null ? lights.length : 0;
@@ -287,6 +283,7 @@ public class LightingRenderActivity {
             light.getColor().get(offset, uniformBuffer);
             offset += GraphConstants.VEC4_SIZE;
         }
+
         lightsBuffer.unMap();
     }
 }

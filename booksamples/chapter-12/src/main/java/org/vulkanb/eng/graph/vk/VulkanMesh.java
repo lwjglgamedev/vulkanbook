@@ -42,8 +42,8 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
-        long mapppedMemory = srcBuffer.map();
-        IntBuffer data = MemoryUtil.memIntBuffer(mapppedMemory, (int) srcBuffer.getRequestedSize());
+        long mappedMemory = srcBuffer.map();
+        IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
         data.put(indices);
         srcBuffer.unMap();
 
@@ -68,9 +68,9 @@ public class VulkanMesh {
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
         long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
 
         int rows = positions.length / 3;
-        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
         for (int row = 0; row < rows; row++) {
             int startPos = row * 3;
             int startTextCoord = row * 2;

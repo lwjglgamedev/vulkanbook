@@ -3,12 +3,9 @@ package org.vulkanb.eng.graph.geometry;
 import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkExtent2D;
-import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
-
-import static org.lwjgl.vulkan.VK10.VK_SAMPLE_COUNT_1_BIT;
 
 public class GeometryFrameBuffer {
 
@@ -17,7 +14,6 @@ public class GeometryFrameBuffer {
     private FrameBuffer frameBuffer;
     private GeometryAttachments geometryAttachments;
     private GeometryRenderPass geometryRenderPass;
-    private int numSamples;
 
     public GeometryFrameBuffer(SwapChain swapChain) {
         LOGGER.debug("Creating GeometryFrameBuffer");
@@ -37,17 +33,7 @@ public class GeometryFrameBuffer {
         VkExtent2D extent2D = swapChain.getSwapChainExtent();
         int width = extent2D.width();
         int height = extent2D.height();
-
-        numSamples = VK_SAMPLE_COUNT_1_BIT;
-        EngineProperties engProps = EngineProperties.getInstance();
-        int requestedSamples = engProps.getMultiSampling();
-        Device device = swapChain.getDevice();
-        if (requestedSamples > 0 && device.isSampleRateShading()) {
-            numSamples = device.getPhysicalDevice().supportsSampleCount(requestedSamples) ? requestedSamples : VK_SAMPLE_COUNT_1_BIT;
-        }
-        LOGGER.debug("Requested [{}] samples, using [{}]", requestedSamples, numSamples);
-
-        geometryAttachments = new GeometryAttachments(swapChain.getDevice(), width, height, numSamples);
+        geometryAttachments = new GeometryAttachments(swapChain.getDevice(), width, height);
     }
 
     private void createFrameBuffer(SwapChain swapChain) {
@@ -72,10 +58,6 @@ public class GeometryFrameBuffer {
         return frameBuffer;
     }
 
-    public int getNumSamples() {
-        return numSamples;
-    }
-
     public GeometryRenderPass getRenderPass() {
         return geometryRenderPass;
     }
@@ -85,9 +67,5 @@ public class GeometryFrameBuffer {
         geometryAttachments.cleanup();
         createAttachments(swapChain);
         createFrameBuffer(swapChain);
-    }
-
-    public void setNumSamples(int numSamples) {
-        this.numSamples = numSamples;
     }
 }
