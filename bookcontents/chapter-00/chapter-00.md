@@ -56,7 +56,7 @@ You will also need the following:
 
 - The Vulkan [SDK](https://vulkan.lunarg.com/).
 
-Bring your own IDE.
+Bring your own IDE. However, since it is a multi-module project it is advised to open each chapter independently. If you still want to work with the root project, please be aware that you will net to set the working directory to the root of each of the sub-projects you want to run. The resources (such as 3D models, shaders and textures are loaded using relative paths to the working directory).
 
 ## Resources used for writing this book
 

@@ -6,7 +6,7 @@ In this chapter we will set up all the base code required to define a basic rend
 
 The base requirements to run the samples of this book are:
 
-- [Java version 14](https://jdk.java.net/14/) or higher.
+- [Java version 15](https://jdk.java.net/15/) or higher.
 - Maven 3.6.X or higher to build the samples. Building the samples with maven will create a jar file, under the target folder, and the required folders with the dependencies and the resources. You can execute them from the command line just by using `java -jar <name_of_the_sample.jar>`.
 - Using an IDE is optional. Personally I'm using [IntelliJ IDEA](https://www.jetbrains.com/es-es/idea/). If you're using an IDE, you may let it compile and run it for you.
 

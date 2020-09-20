@@ -104,7 +104,7 @@
         <built.by>vulkanb</built.by>
         <main.class>org.vulkanb.Main</main.class>
         <!-- Versions -->
-        <java.version>14</java.version>
+        <java.version>15</java.version>
 
         <joml.version>1.9.25</joml.version>
         <log4j.version>2.13.3</log4j.version>
