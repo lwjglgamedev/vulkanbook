@@ -6,13 +6,12 @@ import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
-public class Window implements GLFWFramebufferSizeCallbackI {
+public class Window {
 
-    private int height;
-    private MouseInput mouseInput;
+    private final MouseInput mouseInput;
+    private final long windowHandle;
     private boolean resized;
-    private int width;
-    private long windowHandle;
+    private int width, height;
 
     public Window(String title) {
         this(title, null);
@@ -74,11 +73,6 @@ public class Window implements GLFWFramebufferSizeCallbackI {
 
     public long getWindowHandle() {
         return windowHandle;
-    }
-
-    @Override
-    public void invoke(long handle, int width, int height) {
-        resize(width, height);
     }
 
     public boolean isKeyPressed(int keyCode) {
