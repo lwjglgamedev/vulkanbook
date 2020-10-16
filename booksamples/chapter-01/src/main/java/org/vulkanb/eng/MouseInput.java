@@ -6,7 +6,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 public class MouseInput {
 
-    private final Vector2f currentPos,  previousPos;
+    private final Vector2f currentPos, previousPos;
     private final Vector2f displVec;
 
     private boolean inWindow;

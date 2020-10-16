@@ -1,4 +1,4 @@
-[Previous chapter](../chapter-01/chapter-01.md)
+[Previous chapter](../chapter-00/chapter-00.md)
 # Setting Up The Basics
 
 In this chapter we will set up all the base code required to define a basic rendering loop. This game loop will have these responsibilities: constantly render new frames; get user inputs; and update the game or application state. The code presented here is not directly related to Vulkan, but rather the starting point before we dive right in. You will see something similar in any other application independently of the specific API they use (this is the reason why we will mainly use large chunks of code here, without explaining step of step every detail).

@@ -41,8 +41,8 @@ public class Instance {
                     .apiVersion(VK_API_VERSION_1_1);
 
             // Validation layers
-            String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;
-            int numValidationLayers = validationLayers != null ? validationLayers.length : 0;
+            List<String> validationLayers = getSupportedValidationLayers(stack);
+            int numValidationLayers = validationLayers.size();
             boolean supportsValidation = validate;
             if (validate && numValidationLayers == 0) {
                 supportsValidation = false;
@@ -55,8 +55,8 @@ public class Instance {
             if (supportsValidation) {
                 requiredLayers = stack.mallocPointer(numValidationLayers);
                 for (int i = 0; i < numValidationLayers; i++) {
-                    LOGGER.debug("Using validation layer [{}]", validationLayers[i]);
-                    requiredLayers.put(i, stack.ASCII(validationLayers[i]));
+                    LOGGER.debug("Using validation layer [{}]", validationLayers.get(i));
+                    requiredLayers.put(i, stack.ASCII(validationLayers.get(i)));
                 }
             }
 
@@ -77,19 +77,17 @@ public class Instance {
             }
             requiredExtensions.flip();
 
-            long extension = MemoryUtil.NULL;
-            if (supportsValidation) {
-                debugUtils = createDebugCallBack();
-                extension = debugUtils.address();
-            }
-
             // Create instance info
             VkInstanceCreateInfo instanceInfo = VkInstanceCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
-                    .pNext(extension)
                     .pApplicationInfo(appInfo)
                     .ppEnabledLayerNames(requiredLayers)
                     .ppEnabledExtensionNames(requiredExtensions);
+
+            if (supportsValidation) {
+                debugUtils = createDebugCallBack();
+                instanceInfo.pNext(debugUtils.address());
+            }
 
             PointerBuffer pInstance = stack.mallocPointer(1);
             vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
@@ -97,15 +95,15 @@ public class Instance {
 
             vkDebugHandle = VK_NULL_HANDLE;
             if (supportsValidation) {
-                LongBuffer longBuff = stack.mallocLong(1);
-                vkCheck(vkCreateDebugUtilsMessengerEXT(vkInstance, debugUtils, null, longBuff), "Error creating debug utils");
-                vkDebugHandle = longBuff.get(0);
+                LongBuffer pMessenger = stack.mallocLong(1);
+                vkCheck(vkCreateDebugUtilsMessengerEXT(vkInstance, debugUtils, null, pMessenger), "Error creating debug utils");
+                vkDebugHandle = pMessenger.get(0);
             }
         }
     }
 
     private static VkDebugUtilsMessengerCreateInfoEXT createDebugCallBack() {
-        VkDebugUtilsMessengerCreateInfoEXT result = VkDebugUtilsMessengerCreateInfoEXT
+        return VkDebugUtilsMessengerCreateInfoEXT
                 .calloc()
                 .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
                 .messageSeverity(MESSAGE_SEVERITY_BITMASK)
@@ -124,7 +122,6 @@ public class Instance {
                     LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     return VK_FALSE;
                 });
-        return result;
     }
 
     public void cleanup() {
@@ -138,15 +135,15 @@ public class Instance {
         vkDestroyInstance(vkInstance, null);
     }
 
-    private String[] getSupportedValidationLayers(MemoryStack stack) {
-        Set<String> supportedLayers = new HashSet<>();
-        int[] numLayersArr = new int[1];
-        vkEnumerateInstanceLayerProperties(numLayersArr, null);
-        int numLayers = numLayersArr[0];
+    private List<String> getSupportedValidationLayers(MemoryStack stack) {
+        List<String> supportedLayers = new ArrayList<>();
+        IntBuffer pPropertyCount = stack.mallocInt(1);
+        vkEnumerateInstanceLayerProperties(pPropertyCount, null);
+        int numLayers = pPropertyCount.get(0);
         LOGGER.debug("Instance supports [{}] layers", numLayers);
 
         VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
-        vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
+        vkEnumerateInstanceLayerProperties(pPropertyCount, propsBuf);
         for (int i = 0; i < numLayers; i++) {
             VkLayerProperties props = propsBuf.get(i);
             String layerName = props.layerNameString();
@@ -171,15 +168,18 @@ public class Instance {
                 {"VK_LAYER_LUNARG_core_validation"}
         };
 
-        String[] selectedLayers = null;
+        List<String> selectedLayers = new ArrayList<>();
         for (String[] layers : validationLayers) {
             boolean supported = true;
-            for (String layerName : layers) {
-                supported = supported && supportedLayers.contains(layerName);
+            for (String layer : layers) {
+                if (!supportedLayers.contains(layer)) {
+                    supported = false;
+                    break;
+                }
             }
             if (supported) {
-                selectedLayers = layers;
-                break;
+                selectedLayers.addAll(Arrays.asList(layers));
+                return selectedLayers;
             }
         }
 
