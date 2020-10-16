@@ -5,18 +5,18 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Engine {
 
-    private IAppLogic appLogic;
-    private Render render;
+    private final IAppLogic appLogic;
+    private final Render render;
+    private final Scene scene;
+    private final Window window;
+
     private boolean running;
-    private Scene scene;
-    private Window window;
 
     public Engine(String windowTitle, IAppLogic gameLogic) {
         window = new Window(windowTitle);
-        render = new Render();
         appLogic = gameLogic;
         scene = new Scene(window);
-        render.init(window, scene);
+        render = new Render(window, scene);
         appLogic.init(window, scene, render);
     }
 

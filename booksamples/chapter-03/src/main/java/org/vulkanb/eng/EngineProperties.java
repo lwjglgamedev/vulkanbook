@@ -10,7 +10,6 @@ public class EngineProperties {
     private static final String FILENAME = "eng.properties";
     private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
-    private String physDeviceName;
     private int ups;
     private boolean validate;
 
@@ -22,7 +21,6 @@ public class EngineProperties {
             props.load(stream);
             ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
             validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
-            physDeviceName = props.getProperty("physdeviceName");
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -33,10 +31,6 @@ public class EngineProperties {
             instance = new EngineProperties();
         }
         return instance;
-    }
-
-    public String getPhysDeviceName() {
-        return physDeviceName;
     }
 
     public int getUps() {

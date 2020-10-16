@@ -430,13 +430,14 @@ Finally, we can use the Instance class in our `Render` class, in the `init` and 
 ```java
 public class Render {
     ...
-    public void cleanup() {
-        instance.cleanup();
-    }
 
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
+    }
+
+    public void cleanup() {
+        instance.cleanup();
     }
     ...
 }

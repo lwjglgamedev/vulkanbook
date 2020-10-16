@@ -6,7 +6,6 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
 import java.nio.IntBuffer;
-import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -14,57 +13,55 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class PhysicalDevice {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private VkExtensionProperties.Buffer vkDeviceExtensions;
-    private VkPhysicalDeviceMemoryProperties vkMemoryProperties;
-    private VkPhysicalDevice vkPhysicalDevice;
-    private VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
-    private VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
-    private VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
+    private final VkExtensionProperties.Buffer vkDeviceExtensions;
+    private final VkPhysicalDeviceMemoryProperties vkMemoryProperties;
+    private final VkPhysicalDevice vkPhysicalDevice;
+    private final VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
+    private final VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
+    private final VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
 
     private PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             this.vkPhysicalDevice = vkPhysicalDevice;
 
-            IntBuffer intBuffer = stack.mallocInt(1);
+            IntBuffer pPropertyCount = stack.mallocInt(1);
 
             // Get device properties
             vkPhysicalDeviceProperties = VkPhysicalDeviceProperties.calloc();
-            vkGetPhysicalDeviceProperties(this.vkPhysicalDevice, vkPhysicalDeviceProperties);
+            vkGetPhysicalDeviceProperties(vkPhysicalDevice, vkPhysicalDeviceProperties);
 
             // Get device extensions
-            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, null),
+            vkCheck(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, (String) null, pPropertyCount, null),
                     "Failed to get number of device extension properties");
-            vkDeviceExtensions = VkExtensionProperties.calloc(intBuffer.get(0));
-            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
+            vkDeviceExtensions = VkExtensionProperties.calloc(pPropertyCount.get(0));
+            vkCheck(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, (String) null, pPropertyCount, vkDeviceExtensions),
                     "Failed to get extension properties");
 
             // Get Queue family properties
-            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, null);
-            vkQueueFamilyProps = VkQueueFamilyProperties.calloc(intBuffer.get(0));
-            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, vkQueueFamilyProps);
+            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, pPropertyCount, null);
+            vkQueueFamilyProps = VkQueueFamilyProperties.calloc(pPropertyCount.get(0));
+            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, pPropertyCount, vkQueueFamilyProps);
 
             vkPhysicalDeviceFeatures = VkPhysicalDeviceFeatures.calloc();
-            vkGetPhysicalDeviceFeatures(this.vkPhysicalDevice, vkPhysicalDeviceFeatures);
+            vkGetPhysicalDeviceFeatures(vkPhysicalDevice, vkPhysicalDeviceFeatures);
 
             // Get Memory information and properties
             vkMemoryProperties = VkPhysicalDeviceMemoryProperties.calloc();
-            vkGetPhysicalDeviceMemoryProperties(this.vkPhysicalDevice, vkMemoryProperties);
+            vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, vkMemoryProperties);
         }
     }
 
-    public static PhysicalDevice createPhysicalDevice(Instance instance, String prefferredDeviceName) {
+    public static PhysicalDevice createPhysicalDevice(Instance instance) {
         LOGGER.debug("Selecting physical devices");
-        PhysicalDevice selectedPhysicalDevice = null;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             // Get available devices
             PointerBuffer pPhysicalDevices = getPhysicalDevices(instance, stack);
-            int numDevices = pPhysicalDevices != null ? pPhysicalDevices.capacity() : 0;
+            int numDevices = pPhysicalDevices.capacity();
             if (numDevices <= 0) {
                 throw new RuntimeException("No physical devices found");
             }
 
             // Populate available devices
-            List<PhysicalDevice> devices = new ArrayList<>();
             for (int i = 0; i < numDevices; i++) {
                 VkPhysicalDevice vkPhysicalDevice = new VkPhysicalDevice(pPhysicalDevices.get(i), instance.getVkInstance());
                 PhysicalDevice physicalDevice = new PhysicalDevice(vkPhysicalDevice);
@@ -72,46 +69,29 @@ public class PhysicalDevice {
                 String deviceName = physicalDevice.getDeviceName();
                 if (physicalDevice.hasGraphicsQueueFamily() && physicalDevice.hasKHRSwapChainExtension()) {
                     LOGGER.debug("Device [{}] supports required extensions", deviceName);
-                    if (prefferredDeviceName != null && prefferredDeviceName.equals(deviceName)) {
-                        selectedPhysicalDevice = physicalDevice;
-                        break;
-                    }
-                    devices.add(physicalDevice);
+                    LOGGER.debug("Selected device: [{}]", deviceName);
+                    return physicalDevice;
                 } else {
                     LOGGER.debug("Device [{}] does not support required extensions", deviceName);
-                    physicalDevice.cleanup();
                 }
-            }
-
-            // No preferred device or it does not meet requirements, just pick the first one
-            selectedPhysicalDevice = selectedPhysicalDevice == null && !devices.isEmpty() ? devices.remove(0) : selectedPhysicalDevice;
-
-            // Clean up non-selected devices
-            for (PhysicalDevice physicalDevice : devices) {
                 physicalDevice.cleanup();
             }
 
-            if (selectedPhysicalDevice == null) {
-                throw new RuntimeException("No suitable physical devices found");
-            }
-            LOGGER.debug("Selected device: [{}]", selectedPhysicalDevice.getDeviceName());
+            throw new RuntimeException("No suitable physical devices found");
         }
-
-        return selectedPhysicalDevice;
     }
 
     protected static PointerBuffer getPhysicalDevices(Instance instance, MemoryStack stack) {
-        PointerBuffer pPhysicalDevices;
         // Get number of physical devices
-        IntBuffer intBuffer = stack.mallocInt(1);
-        vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, null),
+        IntBuffer pPhysicalDeviceCount = stack.mallocInt(1);
+        vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), pPhysicalDeviceCount, null),
                 "Failed to get number of physical devices");
-        int numDevices = intBuffer.get(0);
+        int numDevices = pPhysicalDeviceCount.get(0);
         LOGGER.debug("Detected {} physical device(s)", numDevices);
 
         // Populate physical devices list pointer
-        pPhysicalDevices = stack.mallocPointer(numDevices);
-        vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, pPhysicalDevices),
+        PointerBuffer pPhysicalDevices = stack.mallocPointer(numDevices);
+        vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), pPhysicalDeviceCount, pPhysicalDevices),
                 "Failed to get physical devices");
         return pPhysicalDevices;
     }
@@ -152,28 +132,26 @@ public class PhysicalDevice {
     }
 
     private boolean hasGraphicsQueueFamily() {
-        boolean result = false;
-        int numQueueFamilies = vkQueueFamilyProps != null ? vkQueueFamilyProps.capacity() : 0;
-        for (int i = 0; i < numQueueFamilies; i++) {
-            VkQueueFamilyProperties familyProps = vkQueueFamilyProps.get(i);
-            if ((familyProps.queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0) {
-                result = true;
-                break;
+        if (vkQueueFamilyProps != null) {
+            for (int i = 0; i < vkQueueFamilyProps.capacity(); i++) {
+                VkQueueFamilyProperties familyProps = vkQueueFamilyProps.get(i);
+                if ((familyProps.queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0) {
+                    return true;
+                }
             }
         }
-        return result;
+        return false;
     }
 
     private boolean hasKHRSwapChainExtension() {
-        boolean result = false;
-        int numExtensions = vkDeviceExtensions != null ? vkDeviceExtensions.capacity() : 0;
-        for (int i = 0; i < numExtensions; i++) {
-            String extensionName = vkDeviceExtensions.get(i).extensionNameString();
-            if (KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME.equals(extensionName)) {
-                result = true;
-                break;
+        if (vkDeviceExtensions != null) {
+            for (int i = 0; i < vkDeviceExtensions.capacity(); i++) {
+                String extensionName = vkDeviceExtensions.get(i).extensionNameString();
+                if (KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME.equals(extensionName)) {
+                    return true;
+                }
             }
         }
-        return result;
+        return false;
     }
 }

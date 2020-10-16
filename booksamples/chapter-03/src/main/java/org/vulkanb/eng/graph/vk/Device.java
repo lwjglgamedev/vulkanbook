@@ -13,8 +13,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class Device {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private PhysicalDevice physicalDevice;
-    private VkDevice vkDevice;
+    private final PhysicalDevice physicalDevice;
+    private final VkDevice vkDevice;
 
     public Device(PhysicalDevice physicalDevice) {
         LOGGER.debug("Creating device");
@@ -47,10 +47,10 @@ public class Device {
                     .pEnabledFeatures(features)
                     .pQueueCreateInfos(queueCreationInfoBuf);
 
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),
+            PointerBuffer pDevice = stack.mallocPointer(1);
+            vkCheck(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pDevice),
                     "Failed to create device");
-            vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
+            vkDevice = new VkDevice(pDevice.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
         }
     }
 

@@ -14,10 +14,9 @@ public class Engine {
 
     public Engine(String windowTitle, IAppLogic gameLogic) {
         window = new Window(windowTitle);
-        render = new Render();
         appLogic = gameLogic;
         scene = new Scene(window);
-        render.init(window, scene);
+        render = new Render(window, scene);
         appLogic.init(window, scene, render);
     }
 

@@ -11,7 +11,7 @@ public class Queue {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private VkQueue vkQueue;
+    private final VkQueue vkQueue;
 
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
         LOGGER.debug("Creating queue");
@@ -39,23 +39,16 @@ public class Queue {
         }
 
         private static int getGraphicsQueueFamilyIndex(Device device) {
-            int index = -1;
             PhysicalDevice physicalDevice = device.getPhysicalDevice();
             VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
-            int numQueuesFamilies = queuePropsBuff.capacity();
-            for (int i = 0; i < numQueuesFamilies; i++) {
-                VkQueueFamilyProperties props = queuePropsBuff.get(i);
-                boolean graphicsQueue = (props.queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0;
-                if (graphicsQueue) {
-                    index = i;
-                    break;
+
+            for (int i = 0; i < queuePropsBuff.capacity(); i++) {
+                if ((queuePropsBuff.get(i).queueFlags() & VK_QUEUE_GRAPHICS_BIT) != 0) {
+                    return i;
                 }
             }
 
-            if (index < 0) {
-                throw new RuntimeException("Failed to get graphics Queue family index");
-            }
-            return index;
+            throw new RuntimeException("Failed to get graphics Queue family index");
         }
     }
 }

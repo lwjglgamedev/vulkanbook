@@ -10,15 +10,16 @@ import java.nio.LongBuffer;
 public class Surface {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private PhysicalDevice physicalDevice;
-    private long vkSurface;
+
+    private final PhysicalDevice physicalDevice;
+    private final long vkSurface;
 
     public Surface(PhysicalDevice physicalDevice, long windowHandle) {
         LOGGER.debug("Creating Vulkan surface");
         this.physicalDevice = physicalDevice;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer pSurface = stack.mallocLong(1);
-            GLFWVulkan.glfwCreateWindowSurface(this.physicalDevice.getVkPhysicalDevice().getInstance(), windowHandle,
+            GLFWVulkan.glfwCreateWindowSurface(physicalDevice.getVkPhysicalDevice().getInstance(), windowHandle,
                     null, pSurface);
             vkSurface = pSurface.get(0);
         }
