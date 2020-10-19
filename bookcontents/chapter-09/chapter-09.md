@@ -35,6 +35,7 @@ public class Pipeline {
 ```
 
 For each of the output color attachments, we need to setup the blending by filing up a `VkPipelineColorBlendAttachmentState` structure. Up to now, we just had set up the `colorWriteMask`. Now we need to set up the following attributes:
+
 - `blendEnable`: We need to enable blending to support transparent objects. By setting this attribute to `true` the colors are mixed when rendering.
 - `colorBlendOp`: Defines the blending operation for the RGB components. In this case, we are adding source and destination colors, so the resulting color components will be calculated according to this formula: `R = Rs0 × Sr + Rd × Dr`, `G = Gs0 × Sg + Gd × Dg` and `B = Bs0 × Sb + Bd × Db`. As you can see, source and destination colors are added modulated by some factors (`Sx` for source colors and `Dx` for destination colors). Source color is the new color to be mixed, and destination color is the one already present in the color attachment.
 - `alphaBlendOp`: Defines the blending operation for the alpha components. In this case we are also adding source and destination colors: `As0 × Sa + Ad × Da`. As you can see, again, source and destination colors are added modulated by some factors (`Sa` for source and `Da` for destination). 
@@ -44,6 +45,7 @@ For each of the output color attachments, we need to setup the blending by filin
 - `dstAlphaBlendFactor`: This controls the blend factor to be used for the alpha destination component (`Da`). In our case, we set it to the value `VK_BLEND_FACTOR_ZERO`, that is, it will have a zero, ignoring the alpha value of the destination color.
 
 You can try different factors and operations to better match your needs, but, in principle, this is all what is needed to support color blending. This change requires also a modification of the `PipeLineCreationInfo` record. We need to add a new attribute to activate / deactivate the blending named `useBlend`:
+
 ```java
     public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
                                        boolean hasDepthAttachment, boolean useBlend,
@@ -737,6 +739,7 @@ public class ForwardRenderActivity {
 ```
 
 As you can see, we calculate the offset in the buffer, to update the material data by calling the `updateMaterial` data:
+
 ```java
 public class ForwardRenderActivity {
     ...
@@ -749,6 +752,7 @@ public class ForwardRenderActivity {
     ...
 }
 ```
+
 In the `updateMaterial` method, we just map the buffer and dump the material diffuse color to the appropriate offset. 
 
 Finally, we just need to update a little bit the way we record the commands to bind the additional descriptor sets and to use the dynamic uniform buffers:
@@ -793,7 +797,7 @@ The last step is to change the `Main` class to use the camera and a new model. I
 public class Main implements IAppLogic {
     ...
     private static final float MOUSE_SENSITIVITY = 0.1f;
-    private static final float MOVEMENT_SPEED = 100.0f / 1E9f;
+    private static final float MOVEMENT_SPEED = 10.0f / 1E9f;
     ...
     public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
         float move = diffTimeMilisec * MOVEMENT_SPEED;
@@ -838,11 +842,10 @@ public class Main implements IAppLogic {
         render.loadMeshes(meshDataList);
 
         Entity sponzaEntity = new Entity("SponzaEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
-        sponzaEntity.setScale(0.5f);
         scene.addEntity(sponzaEntity);
 
         Camera camera = scene.getCamera();
-        camera.setPosition(-30.0f, 200.0f, -30.0f);
+        camera.setPosition(0.0f, 5.0f, -0.0f);
         camera.setRotation((float) Math.toRadians(20.0f), (float) Math.toRadians(90.f));
     }
     ...

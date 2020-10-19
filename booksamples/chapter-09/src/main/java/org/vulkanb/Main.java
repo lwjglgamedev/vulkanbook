@@ -14,7 +14,7 @@ public class Main implements IAppLogic {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private static final float MOUSE_SENSITIVITY = 0.1f;
-    private static final float MOVEMENT_SPEED = 100.0f / 1E9f;
+    private static final float MOVEMENT_SPEED = 10.0f / 1E9f;
 
     public static void main(String[] args) {
         LOGGER.info("Starting application");
@@ -64,11 +64,10 @@ public class Main implements IAppLogic {
         render.loadMeshes(meshDataList);
 
         Entity sponzaEntity = new Entity("SponzaEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
-        sponzaEntity.setScale(0.5f);
         scene.addEntity(sponzaEntity);
 
         Camera camera = scene.getCamera();
-        camera.setPosition(-30.0f, 200.0f, -30.0f);
+        camera.setPosition(0.0f, 5.0f, 0.0f);
         camera.setRotation((float) Math.toRadians(20.0f), (float) Math.toRadians(90.f));
     }
 }

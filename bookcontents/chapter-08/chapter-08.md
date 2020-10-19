@@ -41,7 +41,8 @@ public class ModelLoader {
     ...
     public static MeshData[] loadMeshes(String id, String modelPath, String texturesDir) {
         return loadMeshes(id, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
-                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace);
+                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace |
+                aiProcess_PreTransformVertices);
     }
     ...
 }
@@ -54,6 +55,7 @@ The `loadMeshes` method receives an identifier associated to all the meshes of t
 - `aiProcess_Triangulate`: This will transform each face of the mesh into a triangle (which is why we expect when loading that data into the GPU). If a face is made up of more than three indices, it will split that face into as many triangles as needed.
 - `aiProcess_FixInfacingNormals`: This tries to identify normals that point inwards and reverse their direction.
 - `aiProcess_CalcTangentSpace`: This calculates the tangents a bitangets for each mesh. We will not use these data immediately, but we will need it when we apply light effects later on.
+- `aiProcess_PreTransformVertices`: This removes the node graph and pre-transforms all vertices with the local transformation matrices of their nodes. Keep in mind that this flag cannot be used with animations.
 
 The `loadMeshes` method version which accepts the flags as a parameter is defined like this:
 
@@ -922,6 +924,7 @@ public class Device {
 ```
 
 It is turn now to create the texture descriptor set. We will first create an abstract class named `DescriptorSet` which will contain the handle for a descriptor set. This class will be extended by each descriptor set type we will create.
+
 ```java
 package org.vulkanb.eng.graph.vk;
 
@@ -934,6 +937,7 @@ public abstract class DescriptorSet {
     }
 }
 ```
+
 Then we can define a new class named `TextureDescriptorSet` for handling descriptor sets associated to textures. Its constructor starts like this:
 
 ```java
@@ -1205,6 +1209,7 @@ public class ForwardRenderActivity {
 First we create the descriptor set layouts. Once we have those, we can create the descriptor pool. In this case we will create just one descriptor for a single texture and a single descriptor for the projection matrix. We also create a texture sampler. Warning note: If the uniform could be updated in each frame, we would need as many descriptors as swap chain images we have. If not, we could be updating the descriptor set contents while still being used in rendering another frame. We also create a map, that we will use for the textures. We will store the descriptors associated to each texture indexed by the file used to load it.
 
 Going back to the `ForwardRenderActivity` constructor, the projection matrix only will be updated when resizing and when that occurs we will not be drawing anything, so it is safe to have just one. We initialize the buffer associated to the projection uniform by calling the `copyMatrixToBuffer` method from the `VulkanUtils` class:
+
 ```java
 public class ForwardRenderActivity {
     ...
@@ -1215,7 +1220,9 @@ public class ForwardRenderActivity {
     ...
 }
 ```
+
 The `copyMatrixToBuffer` method  is defined like this:
+
 ```java
 public class VulkanUtils {
     ...
@@ -1228,6 +1235,7 @@ public class VulkanUtils {
     ...
 }
 ```
+
 The `copyMatrixToBuffer` method is quite simple, we just map the memory associated to a buffer and copy the  matrix passed as parameter to that region. We need also to modify the `cleanup` method to free the new resources:
 
 ```java

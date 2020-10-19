@@ -1143,7 +1143,7 @@ float metallic, float roughness) {
 vec3 calculatePointLight(Light light, vec3 position, vec3 normal, vec3 color,
 float metallic, float roughness) {
     vec3 lightDirection = light.position.xyz - position;
-    float dist = length(lightDirection) * 0.005;
+    float dist = length(lightDirection) * 0.2;
     float attenuation = 1.0 / (dist * dist);
     return calculateLight(light, lightDirection, position, normal, color, metallic, roughness,
     attenuation);
@@ -1239,7 +1239,7 @@ public class Main implements IAppLogic {
         lights.add(directionalLight);
 
         Light light = new Light();
-        light.getPosition().set(0, 40, 0, 1.0f);
+        light.getPosition().set(0, 1, 0, 1.0f);
         light.getColor().set(0.0f, 1.0f, 0.0f, 1.0f);
         lights.add(light);
 

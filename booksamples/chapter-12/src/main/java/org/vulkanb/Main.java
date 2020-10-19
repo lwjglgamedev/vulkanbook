@@ -91,11 +91,10 @@ public class Main implements IAppLogic {
         render.loadMeshes(meshDataList);
 
         Entity sponzaEntity = new Entity("SponzaEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
-        sponzaEntity.setScale(0.5f);
         scene.addEntity(sponzaEntity);
 
         Camera camera = scene.getCamera();
-        camera.setPosition(-30.0f, 200.0f, -30.0f);
+        camera.setPosition(0.0f, 5.0f, 0.0f);
         camera.setRotation((float) Math.toRadians(20.0f), (float) Math.toRadians(90.f));
 
         scene.getAmbientLight().set(0.2f, 0.2f, 0.2f, 1.0f);
@@ -106,7 +105,7 @@ public class Main implements IAppLogic {
         lights.add(directionalLight);
 
         Light light = new Light();
-        light.getPosition().set(0, 40, 0, 1.0f);
+        light.getPosition().set(0, 1, 0, 1.0f);
         light.getColor().set(0.0f, 1.0f, 0.0f, 1.0f);
         lights.add(light);
 

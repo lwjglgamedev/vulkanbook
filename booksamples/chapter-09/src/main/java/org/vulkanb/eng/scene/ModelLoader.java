@@ -58,7 +58,8 @@ public class ModelLoader {
 
     public static MeshData[] loadMeshes(String id, String modelPath, String texturesDir) {
         return loadMeshes(id, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
-                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace);
+                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace |
+                aiProcess_PreTransformVertices);
     }
 
     protected static List<Integer> processIndices(AIMesh aiMesh) {
