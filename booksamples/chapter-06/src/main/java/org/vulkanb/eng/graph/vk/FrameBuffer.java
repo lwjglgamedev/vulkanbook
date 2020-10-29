@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class FrameBuffer {
@@ -26,16 +26,16 @@ public class FrameBuffer {
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateFramebuffer(device.getVkDevice(), fci, null, lp),
                     "Failed to create FrameBuffer");
-            this.vkFrameBuffer = lp.get(0);
+            vkFrameBuffer = lp.get(0);
         }
     }
 
-    public void cleanUp() {
-        vkDestroyFramebuffer(this.device.getVkDevice(), this.vkFrameBuffer, null);
+    public void cleanup() {
+        vkDestroyFramebuffer(device.getVkDevice(), vkFrameBuffer, null);
     }
 
     public long getVkFrameBuffer() {
-        return this.vkFrameBuffer;
+        return vkFrameBuffer;
     }
 
 }

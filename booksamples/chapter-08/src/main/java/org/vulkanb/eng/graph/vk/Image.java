@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Image {
@@ -41,11 +41,11 @@ public class Image {
 
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateImage(device.getVkDevice(), imageCreateInfo, null, lp), "Failed to create image");
-            this.vkImage = lp.get(0);
+            vkImage = lp.get(0);
 
             // Get memory requirements for this object
             VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
-            vkGetImageMemoryRequirements(device.getVkDevice(), this.getVkImage(), memReqs);
+            vkGetImageMemoryRequirements(device.getVkDevice(), getVkImage(), memReqs);
 
             // Select memory size and type
             VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
@@ -56,21 +56,21 @@ public class Image {
 
             // Allocate memory
             vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
-            this.vkMemory = lp.get(0);
+            vkMemory = lp.get(0);
 
             // Bind memory
-            vkCheck(vkBindImageMemory(device.getVkDevice(), this.getVkImage(), this.getVkMemory(), 0),
+            vkCheck(vkBindImageMemory(device.getVkDevice(), getVkImage(), getVkMemory(), 0),
                     "Failed to bind image memory");
         }
     }
 
-    public void cleanUp() {
-        vkDestroyImage(this.device.getVkDevice(), this.vkImage, null);
-        vkFreeMemory(this.device.getVkDevice(), this.vkMemory, null);
+    public void cleanup() {
+        vkDestroyImage(device.getVkDevice(), vkImage, null);
+        vkFreeMemory(device.getVkDevice(), vkMemory, null);
     }
 
     public int getFormat() {
-        return this.format;
+        return format;
     }
 
     public int getMipLevels() {
@@ -78,11 +78,11 @@ public class Image {
     }
 
     public long getVkImage() {
-        return this.vkImage;
+        return vkImage;
     }
 
     public long getVkMemory() {
-        return this.vkMemory;
+        return vkMemory;
     }
 
 }

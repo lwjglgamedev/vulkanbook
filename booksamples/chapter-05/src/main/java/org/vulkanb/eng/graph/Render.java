@@ -16,38 +16,38 @@ public class Render {
     private Surface surface;
     private SwapChain swapChain;
 
-    public void cleanUp() {
-        this.presentQueue.waitIdle();
-        this.graphQueue.waitIdle();
-        this.device.waitIdle();
-        this.fwdRenderActivity.cleanUp();
-        this.commandPool.cleanUp();
-        this.swapChain.cleanUp();
-        this.surface.cleanUp();
-        this.device.cleanUp();
-        this.physicalDevice.cleanUp();
-        this.instance.cleanUp();
+    public void cleanup() {
+        presentQueue.waitIdle();
+        graphQueue.waitIdle();
+        device.waitIdle();
+        fwdRenderActivity.cleanup();
+        commandPool.cleanup();
+        swapChain.cleanup();
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
     }
 
-    public void init(Window window) {
+    public void init(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
-        this.instance = new Instance(engProps.isValidate());
-        this.physicalDevice = PhysicalDevice.createPhysicalDevice(this.instance, engProps.getPhysDeviceName());
-        this.device = new Device(this.physicalDevice);
-        this.surface = new Surface(this.physicalDevice, window.getWindowHandle());
-        this.graphQueue = new Queue.GraphicsQueue(this.device, 0);
-        this.presentQueue = new Queue.PresentQueue(this.device, this.surface, 0);
-        this.swapChain = new SwapChain(this.device, this.surface, window, engProps.getRequestedImages(),
+        instance = new Instance(engProps.isValidate());
+        physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
+        device = new Device(physicalDevice);
+        surface = new Surface(physicalDevice, window.getWindowHandle());
+        graphQueue = new Queue.GraphicsQueue(device, 0);
+        presentQueue = new Queue.PresentQueue(device, surface, 0);
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
-        this.commandPool = new CommandPool(this.device, this.graphQueue.getQueueFamilyIndex());
-        this.fwdRenderActivity = new ForwardRenderActivity(this.swapChain, this.commandPool);
+        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
+        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool);
     }
 
     public void render(Window window, Scene scene) {
-        this.swapChain.acquireNextImage();
+        swapChain.acquireNextImage();
 
-        this.fwdRenderActivity.submit(this.presentQueue);
+        fwdRenderActivity.submit(presentQueue);
 
-        this.swapChain.presentImage(this.graphQueue);
+        swapChain.presentImage(graphQueue);
     }
 }

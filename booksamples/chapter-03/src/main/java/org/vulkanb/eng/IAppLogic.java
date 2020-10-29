@@ -5,7 +5,7 @@ import org.vulkanb.eng.scene.Scene;
 
 public interface IAppLogic {
 
-    void cleanUp();
+    void cleanup();
 
     void handleInput(Window window, Scene scene, long diffTimeMilisec);
 

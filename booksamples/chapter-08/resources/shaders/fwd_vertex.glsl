@@ -5,14 +5,17 @@ layout(location = 1) in vec2 entityTextCoords;
 
 layout(location = 0) out vec2 textCoords;
 
-layout(push_constant) uniform matrices {
+layout(set = 0, binding = 0) uniform ProjUniform {
     mat4 projectionMatrix;
+} projUniform;
+
+layout(push_constant) uniform matrices {
     mat4 modelMatrix;
 } push_constants;
 
 void main()
 {
-    gl_Position = push_constants.projectionMatrix * push_constants.modelMatrix * vec4(entityPos, 1);
+    gl_Position = projUniform.projectionMatrix * push_constants.modelMatrix * vec4(entityPos, 1);
     textCoords = entityTextCoords;
 }
 

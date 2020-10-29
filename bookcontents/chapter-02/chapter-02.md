@@ -8,17 +8,26 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 Usually you will have a single Vulkan instance for each application, but the spec allows you to have more. A potential use case for having more than one is if you are using a legacy library that already uses Vulkan (maybe even different version) and do you not want that to interfere with your code. You could then setup a separate instance just for your code. We will start from scratch in this book and, therefore, we will use just a single instance.
 
-This part of the book will show you an integral part of using LWJGL as well as a structure for creating Vulkan objects. The former is the MemoryStack, and the latter Vk*Info.
+This part of the book will show you an integral part of using LWJGL as well as a structure for creating Vulkan objects. The former is the `MemoryStack`, and the latter Vk*Info.
 
 Most of the Vulkan-related code will be placed under the package `org.vulkanb.eng.graph.vk`. In this case, we will create a new class named `Instance` to wrap all the initialization code. So let's start by coding the constructor, which starts like this:
 
 ```java
+public class Instance {
+    ...
     public Instance(boolean validate) {
         LOGGER.debug("Creating Vulkan instance");
         try (MemoryStack stack = MemoryStack.stackPush()) {
+            ...
+        }
+        ...
+    }
+    ...
+}
 ```
 
 ### Memory Stack
+
 Before going on, for those who are not familiar with [LWJGL](https://www.lwjgl.org/), we will explain the purpose of the `MemoryStack`. In order to share data with native code, LWJGL uses direct (off-heap) buffers instead of relaying on the [JNI](https://en.wikipedia.org/wiki/Java_Native_Interface) (which would be quite slow). You can think of these buffers as C pointers to a region of memory than can be accessed both by Java and native code. But Java has a major drawback: we cannot allocate objects in the stack, such as in C, even for these direct buffers. This is specially painful for short-lived buffers that may be used to pass some initialization info to native methods.
 
 To solve this, LWJGL comes with the `MemoryStack`, which is basically a direct allocated stack, where we can reserve direct memory when we need to exchange short-lived info with native functions. You can read about all the gory details [here](https://github.com/LWJGL/lwjgl3-wiki/wiki/1.3.-Memory-FAQ). Although is not perfect, it really helps this information sharing, and what is more important, everything allocated in the stack inside a try/catch block is automatically freed (how convenient!) when we exit that block. We will see if [Project Panama](https://openjdk.java.net/projects/panama/) can finally ease the invocation of native code from Java.
@@ -30,10 +39,13 @@ To solve this, LWJGL comes with the `MemoryStack`, which is basically a direct a
 Here you can see the basis of all the Vulkan calls. Almost every Vulkan function will use a structure. Of *those*, almost all of them require a type and context-specific attributes. More often than not, it will also require a pointer to creation information. We will go into detail about what these things mean, working backwards.
 
 ##### vkCreate\*
+
 This method creates a Vulkan object, returning a status number. It comes in the form of
+
 ```java
 public static int vkCreate...(VkDevice or VkInstance, Vk...CreateInfo, VkAllocationCallbacks, LongBuffer);
 ```
+
 This signals to create a Vulkan object, using some things we will set up later. We also use a corresponding CreateInfo struct.
 
 ##### Vk\*CreateInfo
@@ -51,15 +63,23 @@ Sometimes Vulkan expects a list of objects, either with a single element or mult
 Back to the constructor:
 
 ```java
-// Create application information
-ByteBuffer appShortName = stack.UTF8("VulkanBook");
-VkApplicationInfo appInfo = VkApplicationInfo.callocStack(stack)
-        .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
-        .pApplicationName(appShortName)
-        .applicationVersion(1)
-        .pEngineName(appShortName)
-        .engineVersion(0)
-        .apiVersion(VK_VERSION_1_0);
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            // Create application information
+            ByteBuffer appShortName = stack.UTF8("VulkanBook");
+            VkApplicationInfo appInfo = VkApplicationInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
+                    .pApplicationName(appShortName)
+                    .applicationVersion(1)
+                    .pEngineName(appShortName)
+                    .engineVersion(0)
+                    .apiVersion(VK_API_VERSION_1_1);
+        ...
+    }
+    ...
+}
 ```
 
 The structure type parameter sType, which, as its names suggests, defines its type. That is, what information it models from. In this case we are defining our application information with the structure `VkApplicationInfo`. As you can see, we cannot create the usual Java objects, but rather we allocate it through the stack and use the following attributes:
@@ -67,9 +87,9 @@ The structure type parameter sType, which, as its names suggests, defines its ty
 - `sType`: Structure type. In this case: `VK_STRUCTURE_TYPE_APPLICATION_INFO`.
 - `pApplicationName`: It is basically just some text that will identify the application that uses this instance. In this case we use another helper method from the stack class to create a `ByteBuffer` that points to a null-terminated string.
 - `applicationVersion`: The version of our application. You can use the method `VK_VERSION_MAJOR/MINOR/PATCH()` methods to create a more detailed version.
-- `pEngineName`: Null-terminated string.
+- `pEngineName`: The engine name (as a null-terminated string).
 - `engineVersion`: The engine version.
-- `apiVersion`: The version of the Vulkan API. This value should be the highest value of the Vulkan version that his application should use encoded according to what is stated in Vulkan specification (major, minor and patch version). In this case we are using version `1.0.0`. If you are using a newer version that has been ported to Java, use that number.
+- `apiVersion`: The version of the Vulkan API. This value should be the highest value of the Vulkan version that his application should use encoded according to what is stated in Vulkan specification (major, minor and patch version). In this case we are using version `1.1.0`. If you are using a newer version that has been ported to Java, use that number.
 
 Most of the time these attributes are set to `NULL` and `0` respectively. Since we are allocating the structure in the stack using the `callocStack` stack method, all the memory block associated to it will be initialized with zeros, so we do not need to explicitly set up these common attributes.
 
@@ -80,26 +100,40 @@ Vulkan is a layered API. When you read about the Vulkan core, you can think as t
 Our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
 
 ```java
-// Validation layers
-String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;
-int numValidationLayers = validationLayers != null ? validationLayers.length : 0;
-boolean supportsValidation = validate;
-if (validate && numValidationLayers == 0) {
-    supportsValidation = false;
-    LOGGER.warn("Request validation but no supported validation layers found. Falling back to no validation");
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            // Validation layers
+            String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;
+            int numValidationLayers = validationLayers != null ? validationLayers.length : 0;
+            boolean supportsValidation = validate;
+            if (validate && numValidationLayers == 0) {
+                supportsValidation = false;
+                LOGGER.warn("Request validation but no supported validation layers found. Falling back to no validation");
+            }
+            LOGGER.debug("Validation: {}", supportsValidation);
+        ...
+    }
+    ...
 }
-LOGGER.debug("Validation: {}", supportsValidation);
 ```
 
-We will get the supported validation layers by invoking the `getSupportedValidationLayers`. If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution. Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
+We will get the supported validation layers by invoking the `getSupportedValidationLayers`. If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution. In order to use validation layers you need to install the [Vulkan SDK]([Vulkan® SDK - What&#039;s in the SDK - Where to Download](https://www.lunarg.com/vulkan-sdk/)). Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
 
 ```java
-private String[] getSupportedValidationLayers(MemoryStack stack) {
-   Set<String> supportedLayers = new HashSet<>();
-    int[] numLayersArr = new int[1];
-    vkEnumerateInstanceLayerProperties(numLayersArr, null);
-    int numLayers = numLayersArr[0];
-    LOGGER.debug("Instance supports [{}] layers", numLayers);
+public class Instance {
+    ...
+    private String[] getSupportedValidationLayers(MemoryStack stack) {
+        Set<String> supportedLayers = new HashSet<>();
+        int[] numLayersArr = new int[1];
+        vkEnumerateInstanceLayerProperties(numLayersArr, null);
+        int numLayers = numLayersArr[0];
+        LOGGER.debug("Instance supports [{}] layers", numLayers);
+        ...
+    }
+    ...
+}
 ```
 
 We first need to get the number of supported layers, by invoking the `vkEnumerateInstanceLayerProperties` function. This function receives two parameters:
@@ -110,138 +144,196 @@ We first need to get the number of supported layers, by invoking the `vkEnumerat
 This function can be used to get the total number of supported layers, and to get their properties. We need first to get the number, so the first parameter is an array to get the number of layers, and the second parameter is `null`. In order to get the properties we will need to perform a second call to the same function, once we get the total size. The next fragment shows how we do retrieve these properties to get their name and store them in a `Set`.
 
 ```java
-    VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
-    vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
-    for (int i = 0; i < numLayers; i++) {
-        VkLayerProperties props = propsBuf.get(i);
-        String layerName = props.layerNameString();
-        supportedLayers.add(layerName);
-        LOGGER.debug("Supported layer [{}]", layerName);
+public class Instance {
+    ...
+    private String[] getSupportedValidationLayers(MemoryStack stack) {
+        ...
+        VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
+        vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
+        for (int i = 0; i < numLayers; i++) {
+            VkLayerProperties props = propsBuf.get(i);
+            String layerName = props.layerNameString();
+            supportedLayers.add(layerName);
+            LOGGER.debug("Supported layer [{}]", layerName);
+        }
+        ...
     }
+    ...
+}
 ```
 
 Once we have the supported layers, we need to select which ones do we want to activate. In order to do so, we construct a list of the preferred layers like this:
 
 ```java
-String[][] validationLayers = new String[][]{
-    // Preferred one
-    {"VK_LAYER_KHRONOS_validation"},
-    // If not available, check LunarG meta layer
-    {"VK_LAYER_LUNARG_standard_validation"},
-    // If not available, check individual layers
-    {
-        "VK_LAYER_GOOGLE_threading",
-        "VK_LAYER_LUNARG_parameter_validation",
-        "VK_LAYER_LUNARG_object_tracker",
-        "VK_LAYER_LUNARG_core_validation",
-        "VK_LAYER_GOOGLE_unique_objects",
-    },
-    // Last resort
-    {"VK_LAYER_LUNARG_core_validation"}
-};
+public class Instance {
+    ...
+    private String[] getSupportedValidationLayers(MemoryStack stack) {
+        ...
+        String[][] validationLayers = new String[][]{
+                // Preferred one
+                {"VK_LAYER_KHRONOS_validation"},
+                // If not available, check LunarG meta layer
+                {"VK_LAYER_LUNARG_standard_validation"},
+                // If not available, check individual layers
+                {
+                        "VK_LAYER_GOOGLE_threading",
+                        "VK_LAYER_LUNARG_parameter_validation",
+                        "VK_LAYER_LUNARG_object_tracker",
+                        "VK_LAYER_LUNARG_core_validation",
+                        "VK_LAYER_GOOGLE_unique_objects",
+                },
+                // Last resort
+                {"VK_LAYER_LUNARG_core_validation"}
+        };
+        ...
+    }
+    ...
+}
 ```
 
 We first try to aim for the `VK_LAYER_KHRONOS_validation` meta layer. A meta layer is basically a collection of layers registered under a single name. Then we go down in our priority list combining other meta layers or selecting a list of single layers. After that, we basically check the presence of these preferred layers (ordered by priority) to get the ones that are supported (once we match with a preferred meta-layer or list of layers, we just pick that):
 
 ```java
-String[] selectedLayers = null;
-for (String[] layers : validationLayers) {
-    boolean supported = true;
-    for (String layerName : layers) {
-        supported = supported && supportedLayers.contains(layerName);
-    }
-    if (supported) {
-        selectedLayers = layers;
-        break;
-    }
-}
+public class Instance {
+    ...
+    private String[] getSupportedValidationLayers(MemoryStack stack) {
+        ...
+        String[] selectedLayers = null;
+        for (String[] layers : validationLayers) {
+            boolean supported = true;
+            for (String layerName : layers) {
+                supported = supported && supportedLayers.contains(layerName);
+            }
+            if (supported) {
+                selectedLayers = layers;
+                break;
+            }
+        }
 
-return selectedLayers;
+        return selectedLayers;
+    }
+    ...
 }
 ```
 
 Let's get back to the constructor. Now we have a list of the names of the supported layers (array of Strings) we need to transform it to a pointer of a list of null terminated Strings:
-
 ```java
-// Set required  layers
-PointerBuffer requiredLayers = null;
-if (supportsValidation) {
-    requiredLayers = stack.mallocPointer(numValidationLayers);
-    for (int i = 0; i < numValidationLayers; i++) {
-        LOGGER.debug("Using validation layer [{}]", validationLayers[i]);
-        requiredLayers.put(i, stack.ASCII(validationLayers[i]));
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            // Set required  layers
+            PointerBuffer requiredLayers = null;
+            if (supportsValidation) {
+                requiredLayers = stack.mallocPointer(numValidationLayers);
+                for (int i = 0; i < numValidationLayers; i++) {
+                    LOGGER.debug("Using validation layer [{}]", validationLayers[i]);
+                    requiredLayers.put(i, stack.ASCII(validationLayers[i]));
+                }
+            }
+        ...
     }
+    ...
 }
 ```
 
 Now that we've setup all the validation layers, we move on to extensions. Because Vulkan is a cross-platform API, links to windowing systems are handled through extensions. In our case we will be using GLFW, which has extensions for Vulkan, so we need to include this as an extension with the following code:
-
 ```java
-// GLFW Extension
-PointerBuffer glfwExtensions = GLFWVulkan.glfwGetRequiredInstanceExtensions();
-if (glfwExtensions == null) {
-    throw new RuntimeException("Failed to find the GLFW platform surface extensions");
-}
-```
-
-Depending if we have enabled validation or not we will need to add another extension to support debugging:
-
-```java
-PointerBuffer requiredExtensions;
-if (supportsValidation) {
-    // Debug extension
-    ByteBuffer vkDebugReportExtension = stack.UTF8(EXTDebugReport.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-    requiredExtensions = stack.mallocPointer(glfwExtensions.remaining() + 1);
-    requiredExtensions.put(glfwExtensions).put(vkDebugReportExtension);
-} else {
-    requiredExtensions = stack.mallocPointer(glfwExtensions.remaining());
-    requiredExtensions.put(glfwExtensions);
-}
-requiredExtensions.flip();
-```
-
-Additionally, if we have enabled the debug extension, we will be interested in setting a callback, so we can, for example, log the information reported. We have already enabled the debugging extension, but we need to configure it. This is done through an extension structure used while creating the Vulkan instance. As mentioned at the beginning, most of Vulkan creation structures reserve an extension parameter which can be used to configure extension-specific data. Therefore, if validation is enabled, we will execute the following code:
-
-```java
-long extension = MemoryUtil.NULL;
-if (supportsValidation) {
-    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.callocStack(stack)
-        .sType(EXTDebugReport.VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
-        .flags(EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT | EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT)
-        .pfnCallback(DBG_FUNC)
-        .pUserData(MemoryUtil.NULL);
-    extension = dbgCreateInfo.address();
-}
-```
-
-We create an instance of the class `VkDebugReportCallbackCreateInfoEXT`, in which, through the flags attribute we restrict the callbacks to error or warning messages. The callback is set using the `pfnCallback` method. In this case, we have created a function which has been defined like this:
-
-```java
-private static final VkDebugReportCallbackEXT DBG_FUNC = VkDebugReportCallbackEXT.create(
-    (flags, objectType, object, location, messageCode, pLayerPrefix, pMessage, pUserData) -> {
-    String msg = VkDebugReportCallbackEXT.getString(pMessage);
-    Level logLevel = Level.DEBUG;
-    if ((flags & EXTDebugReport.VK_DEBUG_REPORT_INFORMATION_BIT_EXT) != 0) {
-        logLevel = Level.INFO;
-    } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT) != 0) {
-        logLevel = Level.WARN;
-    } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) != 0) {
-        logLevel = Level.WARN;
-    } else if ((flags & EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT) != 0) {
-        logLevel = Level.ERROR;
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            // GLFW Extension
+            PointerBuffer glfwExtensions = GLFWVulkan.glfwGetRequiredInstanceExtensions();
+            if (glfwExtensions == null) {
+                throw new RuntimeException("Failed to find the GLFW platform surface extensions");
+            }
+        ...
     }
-
-    LOGGER.log(logLevel, "VkDebugReportCallbackEXT, messageCode: [{}],  message: [{}]", messageCode, msg);
-
-    return VK_FALSE;
-    }
-);
+    ...
+}
 ```
 
-This method just logs the message reported using an appropriate severity level.
+Depending if we have enabled validation or not we will need to add the extension used for debugging. We will use the `VK_EXT_debug_utils` extension (which should be used instead of older debug extension such as `VK_EXT_debug_report` and `VK_EXT_debug_marker`).
+```java
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            PointerBuffer requiredExtensions;
+            if (supportsValidation) {
+                ByteBuffer vkDebugUtilsExtension = stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                requiredExtensions = stack.mallocPointer(glfwExtensions.remaining() + 1);
+                requiredExtensions.put(glfwExtensions).put(vkDebugUtilsExtension);
+            } else {
+                requiredExtensions = stack.mallocPointer(glfwExtensions.remaining());
+                requiredExtensions.put(glfwExtensions);
+            }
+            requiredExtensions.flip();        
+        ...
+    }
+    ...
+}
+```
 
+Additionally, if we have enabled the debug extension, we will be interested in setting a callback, so we can, for example, log the information reported. We have already enabled the debugging extension, but we need to create it. We also need to pass this extension while creating  the instance to properly log errors while creating and destroying the instance:
+```java
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            long extension = MemoryUtil.NULL;
+            if (supportsValidation) {
+                debugUtils = createDebugCallBack();
+                extension = debugUtils.address();
+            }
+        ...
+    }
+    ...
+}
+```
+This is done in a new method named `createDebugCallBack`:
+```java
+public class Instance {
+    ...
+    public static final int MESSAGE_SEVERITY_BITMASK = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+    public static final int MESSAGE_TYPE_BITMASK = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    ...
+    private static VkDebugUtilsMessengerCreateInfoEXT createDebugCallBack() {
+        VkDebugUtilsMessengerCreateInfoEXT result = VkDebugUtilsMessengerCreateInfoEXT
+                .calloc()
+                .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
+                .messageSeverity(MESSAGE_SEVERITY_BITMASK)
+                .messageType(MESSAGE_TYPE_BITMASK)
+                .pfnUserCallback((messageSeverity, messageTypes, pCallbackData, pUserData) -> {
+                    VkDebugUtilsMessengerCallbackDataEXT callbackData = VkDebugUtilsMessengerCallbackDataEXT.create(pCallbackData);
+                    Level logLevel = Level.DEBUG;
+                    if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0) {
+                        logLevel = Level.INFO;
+                    } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0) {
+                        logLevel = Level.WARN;
+                    } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
+                        logLevel = Level.ERROR;
+                    }
 
-Finally, we have everything we need in order to create the Vulkan instance. In order to do so, we need to setup yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
+                    LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                    return VK_FALSE;
+                });
+        return result;
+    }
+    ...
+}
+```
+In this method, we instantiate a `VkDebugUtilsMessengerCreateInfoEXT` which is defined by the following attributes:
+- `sType`: The type of the structure: `VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT`.
+- `messageSeverity`: This will hold a bit mask with the levels of the messages that we are interested in receiving. In our case, we will receive error and warning messages.
+- `messageType`: This will hold a bit mask with the types of messages that we are interested in receiving. In our case, we will receive validation and performance messages.
+- `pfnUserCallback`:  The function that will be invoked when a message matches the criteria established by the `messageSeverity` and `messageType` fields. In our case, we just log the message with the proper logging level according to the `messageSeverity` parameter.
+
+Finally, going back to the constructor, we have everything we need in order to create the Vulkan instance. In order to do so, we need to setup yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
 
 - Structure type: `VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO`.
 - Next extension: In our case, the debug extension configuration structure or `NULL` if no validation is requested or supported.
@@ -252,17 +344,44 @@ Finally, we have everything we need in order to create the Vulkan instance. In o
 With that structure, we invoke the `vkCreateInstance` function, and we will get a pointer to the Vulkan instance. We store that address as a long attribute named `vkInstance`.
 
 ```java
-// Create instance info
-VkInstanceCreateInfo instanceInfo = VkInstanceCreateInfo.callocStack(stack)
-    .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
-    .pNext(extension)
-    .pApplicationInfo(appInfo)
-    .ppEnabledLayerNames(requiredLayers)
-    .ppEnabledExtensionNames(requiredExtensions);
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            // Create instance info
+            VkInstanceCreateInfo instanceInfo = VkInstanceCreateInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
+                    .pNext(extension)
+                    .pApplicationInfo(appInfo)
+                    .ppEnabledLayerNames(requiredLayers)
+                    .ppEnabledExtensionNames(requiredExtensions);
 
-PointerBuffer pInstance = stack.mallocPointer(1);
-vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
-this.vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
+            PointerBuffer pInstance = stack.mallocPointer(1);
+            vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
+            vkInstance = new VkInstance(pInstance.get(0), instanceInfo);
+            ...
+        }
+    }
+    ...
+}
+```
+
+The last step is to instantiate the debug extension. We have passed its configuration while creating the Vulkan instance, but this will only be used in the instance creation and destruction phases. For the rest of the code, we will need to instantiate by calling the `vkCreateDebugUtilsMessengerEXT` Vulkan function.
+```java
+public class Instance {
+    ...
+    public Instance(boolean validate) {
+        ...
+            vkDebugHandle = VK_NULL_HANDLE;
+            if (supportsValidation) {
+                LongBuffer longBuff = stack.mallocLong(1);
+                vkCheck(vkCreateDebugUtilsMessengerEXT(vkInstance, debugUtils, null, longBuff), "Error creating debug utils");
+                vkDebugHandle = longBuff.get(0);
+            }
+        }
+    }
+    ...
+}
 ```
 
 Most of the Vulkan functions return an `int` value that is used to check if the call as succeeded or not. To check this, an utility method has been defined in the `VulkanUtils` class that throws a `RuntimeException` if the call does not return `VK_SUCCESS`.
@@ -270,7 +389,7 @@ Most of the Vulkan functions return an `int` value that is used to check if the 
 ```java
 package org.vulkanb.eng.graph.vk;
 
-import static org.lwjgl.vulkan.VK10.VK_SUCCESS;
+import static org.lwjgl.vulkan.VK11.VK_SUCCESS;
 
 public class VulkanUtils {
 
@@ -286,29 +405,41 @@ public class VulkanUtils {
 }
 ```
 
-The `Instance` class provides two additional methods, one for free resources (named `cleanUp`) and another one to get the address of the instance (named `getVkInstance`).
+The `Instance` class provides two additional methods, one for free resources (named `cleanup`) and another one to get the address of the instance (named `getVkInstance`).
 
 ```java
-public void cleanUp() {
-    LOGGER.debug("Destroying Vulkan instance");
-    vkDestroyInstance(this.vkInstance, null);
-}
-// ...
-public VkInstance getVkInstance() {
-    return vkInstance;
+public class Instance {
+    ...
+    public void cleanup() {
+        LOGGER.debug("Destroying Vulkan instance");
+        if (vkDebugHandle != VK_NULL_HANDLE) {
+            vkDestroyDebugUtilsMessengerEXT(vkInstance, vkDebugHandle, null);
+        }
+        if (debugUtils != null) {
+            debugUtils.free();
+        }
+        vkDestroyInstance(vkInstance, null);
+    }
+    ...
+    public VkInstance getVkInstance() {
+        return vkInstance;
+    }
 }
 ```
 
-Finally, we can use the Instance class in our `Render` class, in the `init` and `cleanUp` methods.
-
+Finally, we can use the Instance class in our `Render` class, in the `init` and `cleanup` methods.
 ```java
-public void cleanUp() {
-    this.instance.cleanUp();
-}
+public class Render {
+    ...
+    public void cleanup() {
+        instance.cleanup();
+    }
 
-public void init(Window window) {
-    EngineProperties engProps = EngineProperties.getInstance();
-    this.instance = new Instance(engProps .isValidate());
+    public void init(Window window, Scene scene) {
+        EngineProperties engProps = EngineProperties.getInstance();
+        instance = new Instance(engProps.isValidate());
+    }
+    ...
 }
 ```
 
@@ -321,12 +452,12 @@ private EngineProperties() {
 
     private EngineProperties() {
         ...
-            this.validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
+            validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
         ...
     }
     ...
     public boolean isValidate() {
-        return this.validate;
+        return validate;
     }
 ```
 

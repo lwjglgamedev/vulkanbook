@@ -8,7 +8,7 @@ import java.io.*;
 import java.nio.*;
 import java.nio.file.Files;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ShaderProgram {
@@ -22,11 +22,11 @@ public class ShaderProgram {
         try {
             this.device = device;
             int numModules = shaderModuleData != null ? shaderModuleData.length : 0;
-            this.shaderModules = new ShaderModule[numModules];
+            shaderModules = new ShaderModule[numModules];
             for (int i = 0; i < numModules; i++) {
                 byte[] moduleContents = Files.readAllBytes(new File(shaderModuleData[i].shaderSpvFile()).toPath());
                 long moduleHandle = createShaderModule(moduleContents);
-                this.shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle);
+                shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle);
             }
         } catch (IOException excp) {
             LOGGER.error("Error reading shader files", excp);
@@ -34,9 +34,9 @@ public class ShaderProgram {
         }
     }
 
-    public void cleanUp() {
-        for (ShaderModule shaderModule : this.shaderModules) {
-            vkDestroyShaderModule(this.device.getVkDevice(), shaderModule.handle(), null);
+    public void cleanup() {
+        for (ShaderModule shaderModule : shaderModules) {
+            vkDestroyShaderModule(device.getVkDevice(), shaderModule.handle(), null);
         }
     }
 
@@ -57,7 +57,7 @@ public class ShaderProgram {
     }
 
     public ShaderModule[] getShaderModules() {
-        return this.shaderModules;
+        return shaderModules;
     }
 
     public record ShaderModule(int shaderStage, long handle) {

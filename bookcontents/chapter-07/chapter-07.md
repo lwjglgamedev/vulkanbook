@@ -8,28 +8,36 @@ You can find the complete source code for this chapter [here](../../booksamples/
 The first thing we must do is create a depth image. In the case of the swap chain, images were already there, we just used a image view to access them. This case is different, we need to allocate the images by ourselves. In order to handle that task we will create a new class named `Image`. This class can used to manage any type of image, not only images to bee used asd depth attachments. The constructor starts like this:
 
 ```java
-public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
-    this.device = device;
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        this.format = format;
-        this.mipLevels = mipLevels;
+public class Image {
+    ...
+    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+        this.device = device;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            this.format = format;
+            this.mipLevels = mipLevels;
 
-        VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.callocStack(stack)
-               .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
-               .imageType(VK_IMAGE_TYPE_2D)
-               .format(format)
-               .extent(it -> it
-                        .width(width)
-                        .height(height)
-                        .depth(1)
-               )
-               .mipLevels(mipLevels)
-               .arrayLayers(1)
-               .samples(sampleCount)
-               .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-               .sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-               .tiling(VK_IMAGE_TILING_OPTIMAL)
-               .usage(usage);
+            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
+                    .imageType(VK_IMAGE_TYPE_2D)
+                    .format(format)
+                    .extent(it -> it
+                            .width(width)
+                            .height(height)
+                            .depth(1)
+                    )
+                    .mipLevels(mipLevels)
+                    .arrayLayers(1)
+                    .samples(sampleCount)
+                    .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
+                    .sharingMode(VK_SHARING_MODE_EXCLUSIVE)
+                    .tiling(VK_IMAGE_TILING_OPTIMAL)
+                    .usage(usage);
+            ...
+        }
+        ...
+    }
+    ...
+}
 ```
 
 The constructor receives the following parameters:
@@ -57,87 +65,177 @@ Besides storing some parameters as attributes of the class, the first thing we d
 Now we can create the image by invoking the `vkCreateImage` Vulkan function:
 
 ```java
-        LongBuffer lp = stack.mallocLong(1);
-        vkCheck(vkCreateImage(device.getVkDevice(), imageCreateInfo, null, lp), "Failed to create image");
-        this.vkImage = lp.get(0);
+public class Image {
+    ...
+    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+            ...
+            LongBuffer lp = stack.mallocLong(1);
+            vkCheck(vkCreateImage(device.getVkDevice(), imageCreateInfo, null, lp), "Failed to create image");
+            vkImage = lp.get(0);
+            ...
+        }
+        ...
+    }
+    ...
+}
 ```
 
 After that we need to allocate the memory associated to that image. As in the case of buffers, that image is just a handle, we need to manually allocate the memory that will host the contents for the image by ourselves. The first step is to get the memory requirements by calling the `vkGetImageMemoryRequirements` function:
 
 ```java
-        // Get memory requirements for this object
-        VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
-        vkGetImageMemoryRequirements(device.getVkDevice(), this.getVkImage(), memReqs);
+public class Image {
+    ...
+    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+            ...
+            // Get memory requirements for this object
+            VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
+            vkGetImageMemoryRequirements(device.getVkDevice(), getVkImage(), memReqs);
+            ...
+        }
+        ...
+    }
+    ...
+}
 ```
 
 With that information we can populate the `VkMemoryAllocateInfo` structure which contains the information to perform the memory allocation.
 
 ```java
-        // Select memory size and type
-        VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
-                .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
-                .allocationSize(memReqs.size())
-                .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),
-                        memReqs.memoryTypeBits(), 0));
+public class Image {
+    ...
+    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+            ...
+            // Select memory size and type
+            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
+                    .allocationSize(memReqs.size())
+                    .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),
+                            memReqs.memoryTypeBits(), 0));
+            ...
+        }
+        ...
+    }
+    ...
+}
 ```
 
 Again, the code is similar as the one used with the buffers, once we have got the requirements, we set the memory size and select the adequate memory type index (obtained by calling the `memoryTypeFromProperties` from the `VulkanUtils` class). After that we can finally allocate the memory and bind it to the image:
 
 ```java
-        // Allocate memory
-        vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
-        this.vkMemory = lp.get(0);
+public class Image {
+    ...
+    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+            ...
+            // Allocate memory
+            vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
+            vkMemory = lp.get(0);
 
-        // Bind memory
-        vkCheck(vkBindImageMemory(device.getVkDevice(), this.getVkImage(), this.getVkMemory(), 0),
-                "Failed to bind image memory");
+            // Bind memory
+            vkCheck(vkBindImageMemory(device.getVkDevice(), getVkImage(), getVkMemory(), 0),
+                    "Failed to bind image memory");
+        }
+    }
+    ...
+}
+```
+
+The rest of the methods of this class are the `cleanup` to free resources and some *getters* to obtain the image handle, the associated memory, the format of the image and the mip levels.
+
+```java
+public class Image {
+    ...
+    public void cleanup() {
+        vkDestroyImage(device.getVkDevice(), vkImage, null);
+        vkFreeMemory(device.getVkDevice(), vkMemory, null);
+    }
+
+    public int getFormat() {
+        return format;
+    }
+
+    public int getMipLevels() {
+        return mipLevels;
+    }
+
+    public long getVkImage() {
+        return vkImage;
+    }
+
+    public long getVkMemory() {
+        return vkMemory;
+    }
+    ...
+}
+```
+
+## Attachment
+
+In order to use the depth image we will also to setup an `ImageView`. Both the depth `Image` and the associated `ImageView` will constitute an attachment, a depth attachment. Since we will handle both objects together, we will create a new class, named `Attachment`, that will handle their creation and will be handy for next chapters. The definition is quite simple:
+```java
+package org.vulkanb.eng.graph.vk;
+
+import static org.lwjgl.vulkan.VK11.*;
+
+public class Attachment {
+
+    private boolean depthAttachment;
+    private Image image;
+    private ImageView imageView;
+
+    public Attachment(Device device, int width, int height, int format, int usage) {
+        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);
+
+        int aspectMask = 0;
+        if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
+            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            depthAttachment = false;
+        }
+        if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) {
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            depthAttachment = true;
+        }
+
+        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), aspectMask, 1);
+    }
+
+    public void cleanup() {
+        imageView.cleanup();
+        image.cleanup();
+    }
+
+    public Image getImage() {
+        return image;
+    }
+
+    public ImageView getImageView() {
+        return imageView;
+    }
+
+    public boolean isDepthAttachment() {
+        return depthAttachment;
     }
 }
 ```
-
-The rest of the methods of this class are the `cleanUp` to free resources and some *getters* to obtain the image handle, the associated memory, the format of the image and the mip levels.
-
-```java
-public void cleanUp() {
-    vkDestroyImage(this.device.getVkDevice(), this.vkImage, null);
-    vkFreeMemory(this.device.getVkDevice(), this.vkMemory, null);
-}
-
-public int getFormat() {
-    return this.format;
-}
-
-public int getMipLevels() {
-    return mipLevels;
-}
-
-public long getVkImage() {
-    return this.vkImage;
-}
-
-public long getVkMemory() {
-    return this.vkMemory;
-}
-```
+We just create and image and the associated image view. Depending on the type of image (color or depth image), we setup the aspect mask accordingly. We also have defined a `boolean` attribute, named `depthAttachment` to identify if it is a depth attachment or not.
 
 ## Changing vertices structure
 
 In the previous chapter, we defined the structure of our vertices, which basically stated that our vertices were composed by x, y and z positions. Therefore, we would not need anything more to display 3D models. However, displaying a 3D model just using a single color (without shadows or light effects), makes difficult to verify if the model is being loaded property. So, we will add extra components that we will reuse in next chapters, we will add texture coordinates. Although we will not be handling textures in this chapter, we can use those components to pass some color information (at lest for two color channels). We need to modify the `VertexBufferStructure`  in this way:
 
 ```java
-public class VertexBufferStructure {
+public class VertexBufferStructure extends VertexInputStateInfo {
 
     public static final int TEXT_COORD_COMPONENTS = 2;
     private static final int NUMBER_OF_ATTRIBUTES = 2;
 ...
     public VertexBufferStructure() {
-        this.viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);
-        this.viBindings = VkVertexInputBindingDescription.calloc(1);
-        this.vi = VkPipelineVertexInputStateCreateInfo.calloc();
+        viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);
+        viBindings = VkVertexInputBindingDescription.calloc(1);
+        vi = VkPipelineVertexInputStateCreateInfo.calloc();
 
         int i = 0;
         // Position
-        this.viAttrs.get(i)
+        viAttrs.get(i)
                 .binding(0)
                 .location(i)
                 .format(VK_FORMAT_R32G32B32_SFLOAT)
@@ -145,22 +243,22 @@ public class VertexBufferStructure {
 
         // Texture coordinates
         i++;
-        this.viAttrs.get(i)
+        viAttrs.get(i)
                 .binding(0)
                 .location(i)
-                .format(VK_FORMAT_R32G32B32_SFLOAT)
+                .format(VK_FORMAT_R32G32_SFLOAT)
                 .offset(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
 
-        this.viBindings.get(0)
+        viBindings.get(0)
                 .binding(0)
                 .stride(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH +
                         TEXT_COORD_COMPONENTS * GraphConstants.FLOAT_LENGTH)
                 .inputRate(VK_VERTEX_INPUT_RATE_VERTEX);
 
-        this.vi
+        vi
                 .sType(VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
-                .pVertexBindingDescriptions(this.viBindings)
-                .pVertexAttributeDescriptions(this.viAttrs);
+                .pVertexBindingDescriptions(viBindings)
+                .pVertexAttributeDescriptions(viAttrs);
     }
 ...
 }
@@ -175,7 +273,6 @@ package org.vulkanb.eng.scene;
 
 public record MeshData(String id, float[]positions, float[]textCoords, int[]indices) {
 }
-
 ```
 
 An therefore,  the way we load vertices in the `VulkanMesh`  class needs also to be updated:
@@ -197,30 +294,25 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
 
-            int rows = positions.length / 3;
-            FloatBuffer data = pp.getFloatBuffer(0, numElements);
-            for (int row = 0; row < rows; row++) {
-                int starPos = row * 3;
-                int startTextCoord = row * 2;
-                data.put(positions[starPos + 0]);
-                data.put(positions[starPos + 1]);
-                data.put(positions[starPos + 2]);
-                data.put(textCoords[startTextCoord + 0]);
-                data.put(textCoords[startTextCoord + 1]);
-            }
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
+        int rows = positions.length / 3;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 3;
+            int startTextCoord = row * 2;
+            data.put(positions[startPos]);
+            data.put(positions[startPos + 1]);
+            data.put(positions[startPos + 2]);
+            data.put(textCoords[startTextCoord]);
+            data.put(textCoords[startTextCoord + 1]);
         }
+
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
-
-...
+    ...
 }
 ```
 
@@ -275,38 +367,67 @@ After that we create a reference to the depth attachment (`VkAttachmentReference
 
 ## Scene changes
 
-If we are going to represent 3D scenes, we need to project from the 3D world into a 2D space (the screen). We will need to use a perspective projection matrix in order to avoid distortions and to represent far away objects smaller than closer ones. We will create a new class that will support its creation and update (due to windows resizing) named `Perspective`, which is defined like this:
+If we are going to represent 3D scenes, we need to project from the 3D world into a 2D space (the screen). We will need to use a perspective projection matrix in order to avoid distortions and to represent far away objects smaller than closer ones. We will create a new class that will support its creation and update (due to windows resizing) named `Projection`, which is defined like this:
 
 ```java
 package org.vulkanb.eng.scene;
 
 import org.joml.Matrix4f;
+import org.vulkanb.eng.EngineProperties;
 
-public class Perspective {
+public class Projection {
 
-    private static final float FOV = (float) Math.toRadians(60.0f);
-    private static final float Z_FAR = 100.f;
-    private static final float Z_NEAR = 0.01f;
+    private Matrix4f projectionMatrix;
 
-    private Matrix4f perspectiveMatrix;
-
-    public Perspective() {
-        this.perspectiveMatrix = new Matrix4f();
+    public Projection() {
+        projectionMatrix = new Matrix4f();
     }
 
-    public Matrix4f getPerspectiveMatrix() {
-        return this.perspectiveMatrix;
+    public Matrix4f getProjectionMatrix() {
+        return projectionMatrix;
     }
 
     public void resize(int width, int height) {
-        this.perspectiveMatrix.identity();
-        this.perspectiveMatrix.perspective(FOV, (float) width / (float) height, Z_NEAR, Z_FAR, true);
+        EngineProperties engProps = EngineProperties.getInstance();
+        projectionMatrix.identity();
+        projectionMatrix.perspective(engProps.getFov(), (float) width / (float) height,
+                engProps.getZNear(), engProps.getZFar(), true);
     }
 }
 ```
 
-We are using the [JOML](https://github.com/JOML-CI/JOML) library to create a `Matrix4f` which will hold the projection matrix. The `resize`should be called, at least once, to initialize the parameters of the matrix with the correct parameters (by invoking the `Matrix4f` `perspective`method). The `perspective` method receives the usual arguments, the field of view (in  radians), the aspect ratio and the near and far planes. You may have noticed that it receives an extra argument, which in JOML documentation is named `zZeroToOne`. We have already talked about that Vulkan uses a different coordinate System where y axis point downwards. Vulkan also defines a different range for z coordinates. The Normalized Device Coordinates (NDC), in OpenGL use the range [-1, 1] to represent screen coordinates and also for the z value. Anything outside that range is considered to be out of the field of view and will not be presented. In Vulkan, and also in Direct3D, the NDC range used for the z coordinates is [0, 1]. We need to set the `zZeroToOne` parameter to true to be compliant with Vulkan coordinates System.
+We are using the [JOML](https://github.com/JOML-CI/JOML) library to create a `Matrix4f` which will hold the projection matrix. The `resize`should be called, at least once, to initialize the parameters of the matrix with the correct parameters (by invoking the `Matrix4f` `Projection`method). The `Projection` method receives the usual arguments, the field of view (in  radians), the aspect ratio and the near and far planes. You may have noticed that it receives an extra argument, which in JOML documentation is named `zZeroToOne`. We have already talked about that Vulkan uses a different coordinate System where y axis point downwards. Vulkan also defines a different range for z coordinates. The Normalized Device Coordinates (NDC), in OpenGL use the range [-1, 1] to represent screen coordinates and also for the z value. Anything outside that range is considered to be out of the field of view and will not be presented. In Vulkan, and also in Direct3D, the NDC range used for the z coordinates is [0, 1]. We need to set the `zZeroToOne` parameter to true to be compliant with Vulkan coordinates System.
 
+The parameters of the perspective matrix can be configured in the `eng.properties` file, so we need to update the `EngineProperties` class:
+```java
+public class EngineProperties {
+    private static final float DEFAULT_FOV = 60.0f;
+    ...
+    private static final float DEFAULT_Z_FAR = 100.f;
+    private static final float DEFAULT_Z_NEAR = 1.0f;
+    ...
+    private EngineProperties() {
+        ...
+            fov = (float) Math.toRadians(Float.parseFloat(props.getOrDefault("fov", DEFAULT_FOV).toString()));
+            zNear = Float.parseFloat(props.getOrDefault("zNear", DEFAULT_Z_NEAR).toString());
+            zFar = Float.parseFloat(props.getOrDefault("zFar", DEFAULT_Z_FAR).toString());
+       ...
+    }
+    ...
+    public float getFov() {
+        return fov;
+    }
+    ...
+    public float getZFar() {
+        return zFar;
+    }
+
+    public float getZNear() {
+        return zNear;
+    }
+    ...
+}
+```
 We are going also to introduce a new concept for the engine that will allow to define game entities and use the same `Mesh` to render multiple elements. Instead of rendering meshes, we will have entities which have some properties, such as their scale, position and rotation and will be associated to a mesh. They can model a player, NPCs or scene objects and will be managed by a class named `Entity`, which is defined like this:
 
 ```java
@@ -327,107 +448,113 @@ public class Entity {
         this.id = id;
         this.meshId = meshId;
         this.position = position;
-        this.scale = 1;
-        this.rotation = new Quaternionf();
-        this.modelMatrix = new Matrix4f();
+        scale = 1;
+        rotation = new Quaternionf();
+        modelMatrix = new Matrix4f();
         updateModelMatrix();
     }
 
     public String getId() {
-        return this.id;
+        return id;
     }
 
     public String getMeshId() {
-        return this.meshId;
+        return meshId;
     }
 
     public Matrix4f getModelMatrix() {
-        return this.modelMatrix;
+        return modelMatrix;
     }
 
     public Vector3f getPosition() {
-        return this.position;
+        return position;
     }
 
     public Quaternionf getRotation() {
-        return this.rotation;
+        return rotation;
     }
 
     public float getScale() {
-        return this.scale;
+        return scale;
     }
 
     public final void setPosition(float x, float y, float z) {
-        this.position.x = x;
-        this.position.y = y;
-        this.position.z = z;
-        this.updateModelMatrix();
+        position.x = x;
+        position.y = y;
+        position.z = z;
+        updateModelMatrix();
     }
 
     public void setScale(float scale) {
         this.scale = scale;
-        this.updateModelMatrix();
+        updateModelMatrix();
     }
 
     public void updateModelMatrix() {
-        this.modelMatrix.identity().translationRotateScale(this.position, this.rotation, this.scale);
+        modelMatrix.identity().translationRotateScale(position, rotation, scale);
     }
 }
 ```
 
 Each `Entity` shall have an identifier which should be unique. It is also linked to the mesh that will be used to render it through the `meshId` attribute. An `Entity` will have also a position, a rotation (modeled using a  quaternion) and a scale. With all that information we are able to construct a model matrix by calling the `updateModelMatrix` from the `Matrix4f` class. The `updateModelMatrix` should be called, each time the position, rotation or scale changes.
 
-Now we can setup the required infrastructure to put the `Perspective` and `Entity` classes into work. We will add this to an empty class which has been there since the beginning, the  `Scene` class. The class definition starts like this:
+Now we can setup the required infrastructure to put the `Projection` and `Entity` classes into work. We will add this to an empty class which has been there since the beginning, the  `Scene` class. The class definition starts like this:
 
 ```java
 public class Scene {
 
     private Map<String, List<Entity>> entitiesMap;
-    private Perspective perspective;
+    private Projection projection;
 
     public Scene(Window window) {
-        this.entitiesMap = new HashMap<>();
-        this.perspective = new Perspective();
-        this.perspective.resize(window.getWidth(), window.getHeight());
+        entitiesMap = new HashMap<>();
+        projection = new Projection();
+        projection.resize(window.getWidth(), window.getHeight());
     }
+    ...
+}
 ```
 
-The constructor receives the a `Window` instance and creates a `Map` of `List`s which will contain `Entity` instances. That map will organized the entities by its `meshId`. The constructor initializes that map and also creates an instance of the `Perspective` class, which will hold the perspective matrix. The next method will be used to add new entities:
+The constructor receives the a `Window` instance and creates a `Map` of `List`s which will contain `Entity` instances. That map will organized the entities by its `meshId`. The constructor initializes that map and also creates an instance of the `Projection` class, which will hold the perspective matrix. The next method will be used to add new entities:
 
 ```java
-...
+public class Scene {
+    ...
     public void addEntity(Entity entity) {
-        List<Entity> entities = this.entitiesMap.get(entity.getMeshId());
+        List<Entity> entities = entitiesMap.get(entity.getMeshId());
         if (entities == null) {
             entities = new ArrayList<>();
-            this.entitiesMap.put(entity.getMeshId(), entities);
+            entitiesMap.put(entity.getMeshId(), entities);
         }
         entities.add(entity);
     }
-...
+    ...
+}
 ```
 
-As it can be seen, the entities are organized by their `meshId`. Those entities which share the same `meshId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (suing its identifier) and to get the perspective matrix.
+As it can be seen, the entities are organized by their `meshId`. Those entities which share the same `meshId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (suing its identifier) and to get the projection matrix.
 
 ```java
+public class Scene {
+    ...
     public List<Entity> getEntitiesByMeshId(String meshId) {
-        return this.entitiesMap.get(meshId);
+        return entitiesMap.get(meshId);
     }
 
     public Map<String, List<Entity>> getEntitiesMap() {
-        return this.entitiesMap;
+        return entitiesMap;
     }
 
-    public Perspective getPerspective() {
-        return perspective;
+    public Projection getProjection() {
+        return projection;
     }
 
     public void removeAllEntities() {
-        this.entitiesMap.clear();
+        entitiesMap.clear();
     }
 
     public void removeEntity(Entity entity) {
-        List<Entity> entities = this.entitiesMap.get(entity.getMeshId());
+        List<Entity> entities = entitiesMap.get(entity.getMeshId());
         if (entities != null) {
             entities.removeIf(e -> e.getId().equals(entity.getId()));
         }
@@ -440,30 +567,40 @@ As it can be seen, the entities are organized by their `meshId`. Those entities 
 We need also to modify the pipeline to actually use the depth image for depth testing. Since we may have pipelines that do not use depth testing at all, we will indicate if it's required in the `PipeLineCreationInfo` `record`:
 
 ```java
-public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
-                                   boolean hasDepthAttachment, int pushConstantsSize,
-                                   VertexBufferStructure vertexBufferStructure) {
-    public void cleanUp() {
-        vertexBufferStructure.cleanUp();
+public class Pipeline {
+    ...
+    public record PipeLineCreationInfo(long vkRenderPass, ShaderProgram shaderProgram, int numColorAttachments,
+        boolean hasDepthAttachment, int pushConstantsSize,
+        VertexInputStateInfo viInputStateInfo) {
+        public void cleanup() {
+            viInputStateInfo.cleanup();
+        }
     }
+    ...
 }
 ```
 
 You may see also that there's another attribute, named `pushConstantsSize`. We will explain its usage later on. Now, in the `Pipeline` class constructor we need to enable the depth stencil state if the `hasDepthAttachment`  attribute from the `PipeLineCreationInfo` class is `true`.
 
 ```java
-public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
+public class Pipeline {
     ...
-        VkPipelineDepthStencilStateCreateInfo ds = null;
-        if (pipeLineCreationInfo.hasDepthAttachment()) {
-            ds = VkPipelineDepthStencilStateCreateInfo.callocStack(stack)
-                    .sType(VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)
-                    .depthTestEnable(true)
-                    .depthWriteEnable(true)
-                    .depthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
-                    .depthBoundsTestEnable(false)
-                    .stencilTestEnable(false)
-        }
+    public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
+        ...
+            VkPipelineDepthStencilStateCreateInfo ds = null;
+            if (pipeLineCreationInfo.hasDepthAttachment()) {
+                ds = VkPipelineDepthStencilStateCreateInfo.callocStack(stack)
+                        .sType(VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)
+                        .depthTestEnable(true)
+                        .depthWriteEnable(true)
+                        .depthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                        .depthBoundsTestEnable(false)
+                        .stencilTestEnable(false);
+            }
+        ...
+    }
+    ...
+}
 ```
 
 We need to instantiate a `VkPipelineDepthStencilStateCreateInfo`  structure which has the following attributes:
@@ -478,17 +615,23 @@ We need to instantiate a `VkPipelineDepthStencilStateCreateInfo`  structure whic
 This structure will be used later on while creating the pipeline:
 
 ```java
-        VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
-                .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
+public class Pipeline {
+    ...
+    public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
-        if (ds != null) {
-            pipeline.pDepthStencilState(ds);
+            VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
+                    .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
+            ...
+            if (ds != null) {
+                pipeline.pDepthStencilState(ds);
+            }
+            vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), pipelineCache.getVkPipelineCache(), pipeline, null, lp),
+                    "Error creating graphics pipeline");
+            vkPipeline = lp.get(0);
         }
-        vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), pipelineCache.getVkPipelineCache(), pipeline, null, lp),
-                "Error creating graphics pipeline");
-        this.vkPipeline = lp.get(0);
     }
-}        
+    ...
+}
 ```
 
 ## Passing data to the shaders
@@ -502,20 +645,23 @@ As it has been said before, push constants are intended to pass small amount of 
 We need to include that support in the pipeline layout definition. So, we need to included that in the constructor of the `Pipeline` class like this:
 
 ```java
-public PipelinePipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
-
+public class Pipeline {
     ...
-        VkPushConstantRange.Buffer vpcr = null;
-        if (pipeLineCreationInfo.pushConstantsSize() > 0) {
-            vpcr = VkPushConstantRange.callocStack(1, stack)
-                    .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
-                    .offset(0)
-                    .size(pipeLineCreationInfo.pushConstantsSize());
-        }
+    public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
+        ...
+            VkPushConstantRange.Buffer vpcr = null;
+            if (pipeLineCreationInfo.pushConstantsSize() > 0) {
+                vpcr = VkPushConstantRange.callocStack(1, stack)
+                        .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
+                        .offset(0)
+                        .size(pipeLineCreationInfo.pushConstantsSize());
+            }
 
-        VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
-                .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
-                .pPushConstantRanges(vpcr);
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
+                    .pPushConstantRanges(vpcr);
+        ...
+    }
     ...
 }
 ```
@@ -537,17 +683,20 @@ We have coded all the elements required to support the proper rendering of 3D mo
 public class Render {
 ...
     public void render(Window window, Scene scene) {
+        if (window.getWidth() <= 0 && window.getHeight() <= 0) {
+            return;
+        }
         if (window.isResized() || this.swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);
-            scene.getPerspective().resize(window.getWidth(), window.getHeight());
-            this.swapChain.acquireNextImage();
+            scene.getProjection().resize(window.getWidth(), window.getHeight());
+            swapChain.acquireNextImage();
         }
 
-        this.fwdRenderActivity.recordCommandBuffers(this.meshList, scene);
-        this.fwdRenderActivity.submit(this.presentQueue);
+        fwdRenderActivity.recordCommandBuffers(meshList, scene);
+        fwdRenderActivity.submit(presentQueue);
 
-        if (this.swapChain.presentImage(this.graphQueue)) {
+        if (swapChain.presentImage(graphQueue)) {
             window.setResized(true);
         }
     }
@@ -555,30 +704,29 @@ public class Render {
     private void resize(Window window) {
         EngineProperties engProps = EngineProperties.getInstance();
 
-        this.device.waitIdle();
-        this.graphQueue.waitIdle();
+        device.waitIdle();
+        graphQueue.waitIdle();
 
-        this.swapChain.cleanUp();
+        swapChain.cleanup();
 
-        this.swapChain = new SwapChain(this.device, this.surface, window, engProps.getRequestedImages(),
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
-        this.fwdRenderActivity.resize(this.swapChain);
+        fwdRenderActivity.resize(swapChain);
     }
 ...
 }
 ```
 
-In the `render` method, we first check if the window has been resized or the current swap chain image has not been acquired (because that the size of the window has changed). In this case, we reset the flag that signals that the window has been resized, call the `resize` method and update the projection matrix to adapt it to the new surface dimensions. If we cannot present the image, we just signal the window resize flag and we'll wait for the next loop to perform the process described above.
+In the `render` method, we first check if the size of the window is `0`. This means that the window has been minimized. In this case we do not render anything. After, we check if the window has been resized or the current swap chain image has not been acquired (because that the size of the window has changed). In this case, we reset the flag that signals that the window has been resized, call the `resize` method and update the projection matrix to adapt it to the new surface dimensions. If we cannot present the image, we just signal the window resize flag and we'll wait for the next loop to perform the process described above.
 
 The new `resize` method, waits for the device and graphics queue to be idle, clean ups the swap chain resources and creates a new one. This implies the creation of new swap chain images adapted to new window size. It also invokes the `resize` method form the `ForwardRenderActivity` class. Let's review the changes required in that class.
 
-We need to create two new attributes in the `ForwardRenderActivity`  class to store the images and the image views for the depth data:
+We need to create two a new attribute in the `ForwardRenderActivity` class to store the depth attachments:
 
 ```java
 public class ForwardRenderActivity {
 ...
-    private ImageView[] depthImageViews;
-    private Image[] depthImages;
+    private Attachment[] depthAttachments;
 ```
 
 In some other tutorials, you will see that they use a single image and image view for the depth data. The argument used to justify this is, in some cases, that since the depth images are only used internally, while rendering, there's no need to use separate resources. This argument is not correct, render operations in different frames may overlap, so we need to use separate resources or use the proper synchronization mechanisms to prevent that. Probably, the samples used in those tutorial work, because they have a different synchronizations schema that prevent this form happening, but the argument to justify that is not correct. There's an excellent analysis of this in this [Stack overflow](https://stackoverflow.com/questions/62371266/why-is-a-single-depth-buffer-sufficient-for-this-vulkan-swapchain-render-loop) question. In that question, a different approach is proposed, use an additional subpass dependency (as in the case for controlling the swap chain images transitions). However by now, we will choose to use  a simpler approach, just use separate resources.
@@ -587,79 +735,84 @@ We need also to change the constructor of the `ForwardRenderActivity` class:
 
 ```java
 public class ForwardRenderActivity {
-...
+    ...
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
-        Device device = swapChain.getDevice();
+        this.device = swapChain.getDevice();
 
         int numImages = swapChain.getImageViews().length;
         createDepthImages();
-        this.renderPass = new SwapChainRenderPass(swapChain, this.depthImages[0].getFormat());
+        renderPass = new SwapChainRenderPass(swapChain, depthAttachments[0].getImage().getFormat());
         createFrameBuffers();
-...
+        ...
     }
+    ...
+}
 ```
 
 We have created a new method to initialize the depth images and their associated image views named `createDepthImages`.  We also have moved the frame buffer creation to another method named `createFrameBuffers`. The reason for that is that these resources will need to be recreated when the window resizes, if we extract that code to some methods we will be able to reuse them without duplicating code. The `createDepthImages` is defined like this:
 
 ```java
+public class ForwardRenderActivity {
+    ...
     private void createDepthImages() {
-        Device device = this.swapChain.getDevice();
-        int numImages = this.swapChain.getNumImages();
-        VkExtent2D swapChainExtent = this.swapChain.getSwapChainExtent();
-        int mipLevels = 1;
-        this.depthImages = new Image[numImages];
-        this.depthImageViews = new ImageView[numImages];
+        int numImages = swapChain.getNumImages();
+        VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
+        depthAttachments = new Attachment[numImages];
         for (int i = 0; i < numImages; i++) {
-            this.depthImages[i] = new Image(device, swapChainExtent.width(), swapChainExtent.height(),
-                    VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, mipLevels);
-            this.depthImageViews[i] = new ImageView(device, this.depthImages[i].getVkImage(),
-                    this.depthImages[i].getFormat(), VK_IMAGE_ASPECT_DEPTH_BIT, mipLevels);
+            depthAttachments[i] = new Attachment(device, swapChainExtent.width(), swapChainExtent.height(),
+                    VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         }
     }
+    ...
+}
 ```
 
-We create as many images and image views as images are in the swap chain. We use the format `VK_FORMAT_D32_SFLOAT` for the depth values (32 bits signed floats), and specify that the images are going to be used as a depth / stencil attachment by the usage flag `VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT`. The code for the frame buffers creation has not been modified, just extracted to the `createFrameBuffers` method:
+We create as many depth attachments (as many images and image views) as images are in the swap chain. We use the format `VK_FORMAT_D32_SFLOAT` for the depth values (32 bits signed floats). The code for the frame buffers creation has not been modified, just extracted to the `createFrameBuffers` method:
 
 ```java
+public class ForwardRenderActivity {
+    ...
     private void createFrameBuffers() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            Device device = swapChain.getDevice();
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             ImageView[] imageViews = swapChain.getImageViews();
             int numImages = imageViews.length;
 
             LongBuffer pAttachments = stack.mallocLong(2);
-            this.frameBuffers = new FrameBuffer[numImages];
+            frameBuffers = new FrameBuffer[numImages];
             for (int i = 0; i < numImages; i++) {
                 pAttachments.put(0, imageViews[i].getVkImageView());
-                pAttachments.put(1, this.depthImageViews[i].getVkImageView());
-                this.frameBuffers[i] = new FrameBuffer(device, swapChainExtent.width(), swapChainExtent.height(),
-                        pAttachments, this.renderPass.getVkRenderPass());
+                pAttachments.put(1, depthAttachments[i].getImageView().getVkImageView());
+                frameBuffers[i] = new FrameBuffer(device, swapChainExtent.width(), swapChainExtent.height(),
+                        pAttachments, renderPass.getVkRenderPass());
             }
         }
     }
+    ...
+}
 ```
 
-The `cleanUp`method needs also to be modified to free the image and image view resources:
+The `cleanup`method needs also to be modified to free the depth attachments:
 
 ```java
-    public void cleanUp() {
+public class ForwardRenderActivity {
+    ...
+    public void cleanup() {
         ...
-        for (ImageView imageView : this.depthImageViews) {
-            imageView.cleanUp();
-        }
-        for (Image image : this.depthImages) {
-            image.cleanUp();
-        }
+        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
         ...
     }
+    ...
+}
 ```
 
 We need also to update the `recordCommandBuffers` method, to take the depth buffer into consideration, to actually use the push constants and to modify how we render to use the game entities. Let's start by the depth buffer:
 
 ```java
+public class ForwardRenderActivity {
+    ...
     public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
     ...
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(2, stack);
@@ -667,62 +820,69 @@ We need also to update the `recordCommandBuffers` method, to take the depth buff
             clearValues.apply(1, v -> v.depthStencil().depth(1.0f));
     ...
     }
+    ...
+}
 ```
 
 In previous chapters, we just recorded commands to clear the color attachment. Now we have another one, the depth attachment, that needs to be cleared at the beginning of each frame. Therefore, we need to add a new `VkClearValue` structure to clear it with the maximum depth value allowed `1.0f`. After that, we need to change the loop in which we iterated over the meshes, recording drawing commands for each of them:
 
 ```java
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+public class ForwardRenderActivity {
     ...
+    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+        ...
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
+            LongBuffer vertexBuffer = stack.mallocLong(1);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE * 2);
             for (VulkanMesh mesh : meshes) {
-                LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                 vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
                 List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
                 for (Entity entity : entities) {
-                    setPushConstants(cmdHandle, scene.getPerspective().getPerspectiveMatrix(), entity.getModelMatrix(),
+                    setPushConstants(cmdHandle, scene.getProjection().getProjectionMatrix(), entity.getModelMatrix(),
                             pushConstantBuffer);
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
             }
-    ...
+        ...
     }
+    ...
+}
 ```
 
 We allocate a `ButeBuffer` to store the information for the push constants. The single loop that iterated over the meshes is now a double loop. We iterate first using the meshes, and for each of them we get the list of entities that have that mesh and iterate over them to render them. The vertex and index buffers are the same, we just need to bind them once per mesh, but for entities, we need to set the push constants for each of them and also record a draw command. Let's examine the `setPushConstants` method:
 
 ```java
+public class ForwardRenderActivity {
+    ...
     private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f projMatrix, Matrix4f modelMatrix,
                                   ByteBuffer pushConstantBuffer) {
         projMatrix.get(pushConstantBuffer);
         modelMatrix.get(GraphConstants.MAT4X4_SIZE, pushConstantBuffer);
-        vkCmdPushConstants(cmdHandle, this.pipeLine.getVkPipelineLayout(),
+        vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
                 VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
     }
+    ...
+}
 ```
 
-The method receives the projection and model matrices and a buffer. It just copies the data contained in those matrices into the buffer. Then we call the `vkCmdPushConstants` function to update the values of the push constants. Finally, in the `resize` method, we just clean the frame buffers, the images and image views and recreate them again.
+The method receives the projection and model matrices and a buffer. It just copies the data contained in those matrices into the buffer. Then we call the `vkCmdPushConstants` function to update the values of the push constants. Finally, in the `resize` method, we just clean the frame buffers, the depth attachments and recreate them again.
 
 ```java
+public class ForwardRenderActivity {
+    ...
     public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;
-        for (FrameBuffer frameBuffer : this.frameBuffers) {
-            frameBuffer.cleanUp();
-        }
-        for (ImageView imageView : this.depthImageViews) {
-            imageView.cleanUp();
-        }
-        for (Image image : this.depthImages) {
-            image.cleanUp();
-        }
+        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
         createDepthImages();
         createFrameBuffers();
     }
+    ...
+}
 ```
 
 The next step missing now is to modify the `init` method in or `Main` class:
@@ -775,9 +935,9 @@ public class Main implements IAppLogic {
         MeshData meshData = new MeshData(meshId, positions, textCoords, indices);
         render.loadMeshes(new MeshData[]{meshData});
 
-        this.cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
-        this.cubeEntity.setPosition(0, 0, -2);
-        scene.addEntity(this.cubeEntity);
+        cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        cubeEntity.setPosition(0, 0, -2);
+        scene.addEntity(cubeEntity);
     }
     ...
 }
@@ -786,15 +946,19 @@ public class Main implements IAppLogic {
 We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color.  We need to create also a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `handleInput`method, that will be invoked periodically to update that angle:
 
 ```java
+public class Main implements IAppLogic {
+    ...
     @Override
     public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
         angle += 1.0f;
         if (angle >= 360) {
             angle = angle - 360;
         }
-        this.cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
-        this.cubeEntity.updateModelMatrix();
+        cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
+        cubeEntity.updateModelMatrix();
     }
+    ...
+}
 ```
 
 The final step is to modify the shaders. The vertex shader will now use the push constants, which is composed by two matrices and use them to transform the entity position from model coordinates system to word coordinate systems (by multiplying by the model matrix) and from world coordinates to normalized screen coordinates by multiplying by the projection matrix. We also pass the texture coordinates to the fragment shader.

@@ -1,14 +1,12 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.*;
 import org.lwjgl.vulkan.VkBufferCopy;
 import org.vulkanb.eng.scene.MeshData;
 
 import java.nio.*;
 
-import static org.lwjgl.vulkan.VK10.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class VulkanMesh {
 
@@ -27,23 +25,17 @@ public class VulkanMesh {
     private static TransferBuffers createIndicesBuffers(Device device, MeshData meshData) {
         int[] indices = meshData.indices();
         int numIndices = indices.length;
-        int bufferSize = numIndices * GraphConstants.FLOAT_LENGTH;
+        int bufferSize = numIndices * GraphConstants.INT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
-
-            IntBuffer data = pp.getIntBuffer(0, numIndices);
-            data.put(indices);
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
-        }
+        long mappedMemory = srcBuffer.map();
+        IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        data.put(indices);
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
@@ -62,25 +54,21 @@ public class VulkanMesh {
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkMapMemory(device.getVkDevice(), srcBuffer.getMemory(), 0, srcBuffer.getAllocationSize(), 0, pp),
-                    "Failed to map memory");
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
 
-            int rows = positions.length / 3;
-            FloatBuffer data = pp.getFloatBuffer(0, numElements);
-            for (int row = 0; row < rows; row++) {
-                int starPos = row * 3;
-                int startTextCoord = row * 2;
-                data.put(positions[starPos + 0]);
-                data.put(positions[starPos + 1]);
-                data.put(positions[starPos + 2]);
-                data.put(textCoords[startTextCoord + 0]);
-                data.put(textCoords[startTextCoord + 1]);
-            }
-
-            vkUnmapMemory(device.getVkDevice(), srcBuffer.getMemory());
+        int rows = positions.length / 3;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 3;
+            int startTextCoord = row * 2;
+            data.put(positions[startPos]);
+            data.put(positions[startPos + 1]);
+            data.put(positions[startPos + 2]);
+            data.put(textCoords[startTextCoord]);
+            data.put(textCoords[startTextCoord + 1]);
         }
+
+        srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);
     }
@@ -115,11 +103,12 @@ public class VulkanMesh {
             fence.reset();
             queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
             fence.fenceWait();
-            fence.cleanUp();
+            fence.cleanup();
+            cmd.cleanup();
 
             for (int i = 0; i < numMeshes; i++) {
-                positionTransferBuffers[i].cleanUp();
-                indicesTransferBuffers[i].cleanUp();
+                positionTransferBuffers[i].cleanup();
+                indicesTransferBuffers[i].cleanup();
             }
         }
 
@@ -135,9 +124,9 @@ public class VulkanMesh {
         }
     }
 
-    public void cleanUp() {
-        this.indicesBuffer.cleanUp();
-        this.verticesBuffer.cleanUp();
+    public void cleanup() {
+        indicesBuffer.cleanup();
+        verticesBuffer.cleanup();
     }
 
     public String getId() {
@@ -145,7 +134,7 @@ public class VulkanMesh {
     }
 
     public VulkanBuffer getIndicesBuffer() {
-        return this.indicesBuffer;
+        return indicesBuffer;
     }
 
     public int getIndicesCount() {
@@ -153,7 +142,7 @@ public class VulkanMesh {
     }
 
     public VulkanBuffer getVerticesBuffer() {
-        return this.verticesBuffer;
+        return verticesBuffer;
     }
 
     private record TransferBuffers(VulkanBuffer srcBuffer, VulkanBuffer dstBuffer) {

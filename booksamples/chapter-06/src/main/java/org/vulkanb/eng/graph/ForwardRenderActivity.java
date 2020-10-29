@@ -10,7 +10,7 @@ import org.vulkanb.eng.graph.vk.*;
 import java.nio.LongBuffer;
 import java.util.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class ForwardRenderActivity {
 
@@ -34,14 +34,14 @@ public class ForwardRenderActivity {
             ImageView[] imageViews = swapChain.getImageViews();
             int numImages = imageViews.length;
 
-            this.renderPass = new SwapChainRenderPass(swapChain);
+            renderPass = new SwapChainRenderPass(swapChain);
 
             LongBuffer pAttachments = stack.mallocLong(1);
-            this.frameBuffers = new FrameBuffer[numImages];
+            frameBuffers = new FrameBuffer[numImages];
             for (int i = 0; i < numImages; i++) {
                 pAttachments.put(0, imageViews[i].getVkImageView());
-                this.frameBuffers[i] = new FrameBuffer(device, swapChainExtent.width(), swapChainExtent.height(),
-                        pAttachments, this.renderPass.getVkRenderPass());
+                frameBuffers[i] = new FrameBuffer(device, swapChainExtent.width(), swapChainExtent.height(),
+                        pAttachments, renderPass.getVkRenderPass());
             }
 
             EngineProperties engineProperties = EngineProperties.getInstance();
@@ -49,54 +49,55 @@ public class ForwardRenderActivity {
                 ShaderCompiler.compileShaderIfChanged(VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
                 ShaderCompiler.compileShaderIfChanged(FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
             }
-            this.fwdShaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
+            fwdShaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                     {
                             new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, VERTEX_SHADER_FILE_SPV),
                             new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, FRAGMENT_SHADER_FILE_SPV),
                     });
             Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                    this.renderPass.getVkRenderPass(), this.fwdShaderProgram, 1, new VertexBufferStructure());
-            this.pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
-            pipeLineCreationInfo.cleanUp();
+                    renderPass.getVkRenderPass(), fwdShaderProgram, 1, new VertexBufferStructure());
+            pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
+            pipeLineCreationInfo.cleanup();
 
-            this.commandBuffers = new CommandBuffer[numImages];
-            this.fences = new Fence[numImages];
+            commandBuffers = new CommandBuffer[numImages];
+            fences = new Fence[numImages];
             for (int i = 0; i < numImages; i++) {
-                this.commandBuffers[i] = new CommandBuffer(commandPool, true, false);
-                this.fences[i] = new Fence(device, true);
+                commandBuffers[i] = new CommandBuffer(commandPool, true, false);
+                fences[i] = new Fence(device, true);
             }
         }
     }
 
-    public void cleanUp() {
-        this.pipeLine.cleanUp();
-        this.fwdShaderProgram.cleanUp();
-        Arrays.stream(this.frameBuffers).forEach(FrameBuffer::cleanUp);
-        this.renderPass.cleanUp();
-        Arrays.stream(this.commandBuffers).forEach(CommandBuffer::cleanUp);
-        Arrays.stream(this.fences).forEach(Fence::cleanUp);
+    public void cleanup() {
+        pipeLine.cleanup();
+        fwdShaderProgram.cleanup();
+        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        renderPass.cleanup();
+        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.stream(fences).forEach(Fence::cleanup);
     }
 
     public void recordCommandBuffers(List<VulkanMesh> meshes) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkExtent2D swapChainExtent = this.swapChain.getSwapChainExtent();
+            VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
             int height = swapChainExtent.height();
-            int idx = this.swapChain.getCurrentFrame();
+            int idx = swapChain.getCurrentFrame();
 
-            Fence fence = this.fences[idx];
-            CommandBuffer commandBuffer = this.commandBuffers[idx];
-            FrameBuffer frameBuffer = this.frameBuffers[idx];
+            Fence fence = fences[idx];
+            CommandBuffer commandBuffer = commandBuffers[idx];
+            FrameBuffer frameBuffer = frameBuffers[idx];
 
             fence.fenceWait();
             fence.reset();
 
+            commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
 
             VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
-                    .renderPass(this.renderPass.getVkRenderPass())
+                    .renderPass(renderPass.getVkRenderPass())
                     .pClearValues(clearValues)
                     .renderArea(a -> a.extent().set(width, height))
                     .framebuffer(frameBuffer.getVkFrameBuffer());
@@ -105,7 +106,7 @@ public class ForwardRenderActivity {
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
             vkCmdBeginRenderPass(cmdHandle, renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-            vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, this.pipeLine.getVkPipeline());
+            vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
             VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
                     .x(0)
@@ -127,8 +128,8 @@ public class ForwardRenderActivity {
 
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
+            LongBuffer vertexBuffer = stack.mallocLong(1);
             for (VulkanMesh mesh : meshes) {
-                LongBuffer vertexBuffer = stack.mallocLong(1);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                 vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
@@ -142,14 +143,14 @@ public class ForwardRenderActivity {
 
     public void submit(Queue queue) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            int idx = this.swapChain.getCurrentFrame();
-            CommandBuffer commandBuffer = this.commandBuffers[idx];
-            Fence currentFence = this.fences[idx];
-            SwapChain.SyncSemaphores syncSemaphores = this.swapChain.getSyncSemaphoresList()[idx];
+            int idx = swapChain.getCurrentFrame();
+            CommandBuffer commandBuffer = commandBuffers[idx];
+            Fence currentFence = fences[idx];
+            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.imgAcquisitionSemaphores().getVkSemaphore()),
+                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.renderCompleteSemaphores().getVkSemaphore()), currentFence);
+                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
         }
     }
 }

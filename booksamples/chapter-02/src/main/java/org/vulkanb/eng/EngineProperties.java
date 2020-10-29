@@ -19,8 +19,8 @@ public class EngineProperties {
 
         try (InputStream stream = EngineProperties.class.getResourceAsStream("/" + FILENAME)) {
             props.load(stream);
-            this.ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
-            this.validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
+            ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
+            validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -34,10 +34,10 @@ public class EngineProperties {
     }
 
     public int getUps() {
-        return this.ups;
+        return ups;
     }
 
     public boolean isValidate() {
-        return this.validate;
+        return validate;
     }
 }

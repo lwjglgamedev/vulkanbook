@@ -93,6 +93,10 @@
         <module>chapter-06</module>
         <module>chapter-07</module>
         <module>chapter-08</module>
+        <module>chapter-09</module>
+        <module>chapter-10</module>
+        <module>chapter-11</module>
+        <module>chapter-12</module>
     </modules>
 
     <properties>
@@ -100,7 +104,7 @@
         <built.by>vulkanb</built.by>
         <main.class>org.vulkanb.Main</main.class>
         <!-- Versions -->
-        <java.version>14</java.version>
+        <java.version>15</java.version>
 
         <joml.version>1.9.25</joml.version>
         <log4j.version>2.13.3</log4j.version>

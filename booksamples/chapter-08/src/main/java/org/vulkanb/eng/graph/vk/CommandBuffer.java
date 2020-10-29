@@ -5,7 +5,7 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandBuffer {
@@ -30,7 +30,7 @@ public class CommandBuffer {
             vkCheck(vkAllocateCommandBuffers(vkDevice, cmdBufAllocateInfo, pb),
                     "Failed to allocate render command buffer");
 
-            this.vkCommandBuffer = new VkCommandBuffer(pb.get(0), vkDevice);
+            vkCommandBuffer = new VkCommandBuffer(pb.get(0), vkDevice);
         }
     }
 
@@ -38,28 +38,28 @@ public class CommandBuffer {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO);
-            if (this.oneTimeSubmit) {
+            if (oneTimeSubmit) {
                 cmdBufInfo.flags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
             }
-            vkCheck(vkBeginCommandBuffer(this.vkCommandBuffer, cmdBufInfo), "Failed to begin command buffer");
+            vkCheck(vkBeginCommandBuffer(vkCommandBuffer, cmdBufInfo), "Failed to begin command buffer");
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.trace("Destroying command buffer");
-        vkFreeCommandBuffers(this.commandPool.getDevice().getVkDevice(), this.commandPool.getVkCommandPool(),
+        vkFreeCommandBuffers(commandPool.getDevice().getVkDevice(), commandPool.getVkCommandPool(),
                 this.vkCommandBuffer);
     }
 
     public void endRecording() {
-        vkCheck(vkEndCommandBuffer(this.vkCommandBuffer), "Failed to end command buffer");
+        vkCheck(vkEndCommandBuffer(vkCommandBuffer), "Failed to end command buffer");
     }
 
     public VkCommandBuffer getVkCommandBuffer() {
-        return this.vkCommandBuffer;
+        return vkCommandBuffer;
     }
 
     public void reset() {
-        vkResetCommandBuffer(this.vkCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+        vkResetCommandBuffer(vkCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     }
 }

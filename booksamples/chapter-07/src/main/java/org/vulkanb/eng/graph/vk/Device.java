@@ -7,7 +7,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.FloatBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Device {
@@ -50,13 +50,13 @@ public class Device {
             PointerBuffer pp = stack.mallocPointer(1);
             vkCheck(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),
                     "Failed to create device");
-            this.vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
+            vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
         }
     }
 
-    public void cleanUp() {
+    public void cleanup() {
         LOGGER.debug("Destroying Vulkan device");
-        vkDestroyDevice(this.vkDevice, null);
+        vkDestroyDevice(vkDevice, null);
     }
 
     public PhysicalDevice getPhysicalDevice() {
@@ -68,6 +68,6 @@ public class Device {
     }
 
     public void waitIdle() {
-        vkDeviceWaitIdle(this.vkDevice);
+        vkDeviceWaitIdle(vkDevice);
     }
 }

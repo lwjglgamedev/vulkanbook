@@ -5,7 +5,7 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class Queue {
 
@@ -20,7 +20,7 @@ public class Queue {
             PointerBuffer pQueue = stack.mallocPointer(1);
             vkGetDeviceQueue(device.getVkDevice(), queueFamilyIndex, queueIndex, pQueue);
             long queue = pQueue.get(0);
-            this.vkQueue = new VkQueue(queue, device.getVkDevice());
+            vkQueue = new VkQueue(queue, device.getVkDevice());
         }
     }
 
@@ -29,7 +29,7 @@ public class Queue {
     }
 
     public void waitIdle() {
-        vkQueueWaitIdle(this.vkQueue);
+        vkQueueWaitIdle(vkQueue);
     }
 
     public static class GraphicsQueue extends Queue {

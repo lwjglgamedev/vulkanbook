@@ -15,15 +15,29 @@ Swap chain creation will be encapsulated in a class named `SwapChain`.
 Let's start with its attributes and the constructor:
 
 ```java
-private static final Logger LOGGER = LogManager.getLogger();
-private Device device;
-private ImageView[] imageViews;
-private SurfaceFormat surfaceFormat;
-private long vkSwapChain;
+package org.vulkanb.eng.graph.vk;
 
-public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
-    LOGGER.debug("Creating Vulkan SwapChain");
-    this.device = device;
+import org.apache.logging.log4j.*;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.*;
+import org.vulkanb.eng.Window;
+
+import java.nio.*;
+
+import static org.lwjgl.vulkan.VK11.*;
+import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+
+public class SwapChain {
+
+    private static final Logger LOGGER = LogManager.getLogger();
+    private Device device;
+    private ImageView[] imageViews;
+    private SurfaceFormat surfaceFormat;
+    private long vkSwapChain;
+
+    public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
+        LOGGER.debug("Creating Vulkan SwapChain");
+        this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
 
             PhysicalDevice physicalDevice = device.getPhysicalDevice();
@@ -34,6 +48,14 @@ public SwapChain(Device device, Surface surface, Window window, int requestedIma
                     surface.getVkSurface(), surfCapabilities), "Failed to get surface capabilities");
 
             int numImages = calcNumImages(surfCapabilities, requestedImages);
+
+            surfaceFormat = calcSurfaceFormat(physicalDevice, surface);
+            ...
+        }
+        ...
+    }
+    ...
+}
 ```
 
 We will be identifying the purpose of the different attributes while we go through the code. The first thing we do to calculate the number of images that our swap chain will have. You may be wondering why do we need more than one image? The answer is to increase performance, while an image is being presented, we may be using another one to render the results of the next frame. We need to have several in order to parallelize the tasks and use both the CPU and GPU at their maximum capacity. The most common use cases employ two images (double buffering) or three (triple buffering), as in the figure below.
@@ -45,90 +67,129 @@ The figure above represents the triple buffer case. While image #1 is used for p
 Our `SwapChain` class constructor has a parameter named `requestedImages` which is used to express the desired number of images our swap chain should have. The `calcNumImages` method tries to accommodate that request to the surface limits defined by the surface capabilities that we obtained at the beginning of the constructor. The definition of the `calcNumImages` is as follows:
 
 ```java
-private int calcNumImages(VkSurfaceCapabilitiesKHR surfCapabilities, int requestedImages) {
-    int maxImages = surfCapabilities.maxImageCount();
-    int minImages = surfCapabilities.minImageCount();
-    int result = minImages;
-    if (maxImages != 0) {
-        result = Math.min(requestedImages, maxImages);
+public class SwapChain {
+    ...
+    private int calcNumImages(VkSurfaceCapabilitiesKHR surfCapabilities, int requestedImages) {
+        int maxImages = surfCapabilities.maxImageCount();
+        int minImages = surfCapabilities.minImageCount();
+        int result = minImages;
+        if (maxImages != 0) {
+            result = Math.min(requestedImages, maxImages);
+        }
+        result = Math.max(result, minImages);
+        LOGGER.debug("Requested [{}] images, got [{}] images. Surface capabilities, maxImages: [{}], minImages [{}]",
+                requestedImages, result, maxImages, minImages);
+
+        return result;
     }
-    result = Math.max(result, minImages);
-    LOGGER.debug("Requested [{}] images, got [{}] images. Surface capabilities, maxImages: [{}], minImages [{}]",
-            requestedImages, result, maxImages, minImages);
-    return result;
+    ...
 }
 ```
 
 The first thing we do is retrieve the minimum and maximum number of images that our surface supports. If we get a value of `0` for the maximum number of images, this means that there is no limit. The rest of the code is basically to try to stick with the  requested value if it's within the maximum-minimum range.
 
-Let's go back again to our constructor. The next thing to do is calculate the image format and the color space of our swap chain images:
+Let's go back again to the `SwapChain` constructor. The next thing to do is calculate the image format and the color space of our swap chain images:
 
 ```java
-        this.surfaceFormat = calcSurfaceFormat(physicalDevice, surface);
+public class SwapChain {
+    ...
+    public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
+        ...
+            surfaceFormat = calcSurfaceFormat(physicalDevice, surface);
+       ...
+    }
+    ...
+}
 ```
 
 Let's review the definition of the `calcSurfaceFormat` method:
 
 ```java
-private SurfaceFormat calcSurfaceFormat(PhysicalDevice physicalDevice, Surface surface) {
-    int imageFormat;
-    int colorSpace;
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        IntBuffer ip = stack.mallocInt(1);
-        vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.getVkPhysicalDevice(),
-                surface.getVkSurface(), ip, null), "Failed to get the number surface formats");
-        int numFormats = ip.get(0);
-        if (numFormats <= 0) {
-            throw new RuntimeException("No surface formats retrieved");
-        }
-        VkSurfaceFormatKHR.Buffer surfaceFormats = VkSurfaceFormatKHR.callocStack(numFormats, stack);
-        vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.getVkPhysicalDevice(),
-                surface.getVkSurface(), ip, surfaceFormats), "Failed to get surface formats");
+public class SwapChain {
+    ...
+    private SurfaceFormat calcSurfaceFormat(PhysicalDevice physicalDevice, Surface surface) {
+        int imageFormat;
+        int colorSpace;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
 
-        imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-        colorSpace = surfaceFormats.get(0).colorSpace();
-        for (int i = 0; i < numFormats; i++) {
-            VkSurfaceFormatKHR surfaceFormatKHR = surfaceFormats.get(i);
-            if (surfaceFormatKHR.format() == VK_FORMAT_B8G8R8A8_UNORM &&
-                    surfaceFormatKHR.colorSpace() == KHRSurface.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                imageFormat = surfaceFormatKHR.format();
-                colorSpace = surfaceFormatKHR.colorSpace();
-                break;
+            IntBuffer ip = stack.mallocInt(1);
+            vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.getVkPhysicalDevice(),
+                    surface.getVkSurface(), ip, null), "Failed to get the number surface formats");
+            int numFormats = ip.get(0);
+            if (numFormats <= 0) {
+                throw new RuntimeException("No surface formats retrieved");
+            }
+
+            VkSurfaceFormatKHR.Buffer surfaceFormats = VkSurfaceFormatKHR.callocStack(numFormats, stack);
+            vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.getVkPhysicalDevice(),
+                    surface.getVkSurface(), ip, surfaceFormats), "Failed to get surface formats");
+
+            imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+            colorSpace = surfaceFormats.get(0).colorSpace();
+            for (int i = 0; i < numFormats; i++) {
+                VkSurfaceFormatKHR surfaceFormatKHR = surfaceFormats.get(i);
+                if (surfaceFormatKHR.format() == VK_FORMAT_B8G8R8A8_UNORM &&
+                        surfaceFormatKHR.colorSpace() == KHRSurface.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                    imageFormat = surfaceFormatKHR.format();
+                    colorSpace = surfaceFormatKHR.colorSpace();
+                    break;
+                }
             }
         }
+        return new SurfaceFormat(imageFormat, colorSpace);
     }
-    return new SurfaceFormat(imageFormat, colorSpace);
+    ...
 }
 ```
 
-The first thing we do is retrieve the number of formats our surface supports by calling the `vkGetPhysicalDeviceSurfaceFormatsKHR` Vulkan function. As with many other Vulkan samples, we first call that function to get the total number of formats supported and then we create a buffer of structures, `VkSurfaceFormatKHR` in this case, to retrieve the data by calling the same function again. Once we have all that data, we iterate over the formats trying to check if `VK_FORMAT_B8G8R8A8_UNORM`(8 bits for RGBA channels normalized) and SRGB non linear color space are supported. `SurfaceFormat` is just a `record` which stores the image format and the color space.
+The first thing we do is retrieve the number of formats our surface supports by calling the `vkGetPhysicalDeviceSurfaceFormatsKHR` Vulkan function. As with many other Vulkan samples, we first call that function to get the total number of formats supported and then we create a buffer of structures, `VkSurfaceFormatKHR` in this case, to retrieve the data by calling the same function again. Once we have all that data, we iterate over the formats trying to check if `VK_FORMAT_B8G8R8A8_UNORM`(8 bits for RGBA channels normalized) and SRGB non linear color space are supported. `SurfaceFormat` is just a `record` which stores the image format and the color space:
+```java
+public class SwapChain {
+    ...
+    public record SurfaceFormat(int imageFormat, int colorSpace) {
+    }
+    ...
+}
+```
 
 It is turn again to go back to the constructor. We need to calculate now the extent of the images of the swap chain:
 
 ```java
-        VkExtent2D swapChainExtent = calcSwapChainExtent(stack, window, surfCapabilities);
+public class SwapChain {
+    ...
+        public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
+            ...
+            VkExtent2D swapChainExtent = calcSwapChainExtent(stack, window, surfCapabilities);
+            ...
+        }
+    ...
+}
 ```
 
 The `calcSwapChainExtent` method is defined like this: 
 
 ```java
-public VkExtent2D calcSwapChainExtent(MemoryStack stack, Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
-    VkExtent2D swapChainExtent = VkExtent2D.callocStack(stack);
-    if (surfCapabilities.currentExtent().width() == 0xFFFFFFFF) {
-        // Surface size undefined. Set to the window size if within bounds
-        int width = Math.min(window.getWidth(), surfCapabilities.maxImageExtent().width());
-        width = Math.max(width, surfCapabilities.minImageExtent().width());
+public class SwapChain {
+    ...
+    public VkExtent2D calcSwapChainExtent(Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
+        VkExtent2D result = VkExtent2D.calloc();
+        if (surfCapabilities.currentExtent().width() == 0xFFFFFFFF) {
+            // Surface size undefined. Set to the window size if within bounds
+            int width = Math.min(window.getWidth(), surfCapabilities.maxImageExtent().width());
+            width = Math.max(width, surfCapabilities.minImageExtent().width());
 
-        int height = Math.min(window.getHeight(), surfCapabilities.maxImageExtent().height());
-        height = Math.max(height, surfCapabilities.minImageExtent().height());
+            int height = Math.min(window.getHeight(), surfCapabilities.maxImageExtent().height());
+            height = Math.max(height, surfCapabilities.minImageExtent().height());
 
-        swapChainExtent.width(width);
-        swapChainExtent.height(height);
-    } else {
-        // Surface already defined, just use that for the swap chain
-        swapChainExtent.set(surfCapabilities.currentExtent());
+            result.width(width);
+            result.height(height);
+        } else {
+            // Surface already defined, just use that for the swap chain
+            result.set(surfCapabilities.currentExtent());
+        }
+        return result;
     }
-    return swapChainExtent;
+    ...
 }
 ```
 
@@ -162,28 +223,36 @@ In our case, the `Swapchain` class constructor receives a parameter, named `vsyn
 We are now ready to create the swap chain at last in our constructor with the following code:
 
 ```java
-        VkSwapchainCreateInfoKHR vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.callocStack(stack)
-                .sType(KHRSwapchain.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)
-                .surface(surface.getVkSurface())
-                .minImageCount(numImages)
-                .imageFormat(this.surfaceFormat.imageFormat())
-                .imageColorSpace(this.surfaceFormat.colorSpace())
-                .imageExtent(swapChainExtent)
-                .imageArrayLayers(1)
-                .imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-                .imageSharingMode(VK_SHARING_MODE_EXCLUSIVE)
-                .preTransform(surface.getVkSurfaceCapabilities().currentTransform())
-                .compositeAlpha(KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
-                .clipped(true);
-        if (vsync) {
-            vkSwapchainCreateInfo.presentMode(KHRSurface.VK_PRESENT_MODE_FIFO_KHR);
-        } else {
-            vkSwapchainCreateInfo.presentMode(KHRSurface.VK_PRESENT_MODE_IMMEDIATE_KHR);
-        }
-        LongBuffer lp = stack.mallocLong(1);
-        vkCheck(KHRSwapchain.vkCreateSwapchainKHR(device.getVkDevice(), vkSwapchainCreateInfo, null, lp),
-                "Failed to create swap chain");
-        this.vkSwapChain = lp.get(0);
+public class SwapChain {
+    ...
+    public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
+        ...
+            VkSwapchainCreateInfoKHR vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.callocStack(stack)
+                    .sType(KHRSwapchain.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)
+                    .surface(surface.getVkSurface())
+                    .minImageCount(numImages)
+                    .imageFormat(surfaceFormat.imageFormat())
+                    .imageColorSpace(surfaceFormat.colorSpace())
+                    .imageExtent(swapChainExtent)
+                    .imageArrayLayers(1)
+                    .imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                    .imageSharingMode(VK_SHARING_MODE_EXCLUSIVE)
+                    .preTransform(surfCapabilities.currentTransform())
+                    .compositeAlpha(KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                    .clipped(true);
+            if (vsync) {
+                vkSwapchainCreateInfo.presentMode(KHRSurface.VK_PRESENT_MODE_FIFO_KHR);
+            } else {
+                vkSwapchainCreateInfo.presentMode(KHRSurface.VK_PRESENT_MODE_IMMEDIATE_KHR);
+            }
+            LongBuffer lp = stack.mallocLong(1);
+            vkCheck(KHRSwapchain.vkCreateSwapchainKHR(device.getVkDevice(), vkSwapchainCreateInfo, null, lp),
+                    "Failed to create swap chain");
+            vkSwapChain = lp.get(0);
+        ...
+    }
+    ...
+}
 ```
 
 ## Swap chain images
@@ -199,32 +268,42 @@ The next step is to retrieve the images of the Swap chain. We will use them when
 This is done at the end of the constructor y calling the `createImageViews`method:
 
 ```java
-        this.imageViews = createImageViews(stack, device, this.vkSwapChain, this.surfaceFormat.imageFormat);
+public class SwapChain {
+    ...
+    public VkExtent2D calcSwapChainExtent(MemoryStack stack, Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
+        ...
+            imageViews = createImageViews(stack, device, vkSwapChain, surfaceFormat.imageFormat);
+        ...
     }
-}       
+    ...
+}
 ```
 
 The definition of that method is as follows:
 
 ```java
-private ImageView[] createImageViews(MemoryStack stack, Device device, long swapChain, int format) {
-    ImageView[] result;
+public class SwapChain {
+    ...
+    private ImageView[] createImageViews(MemoryStack stack, Device device, long swapChain, int format) {
+        ImageView[] result;
 
-    IntBuffer ip = stack.mallocInt(1);
-    vkCheck(KHRSwapchain.vkGetSwapchainImagesKHR(device.getVkDevice(), swapChain, ip, null),
-            "Failed to get number of surface images");
-    int numImages = ip.get(0);
+        IntBuffer ip = stack.mallocInt(1);
+        vkCheck(KHRSwapchain.vkGetSwapchainImagesKHR(device.getVkDevice(), swapChain, ip, null),
+                "Failed to get number of surface images");
+        int numImages = ip.get(0);
 
-    LongBuffer swapChainImages = stack.mallocLong(numImages);
-    vkCheck(KHRSwapchain.vkGetSwapchainImagesKHR(device.getVkDevice(), swapChain, ip, swapChainImages),
-            "Failed to get surface images");
+        LongBuffer swapChainImages = stack.mallocLong(numImages);
+        vkCheck(KHRSwapchain.vkGetSwapchainImagesKHR(device.getVkDevice(), swapChain, ip, swapChainImages),
+                "Failed to get surface images");
 
-    result = new ImageView[numImages];
-    for (int i = 0; i < numImages; i++) {
-        result[i] = new ImageView(device, swapChainImages.get(i), format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        result = new ImageView[numImages];
+        for (int i = 0; i < numImages; i++) {
+            result[i] = new ImageView(device, swapChainImages.get(i), format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        }
+
+        return result;
     }
-
-    return result;
+    ...
 }
 ```
 
@@ -232,26 +311,31 @@ The first thing we do is retrieve the **actual** number of images that our swap 
 Now we iterate over the images to create new `ImageView` instances. The `ImageView` class encapsulates the creation and disposal of Vulkan image views. Its constructor is defined like this:
 
 ```java
-public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
-    this.device = device;
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        LongBuffer lp = stack.mallocLong(1);
-        VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.callocStack(stack)
-                .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
-                .image(vkImage)
-                .viewType(VK_IMAGE_VIEW_TYPE_2D)
-                .format(format)
-                .subresourceRange(it -> it
-                        .aspectMask(aspectMask)
-                        .baseMipLevel(0)
-                        .levelCount(mipLevels)
-                        .baseArrayLayer(0)
-                        .layerCount(1));
+...
+public class ImageView {
+    ...
+    public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
+        this.device = device;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            LongBuffer lp = stack.mallocLong(1);
+            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
+                    .image(vkImage)
+                    .viewType(VK_IMAGE_VIEW_TYPE_2D)
+                    .format(format)
+                    .subresourceRange(it -> it
+                            .aspectMask(aspectMask)
+                            .baseMipLevel(0)
+                            .levelCount(mipLevels)
+                            .baseArrayLayer(0)
+                            .layerCount(1));
 
-        vkCheck(vkCreateImageView(device.getVkDevice(), viewCreateInfo, null, lp),
-                "Failed to create image view");
-        this.vkImageView = lp.get(0);
+            vkCheck(vkCreateImageView(device.getVkDevice(), viewCreateInfo, null, lp),
+                    "Failed to create image view");
+            vkImageView = lp.get(0);
+        }
     }
+    ...
 }
 ```
 
@@ -263,15 +347,33 @@ In order to create a Image View we need to fill up a `VkImageViewCreateInfo` str
 - `format`: The format of the image. In this case we just use the format of the underlying swap chain images.
 - `subresourceRange`: This parameter allow us to select a specific range of the underlying image. We can select a specific set of mipmap levels or layers (in the case of array of layers). In this case, we can control the maximum mipmap level (through the `mipLevels`argument), and we stick to 1 layer. Regarding the aspects, for this specific case, we will get the color aspect (for example there are some other aspect for depth images).
 
-With the `VkImageViewCreateInfo` structure filled up, we just need to call the `vkCreateImageView` to get a handle to the the Image View. The rest of the class is just a *getter* for the handle and the `cleanUp` method to free the resources.
+With the `VkImageViewCreateInfo` structure filled up, we just need to call the `vkCreateImageView` to get a handle to the the Image View. The rest of the class is just a *getter* for the handle and the `cleanup` method to free the resources.
 
 ```java
-public void cleanUp() {
-    vkDestroyImageView(this.device.getVkDevice(), this.vkImageView, null);
-}
+...
+public class ImageView {
+    ...
+    public void cleanup() {
+        vkDestroyImageView(device.getVkDevice(), vkImageView, null);
+    }
 
-public long getVkImageView() {
-    return vkImageView;
+    public long getVkImageView() {
+        return vkImageView;
+    }
+    ...
+}
+```
+
+Going back to the `Swapchain`class we need also to create a `cleanup` method to free the resources:
+```java
+public class SwapChain {
+    ...
+    public void cleanup() {
+        LOGGER.debug("Destroying Vulkan SwapChain");
+        Arrays.stream(imageViews).forEach(ImageView::cleanup);
+        KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
+    }
+    ...
 }
 ```
 
@@ -279,18 +381,20 @@ Now we can use the `Swapchain` class in our `Render`class:
 
 ```java
 public class Render {
-    // ....
+    ...
     private SwapChain swapChain;
-
-    public void cleanUp() {
-        this.swapChain.cleanUp();
-        // ....
+    ...
+    public void cleanup() {
+        ...
+        swapChain.cleanup();
+        ...
     }
 
-    public void init(Window window) {
-        // ... 
-        this.swapChain = new SwapChain(this.device, this.surface, window, engProps.getRequestedImages(),
+    public void init(Window window, Scene scene) {
+        ...
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
+        ...
     }
 ```
 
@@ -303,7 +407,7 @@ public class EngineProperties {
 ...
     private EngineProperties() {
             ...
-            this.vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
+            vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
             ...
     }
 ```

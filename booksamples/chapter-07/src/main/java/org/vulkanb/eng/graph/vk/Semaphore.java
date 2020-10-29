@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.VkSemaphoreCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Semaphore {
@@ -22,15 +22,15 @@ public class Semaphore {
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateSemaphore(device.getVkDevice(), semaphoreCreateInfo, null, lp),
                     "Failed to create semaphore");
-            this.vkSemaphore = lp.get(0);
+            vkSemaphore = lp.get(0);
         }
     }
 
-    public void cleanUp() {
-        vkDestroySemaphore(this.device.getVkDevice(), this.vkSemaphore, null);
+    public void cleanup() {
+        vkDestroySemaphore(device.getVkDevice(), vkSemaphore, null);
     }
 
     public long getVkSemaphore() {
-        return this.vkSemaphore;
+        return vkSemaphore;
     }
 }

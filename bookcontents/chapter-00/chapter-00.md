@@ -4,7 +4,6 @@ So what is Vulkan? Here's the definition for the Vulkan standard landing page:
 
 > Vulkan is a new generation graphics and compute API that provides high-efficiency, cross-platform access to modern GPUs used in a wide variety of devices from PCs and consoles to mobile phones and embedded platforms.
 
-
 Vulkan is a standard developed by the [Khronos group](https://www.khronos.org/), which is an open industry consortium behind many other well-known standards such as [OpenGL](https://www.khronos.org/opengl/) and [OpenCL](https://www.khronos.org/opencl/).
 
 ## Why Vulkan?
@@ -57,7 +56,7 @@ You will also need the following:
 
 - The Vulkan [SDK](https://vulkan.lunarg.com/).
 
-Bring your own IDE.
+Bring your own IDE. However, since it is a multi-module project it is advised to open each chapter independently. If you still want to work with the root project, please be aware that you will net to set the working directory to the root of each of the sub-projects you want to run. The resources (such as 3D models, shaders and textures are loaded using relative paths to the working directory).
 
 ## Resources used for writing this book
 

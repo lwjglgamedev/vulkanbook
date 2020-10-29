@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class SwapChainRenderPass {
@@ -55,16 +55,16 @@ public class SwapChainRenderPass {
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateRenderPass(swapChain.getDevice().getVkDevice(), renderPassInfo, null, lp),
                     "Failed to create render pass");
-            this.vkRenderPass = lp.get(0);
+            vkRenderPass = lp.get(0);
         }
     }
 
-    public void cleanUp() {
-        vkDestroyRenderPass(this.swapChain.getDevice().getVkDevice(), this.vkRenderPass, null);
+    public void cleanup() {
+        vkDestroyRenderPass(swapChain.getDevice().getVkDevice(), vkRenderPass, null);
     }
 
     public long getVkRenderPass() {
-        return this.vkRenderPass;
+        return vkRenderPass;
     }
 
 }
