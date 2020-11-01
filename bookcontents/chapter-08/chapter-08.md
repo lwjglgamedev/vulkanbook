@@ -329,6 +329,7 @@ public class Texture {
     ...
     public Texture(Device device, String fileName, int imageFormat) {
         LOGGER.debug("Creating texture [{}]", fileName);
+        recordedTransition = false;
         this.fileName = fileName;
         ByteBuffer buf;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -357,7 +358,7 @@ public class Texture {
 }
 ```
 
-We use the stb function `stbi_load` to load an image file. This function receives as a parameter the path to the file, three `IntBuffer`s to return the width , the height and the  color components of the image. It also receives the desired number of color components (`4` in our case, which represents RGBA). This function returns a `ByteBuffer` with the contents of the image if it has success and fills up the `IntBuffer` used as output parameters. After that, we create a Vulkan buffer which will be used to transfer the contents to the image. Then, we create a Vulkan image. It is interesting to review the usage flags we are using in in this case:
+The `Texture` class defines the `recordedTransition` attribute to control if the texture has already been recorder to transition to the final layout or not (more on this later). We use the stb function `stbi_load` to load an image file. This function receives as a parameter the path to the file, three `IntBuffer`s to return the width , the height and the  color components of the image. It also receives the desired number of color components (`4` in our case, which represents RGBA). This function returns a `ByteBuffer` with the contents of the image if it has success and fills up the `IntBuffer` used as output parameters. After that, we create a Vulkan buffer which will be used to transfer the contents to the image. Then, we create a Vulkan image. It is interesting to review the usage flags we are using in in this case:
 
 - `VK_IMAGE_USAGE_TRANSFER_DST_BIT`: The image can be used as a destination of a transfer command. We need this, because in our case, we will copy from a staging buffer to the image.
 
@@ -421,8 +422,9 @@ In order for Vulkan to correctly use the image, we need to transition it to the 
 public class Texture {
     ...
     public void recordTextureTransition(CommandBuffer cmd) {
-        if (stgBuffer != null) {
+        if (stgBuffer != null !recordedTransition) {
             LOGGER.debug("Recording transition for texture [{}]", fileName);
+            recordedTransition = true;
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 recordCopyBuffer(stack, cmd, stgBuffer);
@@ -436,7 +438,7 @@ public class Texture {
 }
 ```
 
-This method first records the transition of the image layout to one where we can copy the staging buffer contents. That is, we transition from `VK_IMAGE_LAYOUT_UNDEFINED` to `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL` layout by calling the `recordImageTransition`. After that, it records the commands to copy the staging buffer contents to the image, by calling the `recordCopyBuffer`. Finally, we record the commands to transition the layout from `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL` to `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` by calling again the `recordImageTransition` method. The texture will be used in a shader, no one will be writing to it after we have finished with the staging buffer, therefore, the `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` is the appropriate state.
+This method first checks that if the texture has already been transitioned (`stgBuffer` will be null) or the command to perform that transition have already been recorded (`recordedTransition` would be true). It is important to keep in mind that models may share the same texture for different areas, so it is important to control this to avoid executing useless commands. If this this not the case, it records the transition of the image layout to one where we can copy the staging buffer contents. That is, we transition from `VK_IMAGE_LAYOUT_UNDEFINED` to `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL` layout by calling the `recordImageTransition`. After that, it records the commands to copy the staging buffer contents to the image, by calling the `recordCopyBuffer`. Finally, we record the commands to transition the layout from `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL` to `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` by calling again the `recordImageTransition` method. The texture will be used in a shader, no one will be writing to it after we have finished with the staging buffer, therefore, the `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` is the appropriate state.
 
 An important issue to highlight is that we are recording commands that can be submitted to a queue. In this way, we can group the commands associated to several textures and submit them using a single call, instead of going one by one. This should  reduce the loading time when dealing with several textures. We can view now the definition of the `recordImageTransition` method:
 

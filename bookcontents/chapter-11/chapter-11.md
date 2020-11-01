@@ -269,6 +269,11 @@ public class VulkanMesh {
                 metalRougTexture.recordTextureTransition(cmd);
             }
             ...
+            for (int i = 0; i < numMeshes; i++) {
+                ...
+                meshes[i].getNormalMapTexture().cleanupStgBuffer();
+                meshes[i].getMetalRoughTexture().cleanupStgBuffer();
+            }
         }
         ...
     }

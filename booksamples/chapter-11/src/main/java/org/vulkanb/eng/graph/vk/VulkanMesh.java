@@ -145,6 +145,8 @@ public class VulkanMesh {
                 positionTransferBuffers[i].cleanup();
                 indicesTransferBuffers[i].cleanup();
                 meshes[i].getTexture().cleanupStgBuffer();
+                meshes[i].getNormalMapTexture().cleanupStgBuffer();
+                meshes[i].getMetalRoughTexture().cleanupStgBuffer();
             }
         }
 

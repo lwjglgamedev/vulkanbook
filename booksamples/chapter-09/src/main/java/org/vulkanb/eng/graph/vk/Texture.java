@@ -20,11 +20,13 @@ public class Texture {
     private Image image;
     private ImageView imageView;
     private int mipLevels;
+    private boolean recordedTransition;
     private VulkanBuffer stgBuffer;
     private int width;
 
     public Texture(Device device, String fileName, int imageFormat) {
         LOGGER.debug("Creating texture [{}]", fileName);
+        recordedTransition = false;
         this.fileName = fileName;
         ByteBuffer buf;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -235,8 +237,9 @@ public class Texture {
     }
 
     public void recordTextureTransition(CommandBuffer cmd) {
-        if (stgBuffer != null) {
+        if (stgBuffer != null && !recordedTransition) {
             LOGGER.debug("Recording transition for texture [{}]", fileName);
+            recordedTransition = true;
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 recordCopyBuffer(stack, cmd, stgBuffer);
