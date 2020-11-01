@@ -15,7 +15,7 @@ public class Main implements IAppLogic {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private static final float MOUSE_SENSITIVITY = 0.1f;
-    private static final float MOVEMENT_SPEED = 100.0f / 1E9f;
+    private static final float MOVEMENT_SPEED = 10.0f / 1E9f;
 
     private float angleInc;
     private Light directionalLight;
