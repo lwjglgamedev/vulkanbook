@@ -40,11 +40,11 @@ public class GeometryFrameBuffer {
     private void createFrameBuffer(SwapChain swapChain) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             List<Attachment> attachments = geometryAttachments.getAttachments();
-            int numAttachments = attachments.size();
-            LongBuffer attachmentsBuff = stack.mallocLong(numAttachments);
-            for (int i = 0; i < numAttachments; i++) {
-                attachmentsBuff.put(i, attachments.get(i).getImageView().getVkImageView());
+            LongBuffer attachmentsBuff = stack.mallocLong(attachments.size());
+            for (Attachment attachment : attachments) {
+                attachmentsBuff.put(attachment.getImageView().getVkImageView());
             }
+            attachmentsBuff.flip();
 
             frameBuffer = new FrameBuffer(swapChain.getDevice(), geometryAttachments.getWidth(), geometryAttachments.getHeight(),
                     attachmentsBuff, geometryRenderPass.getVkRenderPass());

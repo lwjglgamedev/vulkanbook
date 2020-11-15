@@ -28,7 +28,7 @@ package org.vulkanb.eng.graph.geometry;
 
 import org.vulkanb.eng.graph.vk.*;
 
-import java.util.Arrays;
+import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
@@ -36,40 +36,37 @@ public class GeometryAttachments {
 
     public static final int NUMBER_ATTACHMENTS = 2;
     public static final int NUMBER_COLOR_ATTACHMENTS = NUMBER_ATTACHMENTS - 1;
-    private Attachment[] attachments;
-    private int depthAttachmentPos;
+    private List<Attachment> attachments;
+    private Attachment deptAttachment;
     private int height;
     private int width;
 
     public GeometryAttachments(Device device, int width, int height) {
         this.width = width;
         this.height = height;
-        attachments = new Attachment[NUMBER_ATTACHMENTS];
+        attachments = new ArrayList<>();
 
-        int i = 0;
         // Albedo attachment
         Attachment attachment = new Attachment(device, width, height,
                 VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-        attachments[i] = attachment;
-        i++;
+        attachments.add(attachment);
 
         // Depth attachment
-        attachment = new Attachment(device, width, height,
+        deptAttachment = new Attachment(device, width, height,
                 VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-        attachments[i] = attachment;
-        depthAttachmentPos = i;
+        attachments.add(deptAttachment);
     }
 
     public void cleanup() {
-        Arrays.stream(attachments).forEach(Attachment::cleanup);
+        attachments.stream().forEach(Attachment::cleanup);
     }
 
-    public Attachment[] getAttachments() {
+    public List<Attachment> getAttachments() {
         return attachments;
     }
 
     public Attachment getDepthAttachment() {
-        return attachments[depthAttachmentPos];
+        return deptAttachment;
     }
 
     public int getHeight() {
@@ -92,7 +89,6 @@ The class provides methods to access the attachments, to get the size of them, t
 ## Geometry render pass
 
 The next step is to define the render pass used to render the geometry. We will create a new class named `GeometryRenderPass` for that. The class starts like this:
-
 ```java
 public class GeometryRenderPass {
 
@@ -100,22 +96,23 @@ public class GeometryRenderPass {
     private Device device;
     private long vkRenderPass;
 
-    public GeometryRenderPass(Device device, Attachment[] attachments) {
+    public GeometryRenderPass(Device device, List<Attachment> attachments) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int numAttachments = attachments.length;
             VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(numAttachments, stack);
             int depthAttachmentPos = 0;
             for (int i = 0; i < numAttachments; i++) {
+                Attachment attachment = attachments.get(i);
                 attachmentsDesc.get(i)
-                        .format(attachments[i].getImage().getFormat())
+                        .format(attachment.getImage().getFormat())
                         .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
                         .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
                         .stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)
                         .stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
                         .samples(MAX_SAMPLES)
                         .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
-                if (attachments[i].isDepthAttachment()) {
+                if (attachment.isDepthAttachment()) {
                     depthAttachmentPos = i;
                     attachmentsDesc.get(i).finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
                 } else {
@@ -136,7 +133,7 @@ The next step is to define the color and depth references that will be used in t
 ```java
 public class GeometryRenderPass {
     ...
-    public GeometryRenderPass(Device device, Attachment[] attachments) {
+    public GeometryRenderPass(Device device, List<Attachment> attachments) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
@@ -172,7 +169,7 @@ Now we need to define the subpass dependencies. Prior to describing them, we wil
 ```java
 public class GeometryRenderPass {
     ...
-    public GeometryRenderPass(Device device, Attachment[] attachments) {
+    public GeometryRenderPass(Device device, List<Attachment> attachments) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
@@ -211,7 +208,7 @@ With that information we can create the render pass:
 ```java
 public class GeometryRenderPass {
     ...
-    public GeometryRenderPass(Device device, Attachment[] attachments) {
+    public GeometryRenderPass(Device device, List<Attachment> attachments) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
@@ -282,12 +279,12 @@ public class GeometryFrameBuffer {
 
     private void createFrameBuffer(SwapChain swapChain) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            Attachment[] attachments = geometryAttachments.getAttachments();
-            int numAttachments = attachments.length;
-            LongBuffer attachmentsBuff = stack.mallocLong(numAttachments);
-            for (int i = 0; i < numAttachments; i++) {
-                attachmentsBuff.put(i, attachments[i].getImageView().getVkImageView());
+            List<Attachment> attachments = geometryAttachments.getAttachments();
+            LongBuffer attachmentsBuff = stack.mallocLong(attachments.size());
+            for (Attachment attachment : attachments) {
+                attachmentsBuff.put(attachment.getImageView().getVkImageView());
             }
+            attachmentsBuff.flip();
 
             frameBuffer = new FrameBuffer(swapChain.getDevice(), geometryAttachments.getWidth(), geometryAttachments.getHeight(),
                     attachmentsBuff, geometryRenderPass.getVkRenderPass());
@@ -333,6 +330,7 @@ public class GeometryRenderActivity {
         device = swapChain.getDevice();
         geometryFrameBuffer = new GeometryFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
+        materialSize = calcMaterialsUniformSize();
         createShaders();
         createDescriptorPool();
         createDescriptorSets(numImages);
@@ -341,6 +339,13 @@ public class GeometryRenderActivity {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
     }
 
+    private int calcMaterialsUniformSize() {
+        PhysicalDevice physDevice = device.getPhysicalDevice();
+        long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
+        long mult = (GraphConstants.VEC4_SIZE * 9) / minUboAlignment + 1;
+        return (int) (mult * minUboAlignment);
+    }
+    
     public void cleanup() {
         pipeLine.cleanup();
         materialsBuffer.cleanup();
@@ -349,7 +354,7 @@ public class GeometryRenderActivity {
         textureSampler.cleanup();
         materialDescriptorSetLayout.cleanup();
         textureDescriptorSetLayout.cleanup();
-        matrixDescriptorSetLayout.cleanup();
+        uniformDescriptorSetLayout.cleanup();
         descriptorPool.cleanup();
         shaderProgram.cleanup();
         geometryFrameBuffer.cleanup();
@@ -357,14 +362,14 @@ public class GeometryRenderActivity {
         Arrays.stream(fences).forEach(Fence::cleanup);
     }
     ...
-    public Attachment[] getAttachments() {
+    public List<Attachment> getAttachments() {
         return geometryFrameBuffer.geometryAttachments().getAttachments();
     }
     ...
 }
 ```
 
-We will be using a new pair of shaders (which we will see later on), and create them in the constructor. The constructor also instantiates the `GeometryFrameBuffer` which contains the attachments and the render pass,  along with the descriptor pool, the descriptor sets, the pipeline, the command buffers and update the projection matrix uniform buffer in the constructor. The class also provides a `cleanup` method to free the allocated resources when they are no longer needed.
+We will be using a new pair of shaders (which we will see later on), and create them in the constructor. The constructor also instantiates the `GeometryFrameBuffer` which contains the attachments and the render pass, along with the descriptor pool, the descriptor sets, the pipeline, the command buffers and update the projection matrix uniform buffer in the constructor. We include here the method that calculates the size of the materials uniform (`calcMaterialsUniformSize`). Finally, the class also provides a `cleanup` method to free the allocated resources when they are no longer needed.
 
 The `createShaders` method just checks if the shaders need to be recompiled an loads them:
 
@@ -388,15 +393,11 @@ public class GeometryRenderActivity {
 ```
 
 The `createDescriptorPool` method just creates the descriptor pool. We will need:
-
 - Uniform buffers (`VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER`): one for the perspective matrix and one per swap chain image for the view matrix.
-
 - Texture samples (`VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER`): one for the textures of each of the potential materials.
-
 - Dynamic uniform buffers (`VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC`): One dynamic buffer will hold all the materials data.
-  
-  Therefore the `createDescriptorPool` method is defined like this:
-
+ 
+The `createDescriptorPool` method is defined like this:
 ```java
   public class GeometryRenderActivity {
     ...
@@ -413,17 +414,16 @@ The `createDescriptorPool` method just creates the descriptor pool. We will need
 ```
 
 The `createDescriptorSets` method is defined like this:
-
 ```java
 public class GeometryRenderActivity {
     ...
     private void createDescriptorSets(int numImages) {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
-        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
-        materialDescriptorSetLayout = new MaterialDescriptorSetLayout(device, 0);
+        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        materialDescriptorSetLayout = new DescriptorSetLayout.DynUniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
-                matrixDescriptorSetLayout,
-                matrixDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+                uniformDescriptorSetLayout,
                 textureDescriptorSetLayout,
                 materialDescriptorSetLayout,
         };
@@ -433,29 +433,27 @@ public class GeometryRenderActivity {
         textureSampler = new TextureSampler(device, 1);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        projMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
+        projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
 
-        viewMatricesDescriptorSets = new MatrixDescriptorSet[numImages];
+        viewMatricesDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
         viewMatricesBuffer = new VulkanBuffer[numImages];
-        materialsBuffer = new VulkanBuffer(device, (long) materialDescriptorSetLayout.getMaterialSize() * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        materialsBuffer = new VulkanBuffer(device, (long) materialSize * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        materialsDescriptorSet = new MaterialDescriptorSet(descriptorPool, materialDescriptorSetLayout,
-                materialsBuffer, 0);
+        materialsDescriptorSet = new DescriptorSet.DynUniformDescriptorSet(descriptorPool, materialDescriptorSetLayout,
+                materialsBuffer, 0, materialSize);
         for (int i = 0; i < numImages; i++) {
             viewMatricesBuffer[i] = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-            viewMatricesDescriptorSets[i] = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
+            viewMatricesDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     viewMatricesBuffer[i], 0);
         }
     }
     ...
 }
 ```
-
 This method is similar to the one used in previous chapters. We start by creating the descriptor layouts, instantiating the usual ones for matrix buffers, texture samplers and materials uniform. Then we create the different descriptor sets needed.
 
 The `createPipeline` is quite similar to the code used previously. It is defined like this:
-
 ```java
 public class GeometryRenderActivity {
     ...
@@ -472,7 +470,6 @@ public class GeometryRenderActivity {
 ```
 
 To finish with the methods called in the constructor, the `createCommandBuffers` is also similar to the code in the previous chapters, we just instantiate one command buffer and their associated fences per swap chain image:
-
 ```java
 public class GeometryRenderActivity {
     ...
@@ -505,7 +502,7 @@ public class GeometryRenderActivity {
         device.waitIdle();
         int meshCount = 0;
         for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
+            int materialOffset = meshCount * materialSize;
             updateTextureDescriptorSet(vulkanMesh.getTexture());
             updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
             meshCount++;
@@ -534,7 +531,6 @@ public class GeometryRenderActivity {
 The `updateMaterial` method is used to update material descriptor sets when new meshes are loaded. The `updateTextureDescriptorSet` method is used to associate the texture descriptor set with a concrete texture sampler.
 
 The `GeometryRenderActivity` also provides a method to record the command buffers which will be invoked in the render loop. This is the definition of that method:
-
 ```java
 public class GeometryRenderActivity {
     ...
@@ -553,16 +549,16 @@ public class GeometryRenderActivity {
             fence.reset();
 
             commandBuffer.reset();
-            Attachment[] attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
-            int numAttachments = attachments.length;
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(numAttachments, stack);
-            for (int i = 0; i < numAttachments; i++) {
-                if (attachments[i].isDepthAttachment()) {
-                    clearValues.apply(i, v -> v.depthStencil().depth(1.0f));
+            List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
+            VkClearValue.Buffer clearValues = VkClearValue.callocStack(attachments.size(), stack);
+            for (Attachment attachment : attachments) {
+                if (attachment.isDepthAttachment()) {
+                    clearValues.apply(v -> v.depthStencil().depth(1.0f));
                 } else {
-                    clearValues.apply(i, v -> v.color().float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 1));
+                    clearValues.apply(v -> v.color().float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 1));
                 }
             }
+            clearValues.flip();
 
             VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
@@ -598,7 +594,6 @@ public class GeometryRenderActivity {
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
-            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
             LongBuffer descriptorSets = stack.mallocLong(4)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
@@ -607,7 +602,7 @@ public class GeometryRenderActivity {
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
+                int materialOffset = meshCount * materialSize;
                 dynDescrSetOffset.put(0, materialOffset);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
@@ -620,7 +615,7 @@ public class GeometryRenderActivity {
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
 
-                    setPushConstants(cmdHandle, entity.getModelMatrix(), pushConstantBuffer);
+                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
 
@@ -635,7 +630,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-This method is almost identical than the one used in the `ForwardRenderActivity`. class in previous chapters. We have just changed a little bit the way we set the clear values to prepare it for the next chapters when we will have more than one color attachment. This class also provides a method to support window resizing, in this case, besides updating the perspective matrix, we just simply call the `resize` method in the `GeometryFrameBuffer` class which recreates the attachments and the frame buffer. This will ensure that the output attachments will match the screen size. The method to set the model matrix, thorough a push constant is also identical to the one used in the `ForwardRenderActivity` class.
+This method is almost identical than the one used in the `ForwardRenderActivity`. class in previous chapters. We have just changed a little bit the way we set the clear values to prepare it for the next chapters when we will have more than one color attachment. This class also provides a method to support window resizing, in this case, besides updating the perspective matrix, we just simply call the `resize` method in the `GeometryFrameBuffer` class which recreates the attachments and the frame buffer. This will ensure that the output attachments will match the screen size.
 
 ```java
 public class GeometryRenderActivity {
@@ -644,12 +639,6 @@ public class GeometryRenderActivity {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
         geometryFrameBuffer.resize(swapChain);
-    }
-
-    private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f modelMatrix, ByteBuffer pushConstantBuffer) {
-        modelMatrix.get(0, pushConstantBuffer);
-        vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
-                VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
     }
     ...
 }
@@ -677,7 +666,6 @@ public class GeometryRenderActivity {
 ```
 
 There's a subtle, but important, change in this method with respect to the similar method used in the `ForwardRenderActivity` class. We are using a new semaphore to be signaled when the commands submitted finishes. Instead of signalling a semaphore that  blocks image presentation, we have introduced a new one. This semaphore will be used for waiting when submitting the commands for the lighting phase. This is what will prevent the lighting phase to start reading the attachments while they are still being generated. Since we have defined new semaphores, we have updated the synchronization semaphores hosted in the `SwapChain` class to add this new element:
-
 ```java
 public class SwapChain {
     ...
@@ -698,7 +686,6 @@ public class SwapChain {
 ```
 
 The final step are thew new shaders for the geometry phase. The vertex shader (`geometry_vertex.glsl`). By now, it is exactly the same code than in t he previous chapter:
-
 ```glsl
 #version 450
 
@@ -890,7 +877,6 @@ public class LightingFrameBuffer {
 We just link the render pass and each of the swap chain images to create a frame buffer for each of them. Nothing new here.
 
 The rendering tasks of the lighting phase will be done in a new class named `LightingRenderActivity` which starts like this:
-
 ```java
 public class LightingRenderActivity {
 
@@ -900,7 +886,7 @@ public class LightingRenderActivity {
     private static final String LIGHTING_VERTEX_SHADER_FILE_SPV = LIGHTING_VERTEX_SHADER_FILE_GLSL + ".spv";
     ...
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
-                                  Attachment[] attachments) {
+                                  List<Attachment> attachments) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
@@ -908,7 +894,7 @@ public class LightingRenderActivity {
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
         createShaders();
-        createDescriptorPool();
+        createDescriptorPool(attachments);
         createDescriptorSets(attachments);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
@@ -919,17 +905,12 @@ public class LightingRenderActivity {
     }
 
     public void cleanup() {
-        pipeLine.cleanup();
-        materialsBuffer.cleanup();
-        Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
-        projMatrixUniform.cleanup();
-        textureSampler.cleanup();
-        materialDescriptorSetLayout.cleanup();
-        textureDescriptorSetLayout.cleanup();
-        matrixDescriptorSetLayout.cleanup();
+        attachmentsDescriptorSet.cleanup();
+        attachmentsLayout.cleanup();
         descriptorPool.cleanup();
+        pipeline.cleanup();
+        lightingFrameBuffer.cleanup();
         shaderProgram.cleanup();
-        geometryFrameBuffer.cleanup();
         Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
         Arrays.stream(fences).forEach(Fence::cleanup);
     }
@@ -961,13 +942,12 @@ public class LightingRenderActivity {
 ```
 
 In the `createDescriptorPool` method, we initialize the descriptor pool properly sized to the different types of descriptor sets:
-
 ```java
 public class LightingRenderActivity {
     ...
-    private void createDescriptorPool() {
+    private void createDescriptorPool(List<Attachment> attachments) {
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(GeometryAttachments.NUMBER_ATTACHMENTS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(attachments.size(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
     ...
@@ -981,8 +961,8 @@ The `createDescriptorSets` method just creates the descriptor set layout and the
 ```java
 public class LightingRenderActivity {
     ...
-    private void createDescriptorSets(Attachment[] attachments) {
-        attachmentsLayout = new AttachmentsLayout(device, GeometryAttachments.NUMBER_ATTACHMENTS);
+    private void createDescriptorSets(List<Attachment> attachments) {
+        attachmentsLayout = new AttachmentsLayout(device, attachments.size());
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 attachmentsLayout,
         };
@@ -1041,7 +1021,6 @@ public class AttachmentsLayout extends DescriptorSetLayout {
 We need to create as many `VkDescriptorSetLayoutBinding` structures as attachments we will have. By now, we just have the color and depth attachments. Their contents will be accessed by a texture sampler in the lighting fragment shader.
 
 The `AttachmentsDescriptorSet` class is defined like this:
-
 ```java
 package org.vulkanb.eng.graph.lighting;
 
@@ -1050,6 +1029,7 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
+import java.util.List;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -1061,7 +1041,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
     private TextureSampler textureSampler;
 
     public AttachmentsDescriptorSet(DescriptorPool descriptorPool, AttachmentsLayout descriptorSetLayout,
-                                    Attachment[] attachments, int binding) {
+                                    List<Attachment> attachments, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             device = descriptorPool.getDevice();
             this.binding = binding;
@@ -1093,12 +1073,12 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
         return vkDescriptorSet;
     }
 
-    public void update(Attachment[] attachments) {
+    public void update(List<Attachment> attachments) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            int numAttachments = attachments.length;
+            int numAttachments = attachments.size();
             VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {
-                Attachment attachment = attachments[i];
+                Attachment attachment = attachments.get(i);
                 VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
                         .sampler(textureSampler.getVkSampler())
                         .imageView(attachment.getImageView().getVkImageView());
@@ -1289,7 +1269,7 @@ The `LightingRenderActivity` class also defines a resize method. This method inv
 ```java
 public class LightingRenderActivity {
     ...
-    public void resize(SwapChain swapChain, Attachment[] attachments) {
+    public void resize(SwapChain swapChain, List<Attachment> attachments) {
         this.swapChain = swapChain;
         attachmentsDescriptorSet.update(attachments);
         lightingFrameBuffer.resize(swapChain);

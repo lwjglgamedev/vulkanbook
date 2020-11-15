@@ -4,7 +4,6 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.geometry.GeometryAttachments;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 
@@ -34,7 +33,7 @@ public class LightingRenderActivity {
     private SwapChain swapChain;
 
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
-                                  Attachment[] attachments) {
+                                  List<Attachment> attachments) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
@@ -42,7 +41,7 @@ public class LightingRenderActivity {
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
         createShaders();
-        createDescriptorPool();
+        createDescriptorPool(attachments);
         createDescriptorSets(attachments);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
@@ -73,14 +72,14 @@ public class LightingRenderActivity {
         }
     }
 
-    private void createDescriptorPool() {
+    private void createDescriptorPool(List<Attachment> attachments) {
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(GeometryAttachments.NUMBER_ATTACHMENTS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(attachments.size(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
-    private void createDescriptorSets(Attachment[] attachments) {
-        attachmentsLayout = new AttachmentsLayout(device, GeometryAttachments.NUMBER_ATTACHMENTS);
+    private void createDescriptorSets(List<Attachment> attachments) {
+        attachmentsLayout = new AttachmentsLayout(device, attachments.size());
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 attachmentsLayout,
         };
@@ -179,7 +178,7 @@ public class LightingRenderActivity {
         fence.reset();
     }
 
-    public void resize(SwapChain swapChain, Attachment[] attachments) {
+    public void resize(SwapChain swapChain, List<Attachment> attachments) {
         this.swapChain = swapChain;
         attachmentsDescriptorSet.update(attachments);
         lightingFrameBuffer.resize(swapChain);

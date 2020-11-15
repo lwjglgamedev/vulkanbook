@@ -6,7 +6,7 @@
 layout (constant_id = 0) const int MAX_LIGHTS = 10;
 const float PI = 3.14159265359;
 
-// Always use vec4 (minimum alighnment)
+// color cannot be vec3 due to std140 in GLSL
 struct Light {
     vec4 position;
     vec4 color;

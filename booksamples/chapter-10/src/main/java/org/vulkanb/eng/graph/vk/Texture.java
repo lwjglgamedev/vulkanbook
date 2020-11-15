@@ -78,7 +78,6 @@ public class Texture {
         stgBuffer.unMap();
     }
 
-
     public String getFileName() {
         return fileName;
     }

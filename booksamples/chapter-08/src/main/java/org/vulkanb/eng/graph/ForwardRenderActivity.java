@@ -1,6 +1,5 @@
 package org.vulkanb.eng.graph;
 
-import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -9,7 +8,7 @@ import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
 
-import java.nio.*;
+import java.nio.LongBuffer;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
@@ -29,15 +28,15 @@ public class ForwardRenderActivity {
     private Fence[] fences;
     private FrameBuffer[] frameBuffers;
     private ShaderProgram fwdShaderProgram;
-    private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
-    private MatrixDescriptorSet projMatrixDescriptorSet;
+    private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
     private SwapChainRenderPass renderPass;
     private SwapChain swapChain;
-    private TextureDescriptorSetLayout textureDescriptorSetLayout;
+    private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
     private TextureSampler textureSampler;
+    private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
@@ -101,10 +100,10 @@ public class ForwardRenderActivity {
     }
 
     private void createDescriptorSets() {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
-        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
+        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
-                matrixDescriptorSetLayout,
+                uniformDescriptorSetLayout,
                 textureDescriptorSetLayout,
         };
 
@@ -116,7 +115,7 @@ public class ForwardRenderActivity {
         textureSampler = new TextureSampler(device, 1);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        projMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout, projMatrixUniform, 0);
+        projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
     }
 
     private void createFrameBuffers() {
@@ -208,7 +207,6 @@ public class ForwardRenderActivity {
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
-            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
             LongBuffer descriptorSets = stack.mallocLong(2)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet());
             for (VulkanMesh mesh : meshes) {
@@ -223,7 +221,7 @@ public class ForwardRenderActivity {
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-                    setPushConstants(cmdHandle, entity.getModelMatrix(), pushConstantBuffer);
+                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
             }
@@ -240,12 +238,6 @@ public class ForwardRenderActivity {
         Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
         createDepthImages();
         createFrameBuffers();
-    }
-
-    private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f modelMatrix, ByteBuffer pushConstantBuffer) {
-        modelMatrix.get(0, pushConstantBuffer);
-        vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
-                VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
     }
 
     public void submit(Queue queue) {

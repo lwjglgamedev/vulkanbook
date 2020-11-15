@@ -32,16 +32,15 @@ public class LightingRenderActivity {
     private Fence[] fences;
     private VulkanBuffer[] invMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] invMatricesDescriptorSets;
+    private LightSpecConstants lightSpecConstants;
     private LightingFrameBuffer lightingFrameBuffer;
     private VulkanBuffer[] lightsBuffers;
-    private LightsDescriptorSetLayout lightsDescriptorSetLayout;
     private DescriptorSet.UniformDescriptorSet[] lightsDescriptorSets;
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
     private ShaderProgram shaderProgram;
     private VulkanBuffer[] shadowsMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] shadowsMatricesDescriptorSets;
-    private SpecializationConstants specializationConstants;
     private SwapChain swapChain;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
@@ -51,7 +50,7 @@ public class LightingRenderActivity {
         device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
         auxVec = new Vector4f();
-        specializationConstants = new SpecializationConstants();
+        lightSpecConstants = new LightSpecConstants();
 
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
@@ -69,13 +68,12 @@ public class LightingRenderActivity {
 
     public void cleanup() {
         uniformDescriptorSetLayout.cleanup();
-        lightsDescriptorSetLayout.cleanup();
         attachmentsDescriptorSet.cleanup();
         attachmentsLayout.cleanup();
         descriptorPool.cleanup();
         Arrays.stream(lightsBuffers).forEach(VulkanBuffer::cleanup);
         pipeline.cleanup();
-        specializationConstants.cleanup();
+        lightSpecConstants.cleanup();
         Arrays.stream(invMatricesBuffers).forEach(VulkanBuffer::cleanup);
         lightingFrameBuffer.cleanup();
         Arrays.stream(shadowsMatricesBuffers).forEach(VulkanBuffer::cleanup);
@@ -103,11 +101,10 @@ public class LightingRenderActivity {
 
     private void createDescriptorSets(List<Attachment> attachments, int numImages) {
         attachmentsLayout = new AttachmentsLayout(device, attachments.size());
-        lightsDescriptorSetLayout = new LightsDescriptorSetLayout(device);
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 attachmentsLayout,
-                lightsDescriptorSetLayout,
+                uniformDescriptorSetLayout,
                 uniformDescriptorSetLayout,
                 uniformDescriptorSetLayout,
         };
@@ -119,11 +116,11 @@ public class LightingRenderActivity {
         invMatricesDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
         shadowsMatricesDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
         for (int i = 0; i < numImages; i++) {
-            lightsDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, lightsDescriptorSetLayout,
+            lightsDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     lightsBuffers[i], 0);
             invMatricesDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     invMatricesBuffers[i], 0);
-            shadowsMatricesDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, lightsDescriptorSetLayout,
+            shadowsMatricesDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     shadowsMatricesBuffers[i], 0);
         }
     }
@@ -146,7 +143,7 @@ public class LightingRenderActivity {
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, LIGHTING_VERTEX_SHADER_FILE_SPV),
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, LIGHTING_FRAGMENT_SHADER_FILE_SPV,
-                                specializationConstants.getSpecInfo()),
+                                lightSpecConstants.getSpecInfo()),
                 });
     }
 

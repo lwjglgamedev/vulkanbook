@@ -5,8 +5,6 @@ import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.*;
-import org.vulkanb.eng.graph.geometry.GeometryAttachments;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
@@ -32,19 +30,18 @@ public class LightingRenderActivity {
     private Device device;
     private Fence[] fences;
     private VulkanBuffer invProjBuffer;
-    private MatrixDescriptorSet invProjMatrixDescriptorSet;
+    private DescriptorSet.UniformDescriptorSet invProjMatrixDescriptorSet;
     private LightingFrameBuffer lightingFrameBuffer;
     private VulkanBuffer[] lightsBuffers;
-    private LightsDescriptorSetLayout lightsDescriptorSetLayout;
-    private LightsDescriptorSet[] lightsDescriptorSets;
-    private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
+    private DescriptorSet.UniformDescriptorSet[] lightsDescriptorSets;
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
+    private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
-                                  Attachment[] attachments, Scene scene) {
+                                  List<Attachment> attachments, Scene scene) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
@@ -53,7 +50,7 @@ public class LightingRenderActivity {
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
         createShaders();
-        createDescriptorPool();
+        createDescriptorPool(attachments);
         createUniforms(numImages);
         createDescriptorSets(attachments, numImages);
         createPipeline();
@@ -66,8 +63,7 @@ public class LightingRenderActivity {
     }
 
     public void cleanup() {
-        matrixDescriptorSetLayout.cleanup();
-        lightsDescriptorSetLayout.cleanup();
+        uniformDescriptorSetLayout.cleanup();
         attachmentsDescriptorSet.cleanup();
         attachmentsLayout.cleanup();
         descriptorPool.cleanup();
@@ -90,31 +86,30 @@ public class LightingRenderActivity {
         }
     }
 
-    private void createDescriptorPool() {
+    private void createDescriptorPool(List<Attachment> attachments) {
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(GeometryAttachments.NUMBER_ATTACHMENTS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(attachments.size(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() + 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
-    private void createDescriptorSets(Attachment[] attachments, int numImages) {
-        attachmentsLayout = new AttachmentsLayout(device, GeometryAttachments.NUMBER_ATTACHMENTS);
-        lightsDescriptorSetLayout = new LightsDescriptorSetLayout(device);
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+    private void createDescriptorSets(List<Attachment> attachments, int numImages) {
+        attachmentsLayout = new AttachmentsLayout(device, attachments.size());
+        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 attachmentsLayout,
-                lightsDescriptorSetLayout,
-                matrixDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+                uniformDescriptorSetLayout,
         };
 
         attachmentsDescriptorSet = new AttachmentsDescriptorSet(descriptorPool, attachmentsLayout,
                 attachments, 0);
-        invProjMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
+        invProjMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                 invProjBuffer, 0);
 
-        lightsDescriptorSets = new LightsDescriptorSet[numImages];
+        lightsDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
         for (int i = 0; i < numImages; i++) {
-            lightsDescriptorSets[i] = new LightsDescriptorSet(descriptorPool, lightsDescriptorSetLayout,
+            lightsDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     lightsBuffers[i], 0);
         }
     }
@@ -227,7 +222,7 @@ public class LightingRenderActivity {
                 lightsBuffers[idx]);
     }
 
-    public void resize(SwapChain swapChain, Attachment[] attachments, Scene scene) {
+    public void resize(SwapChain swapChain, List<Attachment> attachments, Scene scene) {
         this.swapChain = swapChain;
         attachmentsDescriptorSet.update(attachments);
         lightingFrameBuffer.resize(swapChain);

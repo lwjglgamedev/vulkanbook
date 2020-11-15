@@ -6,7 +6,7 @@ public class Light {
 
     private Vector4f color;
     /**
-     * For directional lights, the "w" coordinate will be 1. For point lights it will be "0". For directional lights
+     * For directional lights, the "w" coordinate will be 0. For point lights it will be "1". For directional lights
      * this attribute should be read as a direction.
      */
     private Vector4f position;

@@ -5,6 +5,7 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
+import java.util.List;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -15,22 +16,23 @@ public class GeometryRenderPass {
     private Device device;
     private long vkRenderPass;
 
-    public GeometryRenderPass(Device device, Attachment[] attachments) {
+    public GeometryRenderPass(Device device, List<Attachment> attachments) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            int numAttachments = attachments.length;
+            int numAttachments = attachments.size();
             VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(numAttachments, stack);
             int depthAttachmentPos = 0;
             for (int i = 0; i < numAttachments; i++) {
+                Attachment attachment = attachments.get(i);
                 attachmentsDesc.get(i)
-                        .format(attachments[i].getImage().getFormat())
+                        .format(attachment.getImage().getFormat())
                         .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
                         .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
                         .stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)
                         .stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
                         .samples(MAX_SAMPLES)
                         .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
-                if (attachments[i].isDepthAttachment()) {
+                if (attachment.isDepthAttachment()) {
                     depthAttachmentPos = i;
                     attachmentsDesc.get(i).finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
                 } else {

@@ -359,7 +359,7 @@ public class Light {
 
     private Vector4f color;
     /**
-     * For directional lights, the "w" coordinate will be 1. For point lights it will be "0". For directional lights
+     * For directional lights, the "w" coordinate will be 0. For point lights it will be "1". For directional lights
      * this attribute should be read as a direction.
      */
     private Vector4f position;
@@ -446,14 +446,12 @@ public class GeometryAttachments {
         // Normals attachment
         attachment = new Attachment(device, width, height,
                 VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-        attachments[i] = attachment;
-        i++;
+        attachments.add(attachment);
 
         // PBR attachment
         attachment = new Attachment(device, width, height,
                 VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-        attachments[i] = attachment;
-        i++;
+        attachments.add(attachment);
         ...
     }
     ...
@@ -487,8 +485,8 @@ public class GeometryRenderActivity {
     private void createDescriptorSets(int numImages) {
         ...
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
-                matrixDescriptorSetLayout,
-                matrixDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+                uniformDescriptorSetLayout,
                 textureDescriptorSetLayout,
                 textureDescriptorSetLayout,
                 textureDescriptorSetLayout,
@@ -526,7 +524,7 @@ public class GeometryRenderActivity {
         device.waitIdle();
         int meshCount = 0;
         for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
+            int materialOffset = meshCount * materialSize;
             updateTextureDescriptorSet(vulkanMesh.getTexture());
             updateTextureDescriptorSet(vulkanMesh.getNormalMapTexture());
             updateTextureDescriptorSet(vulkanMesh.getMetalRoughTexture());
@@ -553,7 +551,7 @@ public class GeometryRenderActivity {
             IntBuffer dynDescrSetOffset = stack.callocInt(1);
             int meshCount = 0;
             for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
+                int materialOffset = meshCount * materialSize;
                 dynDescrSetOffset.put(0, materialOffset);
                 vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
@@ -724,104 +722,7 @@ The normal, once updated, is converted to be in the range [0, 1] since it is goi
 
 ## Lighting phase modifications
 
-In order to use lights in the shaders we need to pass that information using new descriptor sets. Therefore, we need first to define the layout of the descriptor set that will contain light information. In our case, we will use a single uniform that will contain the ambient light color, the number of point an directional lights and an array with the position and color for each of those lights. We will do this in a new class named `LightsDescriptorSetLayout` which is defined like this:
-
-```java
-package org.vulkanb.eng.graph.lighting;
-
-import org.apache.logging.log4j.*;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.graph.vk.*;
-
-import java.nio.LongBuffer;
-
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
-
-public class LightsDescriptorSetLayout extends DescriptorSetLayout {
-    private static final Logger LOGGER = LogManager.getLogger();
-
-    public LightsDescriptorSetLayout(Device device) {
-        super(device);
-
-        LOGGER.debug("Creating Lights descriptor set Layout");
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
-            layoutBindings.get(0)
-                    .binding(0)
-                    .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                    .descriptorCount(1)
-                    .stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
-            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
-                    .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
-                    .pBindings(layoutBindings);
-
-            LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateDescriptorSetLayout(device.getVkDevice(), layoutInfo, null, lp),
-                    "Failed to create descriptor set layout");
-            vkDescriptorLayout = lp.get(0);
-        }
-    }
-}
-```
-
-Again, nothing new here. We just define a uniform that will be used in the fragment shader. The next step is to define the descriptor set:
-
-```java
-package org.vulkanb.eng.graph.lighting;
-
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.graph.vk.*;
-
-import java.nio.LongBuffer;
-
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
-
-public class LightsDescriptorSet extends DescriptorSet {
-
-    public LightsDescriptorSet(DescriptorPool descriptorPool, LightsDescriptorSetLayout lightsDescriptorSetLayout,
-                               VulkanBuffer lightsBuffer, int binding) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            Device device = descriptorPool.getDevice();
-            LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
-            pDescriptorSetLayout.put(0, lightsDescriptorSetLayout.getVkDescriptorLayout());
-            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
-                    .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
-                    .descriptorPool(descriptorPool.getVkDescriptorPool())
-                    .pSetLayouts(pDescriptorSetLayout);
-
-            LongBuffer pDescriptorSet = stack.mallocLong(1);
-            vkCheck(vkAllocateDescriptorSets(device.getVkDevice(), allocInfo, pDescriptorSet),
-                    "Failed to create descriptor set");
-
-            vkDescriptorSet = pDescriptorSet.get(0);
-
-            VkDescriptorBufferInfo.Buffer descrLights = VkDescriptorBufferInfo.callocStack(1, stack)
-                    .buffer(lightsBuffer.getBuffer())
-                    .offset(0)
-                    .range(lightsBuffer.getRequestedSize());
-
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
-
-            descrBuffer.get(0)
-                    .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
-                    .dstSet(vkDescriptorSet)
-                    .dstBinding(binding)
-                    .dstArrayElement(0)
-                    .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                    .descriptorCount(1)
-                    .pBufferInfo(descrLights);
-
-            vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
-        }
-    }
-}
-```
-
-In this case, we define a single descriptor set associated to a Vulkan buffer that will hold all the data related to lights. Now we can put all these elements to work in the `LightingRenderActivity` class:
+In order to use lights in the shaders we need to pass that information using uniforms. Therefore, we need first to create new descriptor sets of them in the `LightingRenderActivity` class:
 
 ```java
 public class LightingRenderActivity {
@@ -829,15 +730,15 @@ public class LightingRenderActivity {
     private Vector4f auxVec;
     ...
     private VulkanBuffer invProjBuffer;
-    private MatrixDescriptorSet invProjMatrixDescriptorSet;
+    private DescriptorSet.UniformDescriptorSet invProjMatrixDescriptorSet;
     ...
     private VulkanBuffer[] lightsBuffers;
-    private LightsDescriptorSetLayout lightsDescriptorSetLayout;
-    private LightsDescriptorSet[] lightsDescriptorSets;
-    private MatrixDescriptorSetLayout matrixDescriptorSetLayout;
+    private DescriptorSet.UniformDescriptorSet[] lightsDescriptorSets;
+    ...
+    private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
     ...
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
-                                  Attachment[] attachments, Scene scene) {
+                                  List<Attachment> attachments, Scene scene) {
         ...
         auxVec = new Vector4f();
         ...
@@ -850,8 +751,7 @@ public class LightingRenderActivity {
     }
 
     public void cleanup() {
-        matrixDescriptorSetLayout.cleanup();
-        lightsDescriptorSetLayout.cleanup();
+        uniformDescriptorSetLayout.cleanup();
         ...
         Arrays.stream(lightsBuffers).forEach(VulkanBuffer::cleanup);
         ...
@@ -861,11 +761,9 @@ public class LightingRenderActivity {
     ...
 }
 ```
-
-We have added anew buffers to hold lighting data along with their associated descriptor sets and layout. We have also added a new uniform for a matrix that will hold the inverse projection matrix (we will see in the shader why it is needed). All these resources are instantiated in a new method called `createUniforms` and  freed in the `cleanup` method.
+We have added new buffers to hold lighting data along with their associated descriptor sets and layout. We have also added a new uniform for a matrix that will hold the inverse projection matrix (we will see in the shader why it is needed). All these resources are instantiated in a new method called `createUniforms` and  freed in the `cleanup` method.
 
 The `createUniforms` method is defined like this:
-
 ```java
 public class LightingRenderActivity {
     ...
@@ -892,7 +790,7 @@ The `createDescriptorPool` needs also to be updated to reserve space for the inv
 ```java
 public class LightingRenderActivity {
     ...
-    private void createDescriptorPool() {
+    private void createDescriptorPool(List<Attachment> attachments) {
         ...
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() + 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         ...
@@ -902,35 +800,32 @@ public class LightingRenderActivity {
 ```
 
 The next step is to update the `createDescriptorSets` method:
-
 ```java
 public class LightingRenderActivity {
     ...
     private void createDescriptorSets(Attachment[] attachments, int numImages) {
         attachmentsLayout = new AttachmentsLayout(device, GeometryAttachments.NUMBER_ATTACHMENTS);
-        lightsDescriptorSetLayout = new LightsDescriptorSetLayout(device);
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 attachmentsLayout,
-                lightsDescriptorSetLayout,
-                matrixDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+                uniformDescriptorSetLayout,
         };
 
         attachmentsDescriptorSet = new AttachmentsDescriptorSet(descriptorPool, attachmentsLayout,
                 attachments, 0);
-        invProjMatrixDescriptorSet = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
+        invProjMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                 invProjBuffer, 0);
 
-        lightsDescriptorSets = new LightsDescriptorSet[numImages];
+        lightsDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
         for (int i = 0; i < numImages; i++) {
-            lightsDescriptorSets[i] = new LightsDescriptorSet(descriptorPool, lightsDescriptorSetLayout,
+            lightsDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     lightsBuffers[i], 0);
         }
     }
     ...
 }
 ```
-
 By examining the layouts you can see that the input attachments will still use descriptor set `0` but we added the lights descriptor set (`1`) and the inverse projection matrix (`2`). After that, we just instantiate the new descriptor sets. The only change required in the `preRecordCommandBuffer` is to pass the new descriptor sets:
 
 ```java
@@ -951,7 +846,6 @@ public class LightingRenderActivity {
 ```
 
 In the `prepareCommandBuffers` method we will update the current lights buffer in each render loop (they can be dynamically changed), while in the `resize` method we need just to update the inverse projection matrix (by calling a new method named `updateInvProjMatrix`):
-
 ```java
 public class LightingRenderActivity {
     ...
@@ -989,7 +883,7 @@ public class LightingRenderActivity {
     ...
     private void updateInvProjMatrix(Scene scene) {
         Matrix4f invProj = new Matrix4f(scene.getProjection().getProjectionMatrix()).invert();
-        VulkanUtils.copyMatrixToBuffer(device, invProjBuffer, invProj);
+        VulkanUtils.copyMatrixToBuffer(invProjBuffer, invProj);
     }
 
     private void updateLights(Vector4f ambientLight, Light[] lights, Matrix4f viewMatrix,
@@ -1029,7 +923,7 @@ The lighting vertex shader (`geometry_vertex.glsl`) has not been modified at all
 const int MAX_LIGHTS = 10;
 const float PI = 3.14159265359;
 
-// Always use vec4 (minimum alighnment)
+// color cannot be vec3 due to std140 in GLSL
 struct Light {
     vec4 position;
     vec4 color;

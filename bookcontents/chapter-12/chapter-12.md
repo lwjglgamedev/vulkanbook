@@ -293,7 +293,7 @@ public class LightingRenderActivity {
 
 Specialization constants allows us to modify constants used in the shaders at run-time, when the pipeline that uses those shaders is created. For example, by now we have a constant, in the fragment shader of  the lighting phase which defines the maximum number of lights. This is defined also in the Java code, to properly size the buffers that will hold lights information. The problem with this, is that, if we want to change that constant, we need to do it in the Java code and the shader code at the same time. If we use specialization constants, we can set this value at run-time, keeping always the Java and the shader code perfectly in sync. This will also not impact the performance, since it is resolved when creating the pipeline.
 
-Specialization constants are defined using a `VkSpecializationInfo` structure, which defines the structure of the data that will be used as constants (basically, its size and a numerical identifier associated to each value so we can refer to in the shaders). In our case, we will use specialization constants to modify at run-time the maximum number of lights. In order to handle this, we will create a new class named `SpecializationConstants` under the `org.vulkanb.eng.graph.lighting` package (since they will be using in the lighting phase). The class is defined like this:
+Specialization constants are defined using a `VkSpecializationInfo` structure, which defines the structure of the data that will be used as constants (basically, its size and a numerical identifier associated to each value so we can refer to in the shaders). In our case, we will use specialization constants to modify at run-time the maximum number of lights. In order to handle this, we will create a new class named `LightSpecConstants` under the `org.vulkanb.eng.graph.lighting` package (since they will be using in the lighting phase). The class is defined like this:
 
 ```java
 package org.vulkanb.eng.graph.lighting;
@@ -304,16 +304,17 @@ import org.vulkanb.eng.graph.vk.GraphConstants;
 
 import java.nio.ByteBuffer;
 
-public class SpecializationConstants {
+public class LightSpecConstants {
 
     private ByteBuffer data;
 
     private VkSpecializationMapEntry.Buffer specEntryMap;
     private VkSpecializationInfo specInfo;
 
-    public SpecializationConstants() {
+    public LightSpecConstants() {
         data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);
-        data.putInt(0, GraphConstants.MAX_LIGHTS);
+        data.putInt(GraphConstants.MAX_LIGHTS);
+        data.flip();
 
         specEntryMap = VkSpecializationMapEntry.calloc(1);
         specEntryMap.get(0)
@@ -416,7 +417,7 @@ layout (constant_id = 0) const int MAX_LIGHTS = 10;
 
 We just need to add the `constant_id` parameter. If the specialization constant is not defined, the default value present in the shader will be used.
 
-The final step is to use the `SpecializationConstants` in the `LightingRenderActivity` class:
+The final step is to use the `LightSpecConstants` class in the `LightingRenderActivity` class:
 
 ```java
 public class LightingRenderActivity {
@@ -426,13 +427,13 @@ public class LightingRenderActivity {
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
                                   Attachment[] attachments, Scene scene) {
         ...
-        specializationConstants = new SpecializationConstants();
+        lightSpecConstants = new LightSpecConstants();
         ...
     }
 
     public void cleanup() {
         ...
-        specializationConstants.cleanup();
+        lightSpecConstants.cleanup();
         ...
     }
     ...
@@ -442,7 +443,7 @@ public class LightingRenderActivity {
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, LIGHTING_VERTEX_SHADER_FILE_SPV),
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, LIGHTING_FRAGMENT_SHADER_FILE_SPV,
-                                specializationConstants.getSpecInfo()),
+                                lightSpecConstants.getSpecInfo()),
                 });
     }
     ...

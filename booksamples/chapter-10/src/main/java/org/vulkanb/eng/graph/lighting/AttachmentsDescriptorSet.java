@@ -5,6 +5,7 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
+import java.util.List;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -16,7 +17,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
     private TextureSampler textureSampler;
 
     public AttachmentsDescriptorSet(DescriptorPool descriptorPool, AttachmentsLayout descriptorSetLayout,
-                                    Attachment[] attachments, int binding) {
+                                    List<Attachment> attachments, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             device = descriptorPool.getDevice();
             this.binding = binding;
@@ -48,12 +49,12 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
         return vkDescriptorSet;
     }
 
-    public void update(Attachment[] attachments) {
+    public void update(List<Attachment> attachments) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            int numAttachments = attachments.length;
+            int numAttachments = attachments.size();
             VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {
-                Attachment attachment = attachments[i];
+                Attachment attachment = attachments.get(i);
                 VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
                         .sampler(textureSampler.getVkSampler())
                         .imageView(attachment.getImageView().getVkImageView());

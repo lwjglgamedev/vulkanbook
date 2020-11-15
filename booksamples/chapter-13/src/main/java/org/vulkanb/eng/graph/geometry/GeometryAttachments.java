@@ -8,7 +8,7 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class GeometryAttachments {
 
-    public static final int NUMBER_ATTACHMENTS = 4;
+    private static final int NUMBER_ATTACHMENTS = 4;
     public static final int NUMBER_COLOR_ATTACHMENTS = NUMBER_ATTACHMENTS - 1;
     private List<Attachment> attachments;
     private Attachment deptAttachment;

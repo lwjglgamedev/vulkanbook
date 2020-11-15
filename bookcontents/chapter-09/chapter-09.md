@@ -490,124 +490,33 @@ public class ModelLoader {
 }
 ```
 
-With these changes we need to define a new descriptor set layout for the material structure. We will do this in a new class named `MaterialDescriptorSetLayout`:
+With these changes we need to define a new descriptor set layout for the material structure. We will not use regular frame buffers as in previous examples, we will use dynamic uniform buffers. Therefore, we will create a new class that extends the `SimpleDescriptorSetLayout`, named `DynUniformDescriptorSetLayout`:
 
 ```java
-package org.vulkanb.eng.graph;
-
-import org.apache.logging.log4j.*;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.graph.vk.*;
-
-import java.nio.LongBuffer;
-
-import static org.lwjgl.vulkan.VK10.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
-
-public class MaterialDescriptorSetLayout extends DescriptorSetLayout {
-
-    private static final Logger LOGGER = LogManager.getLogger();
-
-    private int materialSize;
-
-    public MaterialDescriptorSetLayout(Device device, int binding) {
-        super(device);
-
-        materialSize = calcMaterialsUniformSize(device.getPhysicalDevice());
-
-        LOGGER.debug("Creating material descriptor set layout");
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
-            layoutBindings.get(0)
-                    .binding(binding)
-                    .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-                    .descriptorCount(1)
-                    .stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
-
-            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
-                    .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
-                    .pBindings(layoutBindings);
-
-            LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateDescriptorSetLayout(device.getVkDevice(), layoutInfo, null, lp),
-                    "Failed to create material descriptor set layout");
-            super.vkDescriptorLayout = lp.get(0);
+public abstract class DescriptorSetLayout {
+    ...
+    public static class DynUniformDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public DynUniformDescriptorSetLayout(Device device, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, binding, stage);
         }
     }
-
-    private static int calcMaterialsUniformSize(PhysicalDevice physDevice) {
-        long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
-        long mult = GraphConstants.VEC4_SIZE / minUboAlignment + 1;
-        return (int) (mult * minUboAlignment);
-    }
-
-    public int getMaterialSize() {
-        return materialSize;
-    }
+    ...
 }
 ```
 
-The definition of this class is similar to the ones described in previous chapters. We just define a `VkDescriptorSetLayoutBinding` buffer, use it inside a `VkDescriptorSetLayoutCreateInfo` to create the layout by calling the `vkCreateDescriptorSetLayout` function. We are going to use the material descriptor sets in a fragment shader, so we set the `stageFlags` to the `VK_SHADER_STAGE_FRAGMENT_BIT` value. The main difference with this layout is the type which we set to the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC`. This is what states that this uniform is dynamic.
-
-One important aspect to note is the `materialSize` attribute. This attribute represents the size of a single material uniform instance. We mentioned before, that dynamic uniforms use a single buffer which holds data for several uniforms using a single descriptor set. The `materialSize` shall not be the size of that large buffer. You can think about it as the size of one of the slices of that buffer that we can associate to a uniform. This size, will not be strictly the size of the data contained in the material uniform. Those slices need to be aligned in multiples of a minimum allocation size defined by the `minUniformBufferOffsetAlignment` property of the physical device. Therefore, we have created a new method named `calcMaterialsUniformSize` which calculates that size.
-
-The next step is to create a class to define the descriptor set associated to materials:
-
+A dynamic uniform buffer will allow us to create a single buffer which will hold all the data for all the possible materials, while passing a specific window to that buffer to the shaders for the specific material to be used while rendering. These descriptor sets use the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC` type. As you can image we will need also a new descriptor set type that we will use for the materials. We will create a new class named `DynUniformDescriptorSet` which will inherit from `SimpleDescriptorSet`. This class will use the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC` type and will have an extra parameter for the `size`. If you remember from previous descriptor sets, we just used the size of the buffer that holds the uniform values. In this case is different, the buffer will hold the values for all the materials, but this new `size` parameter will not be the size of that large buffer. It will be be the size in bytes of the data associated to a single material. You can think about it as the size of one of the slices of that buffer that we can associate to a uniform. We will see later on how to calculate these slices.
 ```java
-package org.vulkanb.eng.graph;
-
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.graph.vk.*;
-
-import java.nio.LongBuffer;
-
-import static org.lwjgl.vulkan.VK10.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
-
-public class MaterialDescriptorSet extends DescriptorSet {
-
-    public MaterialDescriptorSet(DescriptorPool descriptorPool, MaterialDescriptorSetLayout descriptorSetLayout,
-                                 VulkanBuffer materialBuffer, int binding) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            Device device = descriptorPool.getDevice();
-            LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
-            pDescriptorSetLayout.put(0, descriptorSetLayout.getVkDescriptorLayout());
-            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
-                    .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
-                    .descriptorPool(descriptorPool.getVkDescriptorPool())
-                    .pSetLayouts(pDescriptorSetLayout);
-
-            LongBuffer pDescriptorSet = stack.mallocLong(1);
-            vkCheck(vkAllocateDescriptorSets(device.getVkDevice(), allocInfo, pDescriptorSet),
-                    "Failed to create descriptor set");
-
-            vkDescriptorSet = pDescriptorSet.get(0);
-
-            VkDescriptorBufferInfo.Buffer matBufferInfo = VkDescriptorBufferInfo.callocStack(1, stack)
-                    .buffer(materialBuffer.getBuffer())
-                    .offset(0)
-                    .range(descriptorSetLayout.getMaterialSize());
-
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
-
-            // Material uniform
-            descrBuffer.get(0)
-                    .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
-                    .dstSet(vkDescriptorSet)
-                    .dstBinding(binding)
-                    .descriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-                    .descriptorCount(1)
-                    .pBufferInfo(matBufferInfo);
-
-            vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
+public abstract class DescriptorSet {
+    ...
+    public static class DynUniformDescriptorSet extends SimpleDescriptorSet {
+        public DynUniformDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
+                                       VulkanBuffer buffer, int binding, long size) {
+            super(descriptorPool, descriptorSetLayout, buffer, binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, size);
         }
     }
+    ...
 }
 ```
-
-Again, the definition is similar to the one used in the `MatrixDescriptorSet` class.
 
 ## Completing the changes
 
@@ -616,28 +525,42 @@ Now it is the turn to modify the `ForwardRenderActivity` class. We start be fini
 ```java
 public class ForwardRenderActivity {
     ...
-    private MaterialDescriptorSetLayout materialDescriptorSetLayout;
+    private DescriptorSetLayout.DynUniformDescriptorSetLayout materialDescriptorSetLayout;
+    private int materialSize;
     private VulkanBuffer materialsBuffer;
-    private MaterialDescriptorSet materialsDescriptorSet;
+    private  DescriptorSet.DynUniformDescriptorSet materialsDescriptorSet;
     ....
     private VulkanBuffer[] viewMatricesBuffer;
     private MatrixDescriptorSet[] viewMatricesDescriptorSets;
     ...
+    public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
+        ...
+        materialSize = calcMaterialsUniformSize();
+        ...
+    }
+    ...
+    private int calcMaterialsUniformSize() {
+        PhysicalDevice physDevice = device.getPhysicalDevice();
+        long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
+        long mult = (GraphConstants.VEC4_SIZE * 9) / minUboAlignment + 1;
+        return (int) (mult * minUboAlignment);
+    }
+    ...
 }
 ```
+This class also defines a new attribute named `materialSize`. This will hold the value of on of the slices of the materials buffer that we mentioned previously. This size, will not be strictly the size of the data contained in the material uniform for one material. Those slices need to be aligned in multiples of a minimum allocation size defined by the `minUniformBufferOffsetAlignment` property of the physical device. Therefore, we have created a new method named `calcMaterialsUniformSize` which calculates that size.
 
-We need to modify the `createDescriptorSets` method:
-
+The next step is to modify the `createDescriptorSets` method:
 ```java
 public class ForwardRenderActivity {
     ...
     private void createDescriptorSets(int numImages) {
-        matrixDescriptorSetLayout = new MatrixDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
-        textureDescriptorSetLayout = new TextureDescriptorSetLayout(device, 0);
-        materialDescriptorSetLayout = new MaterialDescriptorSetLayout(device, 0);
+        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        materialDescriptorSetLayout = new DescriptorSetLayout.DynUniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
-                matrixDescriptorSetLayout,
-                matrixDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+                uniformDescriptorSetLayout,
                 textureDescriptorSetLayout,
                 materialDescriptorSetLayout,
         };
@@ -647,17 +570,23 @@ public class ForwardRenderActivity {
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() + 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC));
-        ...
-        viewMatricesDescriptorSets = new MatrixDescriptorSet[numImages];
-        viewMatricesBuffer = new VulkanBuffer[numImages];
-        materialsBuffer = new VulkanBuffer(device, materialDescriptorSetLayout.getMaterialSize() * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
+        descriptorSetMap = new HashMap<>();
+        textureSampler = new TextureSampler(device, 1);
+        projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        materialsDescriptorSet = new MaterialDescriptorSet(descriptorPool, materialDescriptorSetLayout,
-                materialsBuffer, 0);
+        projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
+
+        viewMatricesDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
+        viewMatricesBuffer = new VulkanBuffer[numImages];
+        materialsBuffer = new VulkanBuffer(device, (long) materialSize * engineProps.getMaxMaterials(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        materialsDescriptorSet = new DescriptorSet.DynUniformDescriptorSet(descriptorPool, materialDescriptorSetLayout,
+                materialsBuffer, 0, materialSize);
         for (int i = 0; i < numImages; i++) {
             viewMatricesBuffer[i] = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-            viewMatricesDescriptorSets[i] = new MatrixDescriptorSet(descriptorPool, matrixDescriptorSetLayout,
+            viewMatricesDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     viewMatricesBuffer[i], 0);
         }
     }
@@ -704,8 +633,6 @@ public class ForwardRenderActivity {
         materialsBuffer.cleanup();
         Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         ...
-        matrixDescriptorSetLayout.cleanup();
-        textureDescriptorSetLayout.cleanup();
         materialDescriptorSetLayout.cleanup();
         ...
     }
@@ -722,7 +649,7 @@ public class ForwardRenderActivity {
         device.waitIdle();
         int meshCount = 0;
         for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
+            int materialOffset = meshCount * materialSize;
             String textureFileName = vulkanMesh.getTexture().getFileName();
             TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
             if (textureDescriptorSet == null) {
@@ -778,7 +705,7 @@ public class ForwardRenderActivity {
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
 
-                    setPushConstants(cmdHandle, entity.getModelMatrix(), pushConstantBuffer);
+                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
                     vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
                 meshCount++;

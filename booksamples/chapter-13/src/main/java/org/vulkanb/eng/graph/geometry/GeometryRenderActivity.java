@@ -58,7 +58,7 @@ public class GeometryRenderActivity {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
     }
 
-    public int calcMaterialsUniformSize() {
+    private int calcMaterialsUniformSize() {
         PhysicalDevice physDevice = device.getPhysicalDevice();
         long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
         long mult = (GraphConstants.VEC4_SIZE * 9) / minUboAlignment + 1;
@@ -204,15 +204,15 @@ public class GeometryRenderActivity {
 
             commandBuffer.reset();
             List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
-            int numAttachments = attachments.size();
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(numAttachments, stack);
-            for (int i = 0; i < numAttachments; i++) {
-                if (attachments.get(i).isDepthAttachment()) {
-                    clearValues.apply(i, v -> v.depthStencil().depth(1.0f));
+            VkClearValue.Buffer clearValues = VkClearValue.callocStack(attachments.size(), stack);
+            for (Attachment attachment : attachments) {
+                if (attachment.isDepthAttachment()) {
+                    clearValues.apply(v -> v.depthStencil().depth(1.0f));
                 } else {
-                    clearValues.apply(i, v -> v.color().float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 1));
+                    clearValues.apply(v -> v.color().float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 1));
                 }
             }
+            clearValues.flip();
 
             VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
