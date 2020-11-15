@@ -32,4 +32,6 @@ Antonio Hernández Bejarano.
 
 ## Special Thanks
 
-To all the readers that have contributed with corrections, improvements and ideas.
+To all the readers that have contributed with corrections, improvements and ideas. Specifically to:
+
+- [SWinxy](https://github.com/SWinxy)

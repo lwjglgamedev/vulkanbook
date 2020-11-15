@@ -23,7 +23,7 @@ subprojects {
     }
 
     val jomlVersion = "1.9.25"
-    val log4jVersion = "2.13.3"
+    val log4jVersion = "2.14.0"
     val lwjglVersion = "3.2.3"
 
     dependencies {
