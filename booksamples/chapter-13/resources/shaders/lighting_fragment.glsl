@@ -141,11 +141,10 @@ float metallic, float roughness) {
 float textureProj(vec4 shadowCoord, vec2 offset, uint cascadeIndex)
 {
     float shadow = 1.0;
-    float bias = 0.005;
 
     if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0) {
         float dist = texture(shadowSampler, vec3(shadowCoord.st + offset, cascadeIndex)).r;
-        if (shadowCoord.w > 0 && dist < shadowCoord.z - bias) {
+        if (shadowCoord.w > 0 && dist < shadowCoord.z - BIAS) {
             shadow = SHADOW_FACTOR;
         }
     }
@@ -177,7 +176,7 @@ float calcShadow(vec3 viewPosition, vec4 worldPosition)
 {
     uint cascadeIndex;
     for (int i=0; i<SHADOW_MAP_CASCADE_COUNT; i++) {
-        if (abs(viewPosition.z) < shadowsUniforms.cascadeshadows[i].splitDistance.x) {
+        if (viewPosition.z < shadowsUniforms.cascadeshadows[i].splitDistance.x) {
             cascadeIndex = i;
             break;
         }

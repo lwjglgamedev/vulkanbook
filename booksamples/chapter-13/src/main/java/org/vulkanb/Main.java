@@ -19,7 +19,7 @@ public class Main implements IAppLogic {
 
     private float angleInc;
     private Light directionalLight;
-    private float lightAngle = 90;
+    private float lightAngle = 90.1f;
 
     public static void main(String[] args) {
         LOGGER.info("Starting application");
@@ -76,14 +76,7 @@ public class Main implements IAppLogic {
         } else if (lightAngle > 180) {
             lightAngle = 180;
         }
-        float zValue = (float) Math.cos(Math.toRadians(lightAngle));
-        float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = directionalLight.getPosition();
-        lightDirection.x = 0;
-        lightDirection.y = yValue;
-        lightDirection.z = zValue;
-        lightDirection.normalize();
-        lightDirection.w = 0.0f;
+        updateDirectionalLight();
     }
 
     @Override
@@ -103,12 +96,23 @@ public class Main implements IAppLogic {
         scene.getAmbientLight().set(0.2f, 0.2f, 0.2f, 1.0f);
         List<Light> lights = new ArrayList<>();
         directionalLight = new Light();
-        directionalLight.getPosition().set(0.0f, 1.0f, 0.0f, 0.0f);
         directionalLight.getColor().set(1.0f, 1.0f, 1.0f, 1.0f);
         lights.add(directionalLight);
+        updateDirectionalLight();
 
         Light[] lightArr = new Light[lights.size()];
         lightArr = lights.toArray(lightArr);
         scene.setLights(lightArr);
+    }
+
+    private void updateDirectionalLight() {
+        float zValue = (float) Math.cos(Math.toRadians(lightAngle));
+        float yValue = (float) Math.sin(Math.toRadians(lightAngle));
+        Vector4f lightDirection = directionalLight.getPosition();
+        lightDirection.x = 0;
+        lightDirection.y = yValue;
+        lightDirection.z = zValue;
+        lightDirection.normalize();
+        lightDirection.w = 0.0f;
     }
 }
