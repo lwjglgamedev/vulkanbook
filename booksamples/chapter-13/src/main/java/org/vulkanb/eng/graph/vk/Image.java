@@ -17,6 +17,11 @@ public class Image {
     private long vkMemory;
 
     public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+        this(device, width, height, format, usage, mipLevels, sampleCount, 1);
+    }
+
+    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount,
+                 int arrayLayers) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             this.format = format;
@@ -32,7 +37,7 @@ public class Image {
                             .depth(1)
                     )
                     .mipLevels(mipLevels)
-                    .arrayLayers(1)
+                    .arrayLayers(arrayLayers)
                     .samples(sampleCount)
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .sharingMode(VK_SHARING_MODE_EXCLUSIVE)

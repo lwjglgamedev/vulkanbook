@@ -2,12 +2,14 @@
 // CREDITS: Most of the functions here have been obtained from this link: https://learnopengl.com/PBR
 // developed by Joey de Vries, https://twitter.com/JoeyDeVriez, and licensed under the terms of the CC BY-NC 4.0,
 // https://creativecommons.org/licenses/by-nc/4.0/legalcode
+// Shadows calcuation functions are derived from Vulkan examples from Sascha Willems, and licensed under the MIT License:
+// https://github.com/SaschaWillems/Vulkan/tree/master/examples/shadowmappingcascade
 
-// TODO: Use an array of textures
 layout (constant_id = 0) const int MAX_LIGHTS = 10;
 layout (constant_id = 1) const int SHADOW_MAP_CASCADE_COUNT = 3;
+layout (constant_id = 2) const int USE_PCF = 0;
+layout (constant_id = 3) const float BIAS = 0.0005;
 const float PI = 3.14159265359;
-const float ambient = 0.3;
 const float SHADOW_FACTOR = 0.25;
 
 // color cannot be vec3 due to std140 in GLSL
@@ -29,9 +31,7 @@ layout(set = 0, binding = 0) uniform sampler2D albedoSampler;
 layout(set = 0, binding = 1) uniform sampler2D normalsSampler;
 layout(set = 0, binding = 2) uniform sampler2D pbrSampler;
 layout(set = 0, binding = 3) uniform sampler2D depthSampler;
-layout(set = 0, binding = 4) uniform sampler2D shadowSampler_0;
-layout(set = 0, binding = 5) uniform sampler2D shadowSampler_1;
-layout(set = 0, binding = 6) uniform sampler2D shadowSampler_2;
+layout(set = 0, binding = 4) uniform sampler2DArray shadowSampler;
 
 layout(set = 1, binding = 0) uniform UBO {
     vec4 ambientLightColor;
@@ -138,36 +138,66 @@ float metallic, float roughness) {
     attenuation);
 }
 
-float calcShadow(vec4 P, vec2 inTextCoord, int idx)
+float textureProj(vec4 shadowCoord, vec2 offset, uint cascadeIndex)
 {
     float shadow = 1.0;
-    vec4 shadowCoord = P / P.w;
-    shadowCoord.x = shadowCoord.x * 0.5 + 0.5;
-    shadowCoord.y = (-shadowCoord.y) * 0.5 + 0.5;
+    float bias = 0.005;
 
-    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0)
-    {
-        float dist;
-        if (idx == 0)
-        {
-            dist = texture(shadowSampler_0, vec2(shadowCoord.xy)).r;
-        }
-        else if (idx == 1)
-        {
-            dist = texture(shadowSampler_1, vec2(shadowCoord.xy)).r;
-        }
-        else
-        {
-            dist = texture(shadowSampler_2, vec2(shadowCoord.xy)).r;
-        }
-        float bias = 0.0005;
-        if (shadowCoord.w > 0.0 && dist < shadowCoord.z - bias)
-        {
+    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0) {
+        float dist = texture(shadowSampler, vec3(shadowCoord.st + offset, cascadeIndex)).r;
+        if (shadowCoord.w > 0 && dist < shadowCoord.z - bias) {
             shadow = SHADOW_FACTOR;
         }
     }
     return shadow;
+
 }
+
+float filterPCF(vec4 sc, uint cascadeIndex)
+{
+    ivec2 texDim = textureSize(shadowSampler, 0).xy;
+    float scale = 0.75;
+    float dx = scale * 1.0 / float(texDim.x);
+    float dy = scale * 1.0 / float(texDim.y);
+
+    float shadowFactor = 0.0;
+    int count = 0;
+    int range = 1;
+
+    for (int x = -range; x <= range; x++) {
+        for (int y = -range; y <= range; y++) {
+            shadowFactor += textureProj(sc, vec2(dx*x, dy*y), cascadeIndex);
+            count++;
+        }
+    }
+    return shadowFactor / count;
+}
+
+float calcShadow(vec3 viewPosition, vec4 worldPosition)
+{
+    uint cascadeIndex;
+    for (int i=0; i<SHADOW_MAP_CASCADE_COUNT; i++) {
+        if (abs(viewPosition.z) < shadowsUniforms.cascadeshadows[i].splitDistance.x) {
+            cascadeIndex = i;
+            break;
+        }
+    }
+
+    vec4 shadowMapPosition = shadowsUniforms.cascadeshadows[cascadeIndex].projViewMatrix * worldPosition;
+
+    float shadow = 1.0;
+    vec4 shadowCoord = shadowMapPosition / shadowMapPosition.w;
+    shadowCoord.x = shadowCoord.x * 0.5 + 0.5;
+    shadowCoord.y = (-shadowCoord.y) * 0.5 + 0.5;
+
+    if (USE_PCF == 1) {
+        shadow = filterPCF(shadowCoord, cascadeIndex);
+    } else {
+        shadow = textureProj(shadowCoord, vec2(0, 0), cascadeIndex);
+    }
+    return shadow;
+}
+
 
 void main() {
     vec3 albedo = texture(albedoSampler, inTextCoord).rgb;
@@ -183,16 +213,7 @@ void main() {
     vec3 view_pos   = view_w.xyz / view_w.w;
     vec4 world_pos    = projUniform.invViewMatrix * vec4(view_pos, 1);
 
-    int idx;
-    for (int i=0; i<SHADOW_MAP_CASCADE_COUNT; i++)
-    {
-        if (abs(view_pos.z) < shadowsUniforms.cascadeshadows[i].splitDistance.x)
-        {
-            idx = i;
-            break;
-        }
-    }
-    float shadowFactor = calcShadow(shadowsUniforms.cascadeshadows[idx].projViewMatrix * world_pos, inTextCoord, idx);
+    float shadowFactor = calcShadow(view_pos, world_pos);
 
     // Calculate lighting
     vec3 lightColor = vec3(0.0);

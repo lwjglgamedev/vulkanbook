@@ -8,26 +8,35 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
-// TODO: Layer count
 public class ImageView {
 
+    private int aspectMask;
     private Device device;
+    private int mipLevels;
     private long vkImageView;
 
     public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
+        this(device, vkImage, format, aspectMask, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 0);
+
+    }
+
+    public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels, int viewType,
+                     int baseArrayLayer) {
         this.device = device;
+        this.aspectMask = aspectMask;
+        this.mipLevels = mipLevels;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
             VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
                     .image(vkImage)
-                    .viewType(VK_IMAGE_VIEW_TYPE_2D)
+                    .viewType(viewType)
                     .format(format)
                     .subresourceRange(it -> it
                             .aspectMask(aspectMask)
                             .baseMipLevel(0)
                             .levelCount(mipLevels)
-                            .baseArrayLayer(0)
+                            .baseArrayLayer(baseArrayLayer)
                             .layerCount(1));
 
             vkCheck(vkCreateImageView(device.getVkDevice(), viewCreateInfo, null, lp),
@@ -38,6 +47,14 @@ public class ImageView {
 
     public void cleanup() {
         vkDestroyImageView(device.getVkDevice(), vkImageView, null);
+    }
+
+    public int getAspectMask() {
+        return aspectMask;
+    }
+
+    public int getMipLevels() {
+        return mipLevels;
     }
 
     public long getVkImageView() {

@@ -23,6 +23,9 @@ public class ShadowRenderActivity {
     private static final String SHADOW_VERTEX_SHADER_FILE_SPV = SHADOW_VERTEX_SHADER_FILE_GLSL + ".spv";
     private List<CascadeShadow> cascadeShadows;
     private CommandBuffer[] commandBuffers;
+    private Attachment depthAttachment;
+    private Image depthImage;
+    private ImageView depthImageView;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
@@ -41,6 +44,7 @@ public class ShadowRenderActivity {
         device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
         shadowSpecConstant = new ShadowSpecConstant();
+        createAttachment();
         createFrameBuffers(device);
         createShaders();
         createDescriptorPool(numImages);
@@ -68,8 +72,24 @@ public class ShadowRenderActivity {
         shadowSpecConstant.cleanup();
         shaderProgram.cleanup();
         shadowsFrameBuffers.stream().forEach(ShadowsFrameBuffer::cleanup);
+        depthAttachment.cleanup();
         Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
         Arrays.stream(fences).forEach(Fence::cleanup);
+    }
+
+    private void createAttachment() {
+        int mipLevels = 1;
+        int sampleCount = 1;
+        int usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        depthImage = new Image(device, ShadowsFrameBuffer.SHADOW_MAP_WIDTH, ShadowsFrameBuffer.SHADOW_MAP_HEIGHT,
+                VK_FORMAT_D32_SFLOAT, usage | VK_IMAGE_USAGE_SAMPLED_BIT, mipLevels, sampleCount,
+                GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+
+        int aspectMask = Attachment.calcAspectMask(usage);
+
+        depthImageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(), aspectMask, 1,
+                VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0);
+        depthAttachment = new Attachment(depthImage, depthImageView, true);
     }
 
     private void createCommandBuffers(CommandPool commandPool, int numImages) {
@@ -108,7 +128,7 @@ public class ShadowRenderActivity {
     private void createFrameBuffers(Device device) {
         shadowsFrameBuffers = new ArrayList<>();
         for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
-            ShadowsFrameBuffer shadowsFrameBuffer = new ShadowsFrameBuffer(device);
+            ShadowsFrameBuffer shadowsFrameBuffer = new ShadowsFrameBuffer(device, depthImage, depthImageView, i);
             shadowsFrameBuffers.add(shadowsFrameBuffer);
         }
     }
@@ -154,12 +174,8 @@ public class ShadowRenderActivity {
         }
     }
 
-    public List<Attachment> getAttachments() {
-        List<Attachment> result = new ArrayList<>();
-        for (ShadowsFrameBuffer shadowsFrameBuffer : shadowsFrameBuffers) {
-            result.add(shadowsFrameBuffer.getDepthAttachment());
-        }
-        return result;
+    public Attachment getAttachment() {
+        return depthAttachment;
     }
 
     public List<CascadeShadow> getShadowCascades() {

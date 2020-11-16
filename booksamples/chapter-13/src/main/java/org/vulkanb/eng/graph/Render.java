@@ -65,7 +65,7 @@ public class Render {
         shadowRenderActivity = new ShadowRenderActivity(swapChain, commandPool, pipelineCache);
         List<Attachment> attachments = new ArrayList<>();
         attachments.addAll(geometryRenderActivity.getAttachments());
-        attachments.addAll(shadowRenderActivity.getAttachments());
+        attachments.add(shadowRenderActivity.getAttachment());
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments);
     }
 
@@ -118,7 +118,7 @@ public class Render {
         shadowRenderActivity.resize(swapChain, scene);
         List<Attachment> attachments = new ArrayList<>();
         attachments.addAll(geometryRenderActivity.getAttachments());
-        attachments.addAll(shadowRenderActivity.getAttachments());
+        attachments.add(shadowRenderActivity.getAttachment());
         lightingRenderActivity.resize(swapChain, attachments, scene);
     }
 
