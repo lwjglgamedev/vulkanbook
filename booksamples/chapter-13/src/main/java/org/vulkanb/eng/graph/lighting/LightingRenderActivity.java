@@ -95,7 +95,7 @@ public class LightingRenderActivity {
     private void createDescriptorPool(List<Attachment> attachments) {
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(attachments.size(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() * 2 + 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() * 3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
@@ -276,7 +276,6 @@ public class LightingRenderActivity {
         for (CascadeShadow cascadeShadow : cascadeShadows) {
             cascadeShadow.getProjViewMatrix().get(offset, buffer);
             buffer.putFloat(offset + GraphConstants.MAT4X4_SIZE, cascadeShadow.getZFar());
-            VulkanUtils.copyMatrixToBuffer(shadowsUniformBuffer, cascadeShadow.getProjViewMatrix(), offset);
             offset += GraphConstants.MAT4X4_SIZE + GraphConstants.VEC4_SIZE;
         }
         shadowsUniformBuffer.unMap();
