@@ -10,15 +10,13 @@ public class EngineProperties {
     private static final int DEFAULT_MAX_MATERIALS = 500;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final float DEFAULT_SHADOW_BIAS = 0.00005f;
-    private static final float DEFAULT_SHADOW_Z_FAR = 50.0f;
-    private static final float DEFAULT_SHADOW_Z_NEAR = 1.0f;
+    private static final int DEFAULT_SHADOW_MAP_SIZE = 2048;
     private static final int DEFAULT_UPS = 30;
     private static final float DEFAULT_Z_FAR = 100.f;
     private static final float DEFAULT_Z_NEAR = 1.0f;
     private static final String FILENAME = "eng.properties";
     private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
-
     private String defaultTexturePath;
     private float fov;
     private int maxMaterials;
@@ -26,9 +24,8 @@ public class EngineProperties {
     private int requestedImages;
     private boolean shaderRecompilation;
     private float shadowBias;
+    private int shadowMapSize;
     private boolean shadowPcf;
-    private float shadowZFar;
-    private float shadowZNear;
     private int ups;
     private boolean vSync;
     private boolean validate;
@@ -52,10 +49,9 @@ public class EngineProperties {
             zFar = Float.parseFloat(props.getOrDefault("zFar", DEFAULT_Z_FAR).toString());
             defaultTexturePath = props.getProperty("defaultTexturePath");
             maxMaterials = Integer.parseInt(props.getOrDefault("maxMaterials", DEFAULT_MAX_MATERIALS).toString());
-            shadowZNear = Float.parseFloat(props.getOrDefault("shadowZNear", DEFAULT_SHADOW_Z_NEAR).toString());
-            shadowZFar = Float.parseFloat(props.getOrDefault("shadowZFar", DEFAULT_SHADOW_Z_FAR).toString());
             shadowPcf = Boolean.parseBoolean(props.getOrDefault("shadowPcf", false).toString());
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", DEFAULT_SHADOW_BIAS).toString());
+            shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", DEFAULT_SHADOW_MAP_SIZE).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -92,12 +88,8 @@ public class EngineProperties {
         return shadowBias;
     }
 
-    public float getShadowZFar() {
-        return shadowZFar;
-    }
-
-    public float getShadowZNear() {
-        return shadowZNear;
+    public int getShadowMapSize() {
+        return shadowMapSize;
     }
 
     public int getUps() {

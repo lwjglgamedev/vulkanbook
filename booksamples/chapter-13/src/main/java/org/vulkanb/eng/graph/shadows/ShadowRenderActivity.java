@@ -81,7 +81,9 @@ public class ShadowRenderActivity {
         int mipLevels = 1;
         int sampleCount = 1;
         int usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        depthImage = new Image(device, ShadowsFrameBuffer.SHADOW_MAP_WIDTH, ShadowsFrameBuffer.SHADOW_MAP_HEIGHT,
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        int shadowMapSize = engineProperties.getShadowMapSize();
+        depthImage = new Image(device, shadowMapSize, shadowMapSize,
                 VK_FORMAT_D32_SFLOAT, usage | VK_IMAGE_USAGE_SAMPLED_BIT, mipLevels, sampleCount,
                 GraphConstants.SHADOW_MAP_CASCADE_COUNT);
 
@@ -163,8 +165,8 @@ public class ShadowRenderActivity {
     private void createShadowCascades() {
         EngineProperties engineProperties = EngineProperties.getInstance();
 
-        float zNear = engineProperties.getShadowZNear();
-        float zFar = engineProperties.getShadowZFar();
+        float zNear = engineProperties.getZNear();
+        float zFar = engineProperties.getZFar();
         float[] cascadeSplits = new float[]{zFar / 20.0f, zFar / 10.0f, zFar};
         cascadeShadows = new ArrayList<>();
         for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
@@ -203,8 +205,10 @@ public class ShadowRenderActivity {
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
             clearValues.apply(0, v -> v.depthStencil().depth(1.0f));
 
-            int width = ShadowsFrameBuffer.SHADOW_MAP_WIDTH;
-            int height = ShadowsFrameBuffer.SHADOW_MAP_HEIGHT;
+            EngineProperties engineProperties = EngineProperties.getInstance();
+            int shadowMapSize = engineProperties.getShadowMapSize();
+            int width = shadowMapSize;
+            int height = shadowMapSize;
 
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 

@@ -2,6 +2,7 @@ package org.vulkanb.eng.graph.shadows;
 
 import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
+import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
@@ -9,9 +10,6 @@ import java.nio.LongBuffer;
 import static org.lwjgl.vulkan.VK11.VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 
 public class ShadowsFrameBuffer {
-
-    public static final int SHADOW_MAP_HEIGHT = 2048;
-    public static final int SHADOW_MAP_WIDTH = SHADOW_MAP_HEIGHT;
 
     private static final Logger LOGGER = LogManager.getLogger();
 
@@ -28,9 +26,11 @@ public class ShadowsFrameBuffer {
 
             shadowsRenderPass = new ShadowsRenderPass(device, depthAttachment);
 
+            EngineProperties engineProperties = EngineProperties.getInstance();
+            int shadowMapSize = engineProperties.getShadowMapSize();
             LongBuffer attachmentsBuff = stack.mallocLong(1);
             attachmentsBuff.put(0, depthAttachment.getImageView().getVkImageView());
-            frameBuffer = new FrameBuffer(device, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, attachmentsBuff,
+            frameBuffer = new FrameBuffer(device, shadowMapSize, shadowMapSize, attachmentsBuff,
                     shadowsRenderPass.getVkRenderPass());
         }
     }
