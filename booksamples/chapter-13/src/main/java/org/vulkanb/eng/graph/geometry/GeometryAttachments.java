@@ -8,7 +8,7 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class GeometryAttachments {
 
-    private static final int NUMBER_ATTACHMENTS = 4;
+    private static final int NUMBER_ATTACHMENTS = 5;
     public static final int NUMBER_COLOR_ATTACHMENTS = NUMBER_ATTACHMENTS - 1;
     private List<Attachment> attachments;
     private Attachment deptAttachment;
@@ -31,6 +31,11 @@ public class GeometryAttachments {
         attachments.add(attachment);
 
         // PBR attachment
+        attachment = new Attachment(device, width, height,
+                VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        attachments.add(attachment);
+
+        // View position attachment
         attachment = new Attachment(device, width, height,
                 VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
         attachments.add(attachment);

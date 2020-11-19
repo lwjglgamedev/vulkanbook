@@ -90,7 +90,7 @@ public class ShadowRenderActivity {
         int aspectMask = Attachment.calcAspectMask(usage);
 
         depthImageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(), aspectMask, 1,
-                VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0);
+                VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, GraphConstants.SHADOW_MAP_CASCADE_COUNT);
         depthAttachment = new Attachment(depthImage, depthImageView, true);
     }
 
@@ -163,16 +163,10 @@ public class ShadowRenderActivity {
     }
 
     private void createShadowCascades() {
-        EngineProperties engineProperties = EngineProperties.getInstance();
-
-        float zNear = engineProperties.getZNear();
-        float zFar = engineProperties.getZFar();
-        float[] cascadeSplits = new float[]{zFar / 20.0f, zFar / 10.0f, zFar};
         cascadeShadows = new ArrayList<>();
         for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
-            CascadeShadow cascadeShadow = new CascadeShadow(zNear, cascadeSplits[i]);
+            CascadeShadow cascadeShadow = new CascadeShadow();
             cascadeShadows.add(cascadeShadow);
-            zNear = cascadeSplits[i];
         }
     }
 
@@ -187,7 +181,7 @@ public class ShadowRenderActivity {
     public void recordCommandBuffers(SwapChain swapChain, List<VulkanMesh> meshList, Scene scene) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
-                updateCascadeShadows(scene);
+                CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
             }
 
             int idx = swapChain.getCurrentFrame();
@@ -275,7 +269,7 @@ public class ShadowRenderActivity {
 
     public void resize(SwapChain swapChain, Scene scene) {
         this.swapChain = swapChain;
-        updateCascadeShadows(scene);
+        CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
     }
 
     // TODO: Review synchronization
@@ -291,11 +285,6 @@ public class ShadowRenderActivity {
                     stack.longs(syncSemaphores.shadowCompleteShemaphore().getVkSemaphore()),
                     currentFence);
         }
-    }
-
-    public void updateCascadeShadows(Scene scene) {
-        VkExtent2D extent = swapChain.getSwapChainExtent();
-        CascadeShadow.updateCascadeShadows(extent.width(), extent.height(), cascadeShadows, scene);
     }
 
     private void updateProjViewBuffers(int idx) {

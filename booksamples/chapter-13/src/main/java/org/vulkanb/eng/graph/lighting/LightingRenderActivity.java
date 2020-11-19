@@ -275,7 +275,7 @@ public class LightingRenderActivity {
         int offset = 0;
         for (CascadeShadow cascadeShadow : cascadeShadows) {
             cascadeShadow.getProjViewMatrix().get(offset, buffer);
-            buffer.putFloat(offset + GraphConstants.MAT4X4_SIZE, cascadeShadow.getZFar());
+            buffer.putFloat(offset + GraphConstants.MAT4X4_SIZE, cascadeShadow.getSplitDistance());
             offset += GraphConstants.MAT4X4_SIZE + GraphConstants.VEC4_SIZE;
         }
         shadowsUniformBuffer.unMap();

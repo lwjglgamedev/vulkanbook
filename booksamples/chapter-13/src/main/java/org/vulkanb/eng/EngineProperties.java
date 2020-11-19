@@ -24,6 +24,7 @@ public class EngineProperties {
     private int requestedImages;
     private boolean shaderRecompilation;
     private float shadowBias;
+    private boolean shadowDebug;
     private int shadowMapSize;
     private boolean shadowPcf;
     private int ups;
@@ -52,6 +53,7 @@ public class EngineProperties {
             shadowPcf = Boolean.parseBoolean(props.getOrDefault("shadowPcf", false).toString());
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", DEFAULT_SHADOW_BIAS).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", DEFAULT_SHADOW_MAP_SIZE).toString());
+            shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -106,6 +108,10 @@ public class EngineProperties {
 
     public boolean isShaderRecompilation() {
         return shaderRecompilation;
+    }
+
+    public boolean isShadowDebug() {
+        return shadowDebug;
     }
 
     public boolean isShadowPcf() {

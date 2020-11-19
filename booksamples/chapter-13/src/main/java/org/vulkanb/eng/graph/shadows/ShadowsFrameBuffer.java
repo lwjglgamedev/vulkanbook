@@ -21,7 +21,8 @@ public class ShadowsFrameBuffer {
         LOGGER.debug("Creating ShadowsFrameBuffer");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ImageView imageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(),
-                    depthImageView.getAspectMask(), depthImageView.getMipLevels(), VK_IMAGE_VIEW_TYPE_2D_ARRAY, baseArrayLayer);
+                    depthImageView.getAspectMask(), depthImageView.getMipLevels(), VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+                    baseArrayLayer, 1);
             depthAttachment = new Attachment(depthImage, imageView, true);
 
             shadowsRenderPass = new ShadowsRenderPass(device, depthAttachment);
@@ -40,10 +41,6 @@ public class ShadowsFrameBuffer {
         shadowsRenderPass.cleanup();
         depthAttachment.getImageView().cleanup();
         frameBuffer.cleanup();
-    }
-
-    public Attachment getDepthAttachment() {
-        return depthAttachment;
     }
 
     public FrameBuffer getFrameBuffer() {

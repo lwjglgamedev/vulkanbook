@@ -10,6 +10,7 @@ layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec3 outTangent;
 layout(location = 2) out vec3 outBitangent;
 layout(location = 3) out vec2 outTextCoords;
+layout(location = 4) out vec3 outViewPos;
 
 out gl_PerVertex
 {
@@ -35,4 +36,5 @@ void main()
     outBitangent  = normalize(modelViewMatrix * vec4(entityBitangent, 0)).xyz;
     outTextCoords = entityTextCoords;
     gl_Position   =  projUniform.projectionMatrix * modelViewMatrix * vec4(entityPos, 1);
+    outViewPos = (modelViewMatrix * vec4(entityPos, 1)).xyz;
 }

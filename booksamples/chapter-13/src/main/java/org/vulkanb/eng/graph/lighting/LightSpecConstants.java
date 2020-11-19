@@ -16,14 +16,15 @@ public class LightSpecConstants {
 
     public LightSpecConstants() {
         EngineProperties engineProperties = EngineProperties.getInstance();
-        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH * 3 + GraphConstants.FLOAT_LENGTH);
+        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH * 4 + GraphConstants.FLOAT_LENGTH);
         data.putInt(GraphConstants.MAX_LIGHTS);
         data.putInt(GraphConstants.SHADOW_MAP_CASCADE_COUNT);
         data.putInt(engineProperties.isShadowPcf() ? 1 : 0);
         data.putFloat(engineProperties.getShadowBias());
+        data.putInt(engineProperties.isShadowDebug() ? 1 : 0);
         data.flip();
 
-        specEntryMap = VkSpecializationMapEntry.calloc(4);
+        specEntryMap = VkSpecializationMapEntry.calloc(5);
         specEntryMap.get(0)
                 .constantID(0)
                 .size(GraphConstants.INT_LENGTH)
@@ -40,6 +41,10 @@ public class LightSpecConstants {
                 .constantID(3)
                 .size(GraphConstants.FLOAT_LENGTH)
                 .offset(GraphConstants.INT_LENGTH * 3);
+        specEntryMap.get(4)
+                .constantID(4)
+                .size(GraphConstants.INT_LENGTH)
+                .offset(GraphConstants.INT_LENGTH * 3 + GraphConstants.FLOAT_LENGTH);
 
         specInfo = VkSpecializationInfo.calloc();
         specInfo.pData(data)

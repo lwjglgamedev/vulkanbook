@@ -16,12 +16,12 @@ public class ImageView {
     private long vkImageView;
 
     public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
-        this(device, vkImage, format, aspectMask, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 0);
+        this(device, vkImage, format, aspectMask, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
     }
 
     public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels, int viewType,
-                     int baseArrayLayer) {
+                     int baseArrayLayer, int layerCount) {
         this.device = device;
         this.aspectMask = aspectMask;
         this.mipLevels = mipLevels;
@@ -37,7 +37,7 @@ public class ImageView {
                             .baseMipLevel(0)
                             .levelCount(mipLevels)
                             .baseArrayLayer(baseArrayLayer)
-                            .layerCount(1));
+                            .layerCount(layerCount));
 
             vkCheck(vkCreateImageView(device.getVkDevice(), viewCreateInfo, null, lp),
                     "Failed to create image view");

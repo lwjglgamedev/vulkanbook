@@ -2,45 +2,135 @@ package org.vulkanb.eng.graph.shadows;
 
 import org.joml.*;
 import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.graph.vk.GraphConstants;
+import org.vulkanb.eng.scene.Scene;
 
 import java.lang.Math;
 import java.util.List;
 
 public class CascadeShadow {
 
-    private static final int FRUSTUM_CORNERS = 8;
-    /**
-     * Center of the view cuboid un world space coordinates.
-     */
-    private Vector3f centroid;
-    private Vector3f[] frustumCorners;
-    private Matrix4f lightViewMatrix;
-    private Matrix4f orthoProjMatrix;
     private Matrix4f projViewMatrix;
-    private Vector4f tmpVec;
-    private float zFar;
-    private float zNear;
+    private float splitDistance;
 
-    public CascadeShadow(float zNear, float zFar) {
-        this.zNear = zNear;
-        this.zFar = zFar;
-        centroid = new Vector3f();
-        lightViewMatrix = new Matrix4f();
-        orthoProjMatrix = new Matrix4f();
-        frustumCorners = new Vector3f[FRUSTUM_CORNERS];
-        for (int i = 0; i < FRUSTUM_CORNERS; i++) {
-            frustumCorners[i] = new Vector3f();
-        }
-        tmpVec = new Vector4f();
+    public CascadeShadow() {
         projViewMatrix = new Matrix4f();
     }
 
-    public static void updateCascadeShadows(int width, int height, List<CascadeShadow> cascadeShadows, Scene scene) {
-        int size = cascadeShadows.size();
-        for (int i = 0; i < size; i++) {
+    // Function are derived from Vulkan examples from Sascha Willems, and licensed under the MIT License:
+    // https://github.com/SaschaWillems/Vulkan/tree/master/examples/shadowmappingcascade, which are based on
+    // https://johanmedestrom.wordpress.com/2016/03/18/opengl-cascaded-shadow-maps/
+    public static void updateCascadeShadows(List<CascadeShadow> cascadeShadows, Scene scene) {
+        Matrix4f viewMatrix = scene.getCamera().getViewMatrix();
+        Matrix4f projMatrix = scene.getProjection().getProjectionMatrix();
+        Vector4f lightPos = scene.getDirectionalLight().getPosition();
+
+        float cascadeSplitLambda = 0.95f;
+
+        float[] cascadeSplits = new float[GraphConstants.SHADOW_MAP_CASCADE_COUNT];
+
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        float nearClip = engineProperties.getZNear();
+        float farClip = engineProperties.getZFar();
+        nearClip = projMatrix.perspectiveNear();
+        farClip = projMatrix.perspectiveFar();
+        float clipRange = farClip - nearClip;
+
+        float minZ = nearClip;
+        float maxZ = nearClip + clipRange;
+
+        float range = maxZ - minZ;
+        float ratio = maxZ / minZ;
+
+        // Calculate split depths based on view camera frustum
+        // Based on method presented in https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch10.html
+        for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
+            float p = (float) (i + 1) / (float) (GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            float log = (float) (minZ * Math.pow(ratio, p));
+            float uniform = minZ + range * p;
+            float d = cascadeSplitLambda * (log - uniform) + uniform;
+            cascadeSplits[i] = (d - nearClip) / clipRange;
+        }
+
+        // Calculate orthographic projection matrix for each cascade
+        float lastSplitDist = 0.0f;
+        for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
+            float splitDist = cascadeSplits[i];
+
+            Vector3f[] frustumCorners = new Vector3f[]{
+                    new Vector3f(-1.0f, 1.0f, -1.0f),
+                    new Vector3f(1.0f, 1.0f, -1.0f),
+                    new Vector3f(1.0f, -1.0f, -1.0f),
+                    new Vector3f(-1.0f, -1.0f, -1.0f),
+                    new Vector3f(-1.0f, 1.0f, 1.0f),
+                    new Vector3f(1.0f, 1.0f, 1.0f),
+                    new Vector3f(1.0f, -1.0f, 1.0f),
+                    new Vector3f(-1.0f, -1.0f, 1.0f),
+            };
+
+            // Project frustum corners into world space
+            Matrix4f invCam = (new Matrix4f(projMatrix).mul(viewMatrix)).invert();
+            for (int j = 0; j < 8; j++) {
+                Vector4f invCorner = new Vector4f(frustumCorners[j], 1.0f).mul(invCam);
+                frustumCorners[j] = new Vector3f(invCorner.x / invCorner.w, invCorner.y / invCorner.w, invCorner.z / invCorner.w);
+            }
+
+            for (int j = 0; j < 4; j++) {
+                Vector3f dist = new Vector3f(frustumCorners[j + 4]).sub(frustumCorners[j]);
+                frustumCorners[j + 4] = new Vector3f(frustumCorners[j]).add(new Vector3f(dist).mul(splitDist));
+                frustumCorners[j] = new Vector3f(frustumCorners[j]).add(new Vector3f(dist).mul(lastSplitDist));
+            }
+
+            // Get frustum center
+            Vector3f frustumCenter = new Vector3f(0.0f);
+            for (int j = 0; j < 8; j++) {
+                frustumCenter.add(frustumCorners[j]);
+            }
+            frustumCenter.div(8.0f);
+
+            float radius = 0.0f;
+            for (int j = 0; j < 8; j++) {
+                float distance = (new Vector3f(frustumCorners[j]).sub(frustumCenter)).length();
+                radius = Math.max(radius, distance);
+            }
+            radius = (float) Math.ceil(radius * 16.0f) / 16.0f;
+
+            Vector3f maxExtents = new Vector3f(radius);
+            Vector3f minExtents = new Vector3f(maxExtents).mul(-1);
+
+            Vector3f lightDir = (new Vector3f(lightPos.x, lightPos.y, lightPos.z).mul(-1)).normalize();
+            Vector3f eye = new Vector3f(frustumCenter).sub(new Vector3f(lightDir).mul(-minExtents.z));
+            Vector3f up = new Vector3f(0.0f, 1.0f, 0.0f);
+            Matrix4f lightViewMatrix = new Matrix4f().lookAt(eye, frustumCenter, up);
+            Matrix4f lightOrthoMatrix = new Matrix4f().ortho
+                    (minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, 0.0f, maxExtents.z - minExtents.z, true);
+
+            // Store split distance and matrix in cascade
             CascadeShadow cascadeShadow = cascadeShadows.get(i);
-            cascadeShadow.updateCascadeShadow(width, height, scene.getCamera().getViewMatrix(), scene.getDirectionalLight());
+            cascadeShadow.splitDistance = (nearClip + splitDist * clipRange) * -1.0f;
+            cascadeShadow.projViewMatrix = lightOrthoMatrix.mul(lightViewMatrix);
+
+            lastSplitDist = cascadeSplits[i];
+
+            /*
+            Matrix4f shadowMatrix = new Matrix4f(lightOrthoMatrix).mul(lightViewMatrix);
+            Vector4f shadowOrigin = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
+            shadowOrigin.mul(shadowMatrix);
+            shadowOrigin.mul((float) ShadowsFrameBuffer.SHADOW_MAP_WIDTH / 2.0f);
+
+            Vector4f roundedOrigin = shadowOrigin.round();
+            Vector4f roundOffset = roundedOrigin.sub(shadowOrigin);
+            roundOffset = roundOffset.mul(2.0f / (float) ShadowsFrameBuffer.SHADOW_MAP_WIDTH);
+            roundOffset.z = 0.0f;
+            roundOffset.w = 0.0f;
+
+            Matrix4f shadowProj = lightOrthoMatrix;
+            Vector4f column = new Vector4f();
+            shadowProj.getColumn(3, column);
+            column.add(roundOffset);
+            shadowProj.setColumn(3, column);
+            cascadeShadow.projViewMatrix = shadowProj.mul(lightViewMatrix);
+            */
         }
     }
 
@@ -48,77 +138,8 @@ public class CascadeShadow {
         return projViewMatrix;
     }
 
-    public float getZFar() {
-        return zFar;
+    public float getSplitDistance() {
+        return splitDistance;
     }
 
-    public void updateCascadeShadow(int width, int height, Matrix4f viewMatrix, Light light) {
-        // Build projection view matrix for this cascade
-        float aspectRatio = (float) width / (float) height;
-        float fov = EngineProperties.getInstance().getFov();
-        Matrix4f perspectiveViewMatrix = new Matrix4f();
-        perspectiveViewMatrix.setPerspective(fov, aspectRatio, zNear, zFar);
-        perspectiveViewMatrix.mul(viewMatrix);
-
-        // Calculate frustum corners in world space
-        float maxZ = Float.MIN_VALUE;
-        float minZ = Float.MAX_VALUE;
-        for (int i = 0; i < FRUSTUM_CORNERS; i++) {
-            Vector3f corner = frustumCorners[i];
-            corner.set(0, 0, 0);
-            perspectiveViewMatrix.frustumCorner(i, corner);
-            centroid.add(corner);
-            centroid.div(8.0f);
-            minZ = Math.min(minZ, corner.z);
-            maxZ = Math.max(maxZ, corner.z);
-        }
-
-        // Go back from the centroid up to max.z - min.z in the direction of light
-        Vector3f lightDirection = new Vector3f(light.getPosition().x(), light.getPosition().y(), light.getPosition().z());
-        Vector3f lightPosInc = new Vector3f().set(lightDirection);
-        float distance = maxZ - minZ;
-        lightPosInc.mul(distance);
-        Vector3f lightPosition = new Vector3f();
-        lightPosition.set(centroid);
-        lightPosition.add(lightPosInc);
-
-        updateLightViewMatrix(lightDirection, lightPosition);
-
-        updateLightProjectionMatrix();
-
-        projViewMatrix = new Matrix4f(orthoProjMatrix).mul(lightViewMatrix);
-    }
-
-    private void updateLightProjectionMatrix() {
-        // Now calculate frustum dimensions in light space
-        float minX = Float.MAX_VALUE;
-        float maxX = -Float.MIN_VALUE;
-        float minY = Float.MAX_VALUE;
-        float maxY = -Float.MIN_VALUE;
-        float minZ = Float.MAX_VALUE;
-        float maxZ = -Float.MIN_VALUE;
-        for (int i = 0; i < FRUSTUM_CORNERS; i++) {
-            Vector3f corner = frustumCorners[i];
-            tmpVec.set(corner, 1);
-            tmpVec.mul(lightViewMatrix);
-            minX = Math.min(tmpVec.x, minX);
-            maxX = Math.max(tmpVec.x, maxX);
-            minY = Math.min(tmpVec.y, minY);
-            maxY = Math.max(tmpVec.y, maxY);
-            minZ = Math.min(tmpVec.z, minZ);
-            maxZ = Math.max(tmpVec.z, maxZ);
-        }
-        float distz = maxZ - minZ;
-
-        orthoProjMatrix.setOrtho(minX, maxX, minY, maxY, 0, distz, true);
-    }
-
-    private void updateLightViewMatrix(Vector3f lightDirection, Vector3f lightPosition) {
-        float lightAngleX = (float) Math.toDegrees(Math.acos(lightDirection.z));
-        float lightAngleY = (float) Math.toDegrees(Math.asin(lightDirection.x));
-
-        lightViewMatrix.rotationX((float) Math.toRadians(lightAngleX))
-                .rotateY((float) Math.toRadians(lightAngleY))
-                .translate(-lightPosition.x, -lightPosition.y, -lightPosition.z);
-    }
 }

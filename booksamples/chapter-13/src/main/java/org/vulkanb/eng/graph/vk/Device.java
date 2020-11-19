@@ -35,6 +35,7 @@ public class Device {
             if (samplerAnisotropy) {
                 features.samplerAnisotropy(true);
             }
+            features.depthClamp(supportedFeatures.depthClamp());
 
             // Enable all the queue families
             VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();

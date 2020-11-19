@@ -6,9 +6,10 @@
 // https://github.com/SaschaWillems/Vulkan/tree/master/examples/shadowmappingcascade
 
 layout (constant_id = 0) const int MAX_LIGHTS = 10;
-layout (constant_id = 1) const int SHADOW_MAP_CASCADE_COUNT = 3;
+layout (constant_id = 1) const int SHADOW_MAP_CASCADE_COUNT = 4;
 layout (constant_id = 2) const int USE_PCF = 0;
 layout (constant_id = 3) const float BIAS = 0.0005;
+layout (constant_id = 4) const int DEBUG_SHADOWS = 0;
 const float PI = 3.14159265359;
 const float SHADOW_FACTOR = 0.25;
 
@@ -30,8 +31,9 @@ layout(location = 0) out vec4 outFragColor;
 layout(set = 0, binding = 0) uniform sampler2D albedoSampler;
 layout(set = 0, binding = 1) uniform sampler2D normalsSampler;
 layout(set = 0, binding = 2) uniform sampler2D pbrSampler;
-layout(set = 0, binding = 3) uniform sampler2D depthSampler;
-layout(set = 0, binding = 4) uniform sampler2DArray shadowSampler;
+layout(set = 0, binding = 3) uniform sampler2D viewPosSampler;
+layout(set = 0, binding = 4) uniform sampler2D depthSampler;
+layout(set = 0, binding = 5) uniform sampler2DArray shadowSampler;
 
 layout(set = 1, binding = 0) uniform UBO {
     vec4 ambientLightColor;
@@ -172,16 +174,8 @@ float filterPCF(vec4 sc, uint cascadeIndex)
     return shadowFactor / count;
 }
 
-float calcShadow(vec3 viewPosition, vec4 worldPosition)
+float calcShadow(vec4 worldPosition, uint cascadeIndex)
 {
-    uint cascadeIndex;
-    for (int i=0; i<SHADOW_MAP_CASCADE_COUNT; i++) {
-        if (viewPosition.z < shadowsUniforms.cascadeshadows[i].splitDistance.x) {
-            cascadeIndex = i;
-            break;
-        }
-    }
-
     vec4 shadowMapPosition = shadowsUniforms.cascadeshadows[cascadeIndex].projViewMatrix * worldPosition;
 
     float shadow = 1.0;
@@ -212,20 +206,25 @@ void main() {
     vec3 view_pos   = view_w.xyz / view_w.w;
     vec4 world_pos    = projUniform.invViewMatrix * vec4(view_pos, 1);
 
-    float shadowFactor = calcShadow(view_pos, world_pos);
+    vec3 realViewPos = texture(viewPosSampler, inTextCoord).rgb;
+
+    uint cascadeIndex = 0;
+    for (uint i = 0; i < SHADOW_MAP_CASCADE_COUNT - 1; ++i) {
+        if (realViewPos.z < shadowsUniforms.cascadeshadows[i].splitDistance.x) {
+            cascadeIndex = i + 1;
+        }
+    }
+
+    float shadowFactor = calcShadow(world_pos, cascadeIndex);
 
     // Calculate lighting
     vec3 lightColor = vec3(0.0);
     vec3 ambientColor = vec3(0.5);
-    for (uint i = 0U; i < lights.count; i++)
-    {
+    for (uint i = 0U; i < lights.count; i++) {
         Light light = lights.lights[i];
-        if (light.position.w == 0)
-        {
+        if (light.position.w == 0) {
             lightColor += calculateDirectionalLight(light, view_pos, normal, albedo, metallic, roughness);
-        }
-        else
-        {
+        } else {
             lightColor += calculatePointLight(light, view_pos, normal, albedo, metallic, roughness);
         }
     }
@@ -233,4 +232,21 @@ void main() {
     vec3 ambient = lights.ambientLightColor.rgb * albedo * ao;
 
     outFragColor = vec4(pow(ambient * shadowFactor + lightColor * shadowFactor, vec3(0.4545)), 1.0);
+
+    if (DEBUG_SHADOWS == 1) {
+        switch (cascadeIndex) {
+            case 0:
+            outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
+            break;
+            case 1:
+            outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
+            break;
+            case 2:
+            outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
+            break;
+            default :
+            outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
+            break;
+        }
+    }
 }
