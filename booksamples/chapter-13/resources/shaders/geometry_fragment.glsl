@@ -4,7 +4,6 @@ layout(location = 0) in vec3 inNormal;
 layout(location = 1) in vec3 inTangent;
 layout(location = 2) in vec3 inBitangent;
 layout(location = 3) in vec2 inTextCoords;
-layout(location = 4) in vec3 inViewPos;
 
 layout(location = 0) out vec4 outAlbedo;
 layout(location = 1) out vec4 outNormal;
@@ -62,5 +61,4 @@ void main()
     }
 
     outPBR = vec4(ao, roughnessFactor, metallicFactor, 1.0f);
-    outViewPos = vec4(inViewPos, 1.0f);
 }

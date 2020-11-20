@@ -94,7 +94,7 @@ public class Render {
 
         geometryRenderActivity.recordCommandBuffers(meshList, scene);
         geometryRenderActivity.submit(graphQueue);
-        shadowRenderActivity.recordCommandBuffers(swapChain, meshList, scene);
+        shadowRenderActivity.recordCommandBuffers(meshList, scene);
         shadowRenderActivity.submit(graphQueue);
         lightingRenderActivity.prepareCommandBuffers(scene, shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.submit(graphQueue);

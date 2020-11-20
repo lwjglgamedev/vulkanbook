@@ -31,9 +31,8 @@ layout(location = 0) out vec4 outFragColor;
 layout(set = 0, binding = 0) uniform sampler2D albedoSampler;
 layout(set = 0, binding = 1) uniform sampler2D normalsSampler;
 layout(set = 0, binding = 2) uniform sampler2D pbrSampler;
-layout(set = 0, binding = 3) uniform sampler2D viewPosSampler;
-layout(set = 0, binding = 4) uniform sampler2D depthSampler;
-layout(set = 0, binding = 5) uniform sampler2DArray shadowSampler;
+layout(set = 0, binding = 3) uniform sampler2D depthSampler;
+layout(set = 0, binding = 4) uniform sampler2DArray shadowSampler;
 
 layout(set = 1, binding = 0) uniform UBO {
     vec4 ambientLightColor;
@@ -206,11 +205,9 @@ void main() {
     vec3 view_pos   = view_w.xyz / view_w.w;
     vec4 world_pos    = projUniform.invViewMatrix * vec4(view_pos, 1);
 
-    vec3 realViewPos = texture(viewPosSampler, inTextCoord).rgb;
-
     uint cascadeIndex = 0;
     for (uint i = 0; i < SHADOW_MAP_CASCADE_COUNT - 1; ++i) {
-        if (realViewPos.z < shadowsUniforms.cascadeshadows[i].splitDistance.x) {
+        if (view_pos.z < shadowsUniforms.cascadeshadows[i].splitDistance.x) {
             cascadeIndex = i + 1;
         }
     }

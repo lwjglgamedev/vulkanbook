@@ -111,26 +111,6 @@ public class CascadeShadow {
             cascadeShadow.projViewMatrix = lightOrthoMatrix.mul(lightViewMatrix);
 
             lastSplitDist = cascadeSplits[i];
-
-            /*
-            Matrix4f shadowMatrix = new Matrix4f(lightOrthoMatrix).mul(lightViewMatrix);
-            Vector4f shadowOrigin = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
-            shadowOrigin.mul(shadowMatrix);
-            shadowOrigin.mul((float) ShadowsFrameBuffer.SHADOW_MAP_WIDTH / 2.0f);
-
-            Vector4f roundedOrigin = shadowOrigin.round();
-            Vector4f roundOffset = roundedOrigin.sub(shadowOrigin);
-            roundOffset = roundOffset.mul(2.0f / (float) ShadowsFrameBuffer.SHADOW_MAP_WIDTH);
-            roundOffset.z = 0.0f;
-            roundOffset.w = 0.0f;
-
-            Matrix4f shadowProj = lightOrthoMatrix;
-            Vector4f column = new Vector4f();
-            shadowProj.getColumn(3, column);
-            column.add(roundOffset);
-            shadowProj.setColumn(3, column);
-            cascadeShadow.projViewMatrix = shadowProj.mul(lightViewMatrix);
-            */
         }
     }
 
