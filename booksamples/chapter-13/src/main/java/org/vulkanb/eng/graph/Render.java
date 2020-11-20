@@ -62,7 +62,7 @@ public class Render {
         meshList = new ArrayList<>();
         textureCache = new TextureCache();
         geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
-        shadowRenderActivity = new ShadowRenderActivity(swapChain, commandPool, pipelineCache);
+        shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache);
         List<Attachment> attachments = new ArrayList<>();
         attachments.addAll(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getAttachment());
@@ -92,10 +92,11 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
-        geometryRenderActivity.recordCommandBuffers(meshList, scene);
+        CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
+        geometryRenderActivity.recordCommandBuffers(commandBuffer, meshList, scene);
+        shadowRenderActivity.recordCommandBuffers(commandBuffer, meshList, scene);
+        geometryRenderActivity.endRecording(commandBuffer);
         geometryRenderActivity.submit(graphQueue);
-        shadowRenderActivity.recordCommandBuffers(meshList, scene);
-        shadowRenderActivity.submit(graphQueue);
         lightingRenderActivity.prepareCommandBuffers(scene, shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.submit(graphQueue);
 

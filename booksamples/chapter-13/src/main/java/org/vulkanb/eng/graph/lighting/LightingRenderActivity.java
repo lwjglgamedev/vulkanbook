@@ -262,7 +262,7 @@ public class LightingRenderActivity {
             Fence currentFence = fences[idx];
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.shadowCompleteShemaphore().getVkSemaphore()),
+                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
                     stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()),
                     currentFence);

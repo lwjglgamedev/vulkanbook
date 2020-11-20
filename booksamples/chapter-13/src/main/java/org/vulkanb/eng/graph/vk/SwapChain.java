@@ -248,16 +248,15 @@ public class SwapChain {
     }
 
     public record SyncSemaphores(Semaphore imgAcquisitionSemaphore, Semaphore geometryCompleteSemaphore,
-                                 Semaphore shadowCompleteShemaphore, Semaphore renderCompleteSemaphore) {
+                                 Semaphore renderCompleteSemaphore) {
 
         public SyncSemaphores(Device device) {
-            this(new Semaphore(device), new Semaphore(device), new Semaphore(device), new Semaphore(device));
+            this(new Semaphore(device), new Semaphore(device), new Semaphore(device));
         }
 
         public void cleanup() {
             imgAcquisitionSemaphore.cleanup();
             geometryCompleteSemaphore.cleanup();
-            shadowCompleteShemaphore.cleanup();
             renderCompleteSemaphore.cleanup();
         }
     }

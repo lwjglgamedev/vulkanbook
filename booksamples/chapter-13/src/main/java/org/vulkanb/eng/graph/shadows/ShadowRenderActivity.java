@@ -6,7 +6,6 @@ import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.geometry.GeometryAttachments;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
 
@@ -22,14 +21,12 @@ public class ShadowRenderActivity {
     private static final String SHADOW_VERTEX_SHADER_FILE_GLSL = "resources/shaders/shadow_vertex.glsl";
     private static final String SHADOW_VERTEX_SHADER_FILE_SPV = SHADOW_VERTEX_SHADER_FILE_GLSL + ".spv";
     private List<CascadeShadow> cascadeShadows;
-    private CommandBuffer[] commandBuffers;
     private Attachment depthAttachment;
     private Image depthImage;
     private ImageView depthImageView;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
-    private Fence[] fences;
     private List<Pipeline> pipeLines;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
     private ShaderProgram shaderProgram;
@@ -39,7 +36,7 @@ public class ShadowRenderActivity {
     private SwapChain swapChain;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
-    public ShadowRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache) {
+    public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
@@ -50,7 +47,6 @@ public class ShadowRenderActivity {
         createDescriptorPool(numImages);
         createDescriptorSets(numImages);
         createPipelines(pipelineCache);
-        createCommandBuffers(commandPool, numImages);
         createShadowCascades();
     }
 
@@ -73,8 +69,6 @@ public class ShadowRenderActivity {
         shaderProgram.cleanup();
         shadowsFrameBuffers.stream().forEach(ShadowsFrameBuffer::cleanup);
         depthAttachment.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
     }
 
     private void createAttachment() {
@@ -92,16 +86,6 @@ public class ShadowRenderActivity {
         depthImageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(), aspectMask, 1,
                 VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, GraphConstants.SHADOW_MAP_CASCADE_COUNT);
         depthAttachment = new Attachment(depthImage, depthImageView, true);
-    }
-
-    private void createCommandBuffers(CommandPool commandPool, int numImages) {
-        commandBuffers = new CommandBuffer[numImages];
-        fences = new Fence[numImages];
-
-        for (int i = 0; i < numImages; i++) {
-            commandBuffers[i] = new CommandBuffer(commandPool, true, false);
-            fences[i] = new Fence(device, true);
-        }
     }
 
     private void createDescriptorPool(int numImages) {
@@ -178,23 +162,15 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
-    public void recordCommandBuffers(List<VulkanMesh> meshList, Scene scene) {
+    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanMesh> meshList, Scene scene) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
             }
 
             int idx = swapChain.getCurrentFrame();
-            Fence fence = fences[idx];
-            CommandBuffer commandBuffer = commandBuffers[idx];
-
-            fence.fenceWait();
-            fence.reset();
 
             updateProjViewBuffers(idx);
-
-            commandBuffer.reset();
-            commandBuffer.beginRecording();
 
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
             clearValues.apply(0, v -> v.depthStencil().depth(1.0f));
@@ -263,28 +239,12 @@ public class ShadowRenderActivity {
                 vkCmdEndRenderPass(cmdHandle);
                 cascade++;
             }
-            commandBuffer.endRecording();
         }
     }
 
     public void resize(SwapChain swapChain, Scene scene) {
         this.swapChain = swapChain;
         CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
-    }
-
-    // TODO: Review synchronization
-    public void submit(Queue queue) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            int idx = swapChain.getCurrentFrame();
-            CommandBuffer commandBuffer = commandBuffers[idx];
-            Fence currentFence = fences[idx];
-            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
-            queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()),
-                    stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.shadowCompleteShemaphore().getVkSemaphore()),
-                    currentFence);
-        }
     }
 
     private void updateProjViewBuffers(int idx) {

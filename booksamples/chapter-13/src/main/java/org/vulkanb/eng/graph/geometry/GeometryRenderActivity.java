@@ -58,6 +58,21 @@ public class GeometryRenderActivity {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
     }
 
+    public CommandBuffer beginRecording() {
+        int idx = swapChain.getCurrentFrame();
+
+        Fence fence = fences[idx];
+        CommandBuffer commandBuffer = commandBuffers[idx];
+
+        fence.fenceWait();
+        fence.reset();
+
+        commandBuffer.reset();
+        commandBuffer.beginRecording();
+
+        return commandBuffer;
+    }
+
     private int calcMaterialsUniformSize() {
         PhysicalDevice physDevice = device.getPhysicalDevice();
         long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
@@ -156,6 +171,10 @@ public class GeometryRenderActivity {
                 });
     }
 
+    public void endRecording(CommandBuffer commandBuffer) {
+        commandBuffer.endRecording();
+    }
+
     public List<Attachment> getAttachments() {
         return geometryFrameBuffer.geometryAttachments().getAttachments();
     }
@@ -188,7 +207,7 @@ public class GeometryRenderActivity {
         }
     }
 
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanMesh> meshes, Scene scene) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -196,13 +215,6 @@ public class GeometryRenderActivity {
             int idx = swapChain.getCurrentFrame();
 
             FrameBuffer frameBuffer = geometryFrameBuffer.getFrameBuffer();
-            Fence fence = fences[idx];
-            CommandBuffer commandBuffer = commandBuffers[idx];
-
-            fence.fenceWait();
-            fence.reset();
-
-            commandBuffer.reset();
             List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(attachments.size(), stack);
             for (Attachment attachment : attachments) {
@@ -221,7 +233,6 @@ public class GeometryRenderActivity {
                     .renderArea(a -> a.extent().set(width, height))
                     .framebuffer(frameBuffer.getVkFrameBuffer());
 
-            commandBuffer.beginRecording();
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
             vkCmdBeginRenderPass(cmdHandle, renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -281,7 +292,6 @@ public class GeometryRenderActivity {
             }
 
             vkCmdEndRenderPass(cmdHandle);
-            commandBuffer.endRecording();
         }
     }
 
