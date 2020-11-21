@@ -47,7 +47,7 @@ public class GeometryFrameBuffer {
             attachmentsBuff.flip();
 
             frameBuffer = new FrameBuffer(swapChain.getDevice(), geometryAttachments.getWidth(), geometryAttachments.getHeight(),
-                    attachmentsBuff, geometryRenderPass.getVkRenderPass());
+                    attachmentsBuff, geometryRenderPass.getVkRenderPass(), 1);
         }
     }
 

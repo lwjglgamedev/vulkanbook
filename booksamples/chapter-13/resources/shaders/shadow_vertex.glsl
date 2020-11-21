@@ -10,14 +10,9 @@ layout(location = 4) in vec2 entityTextCoords;
 
 layout(push_constant) uniform matrices {
     mat4 modelMatrix;
-    uint cascadeIndex;
 } push_constants;
-
-layout(set = 0, binding = 0) uniform ProjUniforms {
-    mat4 projViewMatrices[SHADOW_MAP_CASCADE_COUNT];
-} projUniforms;
 
 void main()
 {
-    gl_Position = projUniforms.projViewMatrices[push_constants.cascadeIndex] * push_constants.modelMatrix * vec4(entityPos, 1.0f);
+    gl_Position = push_constants.modelMatrix * vec4(entityPos, 1.0f);
 }

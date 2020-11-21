@@ -37,7 +37,7 @@ public class LightingFrameBuffer {
             for (int i = 0; i < numImages; i++) {
                 attachmentsBuff.put(0, swapChain.getImageViews()[i].getVkImageView());
                 frameBuffers[i] = new FrameBuffer(swapChain.getDevice(), width, height,
-                        attachmentsBuff, lightingRenderPass.getVkRenderPass());
+                        attachmentsBuff, lightingRenderPass.getVkRenderPass(), 1);
             }
         }
     }

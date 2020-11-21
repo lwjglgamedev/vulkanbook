@@ -6,7 +6,7 @@
 // https://github.com/SaschaWillems/Vulkan/tree/master/examples/shadowmappingcascade
 
 layout (constant_id = 0) const int MAX_LIGHTS = 10;
-layout (constant_id = 1) const int SHADOW_MAP_CASCADE_COUNT = 4;
+layout (constant_id = 1) const int SHADOW_MAP_CASCADE_COUNT = 3;
 layout (constant_id = 2) const int USE_PCF = 0;
 layout (constant_id = 3) const float BIAS = 0.0005;
 layout (constant_id = 4) const int DEBUG_SHADOWS = 0;

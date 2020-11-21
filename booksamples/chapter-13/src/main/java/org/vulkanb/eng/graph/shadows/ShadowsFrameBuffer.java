@@ -7,6 +7,7 @@ import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
 
+import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK11.VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 
 public class ShadowsFrameBuffer {
@@ -17,30 +18,42 @@ public class ShadowsFrameBuffer {
     private FrameBuffer frameBuffer;
     private ShadowsRenderPass shadowsRenderPass;
 
-    public ShadowsFrameBuffer(Device device, Image depthImage, ImageView depthImageView, int baseArrayLayer) {
+    public ShadowsFrameBuffer(Device device) {
         LOGGER.debug("Creating ShadowsFrameBuffer");
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            ImageView imageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(),
-                    depthImageView.getAspectMask(), depthImageView.getMipLevels(), VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-                    baseArrayLayer, 1);
-            depthAttachment = new Attachment(depthImage, imageView, true);
+            int mipLevels = 1;
+            int sampleCount = 1;
+            int usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            EngineProperties engineProperties = EngineProperties.getInstance();
+            int shadowMapSize = engineProperties.getShadowMapSize();
+            Image depthImage = new Image(device, shadowMapSize, shadowMapSize,
+                    VK_FORMAT_D32_SFLOAT, usage | VK_IMAGE_USAGE_SAMPLED_BIT, mipLevels, sampleCount,
+                    GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+
+            int aspectMask = Attachment.calcAspectMask(usage);
+
+            ImageView depthImageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(),
+                    aspectMask, 1, VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            depthAttachment = new Attachment(depthImage, depthImageView, true);
 
             shadowsRenderPass = new ShadowsRenderPass(device, depthAttachment);
 
-            EngineProperties engineProperties = EngineProperties.getInstance();
-            int shadowMapSize = engineProperties.getShadowMapSize();
             LongBuffer attachmentsBuff = stack.mallocLong(1);
             attachmentsBuff.put(0, depthAttachment.getImageView().getVkImageView());
             frameBuffer = new FrameBuffer(device, shadowMapSize, shadowMapSize, attachmentsBuff,
-                    shadowsRenderPass.getVkRenderPass());
+                    shadowsRenderPass.getVkRenderPass(), GraphConstants.SHADOW_MAP_CASCADE_COUNT);
         }
     }
 
     public void cleanup() {
         LOGGER.debug("Destroying ShadowsFrameBuffer");
         shadowsRenderPass.cleanup();
-        depthAttachment.getImageView().cleanup();
+        depthAttachment.cleanup();
         frameBuffer.cleanup();
+    }
+
+    public Attachment getDepthAttachment() {
+        return depthAttachment;
     }
 
     public FrameBuffer getFrameBuffer() {

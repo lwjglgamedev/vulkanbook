@@ -12,7 +12,7 @@ public class FrameBuffer {
     private Device device;
     private long vkFrameBuffer;
 
-    public FrameBuffer(Device device, int width, int height, LongBuffer pAttachments, long renderPass) {
+    public FrameBuffer(Device device, int width, int height, LongBuffer pAttachments, long renderPass, int layers) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.callocStack(stack)
@@ -20,7 +20,7 @@ public class FrameBuffer {
                     .pAttachments(pAttachments)
                     .width(width)
                     .height(height)
-                    .layers(1)
+                    .layers(layers)
                     .renderPass(renderPass);
 
             LongBuffer lp = stack.mallocLong(1);

@@ -16,22 +16,20 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class ShadowRenderActivity {
 
-    private static final String SHADOW_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/shadow_fragment.glsl";
-    private static final String SHADOW_FRAGMENT_SHADER_FILE_SPV = SHADOW_FRAGMENT_SHADER_FILE_GLSL + ".spv";
+    private static final String SHADOW_GEOMETRY_SHADER_FILE_GLSL = "resources/shaders/shadow_geometry.glsl";
+    private static final String SHADOW_GEOMETRY_SHADER_FILE_SPV = SHADOW_GEOMETRY_SHADER_FILE_GLSL + ".spv";
     private static final String SHADOW_VERTEX_SHADER_FILE_GLSL = "resources/shaders/shadow_vertex.glsl";
     private static final String SHADOW_VERTEX_SHADER_FILE_SPV = SHADOW_VERTEX_SHADER_FILE_GLSL + ".spv";
+
     private List<CascadeShadow> cascadeShadows;
-    private Attachment depthAttachment;
-    private Image depthImage;
-    private ImageView depthImageView;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
-    private List<Pipeline> pipeLines;
+    private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
     private ShaderProgram shaderProgram;
     private ShadowSpecConstant shadowSpecConstant;
-    private List<ShadowsFrameBuffer> shadowsFrameBuffers;
+    private ShadowsFrameBuffer shadowsFrameBuffer;
     private VulkanBuffer[] shadowsUniforms;
     private SwapChain swapChain;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
@@ -41,51 +39,31 @@ public class ShadowRenderActivity {
         device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
         shadowSpecConstant = new ShadowSpecConstant();
-        createAttachment();
-        createFrameBuffers(device);
+        shadowsFrameBuffer = new ShadowsFrameBuffer(device);
         createShaders();
         createDescriptorPool(numImages);
         createDescriptorSets(numImages);
-        createPipelines(pipelineCache);
+        createPipeline(pipelineCache);
         createShadowCascades();
     }
 
-    private static void setPushConstant(Pipeline pipeLine, VkCommandBuffer cmdHandle, Matrix4f matrix, int cascade) {
+    private static void setPushConstant(Pipeline pipeLine, VkCommandBuffer cmdHandle, Matrix4f matrix) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH);
+            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
             matrix.get(0, pushConstantBuffer);
-            pushConstantBuffer.putInt(GraphConstants.MAT4X4_SIZE, cascade);
             vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
                     VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
         }
     }
 
     public void cleanup() {
-        pipeLines.stream().forEach(Pipeline::cleanup);
+        pipeLine.cleanup();
         Arrays.stream(shadowsUniforms).forEach(VulkanBuffer::cleanup);
         uniformDescriptorSetLayout.cleanup();
         descriptorPool.cleanup();
         shadowSpecConstant.cleanup();
         shaderProgram.cleanup();
-        shadowsFrameBuffers.stream().forEach(ShadowsFrameBuffer::cleanup);
-        depthAttachment.cleanup();
-    }
-
-    private void createAttachment() {
-        int mipLevels = 1;
-        int sampleCount = 1;
-        int usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        EngineProperties engineProperties = EngineProperties.getInstance();
-        int shadowMapSize = engineProperties.getShadowMapSize();
-        depthImage = new Image(device, shadowMapSize, shadowMapSize,
-                VK_FORMAT_D32_SFLOAT, usage | VK_IMAGE_USAGE_SAMPLED_BIT, mipLevels, sampleCount,
-                GraphConstants.SHADOW_MAP_CASCADE_COUNT);
-
-        int aspectMask = Attachment.calcAspectMask(usage);
-
-        depthImageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(), aspectMask, 1,
-                VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, GraphConstants.SHADOW_MAP_CASCADE_COUNT);
-        depthAttachment = new Attachment(depthImage, depthImageView, true);
+        shadowsFrameBuffer.cleanup();
     }
 
     private void createDescriptorPool(int numImages) {
@@ -95,7 +73,7 @@ public class ShadowRenderActivity {
     }
 
     private void createDescriptorSets(int numImages) {
-        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
+        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_GEOMETRY_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformDescriptorSetLayout,
         };
@@ -111,38 +89,25 @@ public class ShadowRenderActivity {
         }
     }
 
-    private void createFrameBuffers(Device device) {
-        shadowsFrameBuffers = new ArrayList<>();
-        for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
-            ShadowsFrameBuffer shadowsFrameBuffer = new ShadowsFrameBuffer(device, depthImage, depthImageView, i);
-            shadowsFrameBuffers.add(shadowsFrameBuffer);
-        }
-    }
-
-    private void createPipelines(PipelineCache pipelineCache) {
-        pipeLines = new ArrayList<>();
-        for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
-            Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                    shadowsFrameBuffers.get(i).getRenderPass().getVkRenderPass(), shaderProgram, GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
-                    true, true, GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH,
-                    new VertexBufferStructure(), descriptorSetLayouts);
-            Pipeline pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
-            pipeLines.add(pipeLine);
-            pipeLineCreationInfo.cleanup();
-        }
+    private void createPipeline(PipelineCache pipelineCache) {
+        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
+                shadowsFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram,
+                GeometryAttachments.NUMBER_COLOR_ATTACHMENTS, true, true, GraphConstants.MAT4X4_SIZE,
+                new VertexBufferStructure(), descriptorSetLayouts);
+        pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
     }
 
     private void createShaders() {
         EngineProperties engineProperties = EngineProperties.getInstance();
         if (engineProperties.isShaderRecompilation()) {
             ShaderCompiler.compileShaderIfChanged(SHADOW_VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
-            ShaderCompiler.compileShaderIfChanged(SHADOW_FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
+            ShaderCompiler.compileShaderIfChanged(SHADOW_GEOMETRY_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_geometry_shader);
         }
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV,
                                 shadowSpecConstant.getSpecInfo()),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_GEOMETRY_BIT, SHADOW_GEOMETRY_SHADER_FILE_SPV),
                 });
     }
 
@@ -154,8 +119,8 @@ public class ShadowRenderActivity {
         }
     }
 
-    public Attachment getAttachment() {
-        return depthAttachment;
+    public Attachment getDepthAttachment() {
+        return shadowsFrameBuffer.getDepthAttachment();
     }
 
     public List<CascadeShadow> getShadowCascades() {
@@ -200,45 +165,40 @@ public class ShadowRenderActivity {
                             .y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            int cascade = 0;
-            for (ShadowsFrameBuffer shadowsFrameBuffer : shadowsFrameBuffers) {
-                FrameBuffer frameBuffer = shadowsFrameBuffer.getFrameBuffer();
+            FrameBuffer frameBuffer = shadowsFrameBuffer.getFrameBuffer();
 
-                VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
-                        .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
-                        .renderPass(shadowsFrameBuffer.getRenderPass().getVkRenderPass())
-                        .pClearValues(clearValues)
-                        .renderArea(a -> a.extent().set(width, height))
-                        .framebuffer(frameBuffer.getVkFrameBuffer());
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
+                    .renderPass(shadowsFrameBuffer.getRenderPass().getVkRenderPass())
+                    .pClearValues(clearValues)
+                    .renderArea(a -> a.extent().set(width, height))
+                    .framebuffer(frameBuffer.getVkFrameBuffer());
 
-                vkCmdBeginRenderPass(cmdHandle, renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(cmdHandle, renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-                Pipeline pipeLine = pipeLines.get(cascade);
-                vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
+            vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-                LongBuffer offsets = stack.mallocLong(1);
-                offsets.put(0, 0L);
-                LongBuffer vertexBuffer = stack.mallocLong(1);
-                LongBuffer descriptorSets = stack.mallocLong(1)
-                        .put(0, projMatrixDescriptorSet[idx].getVkDescriptorSet());
+            LongBuffer offsets = stack.mallocLong(1);
+            offsets.put(0, 0L);
+            LongBuffer vertexBuffer = stack.mallocLong(1);
+            LongBuffer descriptorSets = stack.mallocLong(1)
+                    .put(0, projMatrixDescriptorSet[idx].getVkDescriptorSet());
 
-                vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-                for (VulkanMesh mesh : meshList) {
-                    vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                    vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+            for (VulkanMesh mesh : meshList) {
+                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
+                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-                    List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                    for (Entity entity : entities) {
-                        setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix(), cascade);
-                        vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
-                    }
+                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
+                for (Entity entity : entities) {
+                    setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
                 }
-                vkCmdEndRenderPass(cmdHandle);
-                cascade++;
             }
+            vkCmdEndRenderPass(cmdHandle);
         }
     }
 
