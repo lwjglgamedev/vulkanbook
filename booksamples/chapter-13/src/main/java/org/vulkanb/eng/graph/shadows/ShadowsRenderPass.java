@@ -15,12 +15,12 @@ public class ShadowsRenderPass {
     private Device device;
     private long vkRenderPass;
 
-    public ShadowsRenderPass(Device device, Attachment depthAttachmen) {
+    public ShadowsRenderPass(Device device, Attachment depthAttachment) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(1, stack);
             attachmentsDesc.get(0)
-                    .format(depthAttachmen.getImage().getFormat())
+                    .format(depthAttachment.getImage().getFormat())
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
                     .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
                     .stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE)

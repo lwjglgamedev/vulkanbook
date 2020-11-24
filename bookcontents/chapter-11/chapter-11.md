@@ -1118,14 +1118,7 @@ public class Main implements IAppLogic {
         } else if (lightAngle > 180) {
             lightAngle = 180;
         }
-        float zValue = (float) Math.cos(Math.toRadians(lightAngle));
-        float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = directionalLight.getPosition();
-        lightDirection.x = 0;
-        lightDirection.y = yValue;
-        lightDirection.z = zValue;
-        lightDirection.normalize();
-        lightDirection.w = 0.0f;
+        updateDirectionalLight();
     }
     ...
     public void init(Window window, Scene scene, Render render) {
@@ -1136,6 +1129,7 @@ public class Main implements IAppLogic {
         directionalLight.getPosition().set(0.0f, 1.0f, 0.0f, 0.0f);
         directionalLight.getColor().set(1.0f, 1.0f, 1.0f, 1.0f);
         lights.add(directionalLight);
+        updateDirectionalLight();
 
         Light light = new Light();
         light.getPosition().set(0, 1, 0, 1.0f);
@@ -1145,7 +1139,17 @@ public class Main implements IAppLogic {
         Light[] lightArr = new Light[lights.size()];
         lightArr = lights.toArray(lightArr);
         scene.setLights(lightArr);
-        ...
+    }
+
+    private void updateDirectionalLight() {
+        float zValue = (float) Math.cos(Math.toRadians(lightAngle));
+        float yValue = (float) Math.sin(Math.toRadians(lightAngle));
+        Vector4f lightDirection = directionalLight.getPosition();
+        lightDirection.x = 0;
+        lightDirection.y = yValue;
+        lightDirection.z = zValue;
+        lightDirection.normalize();
+        lightDirection.w = 0.0f;
     }
 }
 ```

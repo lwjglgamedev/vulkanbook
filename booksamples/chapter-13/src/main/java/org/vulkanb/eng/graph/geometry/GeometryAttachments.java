@@ -35,11 +35,6 @@ public class GeometryAttachments {
                 VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
         attachments.add(attachment);
 
-        // View position attachment
-        //attachment = new Attachment(device, width, height,
-        //        VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-        //attachments.add(attachment);
-
         // Depth attachment
         deptAttachment = new Attachment(device, width, height,
                 VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);

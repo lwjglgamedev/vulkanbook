@@ -28,7 +28,6 @@ public class ShadowRenderActivity {
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
     private ShaderProgram shaderProgram;
-    private ShadowSpecConstant shadowSpecConstant;
     private ShadowsFrameBuffer shadowsFrameBuffer;
     private VulkanBuffer[] shadowsUniforms;
     private SwapChain swapChain;
@@ -38,7 +37,6 @@ public class ShadowRenderActivity {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
-        shadowSpecConstant = new ShadowSpecConstant();
         shadowsFrameBuffer = new ShadowsFrameBuffer(device);
         createShaders();
         createDescriptorPool(numImages);
@@ -47,21 +45,11 @@ public class ShadowRenderActivity {
         createShadowCascades();
     }
 
-    private static void setPushConstant(Pipeline pipeLine, VkCommandBuffer cmdHandle, Matrix4f matrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
-            matrix.get(0, pushConstantBuffer);
-            vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
-                    VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
-        }
-    }
-
     public void cleanup() {
         pipeLine.cleanup();
         Arrays.stream(shadowsUniforms).forEach(VulkanBuffer::cleanup);
         uniformDescriptorSetLayout.cleanup();
         descriptorPool.cleanup();
-        shadowSpecConstant.cleanup();
         shaderProgram.cleanup();
         shadowsFrameBuffer.cleanup();
     }
@@ -81,7 +69,7 @@ public class ShadowRenderActivity {
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet[numImages];
         shadowsUniforms = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
-            shadowsUniforms[i] = new VulkanBuffer(device,
+            shadowsUniforms[i] = new VulkanBuffer(device, (long)
                     GraphConstants.MAT4X4_SIZE * GraphConstants.SHADOW_MAP_CASCADE_COUNT,
                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
             projMatrixDescriptorSet[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
@@ -105,8 +93,7 @@ public class ShadowRenderActivity {
         }
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV,
-                                shadowSpecConstant.getSpecInfo()),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV),
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_GEOMETRY_BIT, SHADOW_GEOMETRY_SHADER_FILE_SPV),
                 });
     }
@@ -205,6 +192,15 @@ public class ShadowRenderActivity {
     public void resize(SwapChain swapChain, Scene scene) {
         this.swapChain = swapChain;
         CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+    }
+
+    private void setPushConstant(Pipeline pipeLine, VkCommandBuffer cmdHandle, Matrix4f matrix) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
+            matrix.get(0, pushConstantBuffer);
+            vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
+                    VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
+        }
     }
 
     private void updateProjViewBuffers(int idx) {

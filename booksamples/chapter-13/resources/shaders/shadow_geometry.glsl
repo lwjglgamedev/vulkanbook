@@ -1,6 +1,6 @@
 #version 450
 
-// You shoould change this manually if GraphConstants.SHADOW_MAP_CASCADE_COUNT changes
+// You should change this manually if GraphConstants.SHADOW_MAP_CASCADE_COUNT changes
 #define SHADOW_MAP_CASCADE_COUNT 3
 
 layout (triangles, invocations = SHADOW_MAP_CASCADE_COUNT) in;

@@ -157,11 +157,11 @@ public class LightingRenderActivity {
                     GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
-            invMatricesBuffers[i] = new VulkanBuffer(device,
+            invMatricesBuffers[i] = new VulkanBuffer(device, (long)
                     GraphConstants.MAT4X4_SIZE * 2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
-            shadowsMatricesBuffers[i] = new VulkanBuffer(device,
+            shadowsMatricesBuffers[i] = new VulkanBuffer(device, (long)
                     (GraphConstants.MAT4X4_SIZE + GraphConstants.VEC4_SIZE) * GraphConstants.SHADOW_MAP_CASCADE_COUNT,
                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);

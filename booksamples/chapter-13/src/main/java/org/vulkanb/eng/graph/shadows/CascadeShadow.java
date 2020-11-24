@@ -1,7 +1,6 @@
 package org.vulkanb.eng.graph.shadows;
 
 import org.joml.*;
-import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.vk.GraphConstants;
 import org.vulkanb.eng.scene.Scene;
 
@@ -29,11 +28,8 @@ public class CascadeShadow {
 
         float[] cascadeSplits = new float[GraphConstants.SHADOW_MAP_CASCADE_COUNT];
 
-        EngineProperties engineProperties = EngineProperties.getInstance();
-        float nearClip = engineProperties.getZNear();
-        float farClip = engineProperties.getZFar();
-        nearClip = projMatrix.perspectiveNear();
-        farClip = projMatrix.perspectiveFar();
+        float nearClip = projMatrix.perspectiveNear();
+        float farClip = projMatrix.perspectiveFar();
         float clipRange = farClip - nearClip;
 
         float minZ = nearClip;
