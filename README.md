@@ -1,12 +1,10 @@
 # Vulkan graphics programming in Java
 
-**WORK IN PROGRESS: First chapters published**
-
 This [online book](bookcontents/) will introduce the main concepts required to write graphics games or any other applications using [Vulkan](https://www.khronos.org/vulkan/) in Java.
 
 We will use [LWJGL](http://www.lwjgl.org/) as the Java library which provides the required bindings to use Vulkan and any other required APIs. This book is the result of my self learning language, that I think it may help the community.
 
-![Sample screen shot](./bookcontents/chapter-11/screen-shot.png)
+![Sample screen shot](./bookcontents/chapter-13/screen-shot.png)
 
 ## Book Code
 

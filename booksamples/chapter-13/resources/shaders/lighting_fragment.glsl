@@ -139,22 +139,6 @@ float metallic, float roughness) {
     attenuation);
 }
 
-float calcShadow(vec4 worldPosition, uint cascadeIndex)
-{
-    vec4 shadowMapPosition = shadowsUniforms.cascadeshadows[cascadeIndex].projViewMatrix * worldPosition;
-
-    float shadow = 1.0;
-    vec4 shadowCoord = shadowMapPosition / shadowMapPosition.w;
-    shadowCoord.x = shadowCoord.x * 0.5 + 0.5;
-    shadowCoord.y = (-shadowCoord.y) * 0.5 + 0.5;
-
-    if (USE_PCF == 1) {
-        shadow = filterPCF(shadowCoord, cascadeIndex);
-    } else {
-        shadow = textureProj(shadowCoord, vec2(0, 0), cascadeIndex);
-    }
-    return shadow;
-}
 
 float textureProj(vec4 shadowCoord, vec2 offset, uint cascadeIndex)
 {
@@ -187,6 +171,23 @@ float filterPCF(vec4 sc, uint cascadeIndex)
         }
     }
     return shadowFactor / count;
+}
+
+float calcShadow(vec4 worldPosition, uint cascadeIndex)
+{
+    vec4 shadowMapPosition = shadowsUniforms.cascadeshadows[cascadeIndex].projViewMatrix * worldPosition;
+
+    float shadow = 1.0;
+    vec4 shadowCoord = shadowMapPosition / shadowMapPosition.w;
+    shadowCoord.x = shadowCoord.x * 0.5 + 0.5;
+    shadowCoord.y = (-shadowCoord.y) * 0.5 + 0.5;
+
+    if (USE_PCF == 1) {
+        shadow = filterPCF(shadowCoord, cascadeIndex);
+    } else {
+        shadow = textureProj(shadowCoord, vec2(0, 0), cascadeIndex);
+    }
+    return shadow;
 }
 
 void main() {
