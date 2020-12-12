@@ -244,7 +244,7 @@ public class LightingRenderActivity {
         updateCascadeShadowMatrices(cascadeShadows, shadowsMatricesBuffers[idx]);
     }
 
-    public void resize(SwapChain swapChain, List<Attachment> attachments, Scene scene) {
+    public void resize(SwapChain swapChain, List<Attachment> attachments) {
         this.swapChain = swapChain;
         attachmentsDescriptorSet.update(attachments);
         lightingFrameBuffer.resize(swapChain);

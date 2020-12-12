@@ -120,7 +120,7 @@ public class Render {
         List<Attachment> attachments = new ArrayList<>();
         attachments.addAll(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
-        lightingRenderActivity.resize(swapChain, attachments, scene);
+        lightingRenderActivity.resize(swapChain, attachments);
     }
 
     public void unloadMesh(String id) {

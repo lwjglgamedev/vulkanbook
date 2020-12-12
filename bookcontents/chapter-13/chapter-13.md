@@ -1247,7 +1247,7 @@ Because of the changes described above, in the `resize`method we will not be upd
 ```java
 public class LightingRenderActivity {
     ...
-    public void resize(SwapChain swapChain, List<Attachment> attachments, Scene scene) {
+    public void resize(SwapChain swapChain, List<Attachment> attachments) {
         this.swapChain = swapChain;
         attachmentsDescriptorSet.update(attachments);
         lightingFrameBuffer.resize(swapChain);
@@ -1409,7 +1409,7 @@ public class Render {
         List<Attachment> attachments = new ArrayList<>();
         attachments.addAll(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
-        lightingRenderActivity.resize(swapChain, attachments, scene);
+        lightingRenderActivity.resize(swapChain, attachments);
     }
     ...
 }
