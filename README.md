@@ -33,3 +33,4 @@ Antonio Hernández Bejarano.
 To all the readers that have contributed with corrections, improvements and ideas. Specifically to:
 
 - [SWinxy](https://github.com/SWinxy)
+- [Kai Burjack](https://github.com/httpdigest)
