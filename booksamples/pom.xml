@@ -107,7 +107,7 @@
         <!-- Versions -->
         <java.version>15</java.version>
 
-        <joml.version>1.9.25</joml.version>
+        <joml.version>1.10.0</joml.version>
         <log4j.version>2.14.0</log4j.version>
         <lwjgl.version>3.2.3</lwjgl.version>
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
