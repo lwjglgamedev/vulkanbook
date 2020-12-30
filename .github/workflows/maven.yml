@@ -13,5 +13,7 @@ jobs:
         with:
           java-version: 15
           architecture: x64
+      - name: Go to source code directory
+        run: cd booksamples
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots clean package
