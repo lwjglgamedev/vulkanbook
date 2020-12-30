@@ -293,6 +293,7 @@ The code above, will test if the minimal requirements to use Vulkan are availabl
 public class Window implements GLFWFramebufferSizeCallbackI {
     ...
     public void cleanup() {
+        glfwFreeCallbacks(windowHandle);
         glfwDestroyWindow(windowHandle);
         glfwTerminate();
     }

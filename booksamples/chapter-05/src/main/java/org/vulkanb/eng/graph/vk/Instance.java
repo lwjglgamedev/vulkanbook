@@ -133,6 +133,7 @@ public class Instance {
             vkDestroyDebugUtilsMessengerEXT(vkInstance, vkDebugHandle, null);
         }
         if (debugUtils != null) {
+            debugUtils.pfnUserCallback().free();
             debugUtils.free();
         }
         vkDestroyInstance(vkInstance, null);

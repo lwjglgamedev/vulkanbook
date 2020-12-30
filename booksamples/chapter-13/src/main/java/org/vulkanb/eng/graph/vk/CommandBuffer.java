@@ -21,7 +21,7 @@ public class CommandBuffer {
         VkDevice vkDevice = this.commandPool.getDevice().getVkDevice();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.calloc()
+            VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
                     .commandPool(commandPool.getVkCommandPool())
                     .level(primary ? VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY)

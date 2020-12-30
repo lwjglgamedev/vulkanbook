@@ -285,7 +285,7 @@ public class ShadowsRenderPass {
                     .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
 
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)
@@ -1345,6 +1345,8 @@ public class LightSpecConstants {
     }
 
     public void cleanup() {
+        MemoryUtil.memFree(specEntryMap);
+        specInfo.free();
         MemoryUtil.memFree(data);
     }
 

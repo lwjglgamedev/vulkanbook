@@ -213,7 +213,7 @@ public class GeometryRenderPass {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).callocStack(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)
@@ -773,7 +773,7 @@ public class LightingRenderPass {
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-            VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1)
+            VkSubpassDescription.Buffer subPass = VkSubpassDescription.callocStack(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .colorAttachmentCount(colorReference.remaining())
                     .pColorAttachments(colorReference);
@@ -787,7 +787,7 @@ public class LightingRenderPass {
                     .srcAccessMask(0)
                     .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc()
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).calloc()
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachments)
                     .pSubpasses(subPass)

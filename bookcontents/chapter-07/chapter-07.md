@@ -345,7 +345,7 @@ public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
                 .attachment(1)
                 .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-        VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1)
+        VkSubpassDescription.Buffer subPass = VkSubpassDescription.callocStack(1, stack)
                 .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                 .colorAttachmentCount(colorReference.remaining())
                 .pColorAttachments(colorReference)

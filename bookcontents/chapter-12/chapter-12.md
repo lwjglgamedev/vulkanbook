@@ -328,6 +328,8 @@ public class LightSpecConstants {
     }
 
     public void cleanup() {
+        MemoryUtil.memFree(specEntryMap);
+        specInfo.free();
         MemoryUtil.memFree(data);
     }
 

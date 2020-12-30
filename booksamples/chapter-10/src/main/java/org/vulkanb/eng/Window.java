@@ -3,6 +3,7 @@ package org.vulkanb.eng;
 import org.lwjgl.glfw.*;
 import org.lwjgl.system.MemoryUtil;
 
+import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
@@ -56,6 +57,7 @@ public class Window implements GLFWFramebufferSizeCallbackI {
     }
 
     public void cleanup() {
+        glfwFreeCallbacks(windowHandle);
         glfwDestroyWindow(windowHandle);
         glfwTerminate();
     }
