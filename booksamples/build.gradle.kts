@@ -22,7 +22,7 @@ subprojects {
 	    mavenCentral()
     }
 
-    val jomlVersion = "1.9.25"
+    val jomlVersion = "1.10.0"
     val log4jVersion = "2.14.0"
     val lwjglVersion = "3.2.3"
 
