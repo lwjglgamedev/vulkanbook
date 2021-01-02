@@ -761,6 +761,10 @@ The vertex shader (`shadow_vertex.glsl`) is quite simple, we just apply the mode
 #version 450
 
 layout(location = 0) in vec3 entityPos;
+layout(location = 1) in vec3 entityNormal;
+layout(location = 2) in vec3 entityTangent;
+layout(location = 3) in vec3 entityBitangent;
+layout(location = 4) in vec2 entityTextCoords;
 
 layout(push_constant) uniform matrices {
     mat4 modelMatrix;
@@ -1562,8 +1566,7 @@ public class Main implements IAppLogic {
 }
 ```
 
-Finally, to complete all the changes, we have to enable depth clamp to avoid near plane clipping:
-
+Finally, to complete all the changes, we have to enable depth clamp to avoid near plane clipping and also enable support for geometry shaders:
 ```java
 public class Device {
     ...
@@ -1577,6 +1580,7 @@ public class Device {
                 features.samplerAnisotropy(true);
             }
             features.depthClamp(supportedFeatures.depthClamp());
+            features.geometryShader(true);
         ...
     }
     ...

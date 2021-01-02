@@ -1,6 +1,10 @@
 #version 450
 
 layout(location = 0) in vec3 entityPos;
+layout(location = 1) in vec3 entityNormal;
+layout(location = 2) in vec3 entityTangent;
+layout(location = 3) in vec3 entityBitangent;
+layout(location = 4) in vec2 entityTextCoords;
 
 layout(push_constant) uniform matrices {
     mat4 modelMatrix;
