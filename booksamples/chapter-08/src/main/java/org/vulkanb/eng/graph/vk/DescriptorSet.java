@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public abstract class DescriptorSet {

@@ -7,8 +7,7 @@ import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK10.*;
-import static org.lwjgl.vulkan.VK11.VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+import static org.lwjgl.vulkan.VK11.*;
 
 public class ShadowsFrameBuffer {
 
