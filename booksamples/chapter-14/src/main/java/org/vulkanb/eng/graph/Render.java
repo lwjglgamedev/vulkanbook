@@ -12,9 +12,7 @@ import org.vulkanb.eng.scene.*;
 
 import java.util.*;
 
-// TODO: Use has Texture values
-// TODO: Unload animation
-// TODO: SYnchronization
+// TODO: Synchronization between compute shader and geometry shader
 public class Render {
 
     private static final Logger LOGGER = LogManager.getLogger();

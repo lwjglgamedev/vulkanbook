@@ -186,12 +186,12 @@ public class GeometryRenderActivity {
         device.waitIdle();
         int materialCount = 0;
         for (VulkanModel vulkanModel : vulkanModelList) {
-            int materialOffset = materialCount * materialSize;
             for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
                 updateTextureDescriptorSet(vulkanMaterial.texture());
                 updateTextureDescriptorSet(vulkanMaterial.normalMap());
                 updateTextureDescriptorSet(vulkanMaterial.metalRoughMap());
-                updateMateriasBuffer(materialsBuffer, vulkanMaterial, materialOffset);
+                updateMaterialsBuffer(materialsBuffer, vulkanMaterial, materialOffset);
                 materialCount++;
             }
         }
@@ -331,7 +331,7 @@ public class GeometryRenderActivity {
         }
     }
 
-    private void updateMateriasBuffer(VulkanBuffer vulkanBuffer, VulkanModel.VulkanMaterial material, int offset) {
+    private void updateMaterialsBuffer(VulkanBuffer vulkanBuffer, VulkanModel.VulkanMaterial material, int offset) {
         long mappedMemory = vulkanBuffer.map();
         ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
         material.diffuseColor().get(offset, materialBuffer);
