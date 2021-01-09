@@ -15,7 +15,6 @@ import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Check if adding timers for animations could fit for this chapter
 // TODO: Synchronization between compute shader and geometry shader
-// TODO: EntityANimation, Use started attribute or remove it
 // TODO: Check if using UUID for can simplify the code
 public class AnimationComputeActivity {
 
@@ -145,6 +144,9 @@ public class AnimationComputeActivity {
                             descriptorSets.put(2, entityAnimationBuffer.descriptorSet().getVkDescriptorSet());
 
                             Entity.EntityAnimation entityAnimation = entity.getEntityAnimation();
+                            if (!entityAnimation.isStarted()) {
+                                continue;
+                            }
                             DescriptorSet jointMatricesDescriptorSet = modelDescriptorSets.jointMatricesBufferDescriptorSets.
                                     get(entityAnimation.getAnimationIdx()).get(entityAnimation.getCurrentFrame());
                             descriptorSets.put(3, jointMatricesDescriptorSet.getVkDescriptorSet());

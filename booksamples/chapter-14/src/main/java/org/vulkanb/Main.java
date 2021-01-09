@@ -65,6 +65,10 @@ public class Main implements IAppLogic {
             scene.setLightChanged(false);
         }
 
+        if (window.isKeyPressed(GLFW_KEY_SPACE)) {
+            bobEntity.getEntityAnimation().setStarted(!bobEntity.getEntityAnimation().isStarted());
+        }
+
         MouseInput mouseInput = window.getMouseInput();
         if (mouseInput.isRightButtonPressed()) {
             Vector2f displVec = mouseInput.getDisplVec();
@@ -80,8 +84,11 @@ public class Main implements IAppLogic {
         }
         updateDirectionalLight();
 
-        int currentFrame = Math.floorMod(bobEntity.getEntityAnimation().getCurrentFrame() + 1, maxFrames);
-        bobEntity.getEntityAnimation().setCurrentFrame(currentFrame);
+        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
+        if (entityAnimation.isStarted()) {
+            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
+            entityAnimation.setCurrentFrame(currentFrame);
+        }
     }
 
     @Override
