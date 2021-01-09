@@ -13,8 +13,10 @@ import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: Check if using UUID for can simplify the code
 // TODO: Check if adding timers for animations could fit for this chapter
+// TODO: Synchronization between compute shader and geometry shader
+// TODO: EntityANimation, Use started attribute or remove it
+// TODO: Check if using UUID for can simplify the code
 public class AnimationComputeActivity {
 
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
@@ -67,12 +69,12 @@ public class AnimationComputeActivity {
     }
 
     private void createDescriptorPool() {
-        // TODO: Automate the calculation of number of descriptors
-        int maxNumMeshes = 200;
-        int maxNumModels = 200;
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        int maxAnimatedMeshes = engineProperties.getMaxAnimatedMeshes();
+        int maxAnimatedFrames = engineProperties.getMaxAnimatedFrames();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxNumMeshes, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxNumModels, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxAnimatedMeshes, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxAnimatedFrames, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 

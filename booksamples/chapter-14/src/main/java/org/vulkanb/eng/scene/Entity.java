@@ -70,7 +70,6 @@ public class Entity {
         modelMatrix.identity().translationRotateScale(position, rotation, scale);
     }
 
-    // TODO: Use started attribute or remove it
     public static class EntityAnimation {
         private int animationIdx;
         private int currentFrame;
