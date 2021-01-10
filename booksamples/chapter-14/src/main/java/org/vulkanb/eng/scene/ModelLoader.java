@@ -181,7 +181,7 @@ public class ModelLoader {
         }
 
         aiReleaseImport(aiScene);
-        LOGGER.debug("Loaded mesh data [{}]", modelPath);
+        LOGGER.debug("Loaded model [{}]", modelPath);
         return modelData;
     }
 

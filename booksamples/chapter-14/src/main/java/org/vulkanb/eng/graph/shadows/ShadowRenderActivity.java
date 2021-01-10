@@ -169,22 +169,19 @@ public class ShadowRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
-            LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer descriptorSets = stack.mallocLong(1)
                     .put(0, projMatrixDescriptorSet[idx].getVkDescriptorSet());
 
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            recordEntities(stack, scene, cmdHandle, vulkanModelList, entityAnimationsBuffers);
+            recordEntities(stack, cmdHandle, vulkanModelList, entityAnimationsBuffers);
 
             vkCmdEndRenderPass(cmdHandle);
         }
     }
 
-    private void recordEntities(MemoryStack stack, Scene scene, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList,
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList,
                                 Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         LongBuffer offsets = stack.mallocLong(1);
         offsets.put(0, 0L);
@@ -219,7 +216,6 @@ public class ShadowRenderActivity {
             }
         }
     }
-
 
     public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;

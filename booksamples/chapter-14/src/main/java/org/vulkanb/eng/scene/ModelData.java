@@ -5,8 +5,6 @@ import org.joml.*;
 import java.util.List;
 
 public class ModelData {
-    public static final int MAX_JOINTS = 150;
-
     private List<AnimMeshData> animMeshDataList;
     private List<Animation> animationsList;
     private List<Material> materialList;
@@ -14,16 +12,9 @@ public class ModelData {
     private String modelId;
 
     public ModelData(String modelId, List<MeshData> meshDataList, List<Material> materialList) {
-        this(modelId, meshDataList, materialList, null, null);
-    }
-
-    public ModelData(String modelId, List<MeshData> meshDataList, List<Material> materialList,
-                     List<AnimMeshData> animaMeshData, List<Animation> animationsList) {
         this.modelId = modelId;
         this.meshDataList = meshDataList;
         this.materialList = materialList;
-        this.animMeshDataList = animMeshDataList;
-        this.animationsList = animationsList;
     }
 
     public List<AnimMeshData> getAnimMeshDataList() {
@@ -52,10 +43,6 @@ public class ModelData {
 
     public void setAnimationsList(List<Animation> animationsList) {
         this.animationsList = animationsList;
-    }
-
-    public void setMaterialList(List<Material> materialList) {
-        this.materialList = materialList;
     }
 
     public record AnimMeshData(float[] weights, int[] boneIds) {

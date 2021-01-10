@@ -69,7 +69,7 @@ public class VulkanModel {
         if (textCoords == null || textCoords.length == 0) {
             textCoords = new float[(positions.length / 3) * 2];
         }
-        int numElements = positions.length + normals.length + +tangents.length + biTangents.length + textCoords.length;
+        int numElements = positions.length + normals.length + tangents.length + biTangents.length + textCoords.length;
         int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
@@ -150,7 +150,7 @@ public class VulkanModel {
     private static VulkanMaterial transformMaterial(ModelData.Material material, Device device, TextureCache textureCache,
                                                     CommandBuffer cmd, List<Texture> textureList) {
         Texture texture = textureCache.createTexture(device, material.texturePath(), VK_FORMAT_R8G8B8A8_SRGB);
-        boolean hasTexture = material.normalMapPath() != null && material.texturePath().trim().length() > 0;
+        boolean hasTexture = material.texturePath() != null && material.texturePath().trim().length() > 0;
         Texture normalMapTexture = textureCache.createTexture(device, material.normalMapPath(), VK_FORMAT_R8G8B8A8_UNORM);
         boolean hasNormalMapTexture = material.normalMapPath() != null && material.normalMapPath().trim().length() > 0;
         Texture metalRoughTexture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_SRGB);

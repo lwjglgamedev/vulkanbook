@@ -182,21 +182,6 @@ public class GeometryRenderActivity {
         return geometryFrameBuffer.geometryAttachments().getAttachments();
     }
 
-    public void modelsLoaded(List<VulkanModel> vulkanModelList) {
-        device.waitIdle();
-        int materialCount = 0;
-        for (VulkanModel vulkanModel : vulkanModelList) {
-            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
-                int materialOffset = materialCount * materialSize;
-                updateTextureDescriptorSet(vulkanMaterial.texture());
-                updateTextureDescriptorSet(vulkanMaterial.normalMap());
-                updateTextureDescriptorSet(vulkanMaterial.metalRoughMap());
-                updateMaterialsBuffer(materialsBuffer, vulkanMaterial, materialOffset);
-                materialCount++;
-            }
-        }
-    }
-
     public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
                                      Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -253,13 +238,13 @@ public class GeometryRenderActivity {
                     .put(5, materialsDescriptorSet.getVkDescriptorSet());
             VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
 
-            recordEntities(stack, scene, cmdHandle, descriptorSets, vulkanModelList, entityAnimationsBuffers);
+            recordEntities(stack, cmdHandle, descriptorSets, vulkanModelList, entityAnimationsBuffers);
 
             vkCmdEndRenderPass(cmdHandle);
         }
     }
 
-    private void recordEntities(MemoryStack stack, Scene scene, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
                                 List<VulkanModel> vulkanModelList,
                                 Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         LongBuffer offsets = stack.mallocLong(1);
@@ -307,6 +292,21 @@ public class GeometryRenderActivity {
                     }
                     meshCount++;
                 }
+                materialCount++;
+            }
+        }
+    }
+
+    public void registerModels(List<VulkanModel> vulkanModelList) {
+        device.waitIdle();
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+                updateTextureDescriptorSet(vulkanMaterial.normalMap());
+                updateTextureDescriptorSet(vulkanMaterial.metalRoughMap());
+                updateMaterialsBuffer(materialsBuffer, vulkanMaterial, materialOffset);
                 materialCount++;
             }
         }

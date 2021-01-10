@@ -31,6 +31,28 @@ public class Render {
     private TextureCache textureCache;
     private List<VulkanModel> vulkanModels;
 
+    public Render(Window window, Scene scene) {
+        EngineProperties engProps = EngineProperties.getInstance();
+        instance = new Instance(engProps.isValidate());
+        physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
+        device = new Device(instance, physicalDevice);
+        surface = new Surface(physicalDevice, window.getWindowHandle());
+        graphQueue = new Queue.GraphicsQueue(device, 0);
+        presentQueue = new Queue.PresentQueue(device, surface, 0);
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
+                engProps.isvSync());
+        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
+        pipelineCache = new PipelineCache(device);
+        vulkanModels = new ArrayList<>();
+        textureCache = new TextureCache();
+        geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
+        shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache, scene);
+        List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
+        attachments.add(shadowRenderActivity.getDepthAttachment());
+        lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
+        animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache, scene);
+    }
+
     public void cleanup() {
         presentQueue.waitIdle();
         graphQueue.waitIdle();
@@ -50,33 +72,10 @@ public class Render {
         instance.cleanup();
     }
 
-    public void init(Window window, Scene scene) {
-        EngineProperties engProps = EngineProperties.getInstance();
-        instance = new Instance(engProps.isValidate());
-        physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
-        device = new Device(instance, physicalDevice);
-        surface = new Surface(physicalDevice, window.getWindowHandle());
-        graphQueue = new Queue.GraphicsQueue(device, 0);
-        presentQueue = new Queue.PresentQueue(device, surface, 0);
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
-                engProps.isvSync());
-        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
-        pipelineCache = new PipelineCache(device);
-        vulkanModels = new ArrayList<>();
-        textureCache = new TextureCache();
-        geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
-        shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache, scene);
-        List<Attachment> attachments = new ArrayList<>();
-        attachments.addAll(geometryRenderActivity.getAttachments());
-        attachments.add(shadowRenderActivity.getDepthAttachment());
-        lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
-        animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache, scene);
-    }
-
     public void loadAnimation(Entity entity) {
         String modelId = entity.getModelId();
         Optional<VulkanModel> optModel = vulkanModels.stream().filter(m -> m.getModelId().equals(modelId)).findFirst();
-        if (!optModel.isPresent()) {
+        if (optModel.isEmpty()) {
             throw new RuntimeException("Could not find model [" + modelId + "]");
         }
         VulkanModel vulkanModel = optModel.get();
@@ -92,7 +91,7 @@ public class Render {
         vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
         LOGGER.debug("Loaded {} model(s)", modelDataList.size());
 
-        geometryRenderActivity.modelsLoaded(vulkanModels);
+        geometryRenderActivity.registerModels(vulkanModels);
         animationComputeActivity.registerModels(vulkanModels);
     }
 
@@ -135,8 +134,7 @@ public class Render {
                 engProps.isvSync());
         geometryRenderActivity.resize(swapChain);
         shadowRenderActivity.resize(swapChain);
-        List<Attachment> attachments = new ArrayList<>();
-        attachments.addAll(geometryRenderActivity.getAttachments());
+        List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
         lightingRenderActivity.resize(swapChain, attachments);
     }
