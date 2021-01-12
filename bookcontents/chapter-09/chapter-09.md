@@ -95,21 +95,45 @@ public class Texture {
 }
 ```
 
-This new method basically, iterates over the image contents, checking if the alpha component has a value different than `255` (one in normalized color components). If so, we consider that the texture has transparencies. With that information, we can reorder our meshes so the ones that have non-transparent textures will be drawn first. We will do this in the `loadMeshes` of the `Render`class:
+This new method basically, iterates over the image contents, checking if the alpha component has a value different than `255` (one in normalized color components). If so, we consider that the texture has transparencies. With that information, we will add a new method to the `VulkanModel.VulkanMaterial` class which states if the material is transparent:
+```java
+public class VulkanModel {
+    ...
+    public record VulkanMaterial(Vector4f diffuseColor, Texture texture, boolean hasTexture,
+                                 List<VulkanMesh> vulkanMeshList) {
+
+        public boolean isTransparent() {
+            return texture.hasTransparencies();
+        }
+    }
+    ...
+}
+```
+
+Now, when loading the models in the `Render` class, we will re-order the material list of each model to start first with the non transparent ones. We will also re-order the list of models to leave the transparent ones at the end:
 
 ```java
 public class Render {
     ...
-    public void loadMeshes(MeshData[] meshDataList) {
-        LOGGER.debug("Loading {} meshe(s)", meshDataList.length);
-        VulkanMesh[] meshes = VulkanMesh.loadMeshes(textureCache, commandPool, graphQueue, meshDataList);
-        LOGGER.debug("Loaded {} meshe(s)", meshes.length);
-        meshList.addAll(Arrays.asList(meshes));
+    public void loadModels(List<ModelData> modelDataList) {
+        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
+        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
 
-        // Reorder meshes
-        Collections.sort(meshList, (a, b) -> Boolean.compare(a.getTexture().hasTransparencies(), b.getTexture().hasTransparencies()));
+        // Reorder materials inside models
+        vulkanModels.forEach(m -> {
+            Collections.sort(m.getVulkanMaterialList(), (a, b) -> Boolean.compare(a.isTransparent(), b.isTransparent()));
+        });
 
-        fwdRenderActivity.meshesLoaded(meshes);
+        // Reorder models
+        Collections.sort(vulkanModels, (a, b) -> {
+            boolean aHasTransparentMt = a.getVulkanMaterialList().stream().filter(m -> m.isTransparent()).findAny().isPresent();
+            boolean bHasTransparentMt = b.getVulkanMaterialList().stream().filter(m -> m.isTransparent()).findAny().isPresent();
+
+            return Boolean.compare(aHasTransparentMt, bHasTransparentMt);
+        });
+
+        fwdRenderActivity.registerModels(vulkanModels);
     }
     ...
 }
@@ -478,7 +502,7 @@ In the shader, we are combining the color obtained from the texture with the dif
 ```java
 public class ModelLoader {
     ...
-    private static void processMaterial(AIMaterial aiMaterial, List<Material> materials, String texturesDir) {
+    private static ModelData.Material processMaterial(AIMaterial aiMaterial, String texturesDir) {
         ...
             if (texturePath != null && texturePath.length() > 0) {
                 texturePath = texturesDir + File.separator + new File(texturePath).getName();
@@ -640,77 +664,106 @@ public class ForwardRenderActivity {
 }
 ```
 
-We will also modify the `meshesLoaded` method, to update the buffer that holds the materials data:
+We will also modify the `registerModels` method, to update the buffer that holds the materials data:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    public void meshesLoaded(VulkanMesh[] meshes) {
+    public void registerModels(List<VulkanModel> vulkanModelList) {
         device.waitIdle();
-        int meshCount = 0;
-        for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialSize;
-            String textureFileName = vulkanMesh.getTexture().getFileName();
-            TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
-            if (textureDescriptorSet == null) {
-                textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
-                        vulkanMesh.getTexture(), textureSampler, 0);
-                descriptorSetMap.put(textureFileName, textureDescriptorSet);
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+                updateMaterialsBuffer(materialsBuffer, vulkanMaterial, materialOffset);
+                materialCount++;
             }
-            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
-            meshCount++;
         }
     }
     ...
 }
 ```
 
-As you can see, we calculate the offset in the buffer, to update the material data by calling the `updateMaterial` data:
+As you can see, we calculate the offset in the buffer, to update the material data by calling the `updateMaterialsBuffer` data:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+    private void updateMaterialsBuffer(VulkanBuffer vulkanBuffer, VulkanModel.VulkanMaterial material, int offset) {
         long mappedMemory = vulkanBuffer.map();
         ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
-        material.getDiffuseColor().get(offset, materialBuffer);
+        material.diffuseColor().get(offset, materialBuffer);
         vulkanBuffer.unMap();
     }
     ...
 }
 ```
 
-In the `updateMaterial` method, we just map the buffer and dump the material diffuse color to the appropriate offset. 
+In the `updateMaterialsBuffer` method, we just map the buffer and dump the material diffuse color to the appropriate offset. 
 
-Finally, we just need to update a little bit the way we record the commands to bind the additional descriptor sets and to use the dynamic uniform buffers:
+Finally, we just need to update a little bit the way we record the commands to bind the additional descriptor sets and to use the dynamic uniform buffers. We have also extracted the part of the code which rendered the models to a new method called `recordEntities`:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer descriptorSets = stack.mallocLong(4)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(3, materialsDescriptorSet.getVkDescriptorSet());
             VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
-            IntBuffer dynDescrSetOffset = stack.callocInt(1);
-            int meshCount = 0;
-            for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialDescriptorSetLayout.getMaterialSize();
-                dynDescrSetOffset.put(0, materialOffset);
-                ...
-                for (Entity entity : entities) {
-                    descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
 
-                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
-                }
-                meshCount++;
-            }
+            recordEntities(stack, cmdHandle, descriptorSets, vulkanModelList);
+
+            vkCmdEndRenderPass(cmdHandle);
+            commandBuffer.endRecording();
+        }
         ...
+    }
+
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
+                                List<VulkanModel> vulkanModelList) {
+        LongBuffer offsets = stack.mallocLong(1);
+        offsets.put(0, 0L);
+        LongBuffer vertexBuffer = stack.mallocLong(1);
+        IntBuffer dynDescrSetOffset = stack.callocInt(1);
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            String modelId = vulkanModel.getModelId();
+            List<Entity> entities = scene.getEntitiesByModelId(modelId);
+            if (entities.isEmpty()) {
+                materialCount += vulkanModel.getVulkanMaterialList().size();
+                continue;
+            }
+            for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                if (material.vulkanMeshList().isEmpty()) {
+                    materialCount++;
+                    continue;
+                }
+
+                int materialOffset = materialCount * materialSize;
+                dynDescrSetOffset.put(0, materialOffset);
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
+                descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
+
+                for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                    for (Entity entity : entities) {
+                        vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
+
+                        VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                        vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                    }
+                }
+                materialCount++;
+            }
+        }
     }
     ...
 }
@@ -763,13 +816,16 @@ public class Main implements IAppLogic {
     ...
     @Override
     public void init(Window window, Scene scene, Render render) {
-        String meshId = "SponzaMesh";
-        MeshData[] meshDataList = ModelLoader.loadMeshes(meshId, "resources/models/sponza/Sponza.gltf",
-                "resources/models/sponza");
-        render.loadMeshes(meshDataList);
+        List<ModelData> modelDataList = new ArrayList<>();
 
-        Entity sponzaEntity = new Entity("SponzaEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        String sponzaModelId = "sponza-model";
+        ModelData sponzaModelData = ModelLoader.loadModel(sponzaModelId, "resources/models/sponza/Sponza.gltf",
+                "resources/models/sponza");
+        modelDataList.add(sponzaModelData);
+        Entity sponzaEntity = new Entity("SponzaEntity", sponzaModelId, new Vector3f(0.0f, 0.0f, 0.0f));
         scene.addEntity(sponzaEntity);
+
+        render.loadModels(modelDataList);
 
         Camera camera = scene.getCamera();
         camera.setPosition(0.0f, 5.0f, -0.0f);

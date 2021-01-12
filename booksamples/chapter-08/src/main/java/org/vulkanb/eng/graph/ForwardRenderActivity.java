@@ -33,6 +33,7 @@ public class ForwardRenderActivity {
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
     private SwapChainRenderPass renderPass;
+    private Scene scene;
     private SwapChain swapChain;
     private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
     private TextureSampler textureSampler;
@@ -41,6 +42,7 @@ public class ForwardRenderActivity {
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
+        this.scene = scene;
         device = swapChain.getDevice();
 
         int numImages = swapChain.getImageViews().length;
@@ -135,26 +137,7 @@ public class ForwardRenderActivity {
         }
     }
 
-    public void meshUnLoaded(VulkanMesh vulkanMesh) {
-        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-    }
-
-    public void meshesLoaded(VulkanMesh[] meshes) {
-        for (VulkanMesh vulkanMesh : meshes) {
-            String textureFileName = vulkanMesh.getTexture().getFileName();
-            TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
-            if (textureDescriptorSet == null) {
-                textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
-                        vulkanMesh.getTexture(), textureSampler, 0);
-                descriptorSetMap.put(textureFileName, textureDescriptorSet);
-            }
-        }
-    }
-
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -209,20 +192,32 @@ public class ForwardRenderActivity {
             LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer descriptorSets = stack.mallocLong(2)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet());
-            for (VulkanMesh mesh : meshes) {
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-
-                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                String modelId = vulkanModel.getModelId();
+                List<Entity> entities = scene.getEntitiesByModelId(modelId);
+                if (entities.isEmpty()) {
+                    continue;
+                }
+                for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                    if (material.vulkanMeshList().isEmpty()) {
+                        continue;
+                    }
+                    TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
                     descriptorSets.put(1, textureDescriptorSet.getVkDescriptorSet());
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
+                    for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                        vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                        vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                        vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                        for (Entity entity : entities) {
+                            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+
+                            VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                            vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                        }
+                    }
                 }
             }
 
@@ -231,7 +226,19 @@ public class ForwardRenderActivity {
         }
     }
 
-    public void resize(SwapChain swapChain, Scene scene) {
+    public void registerModels(List<VulkanModel> vulkanModelList) {
+        device.waitIdle();
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                if (vulkanMaterial.vulkanMeshList().isEmpty()) {
+                    continue;
+                }
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+            }
+        }
+    }
+
+    public void resize(SwapChain swapChain) {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
@@ -250,6 +257,16 @@ public class ForwardRenderActivity {
                     stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
                     stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
+        }
+    }
+
+    private void updateTextureDescriptorSet(Texture texture) {
+        String textureFileName = texture.getFileName();
+        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
+        if (textureDescriptorSet == null) {
+            textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
+                    texture, textureSampler, 0);
+            descriptorSetMap.put(textureFileName, textureDescriptorSet);
         }
     }
 }

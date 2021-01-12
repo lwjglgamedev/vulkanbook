@@ -5,15 +5,15 @@ import org.joml.*;
 public class Entity {
 
     private String id;
-    private String meshId;
+    private String modelId;
     private Matrix4f modelMatrix;
     private Vector3f position;
     private Quaternionf rotation;
     private float scale;
 
-    public Entity(String id, String meshId, Vector3f position) {
+    public Entity(String id, String modelId, Vector3f position) {
         this.id = id;
-        this.meshId = meshId;
+        this.modelId = modelId;
         this.position = position;
         scale = 1;
         rotation = new Quaternionf();
@@ -25,8 +25,8 @@ public class Entity {
         return id;
     }
 
-    public String getMeshId() {
-        return meshId;
+    public String getModelId() {
+        return modelId;
     }
 
     public Matrix4f getModelMatrix() {

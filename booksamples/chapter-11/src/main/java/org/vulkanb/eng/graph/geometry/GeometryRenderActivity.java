@@ -35,6 +35,7 @@ public class GeometryRenderActivity {
     private PipelineCache pipelineCache;
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
+    private Scene scene;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
     private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
@@ -46,6 +47,7 @@ public class GeometryRenderActivity {
     public GeometryRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
+        this.scene = scene;
         device = swapChain.getDevice();
         geometryFrameBuffer = new GeometryFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
@@ -160,35 +162,7 @@ public class GeometryRenderActivity {
         return geometryFrameBuffer.geometryAttachments().getAttachments();
     }
 
-    public void meshUnLoaded(VulkanMesh vulkanMesh) {
-        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-        textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getNormalMapTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-        textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getMetalRoughTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-    }
-
-    public void meshesLoaded(VulkanMesh[] meshes) {
-        device.waitIdle();
-        int meshCount = 0;
-        for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialSize;
-            updateTextureDescriptorSet(vulkanMesh.getTexture());
-            updateTextureDescriptorSet(vulkanMesh.getNormalMapTexture());
-            updateTextureDescriptorSet(vulkanMesh.getMetalRoughTexture());
-            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
-            meshCount++;
-        }
-    }
-
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -245,47 +219,77 @@ public class GeometryRenderActivity {
                             .y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
-            LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer descriptorSets = stack.mallocLong(6)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(5, materialsDescriptorSet.getVkDescriptorSet());
             VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
-            IntBuffer dynDescrSetOffset = stack.callocInt(1);
-            int meshCount = 0;
-            for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialSize;
-                dynDescrSetOffset.put(0, materialOffset);
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
-                TextureDescriptorSet normalMapDescriptorSet = descriptorSetMap.get(mesh.getNormalMapTexture().getFileName());
-                TextureDescriptorSet metalRoughDescriptorSet = descriptorSetMap.get(mesh.getMetalRoughTexture().getFileName());
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
-                    descriptorSets.put(3, normalMapDescriptorSet.getVkDescriptorSet());
-                    descriptorSets.put(4, metalRoughDescriptorSet.getVkDescriptorSet());
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
-
-                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
-                }
-
-                meshCount++;
-            }
+            recordEntities(stack, cmdHandle, descriptorSets, vulkanModelList);
 
             vkCmdEndRenderPass(cmdHandle);
             commandBuffer.endRecording();
         }
     }
 
-    public void resize(SwapChain swapChain, Scene scene) {
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
+                                List<VulkanModel> vulkanModelList) {
+        LongBuffer offsets = stack.mallocLong(1);
+        offsets.put(0, 0L);
+        LongBuffer vertexBuffer = stack.mallocLong(1);
+        IntBuffer dynDescrSetOffset = stack.callocInt(1);
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            String modelId = vulkanModel.getModelId();
+            List<Entity> entities = scene.getEntitiesByModelId(modelId);
+            if (entities.isEmpty()) {
+                materialCount += vulkanModel.getVulkanMaterialList().size();
+                continue;
+            }
+            for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                dynDescrSetOffset.put(0, materialOffset);
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
+                TextureDescriptorSet normalMapDescriptorSet = descriptorSetMap.get(material.normalMap().getFileName());
+                TextureDescriptorSet metalRoughDescriptorSet = descriptorSetMap.get(material.metalRoughMap().getFileName());
+
+                for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                    for (Entity entity : entities) {
+                        descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
+                        descriptorSets.put(3, normalMapDescriptorSet.getVkDescriptorSet());
+                        descriptorSets.put(4, metalRoughDescriptorSet.getVkDescriptorSet());
+                        vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
+
+                        VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                        vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                    }
+                }
+                materialCount++;
+            }
+        }
+    }
+
+    public void registerModels(List<VulkanModel> vulkanModelList) {
+        device.waitIdle();
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+                updateTextureDescriptorSet(vulkanMaterial.normalMap());
+                updateTextureDescriptorSet(vulkanMaterial.metalRoughMap());
+                updateMaterialsBuffer(materialsBuffer, vulkanMaterial, materialOffset);
+                materialCount++;
+            }
+        }
+    }
+
+    public void resize(SwapChain swapChain) {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
         geometryFrameBuffer.resize(swapChain);
@@ -304,15 +308,15 @@ public class GeometryRenderActivity {
         }
     }
 
-    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+    private void updateMaterialsBuffer(VulkanBuffer vulkanBuffer, VulkanModel.VulkanMaterial material, int offset) {
         long mappedMemory = vulkanBuffer.map();
         ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
-        material.getDiffuseColor().get(offset, materialBuffer);
+        material.diffuseColor().get(offset, materialBuffer);
         materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 4, material.hasTexture() ? 1.0f : 0.0f);
         materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 5, material.hasNormalMap() ? 1.0f : 0.0f);
         materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 6, material.hasMetalRoughMap() ? 1.0f : 0.0f);
-        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 7, material.getRoughnessFactor());
-        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 8, material.getMetallicFactor());
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 7, material.roughnessFactor());
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 8, material.metallicFactor());
         vulkanBuffer.unMap();
     }
 

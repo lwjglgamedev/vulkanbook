@@ -36,6 +36,7 @@ public class LightingRenderActivity {
     private DescriptorSet.UniformDescriptorSet[] lightsDescriptorSets;
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
+    private Scene scene;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
@@ -43,8 +44,9 @@ public class LightingRenderActivity {
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
                                   List<Attachment> attachments, Scene scene) {
         this.swapChain = swapChain;
-        device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
+        this.scene = scene;
+        device = swapChain.getDevice();
         auxVec = new Vector4f();
 
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
@@ -55,7 +57,7 @@ public class LightingRenderActivity {
         createDescriptorSets(attachments, numImages);
         createPipeline();
         createCommandBuffers(commandPool, numImages);
-        updateInvProjMatrix(scene);
+        updateInvProjMatrix();
 
         for (int i = 0; i < numImages; i++) {
             preRecordCommandBuffer(i);
@@ -211,7 +213,7 @@ public class LightingRenderActivity {
         }
     }
 
-    public void prepareCommandBuffers(Scene scene) {
+    public void prepareCommandBuffers() {
         int idx = swapChain.getCurrentFrame();
         Fence fence = fences[idx];
 
@@ -222,12 +224,12 @@ public class LightingRenderActivity {
                 lightsBuffers[idx]);
     }
 
-    public void resize(SwapChain swapChain, List<Attachment> attachments, Scene scene) {
+    public void resize(SwapChain swapChain, List<Attachment> attachments) {
         this.swapChain = swapChain;
         attachmentsDescriptorSet.update(attachments);
         lightingFrameBuffer.resize(swapChain);
 
-        updateInvProjMatrix(scene);
+        updateInvProjMatrix();
 
         int numImages = swapChain.getNumImages();
         for (int i = 0; i < numImages; i++) {
@@ -249,7 +251,7 @@ public class LightingRenderActivity {
         }
     }
 
-    private void updateInvProjMatrix(Scene scene) {
+    private void updateInvProjMatrix() {
         Matrix4f invProj = new Matrix4f(scene.getProjection().getProjectionMatrix()).invert();
         VulkanUtils.copyMatrixToBuffer(invProjBuffer, invProj);
     }

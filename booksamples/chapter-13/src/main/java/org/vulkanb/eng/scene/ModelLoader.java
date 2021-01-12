@@ -21,8 +21,14 @@ public class ModelLoader {
         // Utility class
     }
 
-    public static MeshData[] loadMeshes(String id, String modelPath, String texturesDir, int flags) {
-        LOGGER.debug("Loading mesh data [{}]", modelPath);
+    public static ModelData loadModel(String modelId, String modelPath, String texturesDir) {
+        return loadModel(modelId, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
+                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace |
+                aiProcess_PreTransformVertices);
+    }
+
+    public static ModelData loadModel(String modelId, String modelPath, String texturesDir, int flags) {
+        LOGGER.debug("Loading model data [{}]", modelPath);
         if (!new File(modelPath).exists()) {
             throw new RuntimeException("Model path does not exist [" + modelPath + "]");
         }
@@ -36,30 +42,27 @@ public class ModelLoader {
         }
 
         int numMaterials = aiScene.mNumMaterials();
-        List<Material> materials = new ArrayList<>();
+        List<ModelData.Material> materialList = new ArrayList<>();
         for (int i = 0; i < numMaterials; i++) {
             AIMaterial aiMaterial = AIMaterial.create(aiScene.mMaterials().get(i));
-            processMaterial(aiMaterial, materials, texturesDir);
+            ModelData.Material material = processMaterial(aiMaterial, texturesDir);
+            materialList.add(material);
         }
 
         int numMeshes = aiScene.mNumMeshes();
         PointerBuffer aiMeshes = aiScene.mMeshes();
-        MeshData[] meshesData = new MeshData[numMeshes];
+        List<ModelData.MeshData> meshDataList = new ArrayList<>();
         for (int i = 0; i < numMeshes; i++) {
             AIMesh aiMesh = AIMesh.create(aiMeshes.get(i));
-            MeshData meshData = processMesh(id, aiMesh, materials);
-            meshesData[i] = meshData;
+            ModelData.MeshData meshData = processMesh(aiMesh);
+            meshDataList.add(meshData);
         }
 
-        aiReleaseImport(aiScene);
-        LOGGER.debug("Loaded mesh data [{}]", modelPath);
-        return meshesData;
-    }
+        ModelData modelData = new ModelData(modelId, meshDataList, materialList);
 
-    public static MeshData[] loadMeshes(String id, String modelPath, String texturesDir) {
-        return loadMeshes(id, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
-                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace |
-                aiProcess_PreTransformVertices);
+        aiReleaseImport(aiScene);
+        LOGGER.debug("Loaded model [{}]", modelPath);
+        return modelData;
     }
 
     private static List<Float> processBitangents(AIMesh aiMesh) {
@@ -88,11 +91,11 @@ public class ModelLoader {
         return indices;
     }
 
-    private static void processMaterial(AIMaterial aiMaterial, List<Material> materials, String texturesDir) {
+    private static ModelData.Material processMaterial(AIMaterial aiMaterial, String texturesDir) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             AIColor4D colour = AIColor4D.create();
 
-            Vector4f diffuse = Material.DEFAULT_COLOR;
+            Vector4f diffuse = ModelData.Material.DEFAULT_COLOR;
             int result = aiGetMaterialColor(aiMaterial, AI_MATKEY_COLOR_DIFFUSE, aiTextureType_NONE, 0,
                     colour);
             if (result == aiReturn_SUCCESS) {
@@ -136,13 +139,12 @@ public class ModelLoader {
                 roughnessArr[0] = 1.0f;
             }
 
-            Material material = new Material(texturePath, normalMapPath, metallicRoughnessPath, diffuse,
+            return new ModelData.Material(texturePath, normalMapPath, metallicRoughnessPath, diffuse,
                     roughnessArr[0], metallicArr[0]);
-            materials.add(material);
         }
     }
 
-    private static MeshData processMesh(String id, AIMesh aiMesh, List<Material> materials) {
+    private static ModelData.MeshData processMesh(AIMesh aiMesh) {
         List<Float> vertices = processVertices(aiMesh);
         List<Float> normals = processNormals(aiMesh);
         List<Float> tangents = processTangents(aiMesh);
@@ -158,15 +160,9 @@ public class ModelLoader {
             }
         }
 
-        Material material;
         int materialIdx = aiMesh.mMaterialIndex();
-        if (materialIdx >= 0 && materialIdx < materials.size()) {
-            material = materials.get(materialIdx);
-        } else {
-            material = new Material();
-        }
-        return new MeshData(id, listToArray(vertices), listToArray(normals), listToArray(tangents),
-                listToArray(biTangents), listToArray(textCoords), listIntToArray(indices), material);
+        return new ModelData.MeshData(listFloatToArray(vertices), listFloatToArray(normals), listFloatToArray(tangents),
+                listFloatToArray(biTangents), listFloatToArray(textCoords), listIntToArray(indices), materialIdx);
     }
 
     private static List<Float> processNormals(AIMesh aiMesh) {

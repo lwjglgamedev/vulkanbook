@@ -23,10 +23,10 @@ public class Scene {
     }
 
     public void addEntity(Entity entity) {
-        List<Entity> entities = entitiesMap.get(entity.getMeshId());
+        List<Entity> entities = entitiesMap.get(entity.getModelId());
         if (entities == null) {
             entities = new ArrayList<>();
-            entitiesMap.put(entity.getMeshId(), entities);
+            entitiesMap.put(entity.getModelId(), entities);
         }
         entities.add(entity);
     }
@@ -39,8 +39,8 @@ public class Scene {
         return camera;
     }
 
-    public List<Entity> getEntitiesByMeshId(String meshId) {
-        return entitiesMap.get(meshId);
+    public List<Entity> getEntitiesByModelId(String modelId) {
+        return entitiesMap.get(modelId);
     }
 
     public Map<String, List<Entity>> getEntitiesMap() {
@@ -60,7 +60,7 @@ public class Scene {
     }
 
     public void removeEntity(Entity entity) {
-        List<Entity> entities = entitiesMap.get(entity.getMeshId());
+        List<Entity> entities = entitiesMap.get(entity.getModelId());
         if (entities != null) {
             entities.removeIf(e -> e.getId().equals(entity.getId()));
         }

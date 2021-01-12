@@ -17,31 +17,15 @@ public class Render {
     private ForwardRenderActivity fwdRenderActivity;
     private Queue.GraphicsQueue graphQueue;
     private Instance instance;
-    private List<VulkanMesh> meshList;
     private PhysicalDevice physicalDevice;
     private PipelineCache pipelineCache;
     private Queue.PresentQueue presentQueue;
     private Surface surface;
     private SwapChain swapChain;
     private TextureCache textureCache;
+    private List<VulkanModel> vulkanModels;
 
-    public void cleanup() {
-        presentQueue.waitIdle();
-        graphQueue.waitIdle();
-        device.waitIdle();
-        textureCache.cleanup();
-        meshList.forEach(VulkanMesh::cleanup);
-        pipelineCache.cleanup();
-        fwdRenderActivity.cleanup();
-        commandPool.cleanup();
-        swapChain.cleanup();
-        surface.cleanup();
-        device.cleanup();
-        physicalDevice.cleanup();
-        instance.cleanup();
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
@@ -54,20 +38,45 @@ public class Render {
         commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
         pipelineCache = new PipelineCache(device);
         fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool, pipelineCache, scene);
-        meshList = new ArrayList<>();
+        vulkanModels = new ArrayList<>();
         textureCache = new TextureCache();
     }
 
-    public void loadMeshes(MeshData[] meshDataList) {
-        LOGGER.debug("Loading {} meshe(s)", meshDataList.length);
-        VulkanMesh[] meshes = VulkanMesh.loadMeshes(textureCache, commandPool, graphQueue, meshDataList);
-        LOGGER.debug("Loaded {} meshe(s)", meshes.length);
-        meshList.addAll(Arrays.asList(meshes));
+    public void cleanup() {
+        presentQueue.waitIdle();
+        graphQueue.waitIdle();
+        device.waitIdle();
+        textureCache.cleanup();
+        vulkanModels.forEach(VulkanModel::cleanup);
+        pipelineCache.cleanup();
+        fwdRenderActivity.cleanup();
+        commandPool.cleanup();
+        swapChain.cleanup();
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
+    }
 
-        // Reorder meshes
-        Collections.sort(meshList, (a, b) -> Boolean.compare(a.getTexture().hasTransparencies(), b.getTexture().hasTransparencies()));
+    public void loadModels(List<ModelData> modelDataList) {
+        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
+        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
 
-        fwdRenderActivity.meshesLoaded(meshes);
+        // Reorder materials inside models
+        vulkanModels.forEach(m -> {
+            Collections.sort(m.getVulkanMaterialList(), (a, b) -> Boolean.compare(a.isTransparent(), b.isTransparent()));
+        });
+
+        // Reorder models
+        Collections.sort(vulkanModels, (a, b) -> {
+            boolean aHasTransparentMt = a.getVulkanMaterialList().stream().filter(m -> m.isTransparent()).findAny().isPresent();
+            boolean bHasTransparentMt = b.getVulkanMaterialList().stream().filter(m -> m.isTransparent()).findAny().isPresent();
+
+            return Boolean.compare(aHasTransparentMt, bHasTransparentMt);
+        });
+
+        fwdRenderActivity.registerModels(vulkanModels);
     }
 
     public void render(Window window, Scene scene) {
@@ -76,12 +85,12 @@ public class Render {
         }
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
-            resize(window, scene);
+            resize(window);
             scene.getProjection().resize(window.getWidth(), window.getHeight());
             swapChain.acquireNextImage();
         }
 
-        fwdRenderActivity.recordCommandBuffers(meshList, scene);
+        fwdRenderActivity.recordCommandBuffers(vulkanModels);
         fwdRenderActivity.submit(presentQueue);
 
         if (swapChain.presentImage(graphQueue)) {
@@ -89,7 +98,7 @@ public class Render {
         }
     }
 
-    private void resize(Window window, Scene scene) {
+    private void resize(Window window) {
         EngineProperties engProps = EngineProperties.getInstance();
 
         device.waitIdle();
@@ -99,27 +108,6 @@ public class Render {
 
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
-        fwdRenderActivity.resize(swapChain, scene);
-    }
-
-    public void unloadMesh(String id) {
-        Iterator<VulkanMesh> it = meshList.iterator();
-        while (it.hasNext()) {
-            VulkanMesh mesh = it.next();
-            if (mesh.getId().equals(id)) {
-                fwdRenderActivity.meshUnLoaded(mesh);
-                mesh.cleanup();
-                it.remove();
-            }
-        }
-    }
-
-    public void unloadMeshes() {
-        device.waitIdle();
-        for (VulkanMesh vulkanMesh : meshList) {
-            fwdRenderActivity.meshUnLoaded(vulkanMesh);
-            vulkanMesh.cleanup();
-        }
-        meshList.clear();
+        fwdRenderActivity.resize(swapChain);
     }
 }

@@ -35,8 +35,8 @@ public class LightingRenderActivity {
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
                                   List<Attachment> attachments) {
         this.swapChain = swapChain;
-        device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
+        device = swapChain.getDevice();
 
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();

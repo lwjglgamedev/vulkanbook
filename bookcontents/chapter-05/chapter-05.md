@@ -294,7 +294,7 @@ public class CommandBuffer {
     public void cleanup() {
         LOGGER.trace("Destroying command buffer");
         vkFreeCommandBuffers(commandPool.getDevice().getVkDevice(), commandPool.getVkCommandPool(),
-                this.vkCommandBuffer);
+                vkCommandBuffer);
     }
 
     public void endRecording() {
@@ -444,6 +444,15 @@ public class Render {
     private Queue.PresentQueue presentQueue;
     ..
     private ForwardRenderActivity fwdRenderActivity;
+    ...
+
+    public Render(Window window, Scene scene) {
+        ...
+        presentQueue = new Queue.PresentQueue(device, surface, 0);
+        ...
+        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
+        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool);
+    }
 
     public void cleanup() {
         presentQueue.waitIdle();
@@ -452,19 +461,11 @@ public class Render {
         commandPool.cleanup();
         ...
     }
-
-    public void init(Window window, Scene scene) {
-        ...
-        presentQueue = new Queue.PresentQueue(device, surface, 0);
-        ...
-        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
-        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool);
-    }
     ..
 }
 ```
 
-As you can see, in the `init` method, we create a `CommandPool` instance which will be used to allocate all the command buffers. We also create a new instance of the `ForwardRenderActivity` class. These new resources are also freed in the `cleanup` method as usual. We also create another queue which will be used to en-queue the swap chain images which are ready to be presented. For this queue we use a specific queue family which is used just for presentation. This is the definition of the `Queue.PresentQueue` (very similar to the `GraphicsQueue`):
+As you can see, in the constructor, we create a `CommandPool` instance which will be used to allocate all the command buffers. We also create a new instance of the `ForwardRenderActivity` class. These new resources are also freed in the `cleanup` method as usual. We also create another queue which will be used to en-queue the swap chain images which are ready to be presented. For this queue we use a specific queue family which is used just for presentation. This is the definition of the `Queue.PresentQueue` (very similar to the `GraphicsQueue`):
 
 ```java
 public class Queue {

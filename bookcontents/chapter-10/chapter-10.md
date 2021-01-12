@@ -327,6 +327,7 @@ public class GeometryRenderActivity {
     public GeometryRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
+        this.scene = scene;
         device = swapChain.getDevice();
         geometryFrameBuffer = new GeometryFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
@@ -486,36 +487,31 @@ public class GeometryRenderActivity {
 }
 ```
 
-This class also will be notified when meshes are loaded and unloaded. As you can see, the `GeometryRenderActivity` is quiet similar to the `ForwardRenderActivity` class in previous chapter
+This class also will be notified when models are loaded. As you can see, the `GeometryRenderActivity` is quite similar to the `ForwardRenderActivity` class in previous chapter
 
 ```java
 public class GeometryRenderActivity {
     ...
-    public void meshUnLoaded(VulkanMesh vulkanMesh) {
-        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-    }
-
-    public void meshesLoaded(VulkanMesh[] meshes) {
+    public void registerModels(List<VulkanModel> vulkanModelList) {
         device.waitIdle();
-        int meshCount = 0;
-        for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialSize;
-            updateTextureDescriptorSet(vulkanMesh.getTexture());
-            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
-            meshCount++;
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+                updateMaterialsBuffer(materialsBuffer, vulkanMaterial, materialOffset);
+                materialCount++;
+            }
         }
     }
     ...
-    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+    private void updateMaterialsBuffer(VulkanBuffer vulkanBuffer, VulkanModel.VulkanMaterial material, int offset) {
         long mappedMemory = vulkanBuffer.map();
         ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
-        material.getDiffuseColor().get(offset, materialBuffer);
+        material.diffuseColor().get(offset, materialBuffer);
         vulkanBuffer.unMap();
     }
-    ...
+
     private void updateTextureDescriptorSet(Texture texture) {
         String textureFileName = texture.getFileName();
         TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
@@ -528,13 +524,13 @@ public class GeometryRenderActivity {
 }
 ```
 
-The `updateMaterial` method is used to update material descriptor sets when new meshes are loaded. The `updateTextureDescriptorSet` method is used to associate the texture descriptor set with a concrete texture sampler.
+The `updateMaterialsBuffer` method is used to update material descriptor sets when new meshes are loaded. The `updateTextureDescriptorSet` method is used to associate the texture descriptor set with a concrete texture sampler.
 
 The `GeometryRenderActivity` also provides a method to record the command buffers which will be invoked in the render loop. This is the definition of that method:
 ```java
 public class GeometryRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -591,39 +587,54 @@ public class GeometryRenderActivity {
                             .y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
-            LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer descriptorSets = stack.mallocLong(4)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(3, materialsDescriptorSet.getVkDescriptorSet());
             VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
-            IntBuffer dynDescrSetOffset = stack.callocInt(1);
-            int meshCount = 0;
-            for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialSize;
-                dynDescrSetOffset.put(0, materialOffset);
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
-
-                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
-                }
-
-                meshCount++;
-            }
+            recordEntities(stack, cmdHandle, descriptorSets, vulkanModelList);
 
             vkCmdEndRenderPass(cmdHandle);
             commandBuffer.endRecording();
+        }
+    }
+
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
+                                List<VulkanModel> vulkanModelList) {
+        LongBuffer offsets = stack.mallocLong(1);
+        offsets.put(0, 0L);
+        LongBuffer vertexBuffer = stack.mallocLong(1);
+        IntBuffer dynDescrSetOffset = stack.callocInt(1);
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            String modelId = vulkanModel.getModelId();
+            List<Entity> entities = scene.getEntitiesByModelId(modelId);
+            if (entities.isEmpty()) {
+                materialCount += vulkanModel.getVulkanMaterialList().size();
+                continue;
+            }
+            for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                dynDescrSetOffset.put(0, materialOffset);
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
+                descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
+
+                for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                    for (Entity entity : entities) {
+                        vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
+
+                        VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                        vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                    }
+                }
+                materialCount++;
+            }
         }
     }
     ...
@@ -635,7 +646,7 @@ This method is almost identical than the one used in the `ForwardRenderActivity`
 ```java
 public class GeometryRenderActivity {
     ...
-    public void resize(SwapChain swapChain, Scene scene) {
+    public void resize(SwapChain swapChain) {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
         geometryFrameBuffer.resize(swapChain);
@@ -1348,60 +1359,40 @@ public class Render {
     ...
     private LightingRenderActivity lightingRenderActivity;
     ...
-    public void cleanup() {
-        ...
-        lightingRenderActivity.cleanup();
-        geometryRenderActivity.cleanup();
-        ...
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         ...
         geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache,
                 geometryRenderActivity.getAttachments());
     }
 
-    public void loadMeshes(MeshData[] meshDataList) {
+    public void cleanup() {
         ...
-        geometryRenderActivity.meshesLoaded(meshes);
+        lightingRenderActivity.cleanup();
+        geometryRenderActivity.cleanup();
+        ...
+    }
+    ...
+    public void loadModels(List<ModelData> modelDataList) {
+        ...
+        geometryRenderActivity.registerModels(vulkanModels);
     }
 
     public void render(Window window, Scene scene) {
         ...
-        geometryRenderActivity.recordCommandBuffers(meshList, scene);
+        geometryRenderActivity.recordCommandBuffers(meshList);
         geometryRenderActivity.submit(graphQueue);
         lightingRenderActivity.prepareCommandBuffers();
         lightingRenderActivity.submit(graphQueue);
         ...
     }
 
-    private void resize(Window window, Scene scene) {
+    private void resize(Window window) {
         ...
-        geometryRenderActivity.resize(swapChain, scene);
+        geometryRenderActivity.resize(swapChain);
         lightingRenderActivity.resize(swapChain, geometryRenderActivity.getAttachments());
     }
-
-    public void unloadMesh(String id) {
-        Iterator<VulkanMesh> it = meshList.iterator();
-        while (it.hasNext()) {
-            VulkanMesh mesh = it.next();
-            if (mesh.getId().equals(id)) {
-                geometryRenderActivity.meshUnLoaded(mesh);
-                mesh.cleanup();
-                it.remove();
-            }
-        }
-    }
-
-    public void unloadMeshes() {
-        device.waitIdle();
-        for (VulkanMesh vulkanMesh : meshList) {
-            geometryRenderActivity.meshUnLoaded(vulkanMesh);
-            vulkanMesh.cleanup();
-        }
-        meshList.clear();
-    }
+    ...
 }
 ```
 

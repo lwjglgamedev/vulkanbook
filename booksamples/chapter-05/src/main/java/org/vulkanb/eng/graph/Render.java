@@ -16,20 +16,7 @@ public class Render {
     private Surface surface;
     private SwapChain swapChain;
 
-    public void cleanup() {
-        presentQueue.waitIdle();
-        graphQueue.waitIdle();
-        device.waitIdle();
-        fwdRenderActivity.cleanup();
-        commandPool.cleanup();
-        swapChain.cleanup();
-        surface.cleanup();
-        device.cleanup();
-        physicalDevice.cleanup();
-        instance.cleanup();
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
@@ -41,6 +28,19 @@ public class Render {
                 engProps.isvSync());
         commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
         fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool);
+    }
+
+    public void cleanup() {
+        presentQueue.waitIdle();
+        graphQueue.waitIdle();
+        device.waitIdle();
+        fwdRenderActivity.cleanup();
+        commandPool.cleanup();
+        swapChain.cleanup();
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
     }
 
     public void render(Window window, Scene scene) {

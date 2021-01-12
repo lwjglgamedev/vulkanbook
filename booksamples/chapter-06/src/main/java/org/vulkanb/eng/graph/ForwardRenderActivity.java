@@ -77,7 +77,7 @@ public class ForwardRenderActivity {
         Arrays.stream(fences).forEach(Fence::cleanup);
     }
 
-    public void recordCommandBuffers(List<VulkanMesh> meshes) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -129,11 +129,13 @@ public class ForwardRenderActivity {
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
-            for (VulkanMesh mesh : meshes) {
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                for (VulkanModel.VulkanMesh mesh : vulkanModel.getVulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+                    vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                }
             }
 
             vkCmdEndRenderPass(cmdHandle);

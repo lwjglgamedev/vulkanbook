@@ -15,6 +15,7 @@ layout(set = 4, binding = 0) uniform sampler2D metRoughSampler;
 
 layout(set = 5, binding = 0) uniform MaterialUniform {
     vec4 diffuseColor;
+    float hasTexture;
     float hasNormalMap;
     float hasMetalRoughMap;
     float roughnessFactor;
@@ -35,7 +36,11 @@ vec3 calcNormal(float hasNormalMap, vec3 normal, vec2 textCoords, mat3 TBN)
 
 void main()
 {
-    outAlbedo = material.diffuseColor + texture(textSampler, inTextCoords);
+    if (material.hasTexture > 0) {
+        outAlbedo = texture(textSampler, inTextCoords);
+    } else {
+        outAlbedo = material.diffuseColor;
+    }
 
     // Hack to avoid transparent PBR artifacts
     if (outAlbedo.a < 0.5) {

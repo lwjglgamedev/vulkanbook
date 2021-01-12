@@ -15,7 +15,7 @@ We will need to modify the `ModelLoader` class to load normal maps and PBR relat
 ```java
 public class ModelLoader {
     ...
-    private static void processMaterial(AIMaterial aiMaterial, List<Material> materials, String texturesDir) {
+    private static ModelData.Material processMaterial(AIMaterial aiMaterial, String texturesDir) {
         ...
             AIString aiNormalMapPath = AIString.callocStack(stack);
             Assimp.aiGetMaterialTexture(aiMaterial, aiTextureType_NORMALS, 0, aiNormalMapPath, (IntBuffer) null,
@@ -46,80 +46,33 @@ public class ModelLoader {
                 roughnessArr[0] = 1.0f;
             }
 
-            Material material = new Material(texturePath, normalMapPath, metallicRoughnessPath, diffuse,
+            return new ModelData.Material(texturePath, normalMapPath, metallicRoughnessPath, diffuse,
                     roughnessArr[0], metallicArr[0]);
-            materials.add(material);
-    }
+        }
+    }      
     ...
 }
 ```
 
-We first check if the model defines a path to a normals map texture by calling the `aiGetMaterialTexture` assimp function specifying the `aiTextureType_NORMALS` flag. After that, we check if there is also a texture which defines the material roughness and metallic factors (as in the case of the normal maps) by calling the same function using the `AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE` flag. If the model does not define a specific texture for those values, we try to get those factors by getting material properties calling the `aiGetMaterialFloatArray` assimp function setting the flag `aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR` for the metallic factor and `aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR` for the roughness factor. With all the information we can create a `Material` instance, which now receives new parameters for the normals map path, the metallic roughness texture and the metallic and roughness factors. These are the changes in the `Material` class:
+We first check if the model defines a path to a normals map texture by calling the `aiGetMaterialTexture` assimp function specifying the `aiTextureType_NORMALS` flag. After that, we check if there is also a texture which defines the material roughness and metallic factors (as in the case of the normal maps) by calling the same function using the `AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE` flag. If the model does not define a specific texture for those values, we try to get those factors by getting material properties calling the `aiGetMaterialFloatArray` assimp function setting the flag `aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR` for the metallic factor and `aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR` for the roughness factor. With all the information we can create a `ModelData.Material` instance, which now receives new parameters for the normals map path, the metallic roughness texture and the metallic and roughness factors. These are the changes in the `ModelData.Material` class:
 
 ```java
-public class Material {
+public class ModelData {
     ...
-    private boolean hasMetalRoughMap;
-    private boolean hasNormalMap;
-    ...
-    private String metalRoughMap;
-    private float metallicFactor;
-    private String normalMapPath;
-    private float roughnessFactor;
-    private String texturePath;
+    public record Material(String texturePath, String normalMapPath, String metalRoughMap, Vector4f diffuseColor,
+                           float roughnessFactor, float metallicFactor) {
+        public static final Vector4f DEFAULT_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-    public Material() {
-        this(null, null, null, DEFAULT_COLOR, 0.0f, 0.0f);
-    }
-
-    public Material(String texturePath, String normalMapPath, String metalRoughMap, Vector4f diffuseColor,
-                    float roughnessFactor, float metallicFactor) {
-        ...
-        setNormalMapPath(normalMapPath);
-        setMetalRoughMap(metalRoughMap);
-        this.roughnessFactor = roughnessFactor;
-        this.metallicFactor = metallicFactor;
-        ...
+        public Material() {
+            this(null, null, null, DEFAULT_COLOR, 0.0f, 0.0f);
+        }
     }
     ...
-    public String getMetalRoughPath() {
-        return metalRoughMap;
-    }
-
-    public float getMetallicFactor() {
-        return metallicFactor;
-    }
-
-    public String getNormalMapPath() {
-        return normalMapPath;
-    }
-
-    public float getRoughnessFactor() {
-        return roughnessFactor;
-    }
-    ...
-    public boolean hasMetalRoughMap() {
-        return hasMetalRoughMap;
-    }
-
-    public boolean hasNormalMap() {
-        return hasNormalMap;
-    }
-    ...
-    public void setMetalRoughMap(String metalRoughMap) {
-        this.metalRoughMap = metalRoughMap;
-        hasMetalRoughMap = this.metalRoughMap != null && this.metalRoughMap.trim().length() > 0;
-    }
-
-    public void setNormalMapPath(String normalMapPath) {
-        this.normalMapPath = normalMapPath;
-        hasNormalMap = this.normalMapPath != null && this.normalMapPath.trim().length() > 0;
-    }
     ...
 }
 ```
 
-We basically have defined new attributes to hold the new parameters passed in the constructor, added new `getter`'s and methods to check if a normals map texture or a metallic roughness texture have been defined.
+We basically have defined new attributes in the constructor to hold the new data.
 
 Going back to the `ModelLoader` class, we need to get also the normals of the model and the tangent and bitangent data (normals maps are defined in the so called tangent space. The tangent space is a coordinate system that is local to each triangle of the model. In that coordinate space the `z` axis always points out of the surface. This is the reason why a normal map is usually bluish, even for complex models with opposing faces). In order to work with that coordinate system we need the normals, tangent and bitangent. You can check a great tutorial on this aspect [here](https://learnopengl.com/Advanced-Lighting/Normal-Mapping).
 
@@ -128,27 +81,28 @@ Therefore, we will modify the `processMesh` method:
 ```java
 public class ModelLoader {
     ...
-    private static MeshData processMesh(String id, AIMesh aiMesh, List<Material> materials) {
+    private static ModelData.MeshData processMesh(AIMesh aiMesh) {
         ...
         List<Float> normals = processNormals(aiMesh);
         List<Float> tangents = processTangents(aiMesh);
         List<Float> biTangents = processBitangents(aiMesh);
         ...
-
-        return new MeshData(id, listToArray(vertices), listToArray(normals), listToArray(tangents),
-                listToArray(biTangents), listToArray(textCoords), listIntToArray(indices), material);
+        return new ModelData.MeshData(listFloatToArray(vertices), listFloatToArray(normals), listFloatToArray(tangents),
+                listFloatToArray(biTangents), listFloatToArray(textCoords), listIntToArray(indices), materialIdx);
     }
     ...
 }
 ```
 
-We have defined new methods to get the normals, tangents and bitangents and pass that data the `MeshData` record. This class has also been modified to accommodate this new data:
+We have defined new methods to get the normals, tangents and bitangents and pass that data to the `ModelData.MeshData` record. This class has also been modified to accommodate this new data:
 
 ```java
-package org.vulkanb.eng.scene;
+public class ModelData {
+    ...
+    public record MeshData(float[] positions, float[] normals, float[] tangents, float[] biTangents,
+                           float[] textCoords, int[] indices, int materialIdx) {
 
-public record MeshData(String id, float[] positions, float[] normals, float[] tangents, float[] biTangents,
-                       float[] textCoords, int[] indices, Material material) {
+    }
 }
 ```
 
@@ -199,97 +153,119 @@ public class ModelLoader {
 
 In order to get that data, we just call the `mNormals`, `mTangents` and `mBitangents` methods over an `AIMesh` instance to get those coordinates. Keep in mind that when we are loading that model using assimp, we are using the `aiProcess_CalcTangentSpace` so the tangents and bitangents are automatically calculated even if they are not present in the model.
 
-The next step is to modify how the Vulkan buffer gets populated to include the new data. This is done in the `VulkanMesh` class:
+The next step is to modify how the Vulkan buffer gets populated to include the new data. This is done in the `VulkanModel` class:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    private Texture metalRoughTexture;
-    private Texture normalMapTexture;
-    ...
-    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount,
-                      Texture texture, Texture normalMapTexture, Texture metalRoughTexture, Material material) {
-        ...
-        this.normalMapTexture = normalMapTexture;
-        this.metalRoughTexture = metalRoughTexture;
-        ...
-    }
-    ...
-    private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
+    private static TransferBuffers createVerticesBuffers(Device device, ModelData.MeshData meshData) {
         float[] positions = meshData.positions();
         float[] normals = meshData.normals();
         float[] tangents = meshData.tangents();
         float[] biTangents = meshData.biTangents();
         float[] textCoords = meshData.textCoords();
-        ...
-        int numElements = positions.length + normals.length + +tangents.length + biTangents.length + textCoords.length;
-        ...
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            ...
-            for (int row = 0; row < rows; row++) {
-                int startPos = row * 3;
-                int startTextCoord = row * 2;
-                data.put(positions[startPos]);
-                data.put(positions[startPos + 1]);
-                data.put(positions[startPos + 2]);
-                data.put(normals[startPos]);
-                data.put(normals[startPos + 1]);
-                data.put(normals[startPos + 2]);
-                data.put(tangents[startPos]);
-                data.put(tangents[startPos + 1]);
-                data.put(tangents[startPos + 2]);
-                data.put(biTangents[startPos]);
-                data.put(biTangents[startPos + 1]);
-                data.put(biTangents[startPos + 2]);
-                data.put(textCoords[startTextCoord]);
-                data.put(textCoords[startTextCoord + 1]);
-            }
-            ...
+        if (textCoords == null || textCoords.length == 0) {
+            textCoords = new float[(positions.length / 3) * 2];
         }
+        int numElements = positions.length + normals.length + tangents.length + biTangents.length + textCoords.length;
+        int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
+
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+
+        int rows = positions.length / 3;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 3;
+            int startTextCoord = row * 2;
+            data.put(positions[startPos]);
+            data.put(positions[startPos + 1]);
+            data.put(positions[startPos + 2]);
+            data.put(normals[startPos]);
+            data.put(normals[startPos + 1]);
+            data.put(normals[startPos + 2]);
+            data.put(tangents[startPos]);
+            data.put(tangents[startPos + 1]);
+            data.put(tangents[startPos + 2]);
+            data.put(biTangents[startPos]);
+            data.put(biTangents[startPos + 1]);
+            data.put(biTangents[startPos + 2]);
+            data.put(textCoords[startTextCoord]);
+            data.put(textCoords[startTextCoord + 1]);
+        }
+
+        srcBuffer.unMap();
+
+        return new TransferBuffers(srcBuffer, dstBuffer);
     }
     ...
-    public static VulkanMesh[] loadMeshes(TextureCache textureCache, CommandPool commandPool, Queue queue, MeshData[] meshDataList) {
+    private static VulkanMaterial transformMaterial(ModelData.Material material, Device device, TextureCache textureCache,
+                                                    CommandBuffer cmd, List<Texture> textureList) {
+        Texture texture = textureCache.createTexture(device, material.texturePath(), VK_FORMAT_R8G8B8A8_SRGB);
+        boolean hasTexture = material.texturePath() != null && material.texturePath().trim().length() > 0;
+        Texture normalMapTexture = textureCache.createTexture(device, material.normalMapPath(), VK_FORMAT_R8G8B8A8_UNORM);
+        boolean hasNormalMapTexture = material.normalMapPath() != null && material.normalMapPath().trim().length() > 0;
+        Texture metalRoughTexture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_SRGB);
+        boolean hasMetalRoughTexture = material.metalRoughMap() != null && material.metalRoughMap().trim().length() > 0;
+
+        texture.recordTextureTransition(cmd);
+        textureList.add(texture);
+        normalMapTexture.recordTextureTransition(cmd);
+        textureList.add(normalMapTexture);
+        metalRoughTexture.recordTextureTransition(cmd);
+        textureList.add(metalRoughTexture);
+
+        return new VulkanModel.VulkanMaterial(material.diffuseColor(), texture, hasTexture, normalMapTexture,
+                hasNormalMapTexture, metalRoughTexture, hasMetalRoughTexture, material.metallicFactor(),
+                material.roughnessFactor(), new ArrayList<>());
+    }
+    ...
+    public static List<VulkanModel> transformModels(List<ModelData> modelDataList, TextureCache textureCache,
+                                                    CommandPool commandPool, Queue queue) {
         ...
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            ...
-            for (int i = 0; i < numMeshes; i++) {
-                ...
-                String normalMapPath = material != null ? material.getNormalMapPath() : null;
-                Texture normalMapTexture = textureCache.createTexture(device, normalMapPath, VK_FORMAT_R8G8B8A8_UNORM);
-
-                String metalRoughPath = material != null ? material.getMetalRoughPath() : null;
-                Texture metalRougTexture = textureCache.createTexture(device, metalRoughPath, VK_FORMAT_R8G8B8A8_SRGB);
-
-                meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
-                        meshData.indices().length, texture, normalMapTexture, metalRougTexture, material);
-                recordTransferCommand(cmd, verticesBuffers);
-                recordTransferCommand(cmd, indicesBuffers);
-                texture.recordTextureTransition(cmd);
-                normalMapTexture.recordTextureTransition(cmd);
-                metalRougTexture.recordTextureTransition(cmd);
+            VulkanMaterial defaultVulkanMaterial = null;
+            for (ModelData.Material material : modelData.getMaterialList()) {
+                VulkanMaterial vulkanMaterial = transformMaterial(material, device, textureCache, cmd, textureList);
+                vulkanModel.vulkanMaterialList.add(vulkanMaterial);
             }
             ...
-            for (int i = 0; i < numMeshes; i++) {
+            for (ModelData.MeshData meshData : modelData.getMeshDataList()) {
                 ...
-                meshes[i].getNormalMapTexture().cleanupStgBuffer();
-                meshes[i].getMetalRoughTexture().cleanupStgBuffer();
+                VulkanModel.VulkanMesh vulkanMesh = new VulkanModel.VulkanMesh(verticesBuffers.dstBuffer(),
+                        indicesBuffers.dstBuffer(), meshData.indices().length);
+
+                VulkanMaterial vulkanMaterial;
+                int materialIdx = meshData.materialIdx();
+                if (materialIdx >= 0 && materialIdx < vulkanModel.vulkanMaterialList.size()) {
+                    vulkanMaterial = vulkanModel.vulkanMaterialList.get(materialIdx);
+                } else {
+                    if (defaultVulkanMaterial == null) {
+                        defaultVulkanMaterial = transformMaterial(new ModelData.Material(), device, textureCache, cmd, textureList);
+                    }
+                    vulkanMaterial = defaultVulkanMaterial;
+                }
+                vulkanMaterial.vulkanMeshList.add(vulkanMesh);
             }
-        }
         ...
     }
     ...
-    public Texture getMetalRoughTexture() {
-        return metalRoughTexture;
-    }
+    public record VulkanMaterial(Vector4f diffuseColor, Texture texture, boolean hasTexture, Texture normalMap,
+                                 boolean hasNormalMap, Texture metalRoughMap, boolean hasMetalRoughMap,
+                                 float metallicFactor, float roughnessFactor, List<VulkanMesh> vulkanMeshList) {
 
-    public Texture getNormalMapTexture() {
-        return normalMapTexture;
+        public boolean isTransparent() {
+            return texture.hasTransparencies();
+        }
     }
     ...
 }
 ```
 
-We define two new attributes to hold the associated textures for the normals map and the roughness metallic map. The `createVerticesBuffers` has also been modified to load into the buffer the coordinates for the normals, tangents and bitangents. Finally, in the `loadMeshes` method, we construct the textures of the normals and roughness metallic maps. We need to transition also these textures to their final layout as with the regular textures.
+We need to modify the `VulkanMaterial` class to to hold the associated textures for the normals map and the roughness metallic map. That data is loaded in the `transformMaterial` methods. The `createVerticesBuffers` has also been modified to load into the buffer the coordinates for the normals, tangents and bitangents.
 
 The last step is to modify the vertex structure, therefore we need to modify the `VertexBufferStructure` class to include the normals, tangents and bitangents as new input attributes:
 
@@ -500,81 +476,64 @@ public class GeometryRenderActivity {
 
 As you can see we add two more descriptor set layouts for the normals an roughness metallic texture maps which will use descriptors `3` and `4` respectively. The descriptor set used for the material data has been pushed to descriptor number `5`.
 
-The `GeometryRenderActivity` class also will be notified when meshes are loaded and unloaded. The only modifications here is that we have to free normals map and roughness metallic map descriptor sets. When loading new meshes we need to take into consideration these new textures for the descriptor sets update.
+The `GeometryRenderActivity` class also will be notified when models are loaded. The only modifications here is that we need to take into consideration these new textures for the descriptor sets update.
 
 ```java
 public class GeometryRenderActivity {
     ...
-    public void meshUnLoaded(VulkanMesh vulkanMesh) {
-        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-        textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getNormalMapTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-        textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getMetalRoughTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-    }
-
-    public void meshesLoaded(VulkanMesh[] meshes) {
+    public void registerModels(List<VulkanModel> vulkanModelList) {
         device.waitIdle();
-        int meshCount = 0;
-        for (VulkanMesh vulkanMesh : meshes) {
-            int materialOffset = meshCount * materialSize;
-            updateTextureDescriptorSet(vulkanMesh.getTexture());
-            updateTextureDescriptorSet(vulkanMesh.getNormalMapTexture());
-            updateTextureDescriptorSet(vulkanMesh.getMetalRoughTexture());
-            updateMaterial(materialsBuffer, vulkanMesh.getMaterial(), materialOffset);
-            meshCount++;
+        int materialCount = 0;
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+                updateTextureDescriptorSet(vulkanMaterial.normalMap());
+                updateTextureDescriptorSet(vulkanMaterial.metalRoughMap());
+                updateMaterialsBuffer(materialsBuffer, vulkanMaterial, materialOffset);
+                materialCount++;
+            }
         }
     }
     ...
 }
 ```
 
-The next change is to put the new descriptors into work by allowing them to be accessed in the shaders. Therefore we need to modify the `recordCommandBuffers` in the `GeometryRenderActivity` class:
+The next change is to put the new descriptors into work by allowing them to be accessed in the shaders. Therefore we need to modify the `recordCommandBuffers` and the `recordEntities` methods in the `GeometryRenderActivity` class:
 
 ```java
 public class GeometryRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer descriptorSets = stack.mallocLong(6)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(5, materialsDescriptorSet.getVkDescriptorSet());
-            VulkanUtils.copyMatrixToBuffer(device, viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
-            IntBuffer dynDescrSetOffset = stack.callocInt(1);
-            int meshCount = 0;
-            for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialSize;
-                dynDescrSetOffset.put(0, materialOffset);
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-
-                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
-                TextureDescriptorSet normalMapDescriptorSet = descriptorSetMap.get(mesh.getNormalMapTexture().getFileName());
-                TextureDescriptorSet metalRoughDescriptorSet = descriptorSetMap.get(mesh.getMetalRoughTexture().getFileName());
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
-                    descriptorSets.put(3, normalMapDescriptorSet.getVkDescriptorSet());
-                    descriptorSets.put(4, metalRoughDescriptorSet.getVkDescriptorSet());
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
-
-                    setPushConstants(cmdHandle, entity.getModelMatrix(), pushConstantBuffer);
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
-                }
-
-                meshCount++;
-            }
         ...
+    }
+
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
+                                List<VulkanModel> vulkanModelList) {
+        ...
+             for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                int materialOffset = materialCount * materialSize;
+                dynDescrSetOffset.put(0, materialOffset);
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
+                TextureDescriptorSet normalMapDescriptorSet = descriptorSetMap.get(material.normalMap().getFileName());
+                TextureDescriptorSet metalRoughDescriptorSet = descriptorSetMap.get(material.metalRoughMap().getFileName());
+
+                for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                    ...
+                    for (Entity entity : entities) {
+                        descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
+                        descriptorSets.put(3, normalMapDescriptorSet.getVkDescriptorSet());
+                        descriptorSets.put(4, metalRoughDescriptorSet.getVkDescriptorSet());
+                    ...
+                }
+                ...
+            }
+            ...
     }
     ...
 }
@@ -582,20 +541,20 @@ public class GeometryRenderActivity {
 
 As we have mentioned before, we have now two more descriptor sets, so we pass from `4` descriptor sets to `6`. The material uniform has also moved from the descriptor set number `3` to number `5`. The texture descriptor sets for the normals and roughness metallic maps are set in numbers `3` and `4`.
 
-Finally, the `updateMaterial` method needs also to be updated to handle the changes in the `Material` class which need to be passed to the uniform used in the geometry fragment shader. We need to pass the flags that indicate if the material has defined a normals map or a roughness metallic map along with the roughness and metallic factors (for the case when no textures are used).
+Finally, the `updateMaterialsBuffer` method needs also to be updated to handle the changes in the `VulkanMode.VulkanMaterial` class which need to be passed to the uniform used in the geometry fragment shader. We need to pass the flags that indicate if the material has defined a normals map or a roughness metallic map along with the roughness and metallic factors (for the case when no textures are used).
 
 ```java
 public class GeometryRenderActivity {
     ...
-    private void updateMaterial(VulkanBuffer vulkanBuffer, Material material, int offset) {
+    private void updateMaterialsBuffer(VulkanBuffer vulkanBuffer, VulkanModel.VulkanMaterial material, int offset) {
         long mappedMemory = vulkanBuffer.map();
         ByteBuffer materialBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
-        material.getDiffuseColor().get(offset, materialBuffer);
+        material.diffuseColor().get(offset, materialBuffer);
         materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 4, material.hasTexture() ? 1.0f : 0.0f);
         materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 5, material.hasNormalMap() ? 1.0f : 0.0f);
         materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 6, material.hasMetalRoughMap() ? 1.0f : 0.0f);
-        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 7, material.getRoughnessFactor());
-        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 8, material.getMetallicFactor());
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 7, material.roughnessFactor());
+        materialBuffer.putFloat(offset + GraphConstants.FLOAT_LENGTH * 8, material.metallicFactor());
         vulkanBuffer.unMap();
     }
     ...
@@ -735,10 +694,14 @@ public class LightingRenderActivity {
     private VulkanBuffer[] lightsBuffers;
     private DescriptorSet.UniformDescriptorSet[] lightsDescriptorSets;
     ...
+    private Scene scene;
+    ...
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
     ...
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
                                   List<Attachment> attachments, Scene scene) {
+        ...
+        this.scene = scene;
         ...
         auxVec = new Vector4f();
         ...
@@ -849,7 +812,7 @@ In the `prepareCommandBuffers` method we will update the current lights buffer i
 ```java
 public class LightingRenderActivity {
     ...
-    public void prepareCommandBuffers(Scene scene) {
+    public void prepareCommandBuffers() {
         int idx = swapChain.getCurrentFrame();
         Fence fence = fences[idx];
 
@@ -860,12 +823,12 @@ public class LightingRenderActivity {
                 lightsBuffers[idx]);
     }
 
-    public void resize(SwapChain swapChain, Attachment[] attachments, Scene scene) {
+    public void resize(SwapChain swapChain, List<Attachment> attachments) {
         this.swapChain = swapChain;
         attachmentsDescriptorSet.update(attachments);
         lightingFrameBuffer.resize(swapChain);
 
-        updateInvProjMatrix(scene);
+        updateInvProjMatrix();
 
         int numImages = swapChain.getNumImages();
         for (int i = 0; i < numImages; i++) {
@@ -881,7 +844,7 @@ Finally, we need to add two new methods to update the inverse projection matrix 
 ```java
 public class LightingRenderActivity {
     ...
-    private void updateInvProjMatrix(Scene scene) {
+    private void updateInvProjMatrix() {
         Matrix4f invProj = new Matrix4f(scene.getProjection().getProjectionMatrix()).invert();
         VulkanUtils.copyMatrixToBuffer(invProjBuffer, invProj);
     }

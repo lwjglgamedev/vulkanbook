@@ -45,8 +45,8 @@ public class Scene {
         return directionalLight;
     }
 
-    public List<Entity> getEntitiesByMeshId(String meshId) {
-        return entitiesMap.get(meshId);
+    public List<Entity> getEntitiesByModelId(String modelId) {
+        return entitiesMap.get(modelId);
     }
 
     public Map<String, List<Entity>> getEntitiesMap() {

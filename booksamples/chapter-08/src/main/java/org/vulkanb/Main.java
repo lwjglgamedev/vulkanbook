@@ -6,6 +6,8 @@ import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.scene.*;
 
+import java.util.*;
+
 public class Main implements IAppLogic {
 
     private static final Logger LOGGER = LogManager.getLogger();
@@ -38,13 +40,16 @@ public class Main implements IAppLogic {
 
     @Override
     public void init(Window window, Scene scene, Render render) {
-        String meshId = "CubeMesh";
-        MeshData[] meshDataList = ModelLoader.loadMeshes(meshId, "resources/models/cube/cube.obj",
-                "resources/models/cube");
-        render.loadMeshes(meshDataList);
+        List<ModelData> modelDataList = new ArrayList<>();
 
-        cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        String modelId = "CubbeModel";
+        ModelData modelData = ModelLoader.loadModel(modelId, "resources/models/cube/cube.obj",
+                "resources/models/cube");
+        modelDataList.add(modelData);
+        cubeEntity = new Entity("CubeEntity", modelId, new Vector3f(0.0f, 0.0f, 0.0f));
         cubeEntity.setPosition(0, 0, -2);
         scene.addEntity(cubeEntity);
+
+        render.loadModels(modelDataList);
     }
 }

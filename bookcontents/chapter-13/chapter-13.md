@@ -498,14 +498,16 @@ public class ShadowRenderActivity {
     private Device device;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
+    private Scene scene;
     private ShaderProgram shaderProgram;
     private ShadowsFrameBuffer shadowsFrameBuffer;
     private VulkanBuffer[] shadowsUniforms;
     private SwapChain swapChain;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
-    public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache) {
+    public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
+        this.scene = scene;
         device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
         shadowsFrameBuffer = new ShadowsFrameBuffer(device);
@@ -636,12 +638,12 @@ public class ShadowRenderActivity {
 }
 ```
 
-Let's examine now the method that renders the scene to generate the depth maps, called `recordCommandBuffers`:
+Let's examine now the methods that render the scene to generate the depth maps, called `recordCommandBuffers` and `recordEntities`:
 
 ```java
 public class ShadowRenderActivity {
     ...
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanMesh> meshList, Scene scene) {
+    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
@@ -692,34 +694,47 @@ public class ShadowRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
-            LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer descriptorSets = stack.mallocLong(1)
                     .put(0, projMatrixDescriptorSet[idx].getVkDescriptorSet());
 
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            for (VulkanMesh mesh : meshList) {
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+            recordEntities(stack, cmdHandle, vulkanModelList);
 
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
+            vkCmdEndRenderPass(cmdHandle);
+        }
+    }
+
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList) {
+        LongBuffer offsets = stack.mallocLong(1);
+        offsets.put(0, 0L);
+        LongBuffer vertexBuffer = stack.mallocLong(1);
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            String modelId = vulkanModel.getModelId();
+            List<Entity> entities = scene.getEntitiesByModelId(modelId);
+            if (entities.isEmpty()) {
+                continue;
+            }
+            for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                    for (Entity entity : entities) {
+                        setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                        vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                    }
                 }
             }
-            vkCmdEndRenderPass(cmdHandle);
         }
     }
     ...
 }
 ```
 
-The method is quite similar to the one used in the `GeometryRenderActivity` class, with the following differences:
+The methods are quite similar to the one used in the `GeometryRenderActivity` class, with the following differences:
 
 - In this case, we receive a `CommandBuffer` instance as a parameter, instead of creating our command buffers for rendering the depth map. We will use the same command buffer used while doing the geometry pass to render the depth maps. Doing this way there is no need to add additionally synchronization code so the lighting phase starts when the scene and the depth maps have been properly render. We can do this, because rendering the geometry information and the depth maps are independent.
 - Since we are using the geometry command buffer, we do not perform any reset operation over it and we do not need to provide a submit method. This will be done when submitting the geometry stage commands.
@@ -730,9 +745,9 @@ The rest of the methods of this class are for supporting resizing (we just store
 ```java
 public class ShadowRenderActivity {
     ...
-    public void resize(SwapChain swapChain, Scene scene) {
+    public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;
-        CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+        CascadeShadow.updateCascadeShadows(cascadeShadows);
     }
 
     private void setPushConstant(Pipeline pipeLine, VkCommandBuffer cmdHandle, Matrix4f matrix) {
@@ -864,7 +879,7 @@ As a result, the `recordCommandBuffers` method needs to be modified to remove th
 ```java
 public class GeometryRenderActivity {
     ...
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -913,40 +928,13 @@ public class GeometryRenderActivity {
                             .y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
-            LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer descriptorSets = stack.mallocLong(6)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
                     .put(5, materialsDescriptorSet.getVkDescriptorSet());
             VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
-            IntBuffer dynDescrSetOffset = stack.callocInt(1);
-            int meshCount = 0;
-            for (VulkanMesh mesh : meshes) {
-                int materialOffset = meshCount * materialSize;
-                dynDescrSetOffset.put(0, materialOffset);
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
-                TextureDescriptorSet normalMapDescriptorSet = descriptorSetMap.get(mesh.getNormalMapTexture().getFileName());
-                TextureDescriptorSet metalRoughDescriptorSet = descriptorSetMap.get(mesh.getMetalRoughTexture().getFileName());
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    descriptorSets.put(2, textureDescriptorSet.getVkDescriptorSet());
-                    descriptorSets.put(3, normalMapDescriptorSet.getVkDescriptorSet());
-                    descriptorSets.put(4, metalRoughDescriptorSet.getVkDescriptorSet());
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, dynDescrSetOffset);
-
-                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
-                }
-
-                meshCount++;
-            }
+            recordEntities(stack, cmdHandle, descriptorSets, vulkanModelList);
 
             vkCmdEndRenderPass(cmdHandle);
         }
@@ -1145,7 +1133,7 @@ public class LightingRenderActivity {
     private DescriptorSet.UniformDescriptorSet[] shadowsMatricesDescriptorSets;
     ...
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
-                                  List<Attachment> attachments) {
+                                  List<Attachment> attachments, Scene scene) {
         ...
     }
 
@@ -1236,7 +1224,7 @@ public class LightingRenderActivity {
         ...
     }
 
-    public void prepareCommandBuffers(Scene scene, List<CascadeShadow> cascadeShadows) {
+    public void prepareCommandBuffers(List<CascadeShadow> cascadeShadows) {
         ...
         updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(), lightsBuffers[idx]);
         updateInvMatrices(scene, invMatricesBuffers[idx]);
@@ -1369,19 +1357,19 @@ public class Render {
     ...
     private ShadowRenderActivity shadowRenderActivity;
     ...
-    public void cleanup() {
-        ...
-        shadowRenderActivity.cleanup();
-        ...
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         ...
         shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache);
         List<Attachment> attachments = new ArrayList<>();
         attachments.addAll(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments);
+        ...
+    }
+
+    public void cleanup() {
+        ...
+        shadowRenderActivity.cleanup();
         ...
     }
     ...
@@ -1408,10 +1396,10 @@ public class Render {
         }
     }
 
-    private void resize(Window window, Scene scene) {
+    private void resize(Window window) {
         ...
-        geometryRenderActivity.resize(swapChain, scene);
-        shadowRenderActivity.resize(swapChain, scene);
+        geometryRenderActivity.resize(swapChain);
+        shadowRenderActivity.resize(swapChain);
         List<Attachment> attachments = new ArrayList<>();
         attachments.addAll(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());

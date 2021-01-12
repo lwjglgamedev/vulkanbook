@@ -254,7 +254,7 @@ public class GeometryRenderActivity {
         int materialCount = 0;
         for (VulkanModel vulkanModel : vulkanModelList) {
             String modelId = vulkanModel.getModelId();
-            List<Entity> entities = scene.getEntitiesByMeshId(modelId);
+            List<Entity> entities = scene.getEntitiesByModelId(modelId);
             if (entities.isEmpty()) {
                 materialCount += vulkanModel.getVulkanMaterialList().size();
                 continue;

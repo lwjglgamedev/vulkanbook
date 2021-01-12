@@ -38,6 +38,7 @@ public class LightingRenderActivity {
     private DescriptorSet.UniformDescriptorSet[] lightsDescriptorSets;
     private Pipeline pipeline;
     private PipelineCache pipelineCache;
+    private Scene scene;
     private ShaderProgram shaderProgram;
     private VulkanBuffer[] shadowsMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] shadowsMatricesDescriptorSets;
@@ -45,10 +46,11 @@ public class LightingRenderActivity {
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
-                                  List<Attachment> attachments) {
+                                  List<Attachment> attachments, Scene scene) {
         this.swapChain = swapChain;
-        device = swapChain.getDevice();
         this.pipelineCache = pipelineCache;
+        this.scene = scene;
+        device = swapChain.getDevice();
         auxVec = new Vector4f();
         lightSpecConstants = new LightSpecConstants();
 
@@ -232,7 +234,7 @@ public class LightingRenderActivity {
         }
     }
 
-    public void prepareCommandBuffers(Scene scene, List<CascadeShadow> cascadeShadows) {
+    public void prepareCommandBuffers(List<CascadeShadow> cascadeShadows) {
         int idx = swapChain.getCurrentFrame();
         Fence fence = fences[idx];
 
@@ -240,7 +242,7 @@ public class LightingRenderActivity {
         fence.reset();
 
         updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(), lightsBuffers[idx]);
-        updateInvMatrices(scene, invMatricesBuffers[idx]);
+        updateInvMatrices(invMatricesBuffers[idx]);
         updateCascadeShadowMatrices(cascadeShadows, shadowsMatricesBuffers[idx]);
     }
 
@@ -281,7 +283,7 @@ public class LightingRenderActivity {
         shadowsUniformBuffer.unMap();
     }
 
-    private void updateInvMatrices(Scene scene, VulkanBuffer invMatricesBuffer) {
+    private void updateInvMatrices(VulkanBuffer invMatricesBuffer) {
         Matrix4f invProj = new Matrix4f(scene.getProjection().getProjectionMatrix()).invert();
         Matrix4f invView = new Matrix4f(scene.getCamera().getViewMatrix()).invert();
         VulkanUtils.copyMatrixToBuffer(invMatricesBuffer, invProj, 0);

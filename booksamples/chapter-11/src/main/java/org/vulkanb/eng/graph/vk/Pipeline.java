@@ -27,10 +27,11 @@ public class Pipeline {
             int numModules = shaderModules.length;
             VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.callocStack(numModules, stack);
             for (int i = 0; i < numModules; i++) {
+                ShaderProgram.ShaderModule shaderModule = shaderModules[i];
                 shaderStages.get(i)
                         .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
-                        .stage(shaderModules[i].shaderStage())
-                        .module(shaderModules[i].handle())
+                        .stage(shaderModule.shaderStage())
+                        .module(shaderModule.handle())
                         .pName(main);
             }
 

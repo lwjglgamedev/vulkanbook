@@ -11,12 +11,11 @@ public class Engine {
     private Scene scene;
     private Window window;
 
-    public Engine(String windowTitle, IAppLogic gameLogic) {
+    public Engine(String windowTitle, IAppLogic appLogic) {
+        this.appLogic = appLogic;
         window = new Window(windowTitle);
-        render = new Render();
-        appLogic = gameLogic;
         scene = new Scene(window);
-        render.init(window, scene);
+        render = new Render(window, scene);
         appLogic.init(window, scene, render);
     }
 

@@ -112,7 +112,7 @@ The `Device` class is first created in the `Render` class, since the `Device` co
 ```java
 public class Render {
     ...
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         ...
         device = new Device(instance, physicalDevice);
         ...
@@ -220,12 +220,12 @@ public class Texture {
 }
 ```
 
-The class `VulkanMesh` needs also to be updated with small changes due to the changes in the `VulkanBuffer` constructor:
+The class `VulkanModel` class needs also to be updated with small changes due to the changes in the `VulkanBuffer` constructor:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    private static TransferBuffers createIndicesBuffers(Device device, MeshData meshData) {
+    private static TransferBuffers createIndicesBuffers(Device device, ModelData.MeshData meshData) {
         ...
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -234,7 +234,7 @@ public class VulkanMesh {
         ...
     }
 
-    private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
+    private static TransferBuffers createVerticesBuffers(Device device, ModelData.MeshData meshData) {
         ...
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);

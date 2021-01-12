@@ -428,17 +428,17 @@ public class Instance {
 }
 ```
 
-Finally, we can use the Instance class in our `Render` class, in the `init` and `cleanup` methods.
+Finally, we can use the Instance class in our `Render` class, in the constructor and `cleanup` methods.
 ```java
 public class Render {
     ...
-    public void cleanup() {
-        instance.cleanup();
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
+    }
+
+    public void cleanup() {
+        instance.cleanup();
     }
     ...
 }

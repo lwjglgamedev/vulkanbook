@@ -34,13 +34,13 @@ Up to now, we have been manually defining the 3D models directly in the code. In
 </project>
 ```
 
-We will create a new class named `ModelLoader`, which defines a method named `loadMeshes` to achieve the above mentioned goal:
+We will create a new class named `ModelLoader`, which defines a method named `loadModel` to achieve the above mentioned goal:
 
 ```java
 public class ModelLoader {
     ...
-    public static MeshData[] loadMeshes(String id, String modelPath, String texturesDir) {
-        return loadMeshes(id, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
+    public static ModelData loadModel(String modelId, String modelPath, String texturesDir) {
+        return loadModel(modelId, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
                 aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace |
                 aiProcess_PreTransformVertices);
     }
@@ -48,7 +48,7 @@ public class ModelLoader {
 }
 ```
 
-The `loadMeshes` method receives an identifier associated to all the meshes of the model, the path to the file that contains the data of the model, and the directory where the textures will reside. This method just calls the homonym method in the same class with a  set of flags that will control the post-processing actions that Assimp will perform (it is a basically a utility method to setup the most common used flags). In our case we are using the following flags:
+The `loadMeshes` method receives an identifier associated to the model, the path to the file that contains the data of the model, and the directory where the textures will reside. This method just calls the homonym method in the same class with a  set of flags that will control the post-processing actions that Assimp will perform (it is a basically a utility method to setup the most common used flags). In our case we are using the following flags:
 
 - `aiProcess_GenSmoothNormals`: This will try to generate smooth normals for all the vertices in the mesh.
 - `aiProcess_JoinIdenticalVertices`: This will try to identify and combine duplicated vertices.
@@ -57,13 +57,13 @@ The `loadMeshes` method receives an identifier associated to all the meshes of t
 - `aiProcess_CalcTangentSpace`: This calculates the tangents a bitangets for each mesh. We will not use these data immediately, but we will need it when we apply light effects later on.
 - `aiProcess_PreTransformVertices`: This removes the node graph and pre-transforms all vertices with the local transformation matrices of their nodes. Keep in mind that this flag cannot be used with animations.
 
-The `loadMeshes` method version which accepts the flags as a parameter is defined like this:
+The `loadModel` method version which accepts the flags as a parameter is defined like this:
 
 ```java
 public class ModelLoader {
     ...
-    public static MeshData[] loadMeshes(String id, String modelPath, String texturesDir, int flags) {
-        LOGGER.debug("Loading mesh data [{}]", modelPath);
+    public static ModelData loadModel(String modelId, String modelPath, String texturesDir, int flags) {
+        LOGGER.debug("Loading model data [{}]", modelPath);
         if (!new File(modelPath).exists()) {
             throw new RuntimeException("Model path does not exist [" + modelPath + "]");
         }
@@ -77,104 +77,76 @@ public class ModelLoader {
         }
 
         int numMaterials = aiScene.mNumMaterials();
-        List<Material> materials = new ArrayList<>();
+        List<ModelData.Material> materialList = new ArrayList<>();
         for (int i = 0; i < numMaterials; i++) {
             AIMaterial aiMaterial = AIMaterial.create(aiScene.mMaterials().get(i));
-            processMaterial(aiMaterial, materials, texturesDir);
+            ModelData.Material material = processMaterial(aiMaterial, texturesDir);
+            materialList.add(material);
         }
 
         int numMeshes = aiScene.mNumMeshes();
         PointerBuffer aiMeshes = aiScene.mMeshes();
-        MeshData[] meshesData = new MeshData[numMeshes];
+        List<ModelData.MeshData> meshDataList = new ArrayList<>();
         for (int i = 0; i < numMeshes; i++) {
             AIMesh aiMesh = AIMesh.create(aiMeshes.get(i));
-            MeshData meshData = processMesh(id, aiMesh, materials);
-            meshesData[i] = meshData;
+            ModelData.MeshData meshData = processMesh(aiMesh);
+            meshDataList.add(meshData);
         }
 
+        ModelData modelData = new ModelData(modelId, meshDataList, materialList);
+
         aiReleaseImport(aiScene);
-        LOGGER.debug("Loaded mesh data [{}]", modelPath);
-        return meshesData;
+        LOGGER.debug("Loaded model [{}]", modelPath);
+        return modelData;
     }
     ...
 }
 ```
 
-We first check if the path to the 3D model and the texture directory exist. After that ,we import the 3D model by invoking the `aiImportFile` Assimp function which will return an `AIScene` structure. Then, we use the `AIScene` structure to load the 3D models materials. We get the total number of materials allocating as many structures of `AIMaterial` as needed. The material will hold information related to the textures and colors for each mesh. For each of the materials we extract the values that we will need by calling the `processMaterial` method. The next step is to load the meshes data by calling the `processMesh` method. As in the case of materials, we get the total number of meshes that the `AIScene` contains and allocate as many `AIMesh` structure as needed. Once we have finished processing the model we just release the `AIScene` and return the array of the meshes present in the model. Let's analyze first the  `processMaterial` method:
+We first check if the path to the 3D model and the texture directory exist. After that, we import the 3D model by invoking the `aiImportFile` Assimp function which will return an `AIScene` structure. Then, we use the `AIScene` structure to load the 3D models materials. We get the total number of materials allocating as many structures of `AIMaterial` as needed. The material will hold information related to the textures and colors for each mesh. For each of the materials we extract the values that we will need by calling the `processMaterial` method. The next step is to load the meshes data by calling the `processMesh` method. As in the case of materials, we get the total number of meshes that the `AIScene` contains and allocate as many `AIMesh` structure as needed. Once we have finished processing the model we just release the `AIScene` and return the array of the meshes present in the model. Let's analyze first the  `processMaterial` method:
 
 ```java
 public class ModelLoader {
     ...
-    private static void processMaterial(AIMaterial aiMaterial, List<Material> materials, String texturesDir) {
+    private static ModelData.Material processMaterial(AIMaterial aiMaterial, String texturesDir) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             AIColor4D colour = AIColor4D.create();
 
-            Vector4f diffuse = Material.DEFAULT_COLOR;
+            Vector4f diffuse = ModelData.Material.DEFAULT_COLOR;
             int result = aiGetMaterialColor(aiMaterial, AI_MATKEY_COLOR_DIFFUSE, aiTextureType_NONE, 0,
                     colour);
             if (result == aiReturn_SUCCESS) {
                 diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
             }
-
             AIString aiTexturePath = AIString.callocStack(stack);
             aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
                     null, null, null, null, null);
             String texturePath = aiTexturePath.dataString();
             if (texturePath != null && texturePath.length() > 0) {
                 texturePath = texturesDir + File.separator + new File(texturePath).getName();
+                diffuse = new Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
             }
 
-            Material material = new Material(texturePath, diffuse);
-            materials.add(material);
+            return new ModelData.Material(texturePath, diffuse);
         }
     }
     ...
 }
 ```
 
-We get the the texture associated to the diffuse color of the material by calling the `aiGetMaterialTexture` function. This function receives as a parameter an instance of an `AIString` that will be used to return the texture path. If the path is present (if it is not null or empty) we insert the path where the textures for this model will reside. Many models use absolute paths, which probably won't fit with the path were you store the model. This is the reason why get just the file name, without the possible path (either absolute or relative)that could be used in the model. Once we have got the texture path, we retrieve the material diffuse color by calling the `aiGetMaterialColor` function. All that information is stored in an instance of the `Material` class. The constructed instance  is appended to the list passed as a parameter that will contain all the materials of the model. The `Material` class is defined like this:
+We get the the texture associated to the diffuse color of the material by calling the `aiGetMaterialTexture` function. This function receives as a parameter an instance of an `AIString` that will be used to return the texture path. If the path is present (if it is not null or empty) we insert the path where the textures for this model will reside. Many models use absolute paths, which probably won't fit with the path were you store the model. This is the reason why get just the file name, without the possible path (either absolute or relative)that could be used in the model. Once we have got the texture path, we retrieve the material diffuse color by calling the `aiGetMaterialColor` function. All that information is stored in an instance of the `ModelData.Material` class. The constructed instance is appended to the list passed as a parameter that will contain all the materials of the model. The `ModelData.Material` class is defined like this:
 
 ```java
-package org.vulkanb.eng.scene;
+public class ModelData {
+    ...
+    public record Material(String texturePath, Vector4f diffuseColor) {
+        public static final Vector4f DEFAULT_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-import org.joml.Vector4f;
-
-public class Material {
-
-    public static final Vector4f DEFAULT_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
-    private Vector4f diffuseColor;
-    private boolean hasTexture;
-    private String texturePath;
-
-    public Material() {
-        this(null, DEFAULT_COLOR);
+        public Material() {
+            this(null, DEFAULT_COLOR);
+        }
     }
-
-    public Material(String texturePath, Vector4f diffuseColor) {
-        setTexturePath(texturePath);
-        this.diffuseColor = diffuseColor;
-    }
-
-    public Vector4f getDiffuseColor() {
-        return diffuseColor;
-    }
-
-    public String getTexturePath() {
-        return texturePath;
-    }
-
-    public boolean hasTexture() {
-        return hasTexture;
-    }
-
-    public void setDiffuseColor(Vector4f diffuseColor) {
-        this.diffuseColor = diffuseColor;
-    }
-
-    public void setTexturePath(String texturePath) {
-        this.texturePath = texturePath;
-        hasTexture = this.texturePath != null && this.texturePath.trim().length() > 0;
-    }
+    ...
 }
 ```
 
@@ -183,7 +155,7 @@ Going back to the `ModelLoader` class, the `processMesh` is defined like this:
 ```java
 public class ModelLoader {
     ...
-    private static MeshData processMesh(String id, AIMesh aiMesh, List<Material> materials) {
+    private static ModelData.MeshData processMesh(AIMesh aiMesh) {
         List<Float> vertices = processVertices(aiMesh);
         List<Float> textCoords = processTextCoords(aiMesh);
         List<Integer> indices = processIndices(aiMesh);
@@ -196,27 +168,22 @@ public class ModelLoader {
             }
         }
 
-        Material material;
         int materialIdx = aiMesh.mMaterialIndex();
-        if (materialIdx >= 0 && materialIdx < materials.size()) {
-            material = materials.get(materialIdx);
-        } else {
-            material = new Material();
-        }
-        return new MeshData(id, listToArray(vertices), listToArray(textCoords), listIntToArray(indices),
-                material);
+        return new ModelData.MeshData(listFloatToArray(vertices), listFloatToArray(textCoords), listIntToArray(indices),
+                materialIdx);
     }
     ...
 }
 ```
 
-This method just delegates the vertices positions, texture coordinates and indices  loading to other internal methods named `processVertices`, `processTextCoords`  and `processIndices` respectively. Once that data has been loaded, we check if the model defined texture coordinates. If not, we create an empty placeholder for them. The buffers that we will create later on (which structure is defined in the `VertexBufferStructure` class) will assume that all of them will have position and texture coordinates so we need to reserve space for them. After that, we get the the material index associated with this mesh by calling the `mMaterialIndex` method over the `aiMesh` instance we are processing. By using that index, we retrieve the associated `Material` instance, populated in the `processMaterial` method and create a new `MeshData` instance. This class has been modified to include texture coordinates and material information:
+This method just delegates the vertices positions, texture coordinates and indices loading to other internal methods named `processVertices`, `processTextCoords` and `processIndices` respectively. Once that data has been loaded, we check if the model defined texture coordinates. If not, we create an empty placeholder for them. The buffers that we will create later on (which structure is defined in the `VertexBufferStructure` class) will assume that all of them will have position and texture coordinates so we need to reserve space for them. After that, we get the the material index associated with this mesh by calling the `mMaterialIndex` method over the `aiMesh` instance we are processing. By using that index, we can later on associate that mesh data to a material. The `ModelData.MeshData` class has been modified to include texture coordinates and material information:
 
 ```java
-package org.vulkanb.eng.scene;
-
-public record MeshData(String id, float[]positions, float[]textCoords, int[]indices, Material material) {
-}
+public class ModelData {
+    ...
+    public record MeshData(float[] positions, float[] textCoords, int[] indices, int materialIdx) {
+    }
+    ...
 ```
 
 Going back to the `ModelLoader`class, the remaining methods are quite simple, we just extract the position and texture coordinates and the indices:
@@ -277,17 +244,17 @@ public class EngineUtils {
         // Utility class
     }
 
-    public static int[] listIntToArray(List<Integer> list) {
-        return list.stream().mapToInt((Integer v) -> v).toArray();
-    }
-
-    public static float[] listToArray(List<Float> list) {
+    public static float[] listFloatToArray(List<Float> list) {
         int size = list != null ? list.size() : 0;
         float[] floatArr = new float[size];
         for (int i = 0; i < size; i++) {
             floatArr[i] = list.get(i);
         }
         return floatArr;
+    }
+
+    public static int[] listIntToArray(List<Integer> list) {
+        return list.stream().mapToInt((Integer v) -> v).toArray();
     }
 }
 ```
@@ -624,61 +591,99 @@ public class TextureCache {
 }
 ```
 
-The next step is to update the `VukanMesh` class to include texture loading into the model loading process. This class now receives new parameters which will hold the texture (remember that we are using a default texture for those models that do not define any) and the material:
+The next step is to update the `VulkanModel` class to support material definition. By now, a material will hold a reference to the color of the material and its texture, but it will be modified in teh future to define other parameters (such as normal maps, etc.). The same material can be applied to several meshes, so we will organize meshes around them to render efficiently. The modifications are listed below:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    private Texture texture;
+    private List<VulkanModel.VulkanMaterial> vulkanMaterialList;
+
+    public VulkanModel(String modelId) {
+        this.modelId = modelId;
+        vulkanMaterialList = new ArrayList<>();
+    }
     ...
-    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount,
-                      Texture texture, Material material) {
-        ...
-        this.texture = texture;
-        this.material = material;
+    public record VulkanMaterial(Vector4f diffuseColor, Texture texture, boolean hasTexture,
+                                 List<VulkanMesh> vulkanMeshList) {
     }
     ...
 }
 ```
 
-We need to change also the `loadMeshes` method to load the textures:
+We need to change also the `transformModels` method to load the textures:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    public static VulkanMesh[] loadMeshes(TextureCache textureCache, CommandPool commandPool, Queue queue, MeshData[] meshDataList) {
+    public static List<VulkanModel> transformModels(List<ModelData> modelDataList, TextureCache textureCache,
+                                                    CommandPool commandPool, Queue queue) {
         ...
-            for (int i = 0; i < numMeshes; i++) {
-                ...
-                Material material = meshData.material();
-                Texture texture = textureCache.createTexture(device, material.getTexturePath(),
-                        VK_FORMAT_R8G8B8A8_SRGB);
-                meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
-                        meshData.indices().length, texture, material);
+        for (ModelData modelData : modelDataList) {
+            VulkanModel vulkanModel = new VulkanModel(modelData.getModelId());
+            vulkanModelList.add(vulkanModel);
+
+            // Create textures defined for the materials
+            VulkanMaterial defaultVulkanMaterial = null;
+            for (ModelData.Material material : modelData.getMaterialList()) {
+                VulkanMaterial vulkanMaterial = transformMaterial(material, device, textureCache, cmd, textureList);
+                vulkanModel.vulkanMaterialList.add(vulkanMaterial);
+            }
+
+            // Transform meshes loading their data into GPU buffers
+            for (ModelData.MeshData meshData : modelData.getMeshDataList()) {
+                TransferBuffers verticesBuffers = createVerticesBuffers(device, meshData);
+                TransferBuffers indicesBuffers = createIndicesBuffers(device, meshData);
+                stagingBufferList.add(verticesBuffers.srcBuffer());
+                stagingBufferList.add(indicesBuffers.srcBuffer());
                 recordTransferCommand(cmd, verticesBuffers);
                 recordTransferCommand(cmd, indicesBuffers);
-                texture.recordTextureTransition(cmd);
-            }
-            cmd.endRecording();
-            Fence fence = new Fence(device, true);
-            fence.reset();
-            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
-            fence.fenceWait();
-            fence.cleanup();
-            cmd.cleanup();
 
-            for (int i = 0; i < numMeshes; i++) {
-                positionTransferBuffers[i].cleanup();
-                indicesTransferBuffers[i].cleanup();
-                meshes[i].getTexture().cleanupStgBuffer();
+                VulkanModel.VulkanMesh vulkanMesh = new VulkanModel.VulkanMesh(verticesBuffers.dstBuffer(),
+                        indicesBuffers.dstBuffer(), meshData.indices().length);
+
+                VulkanMaterial vulkanMaterial;
+                int materialIdx = meshData.materialIdx();
+                if (materialIdx >= 0 && materialIdx < vulkanModel.vulkanMaterialList.size()) {
+                    vulkanMaterial = vulkanModel.vulkanMaterialList.get(materialIdx);
+                } else {
+                    if (defaultVulkanMaterial == null) {
+                        defaultVulkanMaterial = transformMaterial(new ModelData.Material(), device, textureCache, cmd, textureList);
+                    }
+                    vulkanMaterial = defaultVulkanMaterial;
+                }
+                vulkanMaterial.vulkanMeshList.add(vulkanMesh);
             }
-        ...
+        }
+
+        cmd.endRecording();
+        Fence fence = new Fence(device, true);
+        fence.reset();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
+        }
+        fence.fenceWait();
+        fence.cleanup();
+        cmd.cleanup();
+
+        stagingBufferList.forEach(VulkanBuffer::cleanup);
+        textureList.forEach(Texture::cleanupStgBuffer);
+
+        return vulkanModelList;
     }
     ...
 }
 ```
 
-As you can see, when processing the vertices and the indices, we get also the path to the texture form the associated material. We request that texture to the `TextureCache` instance and record the transition and copy commands in the same command buffer that we are using to record the transfer operations for the vertices and the indices. At the end, we can free the staging buffer created in the `Texture` constructor at the same place where we were also releasing the other staging buffer for the vertices and indices.
+As you can see, when processing the materials, we get the path to the texture. We request that texture to the `TextureCache` instance and record the transition and copy commands in the same command buffer that we are using to record the transfer operations for the vertices and the indices. At the end, we can free the staging buffer created in the `Texture` constructor at the same place where we were also releasing the other staging buffer for the vertices and indices. The `cleanup` method needs also to be modified since the meshes, hang now under the material instances:
+```java
+public class VulkanModel {
+    ...
+    public void cleanup() {
+        vulkanMaterialList.forEach(m -> m.vulkanMeshList.forEach((VulkanMesh::cleanup)));
+    }
+    ...
+}
+```
 
 ## Descriptors
 
@@ -1187,7 +1192,11 @@ Going back to the `ForwardRenderActivity` constructor, the projection matrix onl
 ```java
 public class ForwardRenderActivity {
     ...
+    private Scene scene;
+    ...
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
+        ...
+        this.scene = scene;
         ...
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
     }
@@ -1229,55 +1238,40 @@ public class ForwardRenderActivity {
 }
 ```
 
-We also add the following methods to manage the creation and removal of the textures descriptors:
-
-```java
-public class ForwardRenderActivity {
-    ...
-    public void meshUnLoaded(VulkanMesh vulkanMesh) {
-        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.remove(vulkanMesh.getTexture().getFileName());
-        if (textureDescriptorSet != null) {
-            descriptorPool.freeDescriptorSet(textureDescriptorSet.getVkDescriptorSet());
-        }
-    }
-
-    public void meshesLoaded(VulkanMesh[] meshes) {
-        for (VulkanMesh vulkanMesh : meshes) {
-            String textureFileName = vulkanMesh.getTexture().getFileName();
-            TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
-            if (textureDescriptorSet == null) {
-                textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
-                        vulkanMesh.getTexture(), textureSampler, 0);
-                descriptorSetMap.put(textureFileName, textureDescriptorSet);
-            }
-        }
-    }
-    ...
-}
-```
-
-The `meshUnLoaded` will be called when a mesh is removed. In this case, we will remove the descriptor set from the map that indexes them and return it to the descriptor pool. The `meshesLoaded` will be called after new meshes has been uploaded along with their associated textures. We will use the file name associated to the texture to control the texture set creation.
-
 We need also to update the `recordCommandBuffers` like this:
-
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer descriptorSets = stack.mallocLong(2)
                     .put(0, matrixDescriptorSet.getVkDescriptorSet());
-            for (VulkanMesh mesh : meshes) {
-                ...
-                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(mesh.getTexture().getFileName());
-                ...
-                for (Entity entity : entities) {
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                String modelId = vulkanModel.getModelId();
+                List<Entity> entities = scene.getEntitiesByModelId(modelId);
+                if (entities.isEmpty()) {
+                    continue;
+                }
+                for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                    if (material.vulkanMeshList().isEmpty()) {
+                        continue;
+                    }
+                    TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
                     descriptorSets.put(1, textureDescriptorSet.getVkDescriptorSet());
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-                    VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
+                    for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                        vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                        vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                        vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                        for (Entity entity : entities) {
+                            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+
+                            VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                            vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                        }
+                    }
                 }
             }
         ...
@@ -1307,7 +1301,7 @@ The `resize` method needs also to be modified to update the buffer that will bac
 ```java
 public class ForwardRenderActivity {
     ...
-    public void resize(SwapChain swapChain, Scene scene) {
+    public void resize(SwapChain swapChain) {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         ...
     }
@@ -1378,49 +1372,27 @@ public class Render {
         textureCache = new TextureCache();
     }
 
-    public void loadMeshes(MeshData[] meshDataList) {
-        LOGGER.debug("Loading {} meshe(s)", meshDataList.length);
-        VulkanMesh[] meshes = VulkanMesh.loadMeshes(textureCache, commandPool, graphQueue, meshDataList);
-        LOGGER.debug("Loaded {} meshe(s)", meshes.length);
-        meshList.addAll(Arrays.asList(meshes));
+    public void loadModels(List<ModelData> modelDataList) {
+        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
+        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
 
-        fwdRenderActivity.meshesLoaded(meshes);
+        fwdRenderActivity.registerModels(vulkanModels);
     }
 
     public void render(Window window, Scene scene) {
         ...
         if (window.isResized() || swapChain.acquireNextImage()) {
             ...
-            resize(window, scene);
+            resize(window);
             ...
         }
         ...
     }
 
-    private void resize(Window window, Scene scene) {
+    private void resize(Window window) {
         ...
-        fwdRenderActivity.resize(swapChain, scene);
-    }
-
-    public void unloadMesh(String id) {
-        Iterator<VulkanMesh> it = meshList.iterator();
-        while (it.hasNext()) {
-            VulkanMesh mesh = it.next();
-            if (mesh.getId().equals(id)) {
-                fwdRenderActivity.meshUnLoaded(mesh);
-                mesh.cleanup();
-                it.remove();
-            }
-        }
-    }
-
-    public void unloadMeshes() {
-        device.waitIdle();
-        for (VulkanMesh vulkanMesh : meshList) {
-            fwdRenderActivity.meshUnLoaded(vulkanMesh);
-            vulkanMesh.cleanup();
-        }
-        meshList.clear();
+        fwdRenderActivity.resize(swapChain);
     }
 }
 ```
@@ -1432,16 +1404,18 @@ public class Main implements IAppLogic {
     ...
     @Override
     public void init(Window window, Scene scene, Render render) {
-        String meshId = "CubeMesh";
-        MeshData[] meshDataList = ModelLoader.loadMeshes(meshId, "resources/models/cube/cube.obj",
-                "resources/models/cube");
-        render.loadMeshes(meshDataList);
+        List<ModelData> modelDataList = new ArrayList<>();
 
-        cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        String modelId = "CubbeModel";
+        ModelData modelData = ModelLoader.loadModel(modelId, "resources/models/cube/cube.obj",
+                "resources/models/cube");
+        modelDataList.add(modelData);
+        cubeEntity = new Entity("CubeEntity", modelId, new Vector3f(0.0f, 0.0f, 0.0f));
         cubeEntity.setPosition(0, 0, -2);
         scene.addEntity(cubeEntity);
+
+        render.loadModels(modelDataList);
     }
-    ...
 }
 ```
 

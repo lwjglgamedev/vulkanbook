@@ -19,32 +19,15 @@ public class Render {
     private Queue.GraphicsQueue graphQueue;
     private Instance instance;
     private LightingRenderActivity lightingRenderActivity;
-    private List<VulkanMesh> meshList;
     private PhysicalDevice physicalDevice;
     private PipelineCache pipelineCache;
     private Queue.PresentQueue presentQueue;
     private Surface surface;
     private SwapChain swapChain;
     private TextureCache textureCache;
+    private List<VulkanModel> vulkanModels;
 
-    public void cleanup() {
-        presentQueue.waitIdle();
-        graphQueue.waitIdle();
-        device.waitIdle();
-        textureCache.cleanup();
-        meshList.forEach(VulkanMesh::cleanup);
-        pipelineCache.cleanup();
-        lightingRenderActivity.cleanup();
-        geometryRenderActivity.cleanup();
-        commandPool.cleanup();
-        swapChain.cleanup();
-        surface.cleanup();
-        device.cleanup();
-        physicalDevice.cleanup();
-        instance.cleanup();
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
@@ -56,23 +39,36 @@ public class Render {
                 engProps.isvSync());
         commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
         pipelineCache = new PipelineCache(device);
-        meshList = new ArrayList<>();
+        vulkanModels = new ArrayList<>();
         textureCache = new TextureCache();
         geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene);
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache,
                 geometryRenderActivity.getAttachments(), scene);
     }
 
-    public void loadMeshes(MeshData[] meshDataList) {
-        LOGGER.debug("Loading {} meshe(s)", meshDataList.length);
-        VulkanMesh[] meshes = VulkanMesh.loadMeshes(textureCache, commandPool, graphQueue, meshDataList);
-        LOGGER.debug("Loaded {} meshe(s)", meshes.length);
-        meshList.addAll(Arrays.asList(meshes));
+    public void cleanup() {
+        presentQueue.waitIdle();
+        graphQueue.waitIdle();
+        device.waitIdle();
+        textureCache.cleanup();
+        vulkanModels.forEach(VulkanModel::cleanup);
+        pipelineCache.cleanup();
+        lightingRenderActivity.cleanup();
+        geometryRenderActivity.cleanup();
+        commandPool.cleanup();
+        swapChain.cleanup();
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
+    }
 
-        // Reorder meshes
-        Collections.sort(meshList, (a, b) -> Boolean.compare(a.getTexture().hasTransparencies(), b.getTexture().hasTransparencies()));
+    public void loadModels(List<ModelData> modelDataList) {
+        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
+        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
 
-        geometryRenderActivity.meshesLoaded(meshes);
+        geometryRenderActivity.registerModels(vulkanModels);
     }
 
     public void render(Window window, Scene scene) {
@@ -81,14 +77,14 @@ public class Render {
         }
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
-            resize(window, scene);
+            resize(window);
             scene.getProjection().resize(window.getWidth(), window.getHeight());
             swapChain.acquireNextImage();
         }
 
-        geometryRenderActivity.recordCommandBuffers(meshList, scene);
+        geometryRenderActivity.recordCommandBuffers(vulkanModels);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.prepareCommandBuffers(scene);
+        lightingRenderActivity.prepareCommandBuffers();
         lightingRenderActivity.submit(graphQueue);
 
         if (swapChain.presentImage(graphQueue)) {
@@ -96,7 +92,7 @@ public class Render {
         }
     }
 
-    private void resize(Window window, Scene scene) {
+    private void resize(Window window) {
         EngineProperties engProps = EngineProperties.getInstance();
 
         device.waitIdle();
@@ -106,28 +102,7 @@ public class Render {
 
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
-        geometryRenderActivity.resize(swapChain, scene);
-        lightingRenderActivity.resize(swapChain, geometryRenderActivity.getAttachments(), scene);
-    }
-
-    public void unloadMesh(String id) {
-        Iterator<VulkanMesh> it = meshList.iterator();
-        while (it.hasNext()) {
-            VulkanMesh mesh = it.next();
-            if (mesh.getId().equals(id)) {
-                geometryRenderActivity.meshUnLoaded(mesh);
-                mesh.cleanup();
-                it.remove();
-            }
-        }
-    }
-
-    public void unloadMeshes() {
-        device.waitIdle();
-        for (VulkanMesh vulkanMesh : meshList) {
-            geometryRenderActivity.meshUnLoaded(vulkanMesh);
-            vulkanMesh.cleanup();
-        }
-        meshList.clear();
+        geometryRenderActivity.resize(swapChain);
+        lightingRenderActivity.resize(swapChain, geometryRenderActivity.getAttachments());
     }
 }

@@ -304,60 +304,74 @@ public class VertexBufferStructure {
 
 ## Loading the data
 
-We have created the the structures that will hold the data for our models (`VulkanBuffer`) and the ones that define their format (`VulkanMesh`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that wll be used to actually form the triangles. The class that will hold these buffers and the methods to populate them is named `VulkanMesh`. The basic structure of this class is quite simple:
+We have created the the structures that will hold the data for our models (`VulkanBuffer`) and the ones that define their format (`VertexBufferStructure`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that wll be used to actually form the triangles. We will define a new class named `VulkanModel` which will hold the information for 3D models. By now, it will hold the buffers for the different meshes that compose a 3D model. In next chapters it will be extended to support richer structures. At this moment a model is just a collection of meshes which will hold the references to buffers that contain positions data and their indices. This class will also define the methods to populate those structures. The basic structure of this class is quite simple:
 
 ```java
 package org.vulkanb.eng.graph.vk;
 ...
-public class VulkanMesh {
+public class VulkanModel {
 
-    private String id;
-    private VulkanBuffer indicesBuffer;
-    private int indicesCount;
-    private VulkanBuffer verticesBuffer;
+    private String modelId;
+    private List<VulkanMesh> vulkanMeshList;
 
-    public VulkanMesh(String id, VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int indicesCount) {
-        this.id = id;
-        this.verticesBuffer = verticesBuffer;
-        this.indicesBuffer = indicesBuffer;
-        this.indicesCount = indicesCount;
+    public VulkanModel(String modelId) {
+        this.modelId = modelId;
+        vulkanMeshList = new ArrayList<>();
     }
     ...
-
     public void cleanup() {
-        indicesBuffer.cleanup();
-        verticesBuffer.cleanup();
+        vulkanMeshList.forEach(VulkanMesh::cleanup);
     }
 
-    public String getId() {
-        return id;
+    public String getModelId() {
+        return modelId;
     }
 
-    public VulkanBuffer getIndicesBuffer() {
-        return indicesBuffer;
-    }
-
-    public int getIndicesCount() {
-        return indicesCount;
-    }
-
-    public VulkanBuffer getVerticesBuffer() {
-        return verticesBuffer;
+    public List<VulkanModel.VulkanMesh> getVulkanMeshList() {
+        return vulkanMeshList;
     }
     ...
+    public record VulkanMesh(VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int numIndices) {
+        public void cleanup() {
+            verticesBuffer.cleanup();
+            indicesBuffer.cleanup();
+        }
+    }
 }
 ```
 
-This class just stores the buffers associated to the vertices positions and the indices, their `getters` and a `cleanup` method. The interest of this class resides in its static methods which will be used to create those buffers. This class provides a `public` `static` method named `loadMeshes` which will be used to create a set of `VulkanMesh` instances using the model raw data positions and indices). That raw data is encapsulated in a `record`named `MeshData` and is defined like this:
+This class just stores a List of meshes, defined by the `VulkanMesh` record, which contain the buffers associated to the vertices positions and the indices. It provides a method to get the model identifier (it should unique per application), the meshes data  and a `cleanup` method. The interest of this class resides in its static methods which will be used to create those buffers. This class provides a `public` `static` method named `transformModels` which will be used to create a set of `VulkanModel` instances using the model raw data positions and indices for the different meshes). That raw data is encapsulated in a class named `ModelData` which is defined like this:
 
 ```java
 package org.vulkanb.eng.scene;
 
-public record MeshData(String id, float[]positions, int[]indices) {
+import java.util.List;
+
+public class ModelData {
+    private List<MeshData> meshDataList;
+    private String modelId;
+
+    public ModelData(String modelId, List<MeshData> meshDataList) {
+        this.modelId = modelId;
+        this.meshDataList = meshDataList;
+    }
+
+    public List<MeshData> getMeshDataList() {
+        return meshDataList;
+    }
+
+    public String getModelId() {
+        return modelId;
+    }
+
+    public record MeshData(float[] positions, int[] indices) {
+    }
 }
 ```
 
-The `loadMeshes` method will return as many `VulkanMesh`instances as `MeshData` instances received. It will encapsulate all the buffers and data copy creations operations. As it has been shown before, each `VulkanMesh` instance has two buffers, one for positions and another one for the indices. These buffers will be used by the GPU while rendering but we need to access them form the CPU in order to load the data into them. We could use buffers that are accessible from both the CPU and the GPU, but the performance would be worse than buffers that can only used by the GPU. So, how do we solve this? The answer is by using intermediate buffers:
+As you can see the `ModelData` class is quite similar to the `VulkanModel` one. The difference here is that the `ModelData` class holds the raw date for the model, while the `VulkanModel` class holds references to that information loaded in GPU buffers.
+
+Going back to the `VulkanModel`class, the `transformModels` method will return as many `VulkanModel` instances as `ModelData` instances received. It will encapsulate all the buffers and data copy creations operations. As it has been shown before, each `VulkanMesh` instance has two buffers, one for positions and another one for the indices. These buffers will be used by the GPU while rendering but we need to access them form the CPU in order to load the data into them. We could use buffers that are accessible from both the CPU and the GPU, but the performance would be worse than buffers that can only used by the GPU. So, how do we solve this? The answer is by using intermediate buffers:
 
 1. We first create an intermediate buffer (or staging buffer) that can be accessed both by the CPU and the GPU. This will be our source buffer.
 2. We create another buffer that can be accessed only from the GPU. This will be our destination buffer.
@@ -365,86 +379,87 @@ The `loadMeshes` method will return as many `VulkanMesh`instances as `MeshData` 
 4. We copy the source buffer into the destination buffer.
 5. We destroy the source buffer (the intermediate buffer). It is not needed anymore.
 
-The purpose of the `loadMeshes` method is to perform these actions for the positions and indices buffers for each of the `MeshData` instances. It should be used at the initialization stage as a bulk loading mechanism (more efficient). Copying from one buffer to another implies submitting a transfer command to a queue and waiting for it to complete. Instead of submitting these operations one by one, we can record all these commands into a single `CommandBuffer`, submit them just once and also wait once for the commands to be finished. This will be much more efficient than submitting small commands one at a time.
+The purpose of the `transformModels` method is to perform these actions for the positions and indices buffers for each of the `ModelData.MeshData` instances. It should be used at the initialization stage as a bulk loading mechanism (more efficient). Copying from one buffer to another implies submitting a transfer command to a queue and waiting for it to complete. Instead of submitting these operations one by one, we can record all these commands into a single `CommandBuffer`, submit them just once and also wait once for the commands to be finished. This will be much more efficient than submitting small commands one at a time.
 
 The `loadMeshes` method starts like this:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    public static VulkanMesh[] loadMeshes(CommandPool commandPool, Queue queue, MeshData[] meshDataList) {
-        int numMeshes = meshDataList != null ? meshDataList.length : 0;
-        VulkanMesh[] meshes = new VulkanMesh[numMeshes];
+    public static List<VulkanModel> transformModels(List<ModelData> modelDataList, CommandPool commandPool, Queue queue) {
+        List<VulkanModel> vulkanModelList = new ArrayList<>();
+        Device device = commandPool.getDevice();
+        CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
+        List<VulkanBuffer> stagingBufferList = new ArrayList<>();
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            Device device = commandPool.getDevice();
-            CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
-            cmd.beginRecording();
-
-            VulkanBuffer[] positionTransferBuffers = new VulkanBuffer[numMeshes];
-            VulkanBuffer[] indicesTransferBuffers = new VulkanBuffer[numMeshes];
-            ...
-        }
+        cmd.beginRecording();
         ...
     }
     ...
 }
 ```
 
-The method creates the result array with the same size as the list of `MeshData` used as a parameter. Then, it creates a new `CommandBuffer` which will be used to record the copy operations that involve the different buffers used and start the recording. We define also two arrays of `VulkanBuffer` which will be used as intermediate buffers used for position and indices. Then we iterate over the different `MeshData` instances:
+The method creates the result list that will hold the `VulkanModel` instances. After that, it creates a new `CommandBuffer` which will be used to record the copy operations that involve the different buffers used and start the recording. We define also a list, named `stagingBufferList` that will contain the CPU accessible buffers (the staging buffers), so we can destroy them after the copy operations have finished. After that, we iterate over the models and their associated meshes:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    public static VulkanMesh[] loadMeshes(CommandPool commandPool, Queue queue, MeshData[] meshDataList) {
+    public static List<VulkanModel> transformModels(List<ModelData> modelDataList, CommandPool commandPool, Queue queue) {
         ...
-            for (int i = 0; i < numMeshes; i++) {
-                MeshData meshData = meshDataList[i];
+        for (ModelData modelData : modelDataList) {
+            VulkanModel vulkanModel = new VulkanModel(modelData.getModelId());
+            vulkanModelList.add(vulkanModel);
+
+            // Transform meshes loading their data into GPU buffers
+            for (ModelData.MeshData meshData : modelData.getMeshDataList()) {
                 TransferBuffers verticesBuffers = createVerticesBuffers(device, meshData);
                 TransferBuffers indicesBuffers = createIndicesBuffers(device, meshData);
-
-                positionTransferBuffers[i] = verticesBuffers.srcBuffer();
-                indicesTransferBuffers[i] = indicesBuffers.srcBuffer();
-
-                meshes[i] = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), indicesBuffers.dstBuffer(),
-                        meshData.indices().length);
+                stagingBufferList.add(verticesBuffers.srcBuffer());
+                stagingBufferList.add(indicesBuffers.srcBuffer());
                 recordTransferCommand(cmd, verticesBuffers);
                 recordTransferCommand(cmd, indicesBuffers);
-            }
 
-            cmd.endRecording();
-            Fence fence = new Fence(device, true);
-            fence.reset();
-            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
-            fence.fenceWait();
-            fence.cleanup();
-            cmd.cleanup();
+                VulkanModel.VulkanMesh vulkanMesh = new VulkanModel.VulkanMesh(verticesBuffers.dstBuffer(),
+                        indicesBuffers.dstBuffer(), meshData.indices().length);
 
-            for (int i = 0; i < numMeshes; i++) {
-                positionTransferBuffers[i].cleanup();
-                indicesTransferBuffers[i].cleanup();
+                vulkanModel.vulkanMeshList.add(vulkanMesh);
             }
         }
 
-        return meshes;            
+        cmd.endRecording();
+        Fence fence = new Fence(device, true);
+        fence.reset();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
+        }
+        fence.fenceWait();
+        fence.cleanup();
+        cmd.cleanup();
+
+        stagingBufferList.forEach(VulkanBuffer::cleanup);
+
+        return vulkanModelList;
     }
     ...
 }
 ```
 
-For each of these meshes instances, we get the vertices and the indices and record the commands that will copy from the staging buffer to the destination buffer. The `createVerticesBuffers` method creates the intermediate buffer, loads the positions into it and also creates the final (GPU accessible only) buffer. The source and destination buffers are returned encapsulated into a `record` named `TransferBuffers`.
+For each of these meshes, we get the vertices and the indices and record the commands that will copy from the staging buffer to the destination buffer. The `createVerticesBuffers` method creates the intermediate buffer, loads the positions into it and also creates the final (GPU accessible only) buffer. The source and destination buffers are returned encapsulated into a `record` named `TransferBuffers`.
 
 ```java
-private record TransferBuffers(VulkanBuffer srcBuffer, VulkanBuffer dstBuffer) {
+public class VulkanModel {
+    ...
+    private record TransferBuffers(VulkanBuffer srcBuffer, VulkanBuffer dstBuffer) {
+    ...
 }
 ```
 
-The same operation is done for the indices buffers. We the create a `VulkanMesh` instance using the destination buffers and record the copy commands for both buffers by calling the `recordTransferCommand` method. Let's review first the `createVerticesBuffers` method:
+The same operation is done for the indices buffers. We then create a `VulkanModel.VulkanMesh ` instance using the destination buffers and record the copy commands for both buffers by calling the `recordTransferCommand` method. Let's review first the `createVerticesBuffers` method:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
+    private static TransferBuffers createVerticesBuffers(Device device, ModelData.MeshData meshData) {
         float[] positions = meshData.positions();
         int numPositions = positions.length;
         int bufferSize = numPositions * GraphConstants.FLOAT_LENGTH;
@@ -477,9 +492,9 @@ Once the buffers have been created we need to populate the source buffer. In ord
 The definition of the `createIndicesBuffers` is similar:
 
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
-    private static TransferBuffers createIndicesBuffers(Device device, MeshData meshData) {
+    private static TransferBuffers createIndicesBuffers(Device device, ModelData.MeshData meshData) {
         int[] indices = meshData.indices();
         int numIndices = indices.length;
         int bufferSize = numIndices * GraphConstants.INT_LENGTH;
@@ -503,7 +518,7 @@ The major difference is that, in this case, the usage flag is `VK_BUFFER_USAGE_I
 
 The definition of the `recordTransferCommand` method is like this:
 ```java
-public class VulkanMesh {
+public class VulkanModel {
     ...
     private static void recordTransferCommand(CommandBuffer cmd, TransferBuffers transferBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -1007,7 +1022,7 @@ public class Pipeline {
 
 ## Using the pipeline
 
-We are now ready to put all the pieces together and render something to the screen. We will start from our `Main` class. We will create a sample mesh in the `init` method which was previously empty:
+We are now ready to put all the pieces together and render something to the screen. We will start from our `Main` class. We will create a sample model in the `init` method which was previously empty:
 
 ```java
 package org.vulkanb;
@@ -1016,41 +1031,44 @@ public class Main implements IAppLogic {
     ...
     @Override
     public void init(Window window, Scene scene, Render render) {
-        MeshData meshData = new MeshData("Triangle", new float[]{
+        String modelId = "TriangleModel";
+        ModelData.MeshData meshData = new ModelData.MeshData(new float[]{
                 -0.5f, -0.5f, 0.0f,
                 0.0f, 0.5f, 0.0f,
                 0.5f, -0.5f, 0.0f},
                 new int[]{0, 1, 2});
-        render.loadMeshes(new MeshData[]{meshData});
+        List<ModelData.MeshData> meshDataList = new ArrayList<>();
+        meshDataList.add(meshData);
+        ModelData modelData = new ModelData(modelId, meshDataList);
+        List<ModelData> modelDataList = new ArrayList<>();
+        modelDataList.add(modelData);
+        render.loadModels(modelDataList);
     }
 }
 ```
 
-We create a new instance of the `MeshData` class that define the vertices of a triangle. Each mesh has an `String` which acts as an identifier. We will use that later on to link entities with the associated meshes. Mesh information also stores information about the indices. We invoke a new method in the `Render` class named `loadMeshes`. Let's review now the changes in that class:
+We create a new instance of the `ModelData.MeshData` class that define the vertices and the indices of a triangle. We also cerate a model with a unique identifier, which will be used later on to link entities with the associated model. We invoke a new method in the `Render` class named `loadModels`. Let's review now the changes in that class:
 
 ```java
-package org.vulkanb.eng.graph;
-...
 public class Render {
-...
-    private List<VulkanMesh> meshList;
-...
+    ...
+    private List<VulkanModel> vulkanModels;
+    ...
+    public Render(Window window, Scene scene) {
+        ...
+        vulkanModels = new ArrayList<>();
+    }
+
     public void cleanup() {
         ...
-        meshList.forEach(VulkanMesh::cleanup);
+        vulkanModels.forEach(VulkanModel::cleanup);
         ...
     }
 
-    public void init(Window window, Scene scene) {
-        ...
-        meshList = new ArrayList<>();
-    }
-
-    public void loadMeshes(MeshData[] meshDataList) {
-        LOGGER.debug("Loading {} meshe(s)", meshDataList.length);
-        VulkanMesh[] meshes = VulkanMesh.loadMeshes(commandPool, graphQueue, meshDataList);
-        LOGGER.debug("Loaded {} meshe(s)", meshes.length);
-        meshList.addAll(Arrays.asList(meshes));
+    public void loadModels(List<ModelData> modelDataList) {
+        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        vulkanModels.addAll(VulkanModel.transformModels(modelDataList, commandPool, graphQueue));
+        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
     }
 
     public void render(Window window, Scene scene) {
@@ -1061,29 +1079,10 @@ public class Render {
 
         swapChain.presentImage(graphQueue);
     }
-
-    public void unloadMesh(String id) {
-        Iterator<VulkanMesh> it = meshList.iterator();
-        while (it.hasNext()) {
-            VulkanMesh mesh = it.next();
-            if (mesh.getId().equals(id)) {
-                mesh.cleanup();
-                it.remove();
-            }
-        }
-    }
-
-    public void unloadMeshes() {
-        device.waitIdle();
-        for (VulkanMesh vulkanMesh : meshList) {
-            vulkanMesh.cleanup();
-        }
-        meshList.clear();
-    }
 }
 ```
 
-We have created a new attribute named `meshList` to hold the loaded meshes. The `loadMeshes` method just creates `VulkanMesh` instances using the data contained in the array of `MeshData`instances. If you recall, this implies creating the underlying buffers and loading the data into them. We provide method to remove all the meshes (`unloadMeshes`) or a specific one using its identifier (`unloadMesh`). 
+We have created a new attribute named `vulkanModels` to hold the loaded models. The `loadModels` method just creates `VulkanModel` instances using the data contained in the array of `ModelData` instances. If you recall, this implies creating the underlying buffers and loading the data into them. 
 
 The `render` method has been changed also. Prior to submitting the command buffers to the queue we call to a method named `recordCommandBuffers` to record the draw commands. In the previous chapter, we just cleared the screen, so the command buffers could be pre-recorded, while, in this case, we record them form each frame. Strictly speaking, we could also pre-record them, we could just do that after the meshes have been updated. However, later on, in the next chapters, we will need to render the scene based on entities which may be more dynamic than the meshes. Keeping the recorded commands in sync with scene items may not be easy. Therefore, we have chosen a simple approach which just re-records them each frame. The usage of pre-recorded command buffers in the previous chapters was just to show that this an efficient pattern usage in Vulkan.
 
@@ -1140,14 +1139,14 @@ private EngineProperties() {
 }
 ```
 
-Going back to the `ForwardRenderActivity`  constructor, after the code that checks if recompilation is required, we just create a `ShaderProgram` instance with a vertex and a fragment shader modules. As it has been said, in the loop that iterates to create the command buffers, we have removed the pre-recording. The rest is the same. 
+Going back to the `ForwardRenderActivity` constructor, after the code that checks if recompilation is required, we just create a `ShaderProgram` instance with a vertex and a fragment shader modules. As it has been said, in the loop that iterates to create the command buffers, we have removed the pre-recording. The rest is the same. 
 
-We have created a new method named `recordCommandBuffers` which reuses some of the code from the last chapter. We first retrieve the command buffer that should be used for the current swap chain image,  set the clear values, create the render pass begin information, start the recording and the render pass:
+We have created a new method named `recordCommandBuffers` which reuses some of the code from the last chapter. We first retrieve the command buffer that should be used for the current swap chain image,  set the clear values, create the render pass begin information and start the recording and the render pass:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -1182,12 +1181,12 @@ public class ForwardRenderActivity {
 }
 ```
 
-Although the code looks similar to the one use din the previous chapter, there is an important change, we are resetting the command buffer. In the previous chapter, we pre-record the command buffers at the beginning. Here we are recording a command buffer in each frame, we need to reset them prior to is usage. It is important to do it after the fence has been signaled, to prevent the command buffer rest while is still in use.  The new code starts now:
+Although the code looks similar to the one use din the previous chapter, there is an important change, we are resetting the command buffer. In the previous chapter, we pre-record the command buffers at the beginning. Here we are recording a command buffer in each frame, we need to reset them prior to is usage. It is important to do it after the fence has been signaled, to prevent the command buffer rest while is still in use. The new code starts now:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         ...
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
@@ -1223,16 +1222,18 @@ After that, we define the scissor, which dimensions are set to the size of the f
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
-            for (VulkanMesh mesh : meshes) {
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                for (VulkanModel.VulkanMesh mesh : vulkanModel.getVulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+                    vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                }
             }
 
             vkCmdEndRenderPass(cmdHandle);
@@ -1243,7 +1244,7 @@ public class ForwardRenderActivity {
 }
 ```
 
-We iterate over all the meshes and start by binding their vertices buffer by calling the `vkCmdBindVertexBuffers`. The next draw calls will use that data as an input. We also bind the buffer that holds the indices by calling the `vkCmdBindIndexBuffer` and finally we record the drawing of the vertices using those indices by calling the `vkCmdDrawIndexed`. After that, we finalize the render pass and the recording.
+We iterate over all the models, then over their meshes and start by binding their vertices buffer by calling the `vkCmdBindVertexBuffers`. The next draw calls will use that data as an input. We also bind the buffer that holds the indices by calling the `vkCmdBindIndexBuffer` and finally we record the drawing of the vertices using those indices by calling the `vkCmdDrawIndexed`. After that, we finalize the render pass and the recording.
 
 ## Shaders code
 

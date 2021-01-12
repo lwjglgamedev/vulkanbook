@@ -7,6 +7,7 @@ import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.scene.*;
 
 import java.lang.Math;
+import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -58,13 +59,16 @@ public class Main implements IAppLogic {
 
     @Override
     public void init(Window window, Scene scene, Render render) {
-        String meshId = "SponzaMesh";
-        MeshData[] meshDataList = ModelLoader.loadMeshes(meshId, "resources/models/sponza/Sponza.gltf",
-                "resources/models/sponza");
-        render.loadMeshes(meshDataList);
+        List<ModelData> modelDataList = new ArrayList<>();
 
-        Entity sponzaEntity = new Entity("SponzaEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        String sponzaModelId = "sponza-model";
+        ModelData sponzaModelData = ModelLoader.loadModel(sponzaModelId, "resources/models/sponza/Sponza.gltf",
+                "resources/models/sponza");
+        modelDataList.add(sponzaModelData);
+        Entity sponzaEntity = new Entity("SponzaEntity", sponzaModelId, new Vector3f(0.0f, 0.0f, 0.0f));
         scene.addEntity(sponzaEntity);
+
+        render.loadModels(modelDataList);
 
         Camera camera = scene.getCamera();
         camera.setPosition(0.0f, 5.0f, 0.0f);

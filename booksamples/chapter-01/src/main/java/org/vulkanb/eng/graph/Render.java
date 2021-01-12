@@ -5,11 +5,11 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Render {
 
-    public void cleanup() {
+    public Render(Window window, Scene scene) {
         // To be implemented
     }
 
-    public void init(Window window, Scene scene) {
+    public void cleanup() {
         // To be implemented
     }
 

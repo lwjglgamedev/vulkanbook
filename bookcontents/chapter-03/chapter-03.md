@@ -614,25 +614,25 @@ public class Render {
 }
 ```
 
-They will be instantiated in the `init` method, and released in the `cleanup` method as with the case of the `instance` attribute:
+They will be instantiated in the constructor, and released in the `cleanup` method as with the case of the `instance` attribute:
 
 ```java
 public class Render {
     ...
-    public void cleanup() {
-        surface.cleanup();
-        device.cleanup();
-        physicalDevice.cleanup();
-        instance.cleanup();
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
         device = new Device(physicalDevice);
         surface = new Surface(physicalDevice, window.getWindowHandle());
         graphQueue = new Queue.GraphicsQueue(device, 0);
+    }
+
+    public void cleanup() {
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
     }
     ...
 ```

@@ -48,7 +48,7 @@ public class CommandBuffer {
     public void cleanup() {
         LOGGER.trace("Destroying command buffer");
         vkFreeCommandBuffers(commandPool.getDevice().getVkDevice(), commandPool.getVkCommandPool(),
-                this.vkCommandBuffer);
+                vkCommandBuffer);
     }
 
     public void endRecording() {

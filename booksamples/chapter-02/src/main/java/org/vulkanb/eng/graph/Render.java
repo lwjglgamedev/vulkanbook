@@ -8,13 +8,13 @@ public class Render {
 
     private Instance instance;
 
-    public void cleanup() {
-        instance.cleanup();
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
+    }
+
+    public void cleanup() {
+        instance.cleanup();
     }
 
     public void render(Window window, Scene scene) {

@@ -266,21 +266,23 @@ public class VertexBufferStructure extends VertexInputStateInfo {
 
 We define a new constant named `TEXT_COORD_COMPONENTS`  which states that the texture coordinates will be composed by two elements (two floats). The number of attributes of each vertex will be now two (defined by the constant `NUMBER_OF_ATTRIBUTES`), one for the position components and another one for the texture coordinates. We need to define another attribute for the texture coordinates, therefore the buffer of `VkVertexInputAttributeDescription` will have an extra element.  The attribute definition itself is quite similar to the one used for the positions, in this case, the size will be for two floats. Finally, the stride need to be update due to the length increase.
 
-We need to modify the `MeshData` class to include texture coordinates:
+We need to modify the `ModelData.MeshData` class to include texture coordinates:
 
 ```java
-package org.vulkanb.eng.scene;
-
-public record MeshData(String id, float[]positions, float[]textCoords, int[]indices) {
+public class ModelData {
+    ...
+    public record MeshData(float[] positions, float[] textCoords, int[] indices) {
+    }
+    ...
 }
 ```
 
-An therefore,  the way we load vertices in the `VulkanMesh`  class needs also to be updated:
+An therefore,  the way we load vertices in the `VulkanModel` class needs also to be updated:
 
 ```java
-public class VulkanMesh {
-...
-    private static TransferBuffers createVerticesBuffers(Device device, MeshData meshData) {
+public class VulkanModel {
+    ...
+    private static TransferBuffers createVerticesBuffers(Device device, ModelData.MeshData meshData) {
         float[] positions = meshData.positions();
         float[] textCoords = meshData.textCoords();
         if (textCoords == null || textCoords.length == 0) {
@@ -438,15 +440,15 @@ import org.joml.*;
 public class Entity {
 
     private String id;
-    private String meshId;
+    private String modelId;
     private Matrix4f modelMatrix;
     private Vector3f position;
     private Quaternionf rotation;
     private float scale;
 
-    public Entity(String id, String meshId, Vector3f position) {
+    public Entity(String id, String modelId, Vector3f position) {
         this.id = id;
-        this.meshId = meshId;
+        this.modelId = modelId;
         this.position = position;
         scale = 1;
         rotation = new Quaternionf();
@@ -458,8 +460,8 @@ public class Entity {
         return id;
     }
 
-    public String getMeshId() {
-        return meshId;
+    public String getModelId() {
+        return modelId;
     }
 
     public Matrix4f getModelMatrix() {
@@ -496,7 +498,7 @@ public class Entity {
 }
 ```
 
-Each `Entity` shall have an identifier which should be unique. It is also linked to the mesh that will be used to render it through the `meshId` attribute. An `Entity` will have also a position, a rotation (modeled using a  quaternion) and a scale. With all that information we are able to construct a model matrix by calling the `updateModelMatrix` from the `Matrix4f` class. The `updateModelMatrix` should be called, each time the position, rotation or scale changes.
+Each `Entity` shall have an identifier which should be unique. It is also linked to the model that will be used to render it through the `modelId` attribute. An `Entity` will have also a position, a rotation (modeled using a  quaternion) and a scale. With all that information we are able to construct a model matrix by calling the `updateModelMatrix` from the `Matrix4f` class. The `updateModelMatrix` should be called, each time the position, rotation or scale changes.
 
 Now we can setup the required infrastructure to put the `Projection` and `Entity` classes into work. We will add this to an empty class which has been there since the beginning, the  `Scene` class. The class definition starts like this:
 
@@ -532,13 +534,13 @@ public class Scene {
 }
 ```
 
-As it can be seen, the entities are organized by their `meshId`. Those entities which share the same `meshId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (suing its identifier) and to get the projection matrix.
+As it can be seen, the entities are arranged by their `modelId`. Those entities which share the same `modelId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (suing its identifier) and to get the projection matrix.
 
 ```java
 public class Scene {
     ...
-    public List<Entity> getEntitiesByMeshId(String meshId) {
-        return entitiesMap.get(meshId);
+    public List<Entity> getEntitiesByModelId(String modelId) {
+        return entitiesMap.get(modelId);
     }
 
     public Map<String, List<Entity>> getEntitiesMap() {
@@ -681,19 +683,19 @@ We have coded all the elements required to support the proper rendering of 3D mo
 ```java
 ...
 public class Render {
-...
+    ...
     public void render(Window window, Scene scene) {
         if (window.getWidth() <= 0 && window.getHeight() <= 0) {
             return;
         }
-        if (window.isResized() || this.swapChain.acquireNextImage()) {
+        if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);
             scene.getProjection().resize(window.getWidth(), window.getHeight());
             swapChain.acquireNextImage();
         }
 
-        fwdRenderActivity.recordCommandBuffers(meshList, scene);
+        fwdRenderActivity.recordCommandBuffers(vulkanModels);
         fwdRenderActivity.submit(presentQueue);
 
         if (swapChain.presentImage(graphQueue)) {
@@ -713,7 +715,7 @@ public class Render {
                 engProps.isvSync());
         fwdRenderActivity.resize(swapChain);
     }
-...
+    ...
 }
 ```
 
@@ -813,7 +815,7 @@ We need also to update the `recordCommandBuffers` method, to take the depth buff
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
     ...
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(2, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
@@ -829,22 +831,28 @@ In previous chapters, we just recorded commands to clear the color attachment. N
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE * 2);
-            for (VulkanMesh mesh : meshes) {
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                String modelId = vulkanModel.getModelId();
+                List<Entity> entities = scene.getEntitiesByModelId(modelId);
+                if (entities.isEmpty()) {
+                    continue;
+                }
+                for (VulkanModel.VulkanMesh mesh : vulkanModel.getVulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    setPushConstants(cmdHandle, scene.getProjection().getProjectionMatrix(), entity.getModelMatrix(),
-                            pushConstantBuffer);
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
+                    for (Entity entity : entities) {
+                        setPushConstants(cmdHandle, scene.getProjection().getProjectionMatrix(), entity.getModelMatrix(),
+                                pushConstantBuffer);
+                        vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                    }
                 }
             }
         ...
@@ -853,7 +861,7 @@ public class ForwardRenderActivity {
 }
 ```
 
-We allocate a `ButeBuffer` to store the information for the push constants. The single loop that iterated over the meshes is now a double loop. We iterate first using the meshes, and for each of them we get the list of entities that have that mesh and iterate over them to render them. The vertex and index buffers are the same, we just need to bind them once per mesh, but for entities, we need to set the push constants for each of them and also record a draw command. Let's examine the `setPushConstants` method:
+We allocate a `ButeBuffer` to store the information for the push constants. The double loop that iterated over the models and then over the meshes is now a triple loop. For each of the meshes we get the list of entities that have that mesh and iterate over them to render them. The vertex and index buffers are the same, we just need to bind them once per mesh, but for entities, we need to set the push constants for each of them and also record a draw command. Let's examine the `setPushConstants` method:
 
 ```java
 public class ForwardRenderActivity {
@@ -931,11 +939,16 @@ public class Main implements IAppLogic {
                 7, 6, 4, 7, 4, 5,
         };
 
-        String meshId = "CubeMesh";
-        MeshData meshData = new MeshData(meshId, positions, textCoords, indices);
-        render.loadMeshes(new MeshData[]{meshData});
+        String modelId = "CubeModel";
+        ModelData.MeshData meshData = new ModelData.MeshData(positions, textCoords, indices);
+        List<ModelData.MeshData> meshDataList = new ArrayList<>();
+        meshDataList.add(meshData);
+        ModelData modelData = new ModelData(modelId, meshDataList);
+        List<ModelData> modelDataList = new ArrayList<>();
+        modelDataList.add(modelData);
+        render.loadModels(modelDataList);
 
-        cubeEntity = new Entity("CubeEntity", meshId, new Vector3f(0.0f, 0.0f, 0.0f));
+        cubeEntity = new Entity("CubeEntity", modelId, new Vector3f(0.0f, 0.0f, 0.0f));
         cubeEntity.setPosition(0, 0, -2);
         scene.addEntity(cubeEntity);
     }
@@ -943,7 +956,7 @@ public class Main implements IAppLogic {
 }
 ```
 
-We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color.  We need to create also a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `handleInput`method, that will be invoked periodically to update that angle:
+We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color. After that, we need to create also a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `handleInput`method, that will be invoked periodically to update that angle:
 
 ```java
 public class Main implements IAppLogic {

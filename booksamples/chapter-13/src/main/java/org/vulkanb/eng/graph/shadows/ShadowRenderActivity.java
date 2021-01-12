@@ -27,14 +27,16 @@ public class ShadowRenderActivity {
     private Device device;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
+    private Scene scene;
     private ShaderProgram shaderProgram;
     private ShadowsFrameBuffer shadowsFrameBuffer;
     private VulkanBuffer[] shadowsUniforms;
     private SwapChain swapChain;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
-    public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache) {
+    public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
+        this.scene = scene;
         device = swapChain.getDevice();
         int numImages = swapChain.getNumImages();
         shadowsFrameBuffer = new ShadowsFrameBuffer(device);
@@ -114,7 +116,7 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanMesh> meshList, Scene scene) {
+    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
@@ -165,31 +167,44 @@ public class ShadowRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
-            LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer descriptorSets = stack.mallocLong(1)
                     .put(0, projMatrixDescriptorSet[idx].getVkDescriptorSet());
 
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            for (VulkanMesh mesh : meshList) {
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+            recordEntities(stack, cmdHandle, vulkanModelList);
 
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
-                }
-            }
             vkCmdEndRenderPass(cmdHandle);
         }
     }
 
-    public void resize(SwapChain swapChain, Scene scene) {
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList) {
+        LongBuffer offsets = stack.mallocLong(1);
+        offsets.put(0, 0L);
+        LongBuffer vertexBuffer = stack.mallocLong(1);
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            String modelId = vulkanModel.getModelId();
+            List<Entity> entities = scene.getEntitiesByModelId(modelId);
+            if (entities.isEmpty()) {
+                continue;
+            }
+            for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                    for (Entity entity : entities) {
+                        setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
+                        vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;
         CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
     }

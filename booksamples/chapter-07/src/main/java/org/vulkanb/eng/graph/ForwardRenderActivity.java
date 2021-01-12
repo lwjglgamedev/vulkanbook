@@ -29,11 +29,13 @@ public class ForwardRenderActivity {
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
     private SwapChainRenderPass renderPass;
+    private Scene scene;
     private SwapChain swapChain;
 
-    public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache) {
+    public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
+        this.scene = scene;
         device = swapChain.getDevice();
 
         Device device = swapChain.getDevice();
@@ -106,7 +108,7 @@ public class ForwardRenderActivity {
         }
     }
 
-    public void recordCommandBuffers(List<VulkanMesh> meshes, Scene scene) {
+    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -160,16 +162,22 @@ public class ForwardRenderActivity {
             offsets.put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
             ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE * 2);
-            for (VulkanMesh mesh : meshes) {
-                vertexBuffer.put(0, mesh.getVerticesBuffer().getBuffer());
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, mesh.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                String modelId = vulkanModel.getModelId();
+                List<Entity> entities = scene.getEntitiesByModelId(modelId);
+                if (entities.isEmpty()) {
+                    continue;
+                }
+                for (VulkanModel.VulkanMesh mesh : vulkanModel.getVulkanMeshList()) {
+                    vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
+                    vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-                List<Entity> entities = scene.getEntitiesByMeshId(mesh.getId());
-                for (Entity entity : entities) {
-                    setPushConstants(cmdHandle, scene.getProjection().getProjectionMatrix(), entity.getModelMatrix(),
-                            pushConstantBuffer);
-                    vkCmdDrawIndexed(cmdHandle, mesh.getIndicesCount(), 1, 0, 0, 0);
+                    for (Entity entity : entities) {
+                        setPushConstants(cmdHandle, scene.getProjection().getProjectionMatrix(), entity.getModelMatrix(),
+                                pushConstantBuffer);
+                        vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
+                    }
                 }
             }
 

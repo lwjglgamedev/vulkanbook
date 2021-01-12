@@ -188,7 +188,7 @@ public class ShadowRenderActivity {
         LongBuffer vertexBuffer = stack.mallocLong(1);
         for (VulkanModel vulkanModel : vulkanModelList) {
             String modelId = vulkanModel.getModelId();
-            List<Entity> entities = scene.getEntitiesByMeshId(modelId);
+            List<Entity> entities = scene.getEntitiesByModelId(modelId);
             if (entities.isEmpty()) {
                 continue;
             }

@@ -13,15 +13,7 @@ public class Render {
     private Surface surface;
     private SwapChain swapChain;
 
-    public void cleanup() {
-        swapChain.cleanup();
-        surface.cleanup();
-        device.cleanup();
-        physicalDevice.cleanup();
-        instance.cleanup();
-    }
-
-    public void init(Window window, Scene scene) {
+    public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
         instance = new Instance(engProps.isValidate());
         physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
@@ -30,6 +22,14 @@ public class Render {
         graphQueue = new Queue.GraphicsQueue(device, 0);
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
                 engProps.isvSync());
+    }
+
+    public void cleanup() {
+        swapChain.cleanup();
+        surface.cleanup();
+        device.cleanup();
+        physicalDevice.cleanup();
+        instance.cleanup();
     }
 
     public void render(Window window, Scene scene) {

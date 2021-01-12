@@ -6,6 +6,7 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.Window;
 
 import java.nio.*;
+import java.util.Arrays;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -159,13 +160,8 @@ public class SwapChain {
     public void cleanup() {
         LOGGER.debug("Destroying Vulkan SwapChain");
         swapChainExtent.free();
-
-        int size = imageViews != null ? imageViews.length : 0;
-        for (int i = 0; i < size; i++) {
-            imageViews[i].cleanup();
-            syncSemaphoresList[i].cleanup();
-        }
-
+        Arrays.stream(imageViews).forEach(ImageView::cleanup);
+        Arrays.stream(syncSemaphoresList).forEach(SyncSemaphores::cleanup);
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
     }
 
