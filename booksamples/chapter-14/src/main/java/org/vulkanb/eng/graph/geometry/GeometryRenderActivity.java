@@ -21,6 +21,7 @@ public class GeometryRenderActivity {
     private static final String GEOMETRY_VERTEX_SHADER_FILE_GLSL = "resources/shaders/geometry_vertex.glsl";
     private static final String GEOMETRY_VERTEX_SHADER_FILE_SPV = GEOMETRY_VERTEX_SHADER_FILE_GLSL + ".spv";
 
+    private MemoryBarrier acquireBarrier;
     private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
@@ -36,6 +37,7 @@ public class GeometryRenderActivity {
     private PipelineCache pipelineCache;
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
+    private MemoryBarrier releaseBarrier;
     private Scene scene;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
@@ -59,6 +61,8 @@ public class GeometryRenderActivity {
         createPipeline();
         createCommandBuffers(commandPool, numImages);
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
+        acquireBarrier = new MemoryBarrier(0, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
+        releaseBarrier = new MemoryBarrier(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, 0);
     }
 
     public CommandBuffer beginRecording() {
@@ -175,6 +179,10 @@ public class GeometryRenderActivity {
     }
 
     public void endRecording(CommandBuffer commandBuffer) {
+        // Release barrier
+        vkCmdPipelineBarrier(commandBuffer.getVkCommandBuffer(), VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                0, releaseBarrier.getMemoryBarrier(), null, null);
+
         commandBuffer.endRecording();
     }
 
@@ -210,6 +218,12 @@ public class GeometryRenderActivity {
                     .framebuffer(frameBuffer.getVkFrameBuffer());
 
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
+
+            // Acquire barrier
+            vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                    0, acquireBarrier.getMemoryBarrier(), null, null);
+
+
             vkCmdBeginRenderPass(cmdHandle, renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
