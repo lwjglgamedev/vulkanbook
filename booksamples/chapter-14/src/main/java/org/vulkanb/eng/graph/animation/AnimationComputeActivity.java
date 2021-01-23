@@ -4,12 +4,15 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.scene.Entity;
+import org.vulkanb.eng.scene.Scene;
 
 import java.nio.LongBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.lwjgl.vulkan.VK11.*;
 
@@ -169,7 +172,7 @@ public class AnimationComputeActivity {
             }
 
             // Release barrier
-            vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
                     0, releaseMemoryBarrier.getMemoryBarrier(), null, null);
         }
         commandBuffer.endRecording();
