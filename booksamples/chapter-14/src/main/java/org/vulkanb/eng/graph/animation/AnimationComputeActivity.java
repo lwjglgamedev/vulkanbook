@@ -22,7 +22,7 @@ public class AnimationComputeActivity {
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
 
-    private MemoryBarrier acquireMemoryBarrier;
+    private MemoryBarrier memoryBarrier;
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
     private Queue.ComputeQueue computeQueue;
@@ -34,7 +34,6 @@ public class AnimationComputeActivity {
     private Fence fence;
     // Key is the model id
     private Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
-    private MemoryBarrier releaseMemoryBarrier;
     private Scene scene;
     private ShaderProgram shaderProgram;
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
@@ -51,8 +50,7 @@ public class AnimationComputeActivity {
         createCommandBuffers(commandPool);
         modelDescriptorSetsMap = new HashMap<>();
         entityAnimationsBuffers = new HashMap<>();
-        acquireMemoryBarrier = new MemoryBarrier(0, VK_ACCESS_SHADER_WRITE_BIT);
-        releaseMemoryBarrier = new MemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, 0);
+        memoryBarrier = new MemoryBarrier(0, VK_ACCESS_SHADER_WRITE_BIT);
     }
 
     public void cleanup() {
@@ -125,9 +123,8 @@ public class AnimationComputeActivity {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
-            // Acquire barrier
             vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    0, acquireMemoryBarrier.getMemoryBarrier(), null, null);
+                    0, memoryBarrier.getMemoryBarrier(), null, null);
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.getVkPipeline());
 
@@ -170,10 +167,6 @@ public class AnimationComputeActivity {
                     }
                 }
             }
-
-            // Release barrier
-            vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-                    0, releaseMemoryBarrier.getMemoryBarrier(), null, null);
         }
         commandBuffer.endRecording();
     }

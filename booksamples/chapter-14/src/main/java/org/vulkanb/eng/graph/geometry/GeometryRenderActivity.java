@@ -1,15 +1,19 @@
 package org.vulkanb.eng.graph.geometry;
 
-import org.lwjgl.system.*;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.scene.Entity;
+import org.vulkanb.eng.scene.Scene;
 
-import java.nio.*;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.nio.LongBuffer;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
@@ -21,7 +25,7 @@ public class GeometryRenderActivity {
     private static final String GEOMETRY_VERTEX_SHADER_FILE_GLSL = "resources/shaders/geometry_vertex.glsl";
     private static final String GEOMETRY_VERTEX_SHADER_FILE_SPV = GEOMETRY_VERTEX_SHADER_FILE_GLSL + ".spv";
 
-    private MemoryBarrier acquireBarrier;
+    private MemoryBarrier memoryBarrier;
     private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
@@ -37,7 +41,6 @@ public class GeometryRenderActivity {
     private PipelineCache pipelineCache;
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
-    private MemoryBarrier releaseBarrier;
     private Scene scene;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
@@ -61,8 +64,7 @@ public class GeometryRenderActivity {
         createPipeline();
         createCommandBuffers(commandPool, numImages);
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
-        acquireBarrier = new MemoryBarrier(0, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
-        releaseBarrier = new MemoryBarrier(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, 0);
+        memoryBarrier = new MemoryBarrier(0, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
     }
 
     public CommandBuffer beginRecording() {
@@ -179,10 +181,6 @@ public class GeometryRenderActivity {
     }
 
     public void endRecording(CommandBuffer commandBuffer) {
-        // Release barrier
-        vkCmdPipelineBarrier(commandBuffer.getVkCommandBuffer(), VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, releaseBarrier.getMemoryBarrier(), null, null);
-
         commandBuffer.endRecording();
     }
 
@@ -219,10 +217,8 @@ public class GeometryRenderActivity {
 
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
-            // Acquire barrier
             vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-                    0, acquireBarrier.getMemoryBarrier(), null, null);
-
+                    0, memoryBarrier.getMemoryBarrier(), null, null);
 
             vkCmdBeginRenderPass(cmdHandle, renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
