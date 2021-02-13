@@ -1,13 +1,15 @@
 package org.vulkanb.eng.scene;
 
-import org.apache.logging.log4j.*;
-import org.joml.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector4f;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.assimp.*;
 import org.lwjgl.system.MemoryStack;
 
 import java.io.File;
-import java.lang.Math;
 import java.nio.IntBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -125,7 +127,7 @@ public class ModelLoader {
 
     public static ModelData loadModel(String modelId, String modelPath, String texturesDir, boolean animation) {
         return loadModel(modelId, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
-                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace |
+                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace | aiProcess_LimitBoneWeights |
                 (animation ? 0 : aiProcess_PreTransformVertices));
     }
 

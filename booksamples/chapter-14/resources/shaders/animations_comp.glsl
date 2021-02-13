@@ -33,44 +33,44 @@ void main()
     weights.y * jointMatricesUniform.jointMatrices[joints.y] * position +
     weights.z * jointMatricesUniform.jointMatrices[joints.z] * position +
     weights.w * jointMatricesUniform.jointMatrices[joints.w] * position;
-    dstVector.data[baseIdxSrcBuf] = position.x;
-    dstVector.data[baseIdxSrcBuf + 1] = position.y;
-    dstVector.data[baseIdxSrcBuf + 2] = position.z;
+    dstVector.data[baseIdxSrcBuf] = position.x / position.w;
+    dstVector.data[baseIdxSrcBuf + 1] = position.y / position.w;
+    dstVector.data[baseIdxSrcBuf + 2] = position.z / position.w;
 
-    baseIdxSrcBuf = baseIdxSrcBuf + 3;
+    baseIdxSrcBuf += 3;
     vec4 normal = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     normal =
     weights.x * jointMatricesUniform.jointMatrices[joints.x] * normal +
     weights.y * jointMatricesUniform.jointMatrices[joints.y] * normal +
     weights.z * jointMatricesUniform.jointMatrices[joints.z] * normal +
     weights.w * jointMatricesUniform.jointMatrices[joints.w] * normal;
-    dstVector.data[baseIdxSrcBuf] = normal.x;
-    dstVector.data[baseIdxSrcBuf + 1] = normal.y;
-    dstVector.data[baseIdxSrcBuf + 2] = normal.z;
+    dstVector.data[baseIdxSrcBuf] = normal.x / normal.w;
+    dstVector.data[baseIdxSrcBuf + 1] = normal.y / normal.w;
+    dstVector.data[baseIdxSrcBuf + 2] = normal.z / normal.w;
 
-    baseIdxSrcBuf = baseIdxSrcBuf + 3;
+    baseIdxSrcBuf += 3;
     vec4 tangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     tangent =
     weights.x * jointMatricesUniform.jointMatrices[joints.x] * tangent +
     weights.y * jointMatricesUniform.jointMatrices[joints.y] * tangent +
     weights.z * jointMatricesUniform.jointMatrices[joints.z] * tangent +
     weights.w * jointMatricesUniform.jointMatrices[joints.w] * tangent;
-    dstVector.data[baseIdxSrcBuf] = tangent.x;
-    dstVector.data[baseIdxSrcBuf + 1] = tangent.y;
-    dstVector.data[baseIdxSrcBuf + 2] = tangent.z;
+    dstVector.data[baseIdxSrcBuf] = tangent.x / tangent.w;
+    dstVector.data[baseIdxSrcBuf + 1] = tangent.y / tangent.w;
+    dstVector.data[baseIdxSrcBuf + 2] = tangent.z / tangent.w;
 
-    baseIdxSrcBuf = baseIdxSrcBuf + 3;
+    baseIdxSrcBuf += 3;
     vec4 bitangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     bitangent =
     weights.x * jointMatricesUniform.jointMatrices[joints.x] * bitangent +
     weights.y * jointMatricesUniform.jointMatrices[joints.y] * bitangent +
     weights.z * jointMatricesUniform.jointMatrices[joints.z] * bitangent +
     weights.w * jointMatricesUniform.jointMatrices[joints.w] * bitangent;
-    dstVector.data[baseIdxSrcBuf] = bitangent.x;
-    dstVector.data[baseIdxSrcBuf + 1] = bitangent.y;
-    dstVector.data[baseIdxSrcBuf + 2] = bitangent.z;
+    dstVector.data[baseIdxSrcBuf] = bitangent.x / bitangent.w;
+    dstVector.data[baseIdxSrcBuf + 1] = bitangent.y / bitangent.w;
+    dstVector.data[baseIdxSrcBuf + 2] = bitangent.z / bitangent.w;
 
-    baseIdxSrcBuf = baseIdxSrcBuf + 3;
+    baseIdxSrcBuf += 3;
     vec2 textCoords = vec2(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1]);
     dstVector.data[baseIdxSrcBuf] = textCoords.x;
     dstVector.data[baseIdxSrcBuf + 1] = textCoords.y;
