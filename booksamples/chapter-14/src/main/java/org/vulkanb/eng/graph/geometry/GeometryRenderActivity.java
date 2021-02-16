@@ -1,19 +1,15 @@
 package org.vulkanb.eng.graph.geometry;
 
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.Entity;
-import org.vulkanb.eng.scene.Scene;
+import org.vulkanb.eng.scene.*;
 
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
+import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
@@ -64,7 +60,7 @@ public class GeometryRenderActivity {
         createPipeline();
         createCommandBuffers(commandPool, numImages);
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
-        memoryBarrier = new MemoryBarrier(0, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
+        memoryBarrier = new MemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
     }
 
     public CommandBuffer beginRecording() {

@@ -4,23 +4,20 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.Entity;
-import org.vulkanb.eng.scene.Scene;
+import org.vulkanb.eng.scene.*;
 
 import java.nio.LongBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: Check if adding timers for animations could fit for this chapter
 public class AnimationComputeActivity {
 
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
+    private static final int LOCAL_SIZE_X = 32;
 
     private MemoryBarrier memoryBarrier;
     private CommandBuffer commandBuffer;
@@ -73,11 +70,11 @@ public class AnimationComputeActivity {
 
     private void createDescriptorPool() {
         EngineProperties engineProperties = EngineProperties.getInstance();
-        int maxAnimatedMeshes = engineProperties.getMaxAnimatedMeshes();
-        int maxAnimatedFrames = engineProperties.getMaxAnimatedFrames();
+        int maxStorageBuffers = engineProperties.getMaxStorageBuffers();
+        int maxJointsMatricesLists = engineProperties.getMaxJointsMatricesLists();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxAnimatedMeshes, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxAnimatedFrames, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxStorageBuffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxJointsMatricesLists, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
@@ -161,7 +158,7 @@ public class AnimationComputeActivity {
                             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
                                     computePipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 
-                            vkCmdDispatch(cmdHandle, meshDescriptorSets.numVertices(), 1, 1);
+                            vkCmdDispatch(cmdHandle, meshDescriptorSets.groupSize(), 1, 1);
                         }
                         meshCount++;
                     }
@@ -204,11 +201,11 @@ public class AnimationComputeActivity {
             List<MeshDescriptorSets> meshDescriptorSetsList = new ArrayList<>();
             for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
                 for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
-                    int vertexSize = 14 * 4;
-                    int numVertices = (int) (mesh.verticesBuffer().getRequestedSize() / vertexSize);
+                    int vertexSize = 14 * GraphConstants.FLOAT_LENGTH;
+                    int groupSize = (int) Math.ceil((mesh.verticesBuffer().getRequestedSize() / vertexSize) / (float) LOCAL_SIZE_X);
                     MeshDescriptorSets meshDescriptorSets = new MeshDescriptorSets(
                             new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout, mesh.verticesBuffer(), 0),
-                            numVertices,
+                            groupSize,
                             new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout, mesh.weightsBuffer(), 0)
                     );
                     meshDescriptorSetsList.add(meshDescriptorSets);
@@ -236,7 +233,7 @@ public class AnimationComputeActivity {
         }
     }
 
-    record MeshDescriptorSets(DescriptorSet srcDescriptorSet, int numVertices,
+    record MeshDescriptorSets(DescriptorSet srcDescriptorSet, int groupSize,
                               DescriptorSet weightsDescriptorSet) {
     }
 

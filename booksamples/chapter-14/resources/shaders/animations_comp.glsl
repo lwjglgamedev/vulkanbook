@@ -6,7 +6,7 @@ layout (std430, set=0, binding=0) readonly buffer srcBuf {
     float data[];
 } srcVector;
 
-layout (std430, set=1, binding=0) buffer weightsBuf {
+layout (std430, set=1, binding=0) readonly buffer weightsBuf {
     float data[];
 } weightsVector;
 

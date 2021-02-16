@@ -7,8 +7,8 @@ import java.util.Properties;
 
 public class EngineProperties {
     private static final float DEFAULT_FOV = 60.0f;
-    private static final int DEFAULT_MAX_ANIMATED_FRAMES = 100;
-    private static final int DEFAULT_MAX_ANIMATED_MESHES = 100;
+    private static final int DEFAULT_MAX_JOINTS_MATRICES_LISTS = 100;
+    private static final int DEFAULT_STORAGES_BUFFERS = 100;
     private static final int DEFAULT_MAX_MATERIALS = 500;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final float DEFAULT_SHADOW_BIAS = 0.00005f;
@@ -21,8 +21,8 @@ public class EngineProperties {
     private static EngineProperties instance;
     private String defaultTexturePath;
     private float fov;
-    private int maxAnimatedFrames;
-    private int maxAnimatedMeshes;
+    private int maxJointsMatricesLists;
+    private int maxStorageBuffers;
     private int maxMaterials;
     private String physDeviceName;
     private int requestedImages;
@@ -58,8 +58,8 @@ public class EngineProperties {
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", DEFAULT_SHADOW_BIAS).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", DEFAULT_SHADOW_MAP_SIZE).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
-            maxAnimatedMeshes = Integer.parseInt(props.getOrDefault("maxAnimatedMeshes", DEFAULT_MAX_ANIMATED_MESHES).toString());
-            maxAnimatedFrames = Integer.parseInt(props.getOrDefault("maxAnimatedFrames", DEFAULT_MAX_ANIMATED_FRAMES).toString());
+            maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", DEFAULT_STORAGES_BUFFERS).toString());
+            maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", DEFAULT_MAX_JOINTS_MATRICES_LISTS).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -80,12 +80,12 @@ public class EngineProperties {
         return fov;
     }
 
-    public int getMaxAnimatedFrames() {
-        return maxAnimatedFrames;
+    public int getMaxJointsMatricesLists() {
+        return maxJointsMatricesLists;
     }
 
-    public int getMaxAnimatedMeshes() {
-        return maxAnimatedMeshes;
+    public int getMaxStorageBuffers() {
+        return maxStorageBuffers;
     }
 
     public int getMaxMaterials() {
