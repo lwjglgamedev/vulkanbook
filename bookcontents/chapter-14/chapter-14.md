@@ -8,15 +8,549 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 ## Skeletal animation introduction
 
-TBD
+In skeletal animation the way a model is transformed to play an animation is defined by its underlying skeleton. A skeleton is nothing more than a hierarchy of special points called joints. In addition to that, the final position of each joint is affected by the position of their parents. For instance, think of a wrist: the position of a wrist is modified if a character moves the elbow and also if it moves the shoulder.
+
+Joints do not need to represent a physical bone or articulation: they are artifacts that allow the creatives to model an animation  (we may use sometimes the terms bone and joint to refer to the same ting). The models still have vertices that define the different positions, but, in skeletal animation, vertices are drawn based on the position of the joints they are related to and modulated by a set of weights. If we draw a model using just the vertices, without taking into consideration the joints, we would get a 3D model in what is called the bind pose. Each animation is divided into key frames which basically describes the transformations that should be applied to each joint. By changing those transformations, changing those key frames, along time, we are able to animate the model. Those transformations are based on 4x4 matrices which model the displacement and rotation of each joint according to the hierarchy (basically each joint must accumulate the transformations defined by its parents).
+
+If you are reading this, you might probably already know the fundamentals of skeletal animations. The purpose of this chapter is not to explain this in detail but to show an example on how this can be implemented using Vulkan with compute shaders. If you need all the details of skeletal animations you can check this [excellent tutorial](http://ogldev.atspace.co.uk/www/tutorial38/tutorial38.html).
 
 ## Loading the models
 
-TBD: Explain the changes in:
-    - ModelData
-    - Entity.
-    - ModelLoader.
-    - VulkanModel.
+We need to modify the code that loads 3D models to support animations. The first step is to modify the `ModelData` class to store the data required to animate models:
+```java
+public class ModelData {
+    private List<AnimMeshData> animMeshDataList;
+    private List<Animation> animationsList;
+    ...
+    public List<AnimMeshData> getAnimMeshDataList() {
+        return animMeshDataList;
+    }
+
+    public List<Animation> getAnimationsList() {
+        return animationsList;
+    }
+    ...
+    public void setAnimMeshDataList(List<AnimMeshData> animMeshDataList) {
+        this.animMeshDataList = animMeshDataList;
+    }
+
+    public void setAnimationsList(List<Animation> animationsList) {
+        this.animationsList = animationsList;
+    }
+
+    public record AnimMeshData(float[] weights, int[] boneIds) {
+    }
+
+    public record AnimatedFrame(Matrix4f[] jointMatrices) {
+    }
+
+    public record Animation(String name, double duration, List<AnimatedFrame> frames) {
+    }
+    ...
+}
+```
+The new `animMeshDataList` attribute is the equivalent of the `meshDataList` one. That list will contain an entry for each mesh storing the relevant data for animated models. In this case, that data is grouped under the `AnimMeshData` and contains two arrays that will contain the weights that will modulate the transformations applied to the joints related to each vertex (related by their identifier in the hierarchy). That data is common to all the animations supported by the model, since it is related to the model structure itself, its skeleton. The `animationsList` attribute holds the list of animations defined for a model. An animation is described by the `Animation` record and consists on a name the duration of the animation and the data of the key frames that compose the animation. Key frame data is defined by the `AnimatedFrame` record which contains the transformation matrices for each of the model joints for that specific frame. Therefore, in order to load animated models we just need to get the additional structural data for mesh (weights and the joints they apply to) and the transformation matrices for each of those joints per animation key frame.
+
+After that we need to modify the `Entity` class to add new attributes to control its animation state to pause / resume the animation, to select the proper animation and to select a specific key frame):
+```java
+public class Entity {
+
+    private EntityAnimation entityAnimation;
+    ...
+    public EntityAnimation getEntityAnimation() {
+        return entityAnimation;
+    }    
+    ...
+    public void setEntityAnimation(EntityAnimation entityAnimation) {
+        this.entityAnimation = entityAnimation;
+    }
+    ...
+    public static class EntityAnimation {
+        private int animationIdx;
+        private int currentFrame;
+        private boolean started;
+
+        public EntityAnimation(boolean started, int animationIdx, int currentFrame) {
+            this.started = started;
+            this.animationIdx = animationIdx;
+            this.currentFrame = currentFrame;
+        }
+
+        public int getAnimationIdx() {
+            return animationIdx;
+        }
+
+        public int getCurrentFrame() {
+            return currentFrame;
+        }
+
+        public boolean isStarted() {
+            return started;
+        }
+
+        public void setAnimationIdx(int animationIdx) {
+            this.animationIdx = animationIdx;
+        }
+
+        public void setCurrentFrame(int currentFrame) {
+            this.currentFrame = currentFrame;
+        }
+
+        public void setStarted(boolean started) {
+            this.started = started;
+        }
+    }    
+}
+```
+
+After all those changes we can modify the `ModelLoader` class to load animation data using Assimp. We will examine the changes in a logical order (not the alphabetical order which is used in source files). The starting point will be the `loadModel` methods.
+```java
+public class ModelLoader {
+    ...
+    public static ModelData loadModel(String modelId, String modelPath, String texturesDir, boolean animation) {
+        return loadModel(modelId, modelPath, texturesDir, aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices |
+                aiProcess_Triangulate | aiProcess_FixInfacingNormals | aiProcess_CalcTangentSpace | aiProcess_LimitBoneWeights |
+                (animation ? 0 : aiProcess_PreTransformVertices));
+    }
+
+    public static ModelData loadModel(String modelId, String modelPath, String texturesDir, int flags) {
+        ...
+        ModelData modelData = new ModelData(modelId, meshDataList, materialList);
+
+        int numAnimations = aiScene.mNumAnimations();
+        if (numAnimations > 0) {
+            LOGGER.debug("Processing animations");
+            List<Bone> boneList = new ArrayList<>();
+            List<ModelData.AnimMeshData> animMeshDataList = new ArrayList<>();
+            for (int i = 0; i < numMeshes; i++) {
+                AIMesh aiMesh = AIMesh.create(aiMeshes.get(i));
+                ModelData.AnimMeshData animMeshData = processBones(aiMesh, boneList);
+                animMeshDataList.add(animMeshData);
+            }
+            modelData.setAnimMeshDataList(animMeshDataList);
+
+            Node rootNode = buildNodesTree(aiScene.mRootNode(), null);
+            Matrix4f globalInverseTransformation = toMatrix(aiScene.mRootNode().mTransformation()).invert();
+            List<ModelData.Animation> animations = processAnimations(aiScene, boneList, rootNode, globalInverseTransformation);
+            modelData.setAnimationsList(animations);
+        }
+
+        aiReleaseImport(aiScene);
+        LOGGER.debug("Loaded model [{}]", modelPath);
+        return modelData;
+    }
+    ...
+}
+```
+As you can see we are using a new flag: `aiProcess_LimitBoneWeights` that limits the number of bones simultaneously affecting a single vertex to a maximum value (the default maximum values is `4`). The `loadModel` method version that automatically sets the flags receives an extra parameter which indicates if this is an animated model or not. We use that parameter to avoid setting the `aiProcess_PreTransformVertices` for animated models. That flag performs some transformation over the data loaded so the model is placed in the origin and the coordinates are corrected. We cannot use this flag if the model uses animations because it will remove that information. In the `loadModel` method version that actually performs the loading tasks, we have added, at the end, code to load animation data. We first load the skeleton structure (the bones hierarchy) and the weights associated to each vertex. With tha information, we construct `ModelData.AnimMeshData` instances (one per Mesh). After that, we retrieve the different animations and construct the transformation data per key frame.
+
+The `processBones` method is defined like this:
+```java
+public class ModelLoader {
+    ...
+    public static final int MAX_WEIGHTS = 4;
+    ...
+    private static ModelData.AnimMeshData processBones(AIMesh aiMesh, List<Bone> boneList) {
+        List<Integer> boneIds = new ArrayList<>();
+        List<Float> weights = new ArrayList<>();
+
+        Map<Integer, List<VertexWeight>> weightSet = new HashMap<>();
+        int numBones = aiMesh.mNumBones();
+        PointerBuffer aiBones = aiMesh.mBones();
+        for (int i = 0; i < numBones; i++) {
+            AIBone aiBone = AIBone.create(aiBones.get(i));
+            int id = boneList.size();
+            Bone bone = new Bone(id, aiBone.mName().dataString(), toMatrix(aiBone.mOffsetMatrix()));
+            boneList.add(bone);
+            int numWeights = aiBone.mNumWeights();
+            AIVertexWeight.Buffer aiWeights = aiBone.mWeights();
+            for (int j = 0; j < numWeights; j++) {
+                AIVertexWeight aiWeight = aiWeights.get(j);
+                VertexWeight vw = new VertexWeight(bone.boneId(), aiWeight.mVertexId(),
+                        aiWeight.mWeight());
+                List<VertexWeight> vertexWeightList = weightSet.get(vw.vertexId());
+                if (vertexWeightList == null) {
+                    vertexWeightList = new ArrayList<>();
+                    weightSet.put(vw.vertexId(), vertexWeightList);
+                }
+                vertexWeightList.add(vw);
+            }
+        }
+
+        int numVertices = aiMesh.mNumVertices();
+        for (int i = 0; i < numVertices; i++) {
+            List<VertexWeight> vertexWeightList = weightSet.get(i);
+            int size = vertexWeightList != null ? vertexWeightList.size() : 0;
+            for (int j = 0; j < MAX_WEIGHTS; j++) {
+                if (j < size) {
+                    VertexWeight vw = vertexWeightList.get(j);
+                    weights.add(vw.weight());
+                    boneIds.add(vw.boneId());
+                } else {
+                    weights.add(0.0f);
+                    boneIds.add(0);
+                }
+            }
+        }
+
+        return new ModelData.AnimMeshData(listFloatToArray(weights), listIntToArray(boneIds));
+    }
+    ...
+}
+```
+In that `processBones` method, we first construct a list of bones. Each bone will have an identifier which will be used later on to relate them to the wights to be applied for each vertex. That information is stored in the record `ModelData.AnimMeshData`.
+
+The `buildNodesTree` method is quite simple, It just traverses the nodes hierarchy starting from the root node constructing a tree of nodes:
+```java
+public class ModelLoader {
+    ...
+    private static Node buildNodesTree(AINode aiNode, Node parentNode) {
+        String nodeName = aiNode.mName().dataString();
+        Node node = new Node(nodeName, parentNode, toMatrix(aiNode.mTransformation()));
+
+        int numChildren = aiNode.mNumChildren();
+        PointerBuffer aiChildren = aiNode.mChildren();
+        for (int i = 0; i < numChildren; i++) {
+            AINode aiChildNode = AINode.create(aiChildren.get(i));
+            Node childNode = buildNodesTree(aiChildNode, node);
+            node.addChild(childNode);
+        }
+        return node;
+    }
+    ...
+}
+```
+
+Let’s review the `processAnimations` method, which is defined like this:
+```java
+public class ModelLoader {
+    ...
+    public static final int MAX_JOINTS = 150;
+    private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
+    ...    
+    private static List<ModelData.Animation> processAnimations(AIScene aiScene, List<Bone> boneList,
+                                                               Node rootNode, Matrix4f globalInverseTransformation) {
+        List<ModelData.Animation> animations = new ArrayList<>();
+
+        // Process all animations
+        int numAnimations = aiScene.mNumAnimations();
+        PointerBuffer aiAnimations = aiScene.mAnimations();
+        for (int i = 0; i < numAnimations; i++) {
+            AIAnimation aiAnimation = AIAnimation.create(aiAnimations.get(i));
+            int maxFrames = calcAnimationMaxFrames(aiAnimation);
+
+            List<ModelData.AnimatedFrame> frames = new ArrayList<>();
+            ModelData.Animation animation = new ModelData.Animation(aiAnimation.mName().dataString(), aiAnimation.mDuration(), frames);
+            animations.add(animation);
+
+            for (int j = 0; j < maxFrames; j++) {
+                Matrix4f[] jointMatrices = new Matrix4f[MAX_JOINTS];
+                Arrays.fill(jointMatrices, IDENTITY_MATRIX);
+                ModelData.AnimatedFrame animatedFrame = new ModelData.AnimatedFrame(jointMatrices);
+                buildFrameMatrices(aiAnimation, boneList, animatedFrame, j, rootNode,
+                        rootNode.getNodeTransformation(), globalInverseTransformation);
+                frames.add(animatedFrame);
+            }
+        }
+        return animations;
+    }
+    ...
+}
+```
+
+This method returns a `List` of `ModelData.Animation` instances (Remember that a model can have more than one animation). For each of those animations we construct a list of animation frames (`ModelData.AnimatedFrame` instances), which contain essentially a list of the transformation matrices to be applied to each of the bones that compose the model. For each of the animations, we calculate the maximum number of frames by calling the method `calcAnimationMaxFrames`, which is defined like this: 
+```java
+public class ModelLoader {
+    ...
+    private static int calcAnimationMaxFrames(AIAnimation aiAnimation) {
+        int maxFrames = 0;
+        int numNodeAnims = aiAnimation.mNumChannels();
+        PointerBuffer aiChannels = aiAnimation.mChannels();
+        for (int i = 0; i < numNodeAnims; i++) {
+            AINodeAnim aiNodeAnim = AINodeAnim.create(aiChannels.get(i));
+            int numFrames = Math.max(Math.max(aiNodeAnim.mNumPositionKeys(), aiNodeAnim.mNumScalingKeys()),
+                    aiNodeAnim.mNumRotationKeys());
+            maxFrames = Math.max(maxFrames, numFrames);
+        }
+
+        return maxFrames;
+    }
+    ...
+}
+```
+
+Each `AINodeAnim` instance defines some transformations to be applied to a node in the model for a specific frame. These transformations, for a specific node, are defined in the `AINodeAnim` instance. These transformations are defined in the form of position translations, rotations and scaling values. The trick here is that, for example, for a specific node, translation values can stop at a specific frae, but rotations and scaling values can continue for the next frames. In this case, we will have less translation values than rotation or scaling ones. Therefore, a good approximation, to calculate the maximum number of frames is to use the maximum value. The problem gest more complex, because this is defines per node. A node can define just some transformations for the first frames and do not apply more modifications for the rest. In this case, we should use always the last defined values. Therefore, we get the maximum number for all the animations associated to the nodes.
+
+Going back to the `processAnimations` method, with that information, we are ready to iterate over the different frames and build the transformation matrices for the bones by calling the `buildFrameMatrices` method. For each frame we start with the root node, and will apply the transformations recursively from top to down of the nodes hierarchy. The `buildFrameMatrices` is defined like this:
+```java
+public class ModelLoader {
+    ...
+    private static void buildFrameMatrices(AIAnimation aiAnimation, List<Bone> boneList, ModelData.AnimatedFrame animatedFrame,
+                                           int frame, Node node, Matrix4f parentTransformation, Matrix4f globalInverseTransform) {
+        String nodeName = node.getName();
+        AINodeAnim aiNodeAnim = findAIAnimNode(aiAnimation, nodeName);
+        Matrix4f nodeTransform = node.getNodeTransformation();
+        if (aiNodeAnim != null) {
+            nodeTransform = buildNodeTransformationMatrix(aiNodeAnim, frame);
+        }
+        Matrix4f nodeGlobalTransform = new Matrix4f(parentTransformation).mul(nodeTransform);
+
+        List<Bone> affectedBones = boneList.stream().filter(b -> b.boneName().equals(nodeName)).collect(Collectors.toList());
+        for (Bone bone : affectedBones) {
+            Matrix4f boneTransform = new Matrix4f(globalInverseTransform).mul(nodeGlobalTransform).
+                    mul(bone.offsetMatrix());
+            animatedFrame.jointMatrices()[bone.boneId()] = boneTransform;
+        }
+
+        for (Node childNode : node.getChildren()) {
+            buildFrameMatrices(aiAnimation, boneList, animatedFrame, frame, childNode, nodeGlobalTransform,
+                    globalInverseTransform);
+        }
+    }
+    ...
+}
+```
+
+We get the transformation associated to the node. Then we check if this node has an animation node associated to it. If so, we need to get the proper translation, rotation and scaling transformations that apply to the frame that we are handling. With that information, we get the bones associated to that node and update the transformation matrix for each of those bones, for that specific frame by multiplying:
+
+* The model inverse global transformation matrix (the inverse of the root node transformation matrix).
+* The transformation matrix for the node.
+* The bone offset matrix.
+
+After that, we iterate over the children nodes, using the node transformation matrix as the parent matrix for those child nodes.
+
+Let’s review the `buildNodeTransformationMatrix` method:
+```java
+public class ModelLoader {
+    ...
+    private static Matrix4f buildNodeTransformationMatrix(AINodeAnim aiNodeAnim, int frame) {
+        AIVectorKey.Buffer positionKeys = aiNodeAnim.mPositionKeys();
+        AIVectorKey.Buffer scalingKeys = aiNodeAnim.mScalingKeys();
+        AIQuatKey.Buffer rotationKeys = aiNodeAnim.mRotationKeys();
+
+        AIVectorKey aiVecKey;
+        AIVector3D vec;
+
+        Matrix4f nodeTransform = new Matrix4f();
+        int numPositions = aiNodeAnim.mNumPositionKeys();
+        if (numPositions > 0) {
+            aiVecKey = positionKeys.get(Math.min(numPositions - 1, frame));
+            vec = aiVecKey.mValue();
+            nodeTransform.translate(vec.x(), vec.y(), vec.z());
+        }
+        int numRotations = aiNodeAnim.mNumRotationKeys();
+        if (numRotations > 0) {
+            AIQuatKey quatKey = rotationKeys.get(Math.min(numRotations - 1, frame));
+            AIQuaternion aiQuat = quatKey.mValue();
+            Quaternionf quat = new Quaternionf(aiQuat.x(), aiQuat.y(), aiQuat.z(), aiQuat.w());
+            nodeTransform.rotate(quat);
+        }
+        int numScalingKeys = aiNodeAnim.mNumScalingKeys();
+        if (numScalingKeys > 0) {
+            aiVecKey = scalingKeys.get(Math.min(numScalingKeys - 1, frame));
+            vec = aiVecKey.mValue();
+            nodeTransform.scale(vec.x(), vec.y(), vec.z());
+        }
+
+        return nodeTransform;
+    }
+    ...
+}
+```
+
+The `AINodeAnim` instance defines a set of keys that contain translation, rotation and scaling information. These keys are referred to specific instant of times. We assume that information is ordered in time, and construct a list of matrices that contain the transformation to be applied for each frame.
+
+Finally, the `toMatrix` just copies an Assimp matrix to a JOML Matrix:
+```java
+public class ModelLoader {
+    ...
+    private static Matrix4f toMatrix(AIMatrix4x4 aiMatrix4x4) {
+        Matrix4f result = new Matrix4f();
+        result.m00(aiMatrix4x4.a1());
+        result.m10(aiMatrix4x4.a2());
+        result.m20(aiMatrix4x4.a3());
+        result.m30(aiMatrix4x4.a4());
+        result.m01(aiMatrix4x4.b1());
+        result.m11(aiMatrix4x4.b2());
+        result.m21(aiMatrix4x4.b3());
+        result.m31(aiMatrix4x4.b4());
+        result.m02(aiMatrix4x4.c1());
+        result.m12(aiMatrix4x4.c2());
+        result.m22(aiMatrix4x4.c3());
+        result.m32(aiMatrix4x4.c4());
+        result.m03(aiMatrix4x4.d1());
+        result.m13(aiMatrix4x4.d2());
+        result.m23(aiMatrix4x4.d3());
+        result.m33(aiMatrix4x4.d4());
+
+        return result;
+    }
+    ...
+}
+```
+
+All that new information needs to be handled in the `VulkanModel` class so it is loaded into the GPU. This class now defines the following new attribute:
+```java
+public class VulkanModel {
+
+    private List<VulkanModel.VulkanAnimation> animationList;
+    ...
+    public record VulkanAnimation(String name, List<VulkanBuffer> frameBufferList) {
+        public void cleanup() {
+            frameBufferList.forEach(VulkanBuffer::cleanup);
+        }
+    }
+    ...
+    public record VulkanMesh(VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int numIndices,
+                             VulkanBuffer weightsBuffer) {
+        public void cleanup() {
+            verticesBuffer.cleanup();
+            indicesBuffer.cleanup();
+            if (weightsBuffer != null) {
+                weightsBuffer.cleanup();
+            }
+        }
+    }    
+}
+```
+
+The `animationList` attribute holds a list which will contain one entry per animation. Each entry, modelled by the `VulkanAnimation` record, is defined by a name and a list of buffers. Those buffers will contain the joint transformations buffers for each of the animation frames. The `VulkanMesh` record needs also to be modified. Besides storing the vertex and indices buffer, we need to define a new buffer that store the weights and the joints identifiers that will be associated to each vertex (`weightsBuffer`).  
+
+Now that we have all the new structures, we can view the changes on the `transformModels` method:
+```java
+public class VulkanModel {
+    ...
+        for (ModelData modelData : modelDataList) {
+            ...
+            List<ModelData.Animation> animationsList = modelData.getAnimationsList();
+            boolean hasAnimation = animationsList != null && !animationsList.isEmpty();
+            if (hasAnimation) {
+                vulkanModel.animationList = new ArrayList<>();
+                for (ModelData.Animation animation : animationsList) {
+                    List<VulkanBuffer> vulkanFrameBufferList = new ArrayList<>();
+                    VulkanAnimation vulkanAnimation = new VulkanAnimation(animation.name(), vulkanFrameBufferList);
+                    vulkanModel.animationList.add(vulkanAnimation);
+                    List<ModelData.AnimatedFrame> frameList = animation.frames();
+                    for (ModelData.AnimatedFrame frame : frameList) {
+                        TransferBuffers jointMatricesBuffers = createJointMatricesBuffers(device, frame);
+                        stagingBufferList.add(jointMatricesBuffers.srcBuffer());
+                        recordTransferCommand(cmd, jointMatricesBuffers);
+                        vulkanFrameBufferList.add(jointMatricesBuffers.dstBuffer);
+                    }
+                }
+            }
+
+            // Transform meshes loading their data into GPU buffers
+            int meshCount = 0;
+            for (ModelData.MeshData meshData : modelData.getMeshDataList()) {
+                ...
+                TransferBuffers weightsBuffers = null;
+                List<ModelData.AnimMeshData> animMeshDataList = modelData.getAnimMeshDataList();
+                if (animMeshDataList != null && !animMeshDataList.isEmpty()) {
+                    weightsBuffers = createWeightsBuffers(device, animMeshDataList.get(meshCount));
+                    stagingBufferList.add(weightsBuffers.srcBuffer());
+                    recordTransferCommand(cmd, weightsBuffers);
+                }
+
+                VulkanModel.VulkanMesh vulkanMesh = new VulkanModel.VulkanMesh(verticesBuffers.dstBuffer(),
+                        indicesBuffers.dstBuffer(), meshData.indices().length,
+                        weightsBuffers != null ? weightsBuffers.dstBuffer() : null);
+                ...
+
+                meshCount++;
+            }
+            ...
+        }
+    ...
+}
+```
+If the model has animations, we create the buffers that will hold the join transformation matrices for each of the frames. As usual, we use staging buffers with temporary CPU accessible buffers that get copied to a GPU only one, so we need to record those transitions. We also create the wights buffer for each of the meshes and store that in the `VulkanModel.VulkanMesh` instance. The `createJointMatricesBuffers` is defined like this:
+```java
+public class VulkanModel {
+    ...
+    private static TransferBuffers createJointMatricesBuffers(Device device, ModelData.AnimatedFrame frame) {
+        Matrix4f[] matrices = frame.jointMatrices();
+        int numMatrices = matrices.length;
+        int bufferSize = numMatrices * GraphConstants.MAT4X4_SIZE;
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+
+        long mappedMemory = srcBuffer.map();
+        ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        for (int i = 0; i < numMatrices; i++) {
+            matrices[i].get(i * GraphConstants.MAT4X4_SIZE, matrixBuffer);
+        }
+        srcBuffer.unMap();
+
+        return new TransferBuffers(srcBuffer, dstBuffer);
+    }
+    ...
+}
+```
+
+And the `createWeightsBuffers` is defined like this:
+```java
+public class VulkanModel {
+    ...
+    private static TransferBuffers createWeightsBuffers(Device device, ModelData.AnimMeshData animMeshData) {
+        float[] weights = animMeshData.weights();
+        int[] boneIds = animMeshData.boneIds();
+        int bufferSize = weights.length * GraphConstants.FLOAT_LENGTH + boneIds.length * GraphConstants.INT_LENGTH;
+
+        VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+
+        long mappedMemory = srcBuffer.map();
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+
+        int rows = weights.length / 4;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 4;
+            data.put(weights[startPos]);
+            data.put(weights[startPos + 1]);
+            data.put(weights[startPos + 2]);
+            data.put(weights[startPos + 3]);
+            data.put(boneIds[startPos]);
+            data.put(boneIds[startPos + 1]);
+            data.put(boneIds[startPos + 2]);
+            data.put(boneIds[startPos + 3]);
+        }
+
+        srcBuffer.unMap();
+
+        return new TransferBuffers(srcBuffer, dstBuffer);
+    }
+    ...
+}
+```
+
+Finally, we need to modify the `cleanup` method and add new ones to check if the model has animations and to retrieve the buffers for each of the animations:
+```java
+public class VulkanModel {
+    ...
+    public void cleanup() {
+        vulkanMaterialList.forEach(m -> m.vulkanMeshList.forEach((VulkanMesh::cleanup)));
+        if (animationList != null) {
+            animationList.forEach(VulkanAnimation::cleanup);
+        }
+    }
+
+    public List<VulkanModel.VulkanAnimation> getAnimationList() {
+        return animationList;
+    }
+    ...
+    public boolean hasAnimations() {
+        return animationList != null && !animationList.isEmpty();
+    }
+    ...
+}
+```
 
 ## Compute Shader
 
