@@ -58,6 +58,6 @@ public class Entity {
     }
 
     public void updateModelMatrix() {
-        modelMatrix.identity().translationRotateScale(position, rotation, scale);
+        modelMatrix.translationRotateScale(position, rotation, scale);
     }
 }
