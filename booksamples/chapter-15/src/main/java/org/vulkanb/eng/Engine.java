@@ -1,5 +1,7 @@
 package org.vulkanb.eng;
 
+import imgui.*;
+import org.joml.Vector2f;
 import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.scene.Scene;
 
@@ -43,6 +45,7 @@ public class Engine {
 
             if (deltaU >= 1) {
                 long diffTimeNanos = currentTime - updateTime;
+                handleInputGui();
                 appLogic.handleInput(window, scene, diffTimeNanos);
                 updateTime = currentTime;
                 deltaU--;
@@ -52,6 +55,15 @@ public class Engine {
         }
 
         cleanup();
+    }
+
+    private void handleInputGui() {
+        ImGuiIO imGuiIO = ImGui.getIO();
+        MouseInput mouseInput = window.getMouseInput();
+        Vector2f mousePos = mouseInput.getCurrentPos();
+        imGuiIO.setMousePos(mousePos.x, mousePos.y);
+        imGuiIO.setMouseDown(0, mouseInput.isLeftButtonPressed());
+        imGuiIO.setMouseDown(1, mouseInput.isRightButtonPressed());
     }
 
     public void start() {

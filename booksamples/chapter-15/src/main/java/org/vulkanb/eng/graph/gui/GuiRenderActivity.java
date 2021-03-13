@@ -19,6 +19,8 @@ import static org.lwjgl.vulkan.VK11.*;
 // TODO: New LWJGL VERSION DOES NOT WORK WITH JAR EXECUTION
 // TODO: Maven dependencies for all OSs
 // TODO: Maintain y axis convention
+// TODO: Support resizing
+// TODO: Mip Levels
 public class GuiRenderActivity {
 
     private static final String GUI_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/gui_fragment.glsl";
@@ -39,8 +41,6 @@ public class GuiRenderActivity {
     private TextureDescriptorSet textureDescriptorSet;
     private DescriptorPool descriptorPool;
 
-    // TODO: Support resize
-    // TODO: We need to flush buffers or we can use host coherent?
     public GuiRenderActivity(SwapChain swapChain, CommandPool commandPool, Queue queue, PipelineCache pipelineCache,
                              LightingFrameBuffer lightingFrameBuffer) {
         this.swapChain = swapChain;
@@ -67,8 +67,7 @@ public class GuiRenderActivity {
         ByteBuffer buf = imGuiIO.getFonts().getTexDataAsRGBA32(texWidth, texHeight);
         fontsTexture = new Texture(device, buf, texWidth.get(), texHeight.get(), VK_FORMAT_R8G8B8A8_UNORM);
 
-        // TODO: Extract to Utility class?
-        // TODO: Mip Levels
+        // TODO: Check if image transition code should be extracted to utility class
         CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
         cmd.beginRecording();
         fontsTexture.recordTextureTransition(cmd);
@@ -82,11 +81,7 @@ public class GuiRenderActivity {
         fence.cleanup();
         cmd.cleanup();
 
-        ImGui.newFrame();
-        ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
-        ImGui.showDemoWindow();
-        ImGui.endFrame();
-        ImGui.render();
+        createWindow();
     }
 
     private void createDescriptorPool() {
@@ -179,8 +174,17 @@ public class GuiRenderActivity {
         shaderProgram.cleanup();
     }
 
+    private void createWindow() {
+        ImGui.newFrame();
+        ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
+        ImGui.showDemoWindow();
+        ImGui.endFrame();
+        ImGui.render();
+    }
+
     public void render(CommandBuffer commandBuffer) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
+            createWindow();
             updateBuffers();
 
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
