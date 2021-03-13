@@ -25,6 +25,7 @@ subprojects {
     val jomlVersion = "1.10.0"
     val log4jVersion = "2.14.0"
     val lwjglVersion = "3.2.3"
+	var imguiVersion = "1.81.2"
 
     dependencies {
         implementation("org.apache.logging.log4j:log4j-api:$log4jVersion")
@@ -37,6 +38,7 @@ subprojects {
         implementation("org.lwjgl:lwjgl-assimp:$lwjglVersion")
         implementation("org.lwjgl:lwjgl-vma:$lwjglVersion")
         implementation("org.joml:joml:$jomlVersion")
+        implementation("io.github.spair:imgui-java-binding:$imguiVersion")
 
         runtimeOnly("org.lwjgl:lwjgl::$natives")
         runtimeOnly("org.lwjgl:lwjgl-glfw::$natives")
@@ -44,6 +46,7 @@ subprojects {
         runtimeOnly("org.lwjgl:lwjgl-stb::$natives")
         runtimeOnly("org.lwjgl:lwjgl-assimp::$natives")
         runtimeOnly("org.lwjgl:lwjgl-vma::$natives")
+        runtimeOnly("io.github.spair:imgui-java-$natives:$imguiVersion")
     }
 
     tasks {
