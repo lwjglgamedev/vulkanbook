@@ -8,14 +8,17 @@ import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.lighting.LightingFrameBuffer;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.*;
+import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: New LWJGL VERSION DOES NOT WORK WITH JAR EXECUTION
 // TODO: Maven dependencies for all OSs
+// TODO: Maintain y axis convention
 public class GuiRenderActivity {
 
     private static final String GUI_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/gui_fragment.glsl";
@@ -29,20 +32,28 @@ public class GuiRenderActivity {
     private ShaderProgram shaderProgram;
     private VulkanBuffer vertexBuffer;
     private VulkanBuffer indicesBuffer;
+    private Texture fontsTexture;
+    private TextureSampler fontsTextureSampler;
+    private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
+    private DescriptorSetLayout[] descriptorSetLayouts;
+    private TextureDescriptorSet textureDescriptorSet;
+    private DescriptorPool descriptorPool;
 
     // TODO: Support resize
     // TODO: We need to flush buffers or we can use host coherent?
-    public GuiRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
+    public GuiRenderActivity(SwapChain swapChain, CommandPool commandPool, Queue queue, PipelineCache pipelineCache,
                              LightingFrameBuffer lightingFrameBuffer) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
 
         createShaders();
+        createUIResources(swapChain, commandPool, queue);
+        createDescriptorPool();
+        createDescriptorSets();
         createPipeline(pipelineCache, lightingFrameBuffer);
-        createUIResources(swapChain);
     }
 
-    private void createUIResources(SwapChain swapChain) {
+    private void createUIResources(SwapChain swapChain, CommandPool commandPool, Queue queue) {
         ImGui.createContext();
 
         ImGuiIO imGuiIO = ImGui.getIO();
@@ -51,15 +62,47 @@ public class GuiRenderActivity {
         imGuiIO.setDisplaySize(swapChainExtent.width(), swapChainExtent.height());
         imGuiIO.setDisplayFramebufferScale(1.0f, 1.0f);
 
-        ImInt outWidth = new ImInt();
-        ImInt outHeight = new ImInt();
-        imGuiIO.getFonts().getTexDataAsAlpha8(outWidth, outHeight);
+        ImInt texWidth = new ImInt();
+        ImInt texHeight = new ImInt();
+        ByteBuffer buf = imGuiIO.getFonts().getTexDataAsRGBA32(texWidth, texHeight);
+        fontsTexture = new Texture(device, buf, texWidth.get(), texHeight.get(), VK_FORMAT_R8G8B8A8_UNORM);
+
+        // TODO: Extract to Utility class?
+        // TODO: Mip Levels
+        CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
+        cmd.beginRecording();
+        fontsTexture.recordTextureTransition(cmd);
+        cmd.endRecording();
+        Fence fence = new Fence(device, true);
+        fence.reset();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
+        }
+        fence.fenceWait();
+        fence.cleanup();
+        cmd.cleanup();
 
         ImGui.newFrame();
         ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
         ImGui.showDemoWindow();
         ImGui.endFrame();
         ImGui.render();
+    }
+
+    private void createDescriptorPool() {
+        List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
+    }
+
+    private void createDescriptorSets() {
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        descriptorSetLayouts = new DescriptorSetLayout[]{
+                textureDescriptorSetLayout,
+        };
+        fontsTextureSampler = new TextureSampler(device, 1);
+        textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout, fontsTexture,
+                fontsTextureSampler, 0);
     }
 
     private void updateBuffers() {
@@ -84,7 +127,6 @@ public class GuiRenderActivity {
             indicesBuffer = new VulkanBuffer(device, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         }
-
 
         ByteBuffer dstVertexBuffer = MemoryUtil.memByteBuffer(vertexBuffer.map(), vertexBufferSize);
         ByteBuffer dstIdxBuffer = MemoryUtil.memByteBuffer(indicesBuffer.map(), indexBufferSize);
@@ -118,14 +160,18 @@ public class GuiRenderActivity {
 
     private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false,
+                lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
                 GraphConstants.FLOAT_LENGTH * 4,
-                new ImGuiVertexBufferStructure(), null);
+                new ImGuiVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
 
     public void cleanup() {
+        textureDescriptorSetLayout.cleanup();
+        fontsTextureSampler.cleanup();
+        descriptorPool.cleanup();
+        fontsTexture.cleanup();
         vertexBuffer.cleanup();
         indicesBuffer.cleanup();
         ImGui.destroyContext();
@@ -147,8 +193,8 @@ public class GuiRenderActivity {
 
             VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
                     .x(0)
-                    .y(height)
-                    .height(-height)
+                    .y(0)
+                    .height(height)
                     .width(width)
                     .minDepth(0.0f)
                     .maxDepth(1.0f);
@@ -170,6 +216,11 @@ public class GuiRenderActivity {
             vkCmdPushConstants(cmdHandle, pipeline.getVkPipelineLayout(),
                     VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
 
+            LongBuffer descriptorSets = stack.mallocLong(1)
+                    .put(0, this.textureDescriptorSet.getVkDescriptorSet());
+            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pipeline.getVkPipelineLayout(), 0, descriptorSets, null);
+
             ImVec4 imVec4 = new ImVec4();
             VkRect2D.Buffer rect = VkRect2D.callocStack(1, stack);
             ImDrawData imDrawData = ImGui.getDrawData();
@@ -177,13 +228,10 @@ public class GuiRenderActivity {
             for (int i = 0; i < numCmdLists; i++) {
                 int cmdBufferSize = imDrawData.getCmdListCmdBufferSize(i);
                 for (int j = 0; j < cmdBufferSize; j++) {
-                    // TODO: Scissor
-                    /*
                     imDrawData.getCmdListCmdBufferClipRect(i, j, imVec4);
                     rect.offset(it -> it.x((int) Math.max(imVec4.x, 0)).y((int) Math.max(imVec4.y, 1)));
                     rect.extent(it -> it.width((int) (imVec4.z - imVec4.x)).height((int) (imVec4.w - imVec4.y)));
                     vkCmdSetScissor(cmdHandle, 0, rect);
-                     */
                     vkCmdDrawIndexed(cmdHandle, imDrawData.getCmdListCmdBufferElemCount(i, j), 1,
                             imDrawData.getCmdListCmdBufferIdxOffset(i, j), imDrawData.getCmdListCmdBufferVtxOffset(i, j), 0);
                 }

@@ -53,7 +53,7 @@ public class Render {
         attachments.add(shadowRenderActivity.getDepthAttachment());
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
         animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache, scene);
-        guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, pipelineCache,
+        guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
                 lightingRenderActivity.getLightingFrameBuffer());
     }
 

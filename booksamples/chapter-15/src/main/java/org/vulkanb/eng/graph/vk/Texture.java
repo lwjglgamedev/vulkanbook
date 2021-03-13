@@ -44,14 +44,26 @@ public class Texture {
             height = h.get();
             mipLevels = (int) Math.floor(log2(Math.min(width, height))) + 1;
 
-            createStgBuffer(device, buf);
-            image = new Image(device, width, height, imageFormat,
-                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                    mipLevels, 1);
-            imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+            createTextureResources(device, buf, imageFormat);
         }
 
         stbi_image_free(buf);
+    }
+
+    public Texture(Device device, ByteBuffer buf, int width, int height, int imageFormat) {
+        this.width = width;
+        this.height = height;
+        mipLevels = 1;
+
+        createTextureResources(device, buf, imageFormat);
+    }
+
+    private void createTextureResources(Device device, ByteBuffer buf, int imageFormat) {
+        createStgBuffer(device, buf);
+        image = new Image(device, width, height, imageFormat,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                mipLevels, 1);
+        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
     }
 
     public void cleanup() {
