@@ -29,7 +29,6 @@ public class LightingRenderActivity {
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
-    private EmptyVertexBufferStructure emptyVertexBufferStructure;
     private Fence[] fences;
     private VulkanBuffer[] invMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] invMatricesDescriptorSets;
@@ -89,7 +88,6 @@ public class LightingRenderActivity {
         descriptorPool.cleanup();
         Arrays.stream(lightsBuffers).forEach(VulkanBuffer::cleanup);
         pipeline.cleanup();
-        emptyVertexBufferStructure.cleanup();
         lightSpecConstants.cleanup();
         Arrays.stream(invMatricesBuffers).forEach(VulkanBuffer::cleanup);
         lightingFrameBuffer.cleanup();
@@ -143,10 +141,9 @@ public class LightingRenderActivity {
     }
 
     private void createPipeline(PipelineCache pipelineCache) {
-        emptyVertexBufferStructure = new EmptyVertexBufferStructure();
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false, 0,
-                emptyVertexBufferStructure, descriptorSetLayouts);
+                new EmptyVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }

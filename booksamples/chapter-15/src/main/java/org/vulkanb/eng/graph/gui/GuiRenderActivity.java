@@ -16,7 +16,6 @@ import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: New LWJGL VERSION DOES NOT WORK WITH JAR EXECUTION
 // TODO: Maintain y axis convention
 // TODO: Mip Levels
 // TODO: Test pop-ups
@@ -27,7 +26,7 @@ public class GuiRenderActivity {
     private static final String GUI_FRAGMENT_SHADER_FILE_SPV = GUI_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String GUI_VERTEX_SHADER_FILE_GLSL = "resources/shaders/gui_vertex.glsl";
     private static final String GUI_VERTEX_SHADER_FILE_SPV = GUI_VERTEX_SHADER_FILE_GLSL + ".spv";
-    private ImGuiVertexBufferStructure bufferStructure;
+
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
@@ -62,7 +61,6 @@ public class GuiRenderActivity {
         Arrays.stream(indicesBuffers).forEach(VulkanBuffer::cleanup);
         ImGui.destroyContext();
         pipeline.cleanup();
-        bufferStructure.cleanup();
         shaderProgram.cleanup();
     }
 
@@ -83,11 +81,10 @@ public class GuiRenderActivity {
     }
 
     private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
-        bufferStructure = new ImGuiVertexBufferStructure();
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
                 GraphConstants.FLOAT_LENGTH * 4,
-                bufferStructure, descriptorSetLayouts);
+                new ImGuiVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }

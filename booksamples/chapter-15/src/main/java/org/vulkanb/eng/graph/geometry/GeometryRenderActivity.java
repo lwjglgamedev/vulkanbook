@@ -42,7 +42,6 @@ public class GeometryRenderActivity {
     private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
     private TextureSampler textureSampler;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
-    private VertexBufferStructure vertexBufferStructure;
     private VulkanBuffer[] viewMatricesBuffer;
     private DescriptorSet.UniformDescriptorSet[] viewMatricesDescriptorSets;
 
@@ -87,7 +86,6 @@ public class GeometryRenderActivity {
 
     public void cleanup() {
         pipeLine.cleanup();
-        vertexBufferStructure.cleanup();
         materialsBuffer.cleanup();
         Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
@@ -156,11 +154,10 @@ public class GeometryRenderActivity {
     }
 
     private void createPipeline() {
-        vertexBufferStructure = new VertexBufferStructure();
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 geometryFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram, GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
                 true, true, GraphConstants.MAT4X4_SIZE,
-                vertexBufferStructure, geometryDescriptorSetLayouts);
+                new VertexBufferStructure(), geometryDescriptorSetLayouts);
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }

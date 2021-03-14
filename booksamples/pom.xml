@@ -8,6 +8,17 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
+	<!-- Test LWJGL SNAPSHOT version
+	<repositories>
+		<repository>
+			<id>sonatype-snapshots</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+			<releases><enabled>false</enabled></releases>
+			<snapshots><enabled>true</enabled></snapshots>
+		</repository>
+	</repositories>
+	-->
+	
     <build>
         <plugins>
             <plugin>
@@ -17,9 +28,9 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
-                        <compilerArgs>
-                            <arg>--enable-preview</arg>
-                        </compilerArgs>
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
@@ -74,6 +85,7 @@
                             <addClasspath>true</addClasspath>
                             <mainClass>${main.class}</mainClass>
                             <classpathPrefix>lib/</classpathPrefix>
+							<useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                         <manifestEntries>
                             <Built-By>${built.by}</Built-By>
@@ -113,6 +125,9 @@
         <joml.version>1.10.0</joml.version>
         <log4j.version>2.14.0</log4j.version>
         <lwjgl.version>3.2.3</lwjgl.version>
+		<!-- LEJGL SNAPSHOT VERSION 
+        <lwjgl.version>3.3.0-SNAPSHOT</lwjgl.version>
+		-->
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-dependency-plugin.version>3.1.2</maven-dependency-plugin.version>
         <maven-jar-plugin.version>3.2.0</maven-jar-plugin.version>
