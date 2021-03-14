@@ -17,29 +17,28 @@ import java.util.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: New LWJGL VERSION DOES NOT WORK WITH JAR EXECUTION
-// TODO: Maven dependencies for all OSs
 // TODO: Maintain y axis convention
-// TODO: Support resizing
 // TODO: Mip Levels
+// TODO: Test pop-ups
+// TODO: Check if events are consumed by GUI
 public class GuiRenderActivity {
 
     private static final String GUI_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/gui_fragment.glsl";
     private static final String GUI_FRAGMENT_SHADER_FILE_SPV = GUI_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String GUI_VERTEX_SHADER_FILE_GLSL = "resources/shaders/gui_vertex.glsl";
     private static final String GUI_VERTEX_SHADER_FILE_SPV = GUI_VERTEX_SHADER_FILE_GLSL + ".spv";
-
+    private DescriptorPool descriptorPool;
+    private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
-    private SwapChain swapChain;
-    private Pipeline pipeline;
-    private ShaderProgram shaderProgram;
-    private VulkanBuffer vertexBuffer;
-    private VulkanBuffer indicesBuffer;
     private Texture fontsTexture;
     private TextureSampler fontsTextureSampler;
-    private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
-    private DescriptorSetLayout[] descriptorSetLayouts;
+    private VulkanBuffer[] indicesBuffers;
+    private Pipeline pipeline;
+    private ShaderProgram shaderProgram;
+    private SwapChain swapChain;
     private TextureDescriptorSet textureDescriptorSet;
-    private DescriptorPool descriptorPool;
+    private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
+    private VulkanBuffer[] vertexBuffers;
 
     public GuiRenderActivity(SwapChain swapChain, CommandPool commandPool, Queue queue, PipelineCache pipelineCache,
                              LightingFrameBuffer lightingFrameBuffer) {
@@ -53,35 +52,16 @@ public class GuiRenderActivity {
         createPipeline(pipelineCache, lightingFrameBuffer);
     }
 
-    private void createUIResources(SwapChain swapChain, CommandPool commandPool, Queue queue) {
-        ImGui.createContext();
-
-        ImGuiIO imGuiIO = ImGui.getIO();
-        imGuiIO.setIniFilename(null);
-        VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
-        imGuiIO.setDisplaySize(swapChainExtent.width(), swapChainExtent.height());
-        imGuiIO.setDisplayFramebufferScale(1.0f, 1.0f);
-
-        ImInt texWidth = new ImInt();
-        ImInt texHeight = new ImInt();
-        ByteBuffer buf = imGuiIO.getFonts().getTexDataAsRGBA32(texWidth, texHeight);
-        fontsTexture = new Texture(device, buf, texWidth.get(), texHeight.get(), VK_FORMAT_R8G8B8A8_UNORM);
-
-        // TODO: Check if image transition code should be extracted to utility class
-        CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
-        cmd.beginRecording();
-        fontsTexture.recordTextureTransition(cmd);
-        cmd.endRecording();
-        Fence fence = new Fence(device, true);
-        fence.reset();
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
-        }
-        fence.fenceWait();
-        fence.cleanup();
-        cmd.cleanup();
-
-        createWindow();
+    public void cleanup() {
+        textureDescriptorSetLayout.cleanup();
+        fontsTextureSampler.cleanup();
+        descriptorPool.cleanup();
+        fontsTexture.cleanup();
+        Arrays.stream(vertexBuffers).forEach(VulkanBuffer::cleanup);
+        Arrays.stream(indicesBuffers).forEach(VulkanBuffer::cleanup);
+        ImGui.destroyContext();
+        pipeline.cleanup();
+        shaderProgram.cleanup();
     }
 
     private void createDescriptorPool() {
@@ -99,45 +79,14 @@ public class GuiRenderActivity {
         textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout, fontsTexture,
                 fontsTextureSampler, 0);
     }
-
-    private void updateBuffers() {
-        ImDrawData imDrawData = ImGui.getDrawData();
-
-        int vertexBufferSize = imDrawData.getTotalVtxCount() * ImGuiVertexBufferStructure.VERTEX_SIZE;
-        int indexBufferSize = imDrawData.getTotalIdxCount() * GraphConstants.SHORT_LENGTH;
-
-        // TODO: Non-coherent buffers
-        if (vertexBuffer == null || vertexBufferSize != vertexBuffer.getRequestedSize()) {
-            if (vertexBuffer != null) {
-                vertexBuffer.cleanup();
-            }
-            vertexBuffer = new VulkanBuffer(device, vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        }
-
-        if (indicesBuffer == null || indexBufferSize != indicesBuffer.getRequestedSize()) {
-            if (indicesBuffer != null) {
-                indicesBuffer.cleanup();
-            }
-            indicesBuffer = new VulkanBuffer(device, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        }
-
-        ByteBuffer dstVertexBuffer = MemoryUtil.memByteBuffer(vertexBuffer.map(), vertexBufferSize);
-        ByteBuffer dstIdxBuffer = MemoryUtil.memByteBuffer(indicesBuffer.map(), indexBufferSize);
-
-        int numCmdLists = imDrawData.getCmdListsCount();
-        for (int i = 0; i < numCmdLists; i++) {
-            ByteBuffer imguiVertexBuffer = imDrawData.getCmdListVtxBufferData(i);
-            dstVertexBuffer.put(imguiVertexBuffer);
-
-            // TODO: Check why this cannot be called after getting the vertexbuffer
-            ByteBuffer imguiIndicesBuffer = imDrawData.getCmdListIdxBufferData(i);
-            dstIdxBuffer.put(imguiIndicesBuffer);
-        }
-        vertexBuffer.unMap();
-        indicesBuffer.unMap();
-
+    
+    private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
+        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
+                lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
+                GraphConstants.FLOAT_LENGTH * 4,
+                new ImGuiVertexBufferStructure(), descriptorSetLayouts);
+        pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
+        pipeLineCreationInfo.cleanup();
     }
 
     private void createShaders() {
@@ -153,25 +102,30 @@ public class GuiRenderActivity {
                 });
     }
 
-    private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
-        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
-                GraphConstants.FLOAT_LENGTH * 4,
-                new ImGuiVertexBufferStructure(), descriptorSetLayouts);
-        pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
-        pipeLineCreationInfo.cleanup();
-    }
+    private void createUIResources(SwapChain swapChain, CommandPool commandPool, Queue queue) {
+        ImGui.createContext();
 
-    public void cleanup() {
-        textureDescriptorSetLayout.cleanup();
-        fontsTextureSampler.cleanup();
-        descriptorPool.cleanup();
-        fontsTexture.cleanup();
-        vertexBuffer.cleanup();
-        indicesBuffer.cleanup();
-        ImGui.destroyContext();
-        pipeline.cleanup();
-        shaderProgram.cleanup();
+        ImGuiIO imGuiIO = ImGui.getIO();
+        imGuiIO.setIniFilename(null);
+        VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
+        imGuiIO.setDisplaySize(swapChainExtent.width(), swapChainExtent.height());
+        imGuiIO.setDisplayFramebufferScale(1.0f, 1.0f);
+
+        ImInt texWidth = new ImInt();
+        ImInt texHeight = new ImInt();
+        ByteBuffer buf = imGuiIO.getFonts().getTexDataAsRGBA32(texWidth, texHeight);
+        fontsTexture = new Texture(device, buf, texWidth.get(), texHeight.get(), VK_FORMAT_R8G8B8A8_UNORM);
+
+        CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
+        cmd.beginRecording();
+        fontsTexture.recordTextureTransition(cmd);
+        cmd.endRecording();
+        cmd.submitAndWait(device, queue);
+        cmd.cleanup();
+
+        vertexBuffers = new VulkanBuffer[swapChain.getNumImages()];
+        indicesBuffers = new VulkanBuffer[swapChain.getNumImages()];
+        createWindow();
     }
 
     private void createWindow() {
@@ -184,8 +138,9 @@ public class GuiRenderActivity {
 
     public void render(CommandBuffer commandBuffer) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
+            int idx = swapChain.getCurrentFrame();
             createWindow();
-            updateBuffers();
+            updateBuffers(idx);
 
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -205,11 +160,11 @@ public class GuiRenderActivity {
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
             LongBuffer vtxBuffer = stack.mallocLong(1);
-            vtxBuffer.put(0, vertexBuffer.getBuffer());
+            vtxBuffer.put(0, vertexBuffers[idx].getBuffer());
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);
             vkCmdBindVertexBuffers(cmdHandle, 0, vtxBuffer, offsets);
-            vkCmdBindIndexBuffer(cmdHandle, indicesBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(cmdHandle, indicesBuffers[idx].getBuffer(), 0, VK_INDEX_TYPE_UINT16);
 
             ImGuiIO io = ImGui.getIO();
             FloatBuffer pushConstantBuffer = stack.mallocFloat(4);
@@ -241,5 +196,56 @@ public class GuiRenderActivity {
                 }
             }
         }
+    }
+
+    public void resize(SwapChain swapChain) {
+        this.swapChain = swapChain;
+        ImGuiIO imGuiIO = ImGui.getIO();
+        VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
+        imGuiIO.setDisplaySize(swapChainExtent.width(), swapChainExtent.height());
+    }
+
+    private void updateBuffers(int idx) {
+        ImDrawData imDrawData = ImGui.getDrawData();
+
+        int vertexBufferSize = imDrawData.getTotalVtxCount() * ImGuiVertexBufferStructure.VERTEX_SIZE;
+        int indexBufferSize = imDrawData.getTotalIdxCount() * GraphConstants.SHORT_LENGTH;
+
+        VulkanBuffer vertexBuffer = vertexBuffers[idx];
+        // TODO: Non-coherent buffers
+        if (vertexBuffer == null || vertexBufferSize != vertexBuffer.getRequestedSize()) {
+            if (vertexBuffer != null) {
+                vertexBuffer.cleanup();
+            }
+            vertexBuffer = new VulkanBuffer(device, vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            vertexBuffers[idx] = vertexBuffer;
+        }
+
+        VulkanBuffer indicesBuffer = indicesBuffers[idx];
+        if (indicesBuffer == null || indexBufferSize != indicesBuffer.getRequestedSize()) {
+            if (indicesBuffer != null) {
+                indicesBuffer.cleanup();
+            }
+            indicesBuffer = new VulkanBuffer(device, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            indicesBuffers[idx] = indicesBuffer;
+        }
+
+        ByteBuffer dstVertexBuffer = MemoryUtil.memByteBuffer(vertexBuffer.map(), vertexBufferSize);
+        ByteBuffer dstIdxBuffer = MemoryUtil.memByteBuffer(indicesBuffer.map(), indexBufferSize);
+
+        int numCmdLists = imDrawData.getCmdListsCount();
+        for (int i = 0; i < numCmdLists; i++) {
+            ByteBuffer imguiVertexBuffer = imDrawData.getCmdListVtxBufferData(i);
+            dstVertexBuffer.put(imguiVertexBuffer);
+
+            // Always get the indices buffer after finishing with the vertices buffer
+            ByteBuffer imguiIndicesBuffer = imDrawData.getCmdListIdxBufferData(i);
+            dstIdxBuffer.put(imguiIndicesBuffer);
+        }
+        vertexBuffer.unMap();
+        indicesBuffer.unMap();
+
     }
 }

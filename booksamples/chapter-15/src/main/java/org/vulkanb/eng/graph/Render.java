@@ -14,13 +14,13 @@ import org.vulkanb.eng.scene.*;
 import java.util.*;
 
 public class Render {
-
     private static final Logger LOGGER = LogManager.getLogger();
     private AnimationComputeActivity animationComputeActivity;
     private CommandPool commandPool;
     private Device device;
     private GeometryRenderActivity geometryRenderActivity;
     private Queue.GraphicsQueue graphQueue;
+    private GuiRenderActivity guiRenderActivity;
     private Instance instance;
     private LightingRenderActivity lightingRenderActivity;
     private PhysicalDevice physicalDevice;
@@ -31,7 +31,6 @@ public class Render {
     private SwapChain swapChain;
     private TextureCache textureCache;
     private List<VulkanModel> vulkanModels;
-    private GuiRenderActivity guiRenderActivity;
 
     public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();
@@ -145,5 +144,6 @@ public class Render {
         List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
         lightingRenderActivity.resize(swapChain, attachments);
+        guiRenderActivity.resize(swapChain);
     }
 }

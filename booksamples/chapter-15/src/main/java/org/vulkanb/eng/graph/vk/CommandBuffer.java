@@ -62,4 +62,14 @@ public class CommandBuffer {
     public void reset() {
         vkResetCommandBuffer(vkCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     }
+
+    public void submitAndWait(Device device, Queue queue) {
+        Fence fence = new Fence(device, true);
+        fence.reset();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            queue.submit(stack.pointers(vkCommandBuffer), null, null, null, fence);
+        }
+        fence.fenceWait();
+        fence.cleanup();
+    }
 }

@@ -246,13 +246,7 @@ public class VulkanModel {
         }
 
         cmd.endRecording();
-        Fence fence = new Fence(device, true);
-        fence.reset();
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            queue.submit(stack.pointers(cmd.getVkCommandBuffer()), null, null, null, fence);
-        }
-        fence.fenceWait();
-        fence.cleanup();
+        cmd.submitAndWait(device, queue);
         cmd.cleanup();
 
         stagingBufferList.forEach(VulkanBuffer::cleanup);
