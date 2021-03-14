@@ -17,7 +17,7 @@ public abstract class DescriptorSetLayout {
 
     private Device device;
 
-    public DescriptorSetLayout(Device device) {
+    protected DescriptorSetLayout(Device device) {
         this.device = device;
     }
 

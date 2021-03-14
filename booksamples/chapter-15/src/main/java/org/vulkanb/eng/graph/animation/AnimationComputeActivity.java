@@ -18,8 +18,6 @@ public class AnimationComputeActivity {
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
     private static final int LOCAL_SIZE_X = 32;
-
-    private MemoryBarrier memoryBarrier;
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
     private Queue.ComputeQueue computeQueue;
@@ -29,6 +27,7 @@ public class AnimationComputeActivity {
     // Key is the entity id
     private Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
     private Fence fence;
+    private MemoryBarrier memoryBarrier;
     // Key is the model id
     private Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
     private Scene scene;
@@ -121,7 +120,7 @@ public class AnimationComputeActivity {
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
             vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    0, memoryBarrier.getMemoryBarrier(), null, null);
+                    0, memoryBarrier.getVkMemoryBarrier(), null, null);
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.getVkPipeline());
 

@@ -17,9 +17,8 @@ import java.util.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Maintain y axis convention
-// TODO: Mip Levels
-// TODO: Check if events are consumed by GUI
 // TODO: Synchronization
+// TODO: Decouple gui
 public class GuiRenderActivity {
 
     private static final String GUI_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/gui_fragment.glsl";

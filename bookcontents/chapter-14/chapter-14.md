@@ -766,17 +766,17 @@ import static org.lwjgl.vulkan.VK11.VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 
 public class MemoryBarrier {
 
-    private VkMemoryBarrier.Buffer memoryBarrier;
+    private VkMemoryBarrier.Buffer vkMemoryBarrier;
 
     public MemoryBarrier(int srcAccessMask, int dstAccessMask) {
-        memoryBarrier = VkMemoryBarrier.calloc(1)
+        vkMemoryBarrier = VkMemoryBarrier.calloc(1)
                 .sType(VK_STRUCTURE_TYPE_MEMORY_BARRIER)
                 .srcAccessMask(srcAccessMask)
                 .dstAccessMask(dstAccessMask);
     }
 
-    public VkMemoryBarrier.Buffer getMemoryBarrier() {
-        return memoryBarrier;
+    public VkMemoryBarrier.Buffer getVkMemoryBarrier() {
+        return vkMemoryBarrier;
     }
 }
 ```
@@ -1025,7 +1025,7 @@ public class AnimationComputeActivity {
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
             vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    0, memoryBarrier.getMemoryBarrier(), null, null);
+                    0, memoryBarrier.getVkMemoryBarrier(), null, null);
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.getVkPipeline());
 
@@ -1250,7 +1250,7 @@ public class GeometryRenderActivity {
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
             vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-                    0, memoryBarrier.getMemoryBarrier(), null, null);
+                    0, memoryBarrier.getVkMemoryBarrier(), null, null);
 
             vkCmdBeginRenderPass(cmdHandle, renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
         ...

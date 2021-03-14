@@ -33,7 +33,7 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
+    public void handleInput(Window window, Scene scene, long diffTimeMilisec, boolean inputConsumed) {
         float move = diffTimeMilisec * MOVEMENT_SPEED;
         Camera camera = scene.getCamera();
         if (window.isKeyPressed(GLFW_KEY_W)) {

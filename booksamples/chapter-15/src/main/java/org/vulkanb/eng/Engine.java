@@ -27,6 +27,17 @@ public class Engine {
         window.cleanup();
     }
 
+    private boolean handleInputGui() {
+        ImGuiIO imGuiIO = ImGui.getIO();
+        MouseInput mouseInput = window.getMouseInput();
+        Vector2f mousePos = mouseInput.getCurrentPos();
+        imGuiIO.setMousePos(mousePos.x, mousePos.y);
+        imGuiIO.setMouseDown(0, mouseInput.isLeftButtonPressed());
+        imGuiIO.setMouseDown(1, mouseInput.isRightButtonPressed());
+
+        return imGuiIO.getWantCaptureMouse() || imGuiIO.getWantCaptureKeyboard();
+    }
+
     public void run() {
         EngineProperties engineProperties = EngineProperties.getInstance();
         long initialTime = System.nanoTime();
@@ -45,8 +56,8 @@ public class Engine {
 
             if (deltaU >= 1) {
                 long diffTimeNanos = currentTime - updateTime;
-                handleInputGui();
-                appLogic.handleInput(window, scene, diffTimeNanos);
+                boolean inputConsumed = handleInputGui();
+                appLogic.handleInput(window, scene, diffTimeNanos, inputConsumed);
                 updateTime = currentTime;
                 deltaU--;
             }
@@ -55,15 +66,6 @@ public class Engine {
         }
 
         cleanup();
-    }
-
-    private void handleInputGui() {
-        ImGuiIO imGuiIO = ImGui.getIO();
-        MouseInput mouseInput = window.getMouseInput();
-        Vector2f mousePos = mouseInput.getCurrentPos();
-        imGuiIO.setMousePos(mousePos.x, mousePos.y);
-        imGuiIO.setMouseDown(0, mouseInput.isLeftButtonPressed());
-        imGuiIO.setMouseDown(1, mouseInput.isRightButtonPressed());
     }
 
     public void start() {

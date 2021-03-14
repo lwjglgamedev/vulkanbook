@@ -121,7 +121,7 @@ public class AnimationComputeActivity {
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
             vkCmdPipelineBarrier(cmdHandle, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    0, memoryBarrier.getMemoryBarrier(), null, null);
+                    0, memoryBarrier.getVkMemoryBarrier(), null, null);
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.getVkPipeline());
 
