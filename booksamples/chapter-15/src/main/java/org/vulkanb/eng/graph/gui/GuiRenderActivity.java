@@ -18,8 +18,8 @@ import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Maintain y axis convention
 // TODO: Mip Levels
-// TODO: Test pop-ups
 // TODO: Check if events are consumed by GUI
+// TODO: Synchronization
 public class GuiRenderActivity {
 
     private static final String GUI_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/gui_fragment.glsl";
@@ -184,6 +184,8 @@ public class GuiRenderActivity {
             VkRect2D.Buffer rect = VkRect2D.callocStack(1, stack);
             ImDrawData imDrawData = ImGui.getDrawData();
             int numCmdLists = imDrawData.getCmdListsCount();
+            int offsetIdx = 0;
+            int offsetVtx = 0;
             for (int i = 0; i < numCmdLists; i++) {
                 int cmdBufferSize = imDrawData.getCmdListCmdBufferSize(i);
                 for (int j = 0; j < cmdBufferSize; j++) {
@@ -191,9 +193,11 @@ public class GuiRenderActivity {
                     rect.offset(it -> it.x((int) Math.max(imVec4.x, 0)).y((int) Math.max(imVec4.y, 1)));
                     rect.extent(it -> it.width((int) (imVec4.z - imVec4.x)).height((int) (imVec4.w - imVec4.y)));
                     vkCmdSetScissor(cmdHandle, 0, rect);
-                    vkCmdDrawIndexed(cmdHandle, imDrawData.getCmdListCmdBufferElemCount(i, j), 1,
-                            imDrawData.getCmdListCmdBufferIdxOffset(i, j), imDrawData.getCmdListCmdBufferVtxOffset(i, j), 0);
+                    int numElements = imDrawData.getCmdListCmdBufferElemCount(i, j);
+                    vkCmdDrawIndexed(cmdHandle, numElements, 1, offsetIdx, offsetVtx, 0);
+                    offsetIdx += numElements;
                 }
+                offsetVtx += imDrawData.getCmdListVtxBufferSize(i);
             }
         }
     }
