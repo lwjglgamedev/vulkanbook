@@ -20,8 +20,6 @@ public class GeometryRenderActivity {
     private static final String GEOMETRY_FRAGMENT_SHADER_FILE_SPV = GEOMETRY_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String GEOMETRY_VERTEX_SHADER_FILE_GLSL = "resources/shaders/geometry_vertex.glsl";
     private static final String GEOMETRY_VERTEX_SHADER_FILE_SPV = GEOMETRY_VERTEX_SHADER_FILE_GLSL + ".spv";
-
-    private MemoryBarrier memoryBarrier;
     private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
@@ -33,6 +31,7 @@ public class GeometryRenderActivity {
     private int materialSize;
     private VulkanBuffer materialsBuffer;
     private DescriptorSet.DynUniformDescriptorSet materialsDescriptorSet;
+    private MemoryBarrier memoryBarrier;
     private Pipeline pipeLine;
     private PipelineCache pipelineCache;
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
@@ -43,6 +42,7 @@ public class GeometryRenderActivity {
     private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
     private TextureSampler textureSampler;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
+    private VertexBufferStructure vertexBufferStructure;
     private VulkanBuffer[] viewMatricesBuffer;
     private DescriptorSet.UniformDescriptorSet[] viewMatricesDescriptorSets;
 
@@ -87,6 +87,7 @@ public class GeometryRenderActivity {
 
     public void cleanup() {
         pipeLine.cleanup();
+        vertexBufferStructure.cleanup();
         materialsBuffer.cleanup();
         Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
@@ -155,10 +156,11 @@ public class GeometryRenderActivity {
     }
 
     private void createPipeline() {
+        vertexBufferStructure = new VertexBufferStructure();
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 geometryFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram, GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
                 true, true, GraphConstants.MAT4X4_SIZE,
-                new VertexBufferStructure(), geometryDescriptorSetLayouts);
+                vertexBufferStructure, geometryDescriptorSetLayouts);
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }

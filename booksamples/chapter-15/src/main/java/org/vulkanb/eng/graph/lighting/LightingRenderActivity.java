@@ -29,6 +29,7 @@ public class LightingRenderActivity {
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
+    private EmptyVertexBufferStructure emptyVertexBufferStructure;
     private Fence[] fences;
     private VulkanBuffer[] invMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] invMatricesDescriptorSets;
@@ -62,8 +63,23 @@ public class LightingRenderActivity {
         createCommandBuffers(commandPool, numImages);
     }
 
-    public LightingFrameBuffer getLightingFrameBuffer() {
-        return lightingFrameBuffer;
+    public CommandBuffer beginRecording(List<CascadeShadow> cascadeShadows) {
+        int idx = swapChain.getCurrentFrame();
+
+        Fence fence = fences[idx];
+        CommandBuffer commandBuffer = commandBuffers[idx];
+
+        fence.fenceWait();
+        fence.reset();
+
+        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(), lightsBuffers[idx]);
+        updateInvMatrices(invMatricesBuffers[idx]);
+        updateCascadeShadowMatrices(cascadeShadows, shadowsMatricesBuffers[idx]);
+
+        commandBuffer.reset();
+        commandBuffer.beginRecording();
+
+        return commandBuffer;
     }
 
     public void cleanup() {
@@ -73,6 +89,7 @@ public class LightingRenderActivity {
         descriptorPool.cleanup();
         Arrays.stream(lightsBuffers).forEach(VulkanBuffer::cleanup);
         pipeline.cleanup();
+        emptyVertexBufferStructure.cleanup();
         lightSpecConstants.cleanup();
         Arrays.stream(invMatricesBuffers).forEach(VulkanBuffer::cleanup);
         lightingFrameBuffer.cleanup();
@@ -126,9 +143,10 @@ public class LightingRenderActivity {
     }
 
     private void createPipeline(PipelineCache pipelineCache) {
+        emptyVertexBufferStructure = new EmptyVertexBufferStructure();
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false, 0,
-                new EmptyVertexBufferStructure(), descriptorSetLayouts);
+                emptyVertexBufferStructure, descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
@@ -166,6 +184,15 @@ public class LightingRenderActivity {
                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
+    }
+
+    public void endRecording(CommandBuffer commandBuffer) {
+        vkCmdEndRenderPass(commandBuffer.getVkCommandBuffer());
+        commandBuffer.endRecording();
+    }
+
+    public LightingFrameBuffer getLightingFrameBuffer() {
+        return lightingFrameBuffer;
     }
 
     public void recordCommandBuffers(CommandBuffer commandBuffer) {
@@ -226,30 +253,6 @@ public class LightingRenderActivity {
 
             vkCmdDraw(cmdHandle, 3, 1, 0, 0);
         }
-    }
-
-    public void endRecording(CommandBuffer commandBuffer) {
-        vkCmdEndRenderPass(commandBuffer.getVkCommandBuffer());
-        commandBuffer.endRecording();
-    }
-
-    public CommandBuffer beginRecording(List<CascadeShadow> cascadeShadows) {
-        int idx = swapChain.getCurrentFrame();
-
-        Fence fence = fences[idx];
-        CommandBuffer commandBuffer = commandBuffers[idx];
-
-        fence.fenceWait();
-        fence.reset();
-
-        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(), lightsBuffers[idx]);
-        updateInvMatrices(invMatricesBuffers[idx]);
-        updateCascadeShadowMatrices(cascadeShadows, shadowsMatricesBuffers[idx]);
-
-        commandBuffer.reset();
-        commandBuffer.beginRecording();
-
-        return commandBuffer;
     }
 
     public void resize(SwapChain swapChain, List<Attachment> attachments) {

@@ -52,7 +52,6 @@ public class ImGuiVertexBufferStructure extends VertexInputStateInfo {
                 .pVertexAttributeDescriptions(viAttrs);
     }
 
-    // TODO: Check if this is called somewhere
     @Override
     public void cleanup() {
         super.cleanup();

@@ -27,6 +27,7 @@ public class GuiRenderActivity {
     private static final String GUI_FRAGMENT_SHADER_FILE_SPV = GUI_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String GUI_VERTEX_SHADER_FILE_GLSL = "resources/shaders/gui_vertex.glsl";
     private static final String GUI_VERTEX_SHADER_FILE_SPV = GUI_VERTEX_SHADER_FILE_GLSL + ".spv";
+    private ImGuiVertexBufferStructure bufferStructure;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Device device;
@@ -61,6 +62,7 @@ public class GuiRenderActivity {
         Arrays.stream(indicesBuffers).forEach(VulkanBuffer::cleanup);
         ImGui.destroyContext();
         pipeline.cleanup();
+        bufferStructure.cleanup();
         shaderProgram.cleanup();
     }
 
@@ -79,12 +81,13 @@ public class GuiRenderActivity {
         textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout, fontsTexture,
                 fontsTextureSampler, 0);
     }
-    
+
     private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
+        bufferStructure = new ImGuiVertexBufferStructure();
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
                 GraphConstants.FLOAT_LENGTH * 4,
-                new ImGuiVertexBufferStructure(), descriptorSetLayouts);
+                bufferStructure, descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
@@ -212,13 +215,12 @@ public class GuiRenderActivity {
         int indexBufferSize = imDrawData.getTotalIdxCount() * GraphConstants.SHORT_LENGTH;
 
         VulkanBuffer vertexBuffer = vertexBuffers[idx];
-        // TODO: Non-coherent buffers
         if (vertexBuffer == null || vertexBufferSize != vertexBuffer.getRequestedSize()) {
             if (vertexBuffer != null) {
                 vertexBuffer.cleanup();
             }
             vertexBuffer = new VulkanBuffer(device, vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
             vertexBuffers[idx] = vertexBuffer;
         }
 
@@ -228,7 +230,7 @@ public class GuiRenderActivity {
                 indicesBuffer.cleanup();
             }
             indicesBuffer = new VulkanBuffer(device, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
             indicesBuffers[idx] = indicesBuffer;
         }
 
@@ -244,8 +246,11 @@ public class GuiRenderActivity {
             ByteBuffer imguiIndicesBuffer = imDrawData.getCmdListIdxBufferData(i);
             dstIdxBuffer.put(imguiIndicesBuffer);
         }
+
+        vertexBuffer.flush();
+        indicesBuffer.flush();
+
         vertexBuffer.unMap();
         indicesBuffer.unMap();
-
     }
 }

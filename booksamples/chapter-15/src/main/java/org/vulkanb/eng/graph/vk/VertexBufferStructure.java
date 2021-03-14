@@ -4,7 +4,6 @@ import org.lwjgl.vulkan.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: call clenup
 public class VertexBufferStructure extends VertexInputStateInfo {
 
     public static final int TEXT_COORD_COMPONENTS = 2;
