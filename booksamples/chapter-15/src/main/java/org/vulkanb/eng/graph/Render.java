@@ -120,7 +120,7 @@ public class Render {
         geometryRenderActivity.submit(graphQueue);
         commandBuffer = lightingRenderActivity.beginRecording(shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.recordCommandBuffers(commandBuffer);
-        guiRenderActivity.render(commandBuffer);
+        guiRenderActivity.render(scene, commandBuffer);
         lightingRenderActivity.endRecording(commandBuffer);
         lightingRenderActivity.submit(graphQueue);
 

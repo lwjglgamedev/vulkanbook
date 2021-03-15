@@ -1,7 +1,6 @@
 package org.vulkanb.eng.graph.gui;
 
 import imgui.*;
-import imgui.flag.ImGuiCond;
 import imgui.type.ImInt;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
@@ -10,6 +9,7 @@ import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.lighting.LightingFrameBuffer;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.scene.*;
 
 import java.nio.*;
 import java.util.*;
@@ -17,8 +17,6 @@ import java.util.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Maintain y axis convention
-// TODO: Synchronization
-// TODO: Decouple gui
 public class GuiRenderActivity {
 
     private static final String GUI_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/gui_fragment.glsl";
@@ -124,21 +122,18 @@ public class GuiRenderActivity {
 
         vertexBuffers = new VulkanBuffer[swapChain.getNumImages()];
         indicesBuffers = new VulkanBuffer[swapChain.getNumImages()];
-        createWindow();
     }
 
-    private void createWindow() {
-        ImGui.newFrame();
-        ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
-        ImGui.showDemoWindow();
-        ImGui.endFrame();
-        ImGui.render();
-    }
-
-    public void render(CommandBuffer commandBuffer) {
+    public void render(Scene scene, CommandBuffer commandBuffer) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int idx = swapChain.getCurrentFrame();
-            createWindow();
+
+            IGuiInstance guiInstance = scene.getGuiInstance();
+            if (guiInstance == null) {
+                return;
+            }
+            guiInstance.drawGui();
+
             updateBuffers(idx);
 
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
@@ -214,6 +209,9 @@ public class GuiRenderActivity {
         int vertexBufferSize = imDrawData.getTotalVtxCount() * ImGuiVertexBufferStructure.VERTEX_SIZE;
         int indexBufferSize = imDrawData.getTotalIdxCount() * GraphConstants.SHORT_LENGTH;
 
+        if (vertexBufferSize == 0 || indexBufferSize == 0) {
+            return;
+        }
         VulkanBuffer vertexBuffer = vertexBuffers[idx];
         if (vertexBuffer == null || vertexBufferSize != vertexBuffer.getRequestedSize()) {
             if (vertexBuffer != null) {

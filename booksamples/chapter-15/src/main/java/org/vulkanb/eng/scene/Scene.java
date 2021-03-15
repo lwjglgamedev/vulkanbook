@@ -12,6 +12,7 @@ public class Scene {
     private Camera camera;
     private Light directionalLight;
     private Map<String, List<Entity>> entitiesMap;
+    private IGuiInstance guiInstance;
     private boolean lightChanged;
     private Light[] lights;
     private Projection projection;
@@ -53,6 +54,10 @@ public class Scene {
         return entitiesMap;
     }
 
+    public IGuiInstance getGuiInstance() {
+        return guiInstance;
+    }
+
     public Light[] getLights() {
         return this.lights;
     }
@@ -74,6 +79,10 @@ public class Scene {
         if (entities != null) {
             entities.removeIf(e -> e.getId().equals(entity.getId()));
         }
+    }
+
+    public void setGuiInstance(IGuiInstance guiInstance) {
+        this.guiInstance = guiInstance;
     }
 
     public void setLightChanged(boolean lightChanged) {

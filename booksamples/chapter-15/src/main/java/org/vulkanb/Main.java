@@ -1,5 +1,7 @@
 package org.vulkanb;
 
+import imgui.ImGui;
+import imgui.flag.ImGuiCond;
 import org.apache.logging.log4j.*;
 import org.joml.*;
 import org.vulkanb.eng.*;
@@ -62,6 +64,14 @@ public class Main implements IAppLogic {
             scene.setLightChanged(false);
         }
 
+        if (window.isKeyPressed(GLFW_KEY_0)) {
+            scene.setGuiInstance(null);
+        } else if (window.isKeyPressed(GLFW_KEY_1)) {
+            scene.setGuiInstance(new DemoGui());
+        } else if (window.isKeyPressed(GLFW_KEY_2)) {
+            scene.setGuiInstance(new SimpleGui());
+        }
+
         MouseInput mouseInput = window.getMouseInput();
         if (mouseInput.isRightButtonPressed()) {
             Vector2f displVec = mouseInput.getDisplVec();
@@ -105,6 +115,8 @@ public class Main implements IAppLogic {
         Light[] lightArr = new Light[lights.size()];
         lightArr = lights.toArray(lightArr);
         scene.setLights(lightArr);
+
+        scene.setGuiInstance(new DemoGui());
     }
 
     private void updateDirectionalLight() {
@@ -116,5 +128,29 @@ public class Main implements IAppLogic {
         lightDirection.z = zValue;
         lightDirection.normalize();
         lightDirection.w = 0.0f;
+    }
+
+    static class DemoGui implements IGuiInstance {
+        @Override
+        public void drawGui() {
+            ImGui.newFrame();
+            ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
+            ImGui.showDemoWindow();
+            ImGui.endFrame();
+            ImGui.render();
+        }
+    }
+
+    static class SimpleGui implements IGuiInstance {
+        @Override
+        public void drawGui() {
+            ImGui.newFrame();
+            ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
+            ImGui.setNextWindowSize(200, 200);
+            ImGui.begin("Test Window");
+            ImGui.end();
+            ImGui.endFrame();
+            ImGui.render();
+        }
     }
 }
