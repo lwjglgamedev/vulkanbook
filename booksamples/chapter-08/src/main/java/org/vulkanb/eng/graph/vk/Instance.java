@@ -107,7 +107,7 @@ public class Instance {
     }
 
     private static VkDebugUtilsMessengerCreateInfoEXT createDebugCallBack() {
-        VkDebugUtilsMessengerCreateInfoEXT result = VkDebugUtilsMessengerCreateInfoEXT
+        return VkDebugUtilsMessengerCreateInfoEXT
                 .calloc()
                 .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
                 .messageSeverity(MESSAGE_SEVERITY_BITMASK)
@@ -126,7 +126,6 @@ public class Instance {
                     LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     return VK_FALSE;
                 });
-        return result;
     }
 
     public void cleanup() {
