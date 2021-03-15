@@ -105,8 +105,8 @@ public class Instance {
     public Instance(boolean validate) {
         ...
             // Validation layers
-            String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;
-            int numValidationLayers = validationLayers != null ? validationLayers.length : 0;
+		    List<String> validationLayers = getSupportedValidationLayers();
+		    int numValidationLayers = validationLayers.size();
             boolean supportsValidation = validate;
             if (validate && numValidationLayers == 0) {
                 supportsValidation = false;
@@ -124,13 +124,14 @@ We will get the supported validation layers by invoking the `getSupportedValidat
 ```java
 public class Instance {
     ...
-    private String[] getSupportedValidationLayers(MemoryStack stack) {
-        Set<String> supportedLayers = new HashSet<>();
-		IntBuffer numLayersArr = stack.callocInt(1);
-		vkEnumerateInstanceLayerProperties(numLayersArr, null);
-		int numLayers = numLayersArr.get(0);
-        LOGGER.debug("Instance supports [{}] layers", numLayers);
+    private List<String> getSupportedValidationLayers() {
+    	try (MemoryStack stack = MemoryStack.stackPush()) {
+			IntBuffer numLayersArr = stack.callocInt(1);
+			vkEnumerateInstanceLayerProperties(numLayersArr, null);
+			int numLayers = numLayersArr.get(0);
+			LOGGER.debug("Instance supports [{}] layers", numLayers);
         ...
+		}
     }
     ...
 }
@@ -146,75 +147,77 @@ This function can be used to get the total number of supported layers, and to ge
 ```java
 public class Instance {
     ...
-    private String[] getSupportedValidationLayers(MemoryStack stack) {
+    private List<String> getSupportedValidationLayers() {
+    	try (MemoryStack stack = MemoryStack.stackPush()) {
         ...
-        VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
-        vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
-        for (int i = 0; i < numLayers; i++) {
-            VkLayerProperties props = propsBuf.get(i);
-            String layerName = props.layerNameString();
-            supportedLayers.add(layerName);
-            LOGGER.debug("Supported layer [{}]", layerName);
-        }
+			VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
+			vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
+			List<String> supportedLayers = new ArrayList<>();
+			for (int i = 0; i < numLayers; i++) {
+				VkLayerProperties props = propsBuf.get(i);
+				String layerName = props.layerNameString();
+				supportedLayers.add(layerName);
+				LOGGER.debug("Supported layer [{}]", layerName);
+			}
         ...
+		}
     }
     ...
 }
 ```
 
-Once we have the supported layers, we need to select which ones do we want to activate. In order to do so, we construct a list of the preferred layers like this:
+Once we have the supported layers, we need to select which ones do we want to activate. In order to do so, we construct a checks like this:
 
 ```java
 public class Instance {
     ...
-    private String[] getSupportedValidationLayers(MemoryStack stack) {
+    private List<String> getSupportedValidationLayers() {
+    	try (MemoryStack stack = MemoryStack.stackPush()) {
         ...
-        String[][] validationLayers = new String[][]{
-                // Preferred one
-                {"VK_LAYER_KHRONOS_validation"},
-                // If not available, check LunarG meta layer
-                {"VK_LAYER_LUNARG_standard_validation"},
-                // If not available, check individual layers
-                {
-                        "VK_LAYER_GOOGLE_threading",
-                        "VK_LAYER_LUNARG_parameter_validation",
-                        "VK_LAYER_LUNARG_object_tracker",
-                        "VK_LAYER_LUNARG_core_validation",
-                        "VK_LAYER_GOOGLE_unique_objects",
-                },
-                // Last resort
-                {"VK_LAYER_LUNARG_core_validation"}
-        };
+			List<String> layersToUse = new ArrayList<>();
+
+			// Main validation layer
+			if (supportedLayers.contains("VK_LAYER_KHRONOS_validation")) {
+				layersToUse.add("VK_LAYER_KHRONOS_validation");
+				return layersToUse;
+			}
+
+			// Fallback 1
+			if (supportedLayers.contains("VK_LAYER_LUNARG_standard_validation")) {
+				layersToUse.add("VK_LAYER_KHRONOS_validation");
+				return layersToUse;
+			}
+
+			// Fallback 2 (set)
+			List<String> requestedLayers = new ArrayList<>();
+			requestedLayers.add("VK_LAYER_GOOGLE_threading");
+			requestedLayers.add("VK_LAYER_LUNARG_parameter_validation");
+			requestedLayers.add("VK_LAYER_LUNARG_object_tracker");
+			requestedLayers.add("VK_LAYER_LUNARG_core_validation");
+			requestedLayers.add("VK_LAYER_GOOGLE_unique_objects");
+
+			List<String> overlap = requestedLayers.stream().filter(requestedLayers::contains).collect(Collectors.toList());
+
+			if (overlap.size() > 0) {
+				return overlap;
+			}
+
+			// Fallback 3
+			if (supportedLayers.contains("VK_LAYER_LUNARG_core_validation")) {
+				layersToUse.add("VK_LAYER_LUNARG_core_validation");
+				return layersToUse;
+			}
+
+			// Returns empty list
+			return layersToUse;
         ...
+		}
     }
     ...
 }
 ```
 
-We first try to aim for the `VK_LAYER_KHRONOS_validation` meta layer. A meta layer is basically a collection of layers registered under a single name. Then we go down in our priority list combining other meta layers or selecting a list of single layers. After that, we basically check the presence of these preferred layers (ordered by priority) to get the ones that are supported (once we match with a preferred meta-layer or list of layers, we just pick that):
-
-```java
-public class Instance {
-    ...
-    private String[] getSupportedValidationLayers(MemoryStack stack) {
-        ...
-        String[] selectedLayers = null;
-        for (String[] layers : validationLayers) {
-            boolean supported = true;
-            for (String layerName : layers) {
-                supported = supported && supportedLayers.contains(layerName);
-            }
-            if (supported) {
-                selectedLayers = layers;
-                break;
-            }
-        }
-
-        return selectedLayers;
-    }
-    ...
-}
-```
+We first try to aim for the `VK_LAYER_KHRONOS_validation` meta layer. A meta layer is basically a collection of layers registered under a single name. Then we go down in our priority list combining other meta layers or selecting a list of single layers. We basically check the presence of these preferred layers (ordered by priority) to get the ones that are supported, and pick those.
 
 Let's get back to the constructor. Now we have a list of the names of the supported layers (array of Strings) we need to transform it to a pointer of a list of null terminated Strings:
 ```java
@@ -227,8 +230,8 @@ public class Instance {
             if (supportsValidation) {
                 requiredLayers = stack.mallocPointer(numValidationLayers);
                 for (int i = 0; i < numValidationLayers; i++) {
-                    LOGGER.debug("Using validation layer [{}]", validationLayers[i]);
-                    requiredLayers.put(i, stack.ASCII(validationLayers[i]));
+					LOGGER.debug("Using validation layer [{}]", validationLayers.get(i));
+					requiredLayers.put(i, stack.ASCII(validationLayers.get(i)));
                 }
             }
         ...
