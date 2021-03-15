@@ -126,9 +126,9 @@ public class Instance {
     ...
     private String[] getSupportedValidationLayers(MemoryStack stack) {
         Set<String> supportedLayers = new HashSet<>();
-        int[] numLayersArr = new int[1];
-        vkEnumerateInstanceLayerProperties(numLayersArr, null);
-        int numLayers = numLayersArr[0];
+		IntBuffer numLayersArr = stack.callocInt(1);
+		vkEnumerateInstanceLayerProperties(numLayersArr, null);
+		int numLayers = numLayersArr.get(0);
         LOGGER.debug("Instance supports [{}] layers", numLayers);
         ...
     }
