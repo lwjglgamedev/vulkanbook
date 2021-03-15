@@ -13,8 +13,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class Queue {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private int queueFamilyIndex;
-    private VkQueue vkQueue;
+
+    private final int queueFamilyIndex;
+    private final VkQueue vkQueue;
 
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
         LOGGER.debug("Creating queue");

@@ -10,8 +10,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class SwapChainRenderPass {
 
-    private SwapChain swapChain;
-    private long vkRenderPass;
+    private final SwapChain swapChain;
+    private final long vkRenderPass;
 
     public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
         this.swapChain = swapChain;

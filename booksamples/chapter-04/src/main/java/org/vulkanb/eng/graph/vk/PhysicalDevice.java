@@ -14,12 +14,13 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class PhysicalDevice {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private VkExtensionProperties.Buffer vkDeviceExtensions;
-    private VkPhysicalDeviceMemoryProperties vkMemoryProperties;
-    private VkPhysicalDevice vkPhysicalDevice;
-    private VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
-    private VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
-    private VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
+
+    private final VkExtensionProperties.Buffer vkDeviceExtensions;
+    private final VkPhysicalDeviceMemoryProperties vkMemoryProperties;
+    private final VkPhysicalDevice vkPhysicalDevice;
+    private final VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
+    private final VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
+    private final VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
 
     private PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -29,26 +30,26 @@ public class PhysicalDevice {
 
             // Get device properties
             vkPhysicalDeviceProperties = VkPhysicalDeviceProperties.calloc();
-            vkGetPhysicalDeviceProperties(this.vkPhysicalDevice, vkPhysicalDeviceProperties);
+            vkGetPhysicalDeviceProperties(vkPhysicalDevice, vkPhysicalDeviceProperties);
 
             // Get device extensions
-            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, null),
+            vkCheck(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, (String) null, intBuffer, null),
                     "Failed to get number of device extension properties");
             vkDeviceExtensions = VkExtensionProperties.calloc(intBuffer.get(0));
-            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
+            vkCheck(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
                     "Failed to get extension properties");
 
             // Get Queue family properties
-            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, null);
+            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, intBuffer, null);
             vkQueueFamilyProps = VkQueueFamilyProperties.calloc(intBuffer.get(0));
-            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, vkQueueFamilyProps);
+            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, intBuffer, vkQueueFamilyProps);
 
             vkPhysicalDeviceFeatures = VkPhysicalDeviceFeatures.calloc();
-            vkGetPhysicalDeviceFeatures(this.vkPhysicalDevice, vkPhysicalDeviceFeatures);
+            vkGetPhysicalDeviceFeatures(vkPhysicalDevice, vkPhysicalDeviceFeatures);
 
             // Get Memory information and properties
             vkMemoryProperties = VkPhysicalDeviceMemoryProperties.calloc();
-            vkGetPhysicalDeviceMemoryProperties(this.vkPhysicalDevice, vkMemoryProperties);
+            vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, vkMemoryProperties);
         }
     }
 

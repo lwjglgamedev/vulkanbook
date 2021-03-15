@@ -13,8 +13,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class Device {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private PhysicalDevice physicalDevice;
-    private VkDevice vkDevice;
+
+    private final PhysicalDevice physicalDevice;
+    private final VkDevice vkDevice;
 
     public Device(PhysicalDevice physicalDevice) {
         LOGGER.debug("Creating device");

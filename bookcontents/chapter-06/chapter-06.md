@@ -203,8 +203,9 @@ public class VertexBufferStructure extends VertexInputStateInfo {
 
     private static final int NUMBER_OF_ATTRIBUTES = 1;
     private static final int POSITION_COMPONENTS = 3;
-    private VkVertexInputAttributeDescription.Buffer viAttrs;
-    private VkVertexInputBindingDescription.Buffer viBindings;
+    
+    private final VkVertexInputAttributeDescription.Buffer viAttrs;
+    private final VkVertexInputBindingDescription.Buffer viBindings;
 
     public VertexBufferStructure() {
         viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);
@@ -574,8 +575,8 @@ public class ShaderProgram {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private Device device;
-    private ShaderModule[] shaderModules;
+    private final Device device;
+    private final ShaderModule[] shaderModules;
 
     public ShaderProgram(Device device, ShaderModuleData[] shaderModuleData) {
         try {
@@ -744,9 +745,11 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class PipelineCache {
+    
     private static final Logger LOGGER = LogManager.getLogger();
-    private Device device;
-    private long vkPipelineCache;
+    
+    private final Device device;
+    private final long vkPipelineCache;
 
     public PipelineCache(Device device) {
         LOGGER.debug("Creating pipeline cache");

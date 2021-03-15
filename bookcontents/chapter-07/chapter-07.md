@@ -178,9 +178,10 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Attachment {
 
+    private final Image image;
+    private final ImageView imageView;
+    
     private boolean depthAttachment;
-    private Image image;
-    private ImageView imageView;
 
     public Attachment(Device device, int width, int height, int format, int usage) {
         image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);

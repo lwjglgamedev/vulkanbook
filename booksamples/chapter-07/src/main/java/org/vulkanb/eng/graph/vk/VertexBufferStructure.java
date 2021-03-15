@@ -9,8 +9,9 @@ public class VertexBufferStructure extends VertexInputStateInfo {
     public static final int TEXT_COORD_COMPONENTS = 2;
     private static final int NUMBER_OF_ATTRIBUTES = 2;
     private static final int POSITION_COMPONENTS = 3;
-    private VkVertexInputAttributeDescription.Buffer viAttrs;
-    private VkVertexInputBindingDescription.Buffer viBindings;
+
+    private final VkVertexInputAttributeDescription.Buffer viAttrs;
+    private final VkVertexInputBindingDescription.Buffer viBindings;
 
     public VertexBufferStructure() {
         viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);

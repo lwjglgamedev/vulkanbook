@@ -8,10 +8,9 @@ import java.nio.ByteBuffer;
 
 public class LightSpecConstants {
 
-    private ByteBuffer data;
-
-    private VkSpecializationMapEntry.Buffer specEntryMap;
-    private VkSpecializationInfo specInfo;
+    private final ByteBuffer data;
+    private final VkSpecializationMapEntry.Buffer specEntryMap;
+    private final VkSpecializationInfo specInfo;
 
     public LightSpecConstants() {
         data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);

@@ -10,11 +10,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Image {
 
-    private Device device;
-    private int format;
-    private int mipLevels;
-    private long vkImage;
-    private long vkMemory;
+    private final Device device;
+    private final int format;
+    private final int mipLevels;
+    private final long vkImage;
+    private final long vkMemory;
 
     public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
         this.device = device;

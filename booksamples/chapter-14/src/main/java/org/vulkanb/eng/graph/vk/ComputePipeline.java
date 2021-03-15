@@ -16,9 +16,10 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class ComputePipeline {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private Device device;
-    private long vkPipeline;
-    private long vkPipelineLayout;
+
+    private final Device device;
+    private final long vkPipeline;
+    private final long vkPipelineLayout;
 
     public ComputePipeline(PipelineCache pipelineCache, ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         LOGGER.debug("Creating compute pipeline");

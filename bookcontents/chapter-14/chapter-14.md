@@ -562,10 +562,12 @@ In order to support the execution of commands that will go through the compute p
 ```java
 public class ComputePipeline {
 
+    
     private static final Logger LOGGER = LogManager.getLogger();
-    private Device device;
-    private long vkPipeline;
-    private long vkPipelineLayout;
+    
+    private final Device device;
+    private final long vkPipeline;
+    private final long vkPipelineLayout;
 
     public ComputePipeline(PipelineCache pipelineCache, ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
@@ -766,7 +768,7 @@ import static org.lwjgl.vulkan.VK11.VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 
 public class MemoryBarrier {
 
-    private VkMemoryBarrier.Buffer vkMemoryBarrier;
+    private final VkMemoryBarrier.Buffer vkMemoryBarrier;
 
     public MemoryBarrier(int srcAccessMask, int dstAccessMask) {
         vkMemoryBarrier = VkMemoryBarrier.calloc(1)

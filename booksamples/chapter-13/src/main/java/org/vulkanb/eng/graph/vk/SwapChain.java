@@ -14,13 +14,15 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class SwapChain {
 
     private static final Logger LOGGER = LogManager.getLogger();
+
+    private final Device device;
+    private final ImageView[] imageViews;
+    private final SurfaceFormat surfaceFormat;
+    private final VkExtent2D swapChainExtent;
+    private final SyncSemaphores[] syncSemaphoresList;
+    private final long vkSwapChain;
+
     private int currentFrame;
-    private Device device;
-    private ImageView[] imageViews;
-    private SurfaceFormat surfaceFormat;
-    private VkExtent2D swapChainExtent;
-    private SyncSemaphores[] syncSemaphoresList;
-    private long vkSwapChain;
 
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
         LOGGER.debug("Creating Vulkan SwapChain");

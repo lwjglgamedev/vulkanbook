@@ -434,6 +434,7 @@ public class Instance {
 Finally, we can use the Instance class in our `Render` class, in the constructor and `cleanup` methods.
 ```java
 public class Render {
+	private final Instance instance;
     ...
     public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();

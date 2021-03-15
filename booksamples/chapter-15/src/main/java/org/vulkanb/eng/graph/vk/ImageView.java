@@ -10,10 +10,10 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ImageView {
 
-    private int aspectMask;
-    private Device device;
-    private int mipLevels;
-    private long vkImageView;
+    private final int aspectMask;
+    private final Device device;
+    private final int mipLevels;
+    private final long vkImageView;
 
     public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
         this(device, vkImage, format, aspectMask, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 0, 1);

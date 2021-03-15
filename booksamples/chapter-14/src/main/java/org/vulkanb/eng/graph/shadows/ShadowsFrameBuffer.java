@@ -13,9 +13,9 @@ public class ShadowsFrameBuffer {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private Attachment depthAttachment;
-    private FrameBuffer frameBuffer;
-    private ShadowsRenderPass shadowsRenderPass;
+    private final Attachment depthAttachment;
+    private final FrameBuffer frameBuffer;
+    private final ShadowsRenderPass shadowsRenderPass;
 
     public ShadowsFrameBuffer(Device device) {
         LOGGER.debug("Creating ShadowsFrameBuffer");

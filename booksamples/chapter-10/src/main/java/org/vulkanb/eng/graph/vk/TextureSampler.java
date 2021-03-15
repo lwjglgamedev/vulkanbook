@@ -11,8 +11,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class TextureSampler {
 
     private static final int MAX_ANISOTROPY = 16;
-    private Device device;
-    private long vkSampler;
+
+    private final Device device;
+    private final long vkSampler;
 
     public TextureSampler(Device device, int mipLevels) {
         this.device = device;

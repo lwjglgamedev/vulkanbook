@@ -10,8 +10,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Fence {
 
-    private Device device;
-    private long vkFence;
+    private final Device device;
+    private final long vkFence;
 
     public Fence(Device device, boolean signaled) {
         this.device = device;

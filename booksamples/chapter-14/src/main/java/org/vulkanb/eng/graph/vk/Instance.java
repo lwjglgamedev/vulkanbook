@@ -25,6 +25,7 @@ public class Instance {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final VkInstance vkInstance;
+
     private VkDebugUtilsMessengerCreateInfoEXT debugUtils;
     private long vkDebugHandle;
 

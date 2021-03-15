@@ -54,7 +54,7 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class MemoryAllocator {
 
-    private long vmaAllocator;
+    private final long vmaAllocator;
 
     public MemoryAllocator(Instance instance, PhysicalDevice physicalDevice, VkDevice vkDevice) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -126,12 +126,13 @@ The next step is to modify the `VulkanBuffer` class to use the VMA library. We w
 ```java
 public class VulkanBuffer {
 
-    private long allocation;
-    private long buffer;
-    private Device device;
+    private final long allocation;
+    private final long buffer;
+    private final Device device;
+    private final PointerBuffer pb;
+    private final long requestedSize;
+    
     private long mappedMemory;
-    private PointerBuffer pb;
-    private long requestedSize;
     ...
 }
 ```

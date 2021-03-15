@@ -522,7 +522,7 @@ Now that the `Texture` class is complete, we are ready to to use it. In 3D model
 ```java
 public class TextureCache {
 
-    private Map<String, Texture> textureMap;
+    private final Map<String, Texture> textureMap;
 
     public TextureCache() {
         textureMap = new HashMap<>();
@@ -770,8 +770,10 @@ import static org.lwjgl.vulkan.VK11.vkDestroyDescriptorSetLayout;
 public abstract class DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
+
+    private final Device device;
+    
     protected long vkDescriptorLayout;
-    private Device device;
 
     protected DescriptorSetLayout(Device device) {
         this.device = device;
@@ -851,8 +853,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class TextureSampler {
 
     private static final int MAX_ANISOTROPY = 16;
-    private Device device;
-    private long vkSampler;
+    
+    private final Device device;
+    private final long vkSampler;
 
     public TextureSampler(Device device, int mipLevels) {
         this.device = device;

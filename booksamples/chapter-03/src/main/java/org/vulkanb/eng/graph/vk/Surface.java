@@ -10,8 +10,9 @@ import java.nio.LongBuffer;
 public class Surface {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private PhysicalDevice physicalDevice;
-    private long vkSurface;
+
+    private final PhysicalDevice physicalDevice;
+    private final long vkSurface;
 
     public Surface(PhysicalDevice physicalDevice, long windowHandle) {
         LOGGER.debug("Creating Vulkan surface");

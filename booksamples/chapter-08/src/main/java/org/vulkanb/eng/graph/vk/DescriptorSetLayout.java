@@ -12,8 +12,10 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public abstract class DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
+
+    private final Device device;
+
     protected long vkDescriptorLayout;
-    private Device device;
 
     protected DescriptorSetLayout(Device device) {
         this.device = device;

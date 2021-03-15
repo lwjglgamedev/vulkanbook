@@ -22,6 +22,8 @@ We will encapsulate render pass creation which will use as an output  the `SwapC
 
 ```java
 public class SwapChainRenderPass {
+	
+	private final Swapchain swapchain;
     ...
     public SwapChainRenderPass(SwapChain swapChain) {
         this.swapChain = swapChain;
@@ -85,6 +87,8 @@ Now we can create the render pass and finish the constructor:
 ```java
 public class SwapChainRenderPass {
     ...
+    private final long vkRenderPass;
+    
     public SwapChainRenderPass(SwapChain swapChain) {
         ...
             VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).calloc()
@@ -136,8 +140,9 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class FrameBuffer {
-    private Device device;
-    private long vkFrameBuffer;
+    
+    private final Device device;
+    private final long vkFrameBuffer;
 
     public FrameBuffer(Device device, int width, int height, LongBuffer pAttachments, long renderPass) {
         this.device = device;
@@ -189,9 +194,11 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandPool {
+    
     private static final Logger LOGGER = LogManager.getLogger();
-    private Device device;
-    private long vkCommandPool;
+    
+    private final Device device;
+    private final long vkCommandPool;
 
     public CommandPool(Device device, int queueFamilyIndex) {
         LOGGER.debug("Creating Vulkan CommandPool");
@@ -236,12 +243,18 @@ Now that are able to create command pools, let's review the class that will allo
 
 ```java
 public class CommandBuffer {
-    ...
+	
+    private static final Logger LOGGER = LogManager.getLogger();
+    
+    private final CommandPool commandPool;
+    private final boolean oneTimeSubmit;
+    private final VkCommandBuffer vkCommandBuffer;
+    
     public CommandBuffer(CommandPool commandPool, boolean primary, boolean oneTimeSubmit) {
         LOGGER.trace("Creating command buffer");
         this.commandPool = commandPool;
         this.oneTimeSubmit = oneTimeSubmit;
-        VkDevice vkDevice = this.commandPool.getDevice().getVkDevice();
+        VkDevice vkDevice = commandPool.getDevice().getVkDevice();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.callocStack(stack)
@@ -345,8 +358,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Semaphore {
 
-    private Device device;
-    private long vkSemaphore;
+    private final Device device;
+    private final long vkSemaphore;
 
     public Semaphore(Device device) {
         this.device = device;
@@ -388,8 +401,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Fence {
 
-    private Device device;
-    private long vkFence;
+    private final Device device;
+    private final long vkFence;
 
     public Fence(Device device, boolean signaled) {
         this.device = device;
@@ -439,11 +452,11 @@ The first step is optional, depending on your case you can pre-record your comma
 ```java
 public class Render {
     ...
-    private CommandPool commandPool;
+    private final CommandPool commandPool;
     ...
-    private Queue.PresentQueue presentQueue;
+    private final Queue.PresentQueue presentQueue;
     ..
-    private ForwardRenderActivity fwdRenderActivity;
+    private final ForwardRenderActivity fwdRenderActivity;
     ...
 
     public Render(Window window, Scene scene) {
@@ -524,9 +537,10 @@ As you can see it matches the render loop figure presented above. The `SwapChain
 ```java
 public class SwapChain {
     ...
-    private int currentFrame;
-    private SyncSemaphores[] syncSemaphoresList;
+    private final SyncSemaphores[] syncSemaphoresList;
     ...
+
+    private int currentFrame;
 
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
         ...
@@ -829,7 +843,9 @@ public class SwapChainRenderPass {
     ...
 }
 public SwapChainRenderPass(SwapChain swapChain) {
-    this.swapChain = swapChain;
+
+	private final SwapChain swapChain;
+	private final long vkRenderPass;
 
     try (MemoryStack stack = MemoryStack.stackPush()) {
     ...

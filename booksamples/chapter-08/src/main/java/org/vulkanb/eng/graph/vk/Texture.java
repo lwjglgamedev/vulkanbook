@@ -11,17 +11,19 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Texture {
 
+    private static final Logger LOGGER = LogManager.getLogger();
     // RGBA
     private static final int BYTES_PER_PIXEL = 4;
-    private static final Logger LOGGER = LogManager.getLogger();
-    private String fileName;
-    private int height;
-    private Image image;
-    private ImageView imageView;
-    private int mipLevels;
-    private boolean recordedTransition;
+
+    private final String fileName;
+    private final int height;
+    private final Image image;
+    private final ImageView imageView;
+    private final int mipLevels;
+    private final int width;
+
     private VulkanBuffer stgBuffer;
-    private int width;
+    private boolean recordedTransition;
 
     public Texture(Device device, String fileName, int imageFormat) {
         LOGGER.debug("Creating texture [{}]", fileName);

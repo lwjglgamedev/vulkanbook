@@ -11,10 +11,11 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class DescriptorPool {
+
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private Device device;
-    private long vkDescriptorPool;
+    private final Device device;
+    private final long vkDescriptorPool;
 
     public DescriptorPool(Device device, List<DescriptorTypeCount> descriptorTypeCounts) {
         LOGGER.debug("Creating descriptor pool");

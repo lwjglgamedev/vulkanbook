@@ -12,17 +12,18 @@ public class Render {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private CommandPool commandPool;
-    private Device device;
-    private ForwardRenderActivity fwdRenderActivity;
-    private Queue.GraphicsQueue graphQueue;
-    private Instance instance;
-    private PhysicalDevice physicalDevice;
-    private PipelineCache pipelineCache;
-    private Queue.PresentQueue presentQueue;
-    private Surface surface;
+    private final CommandPool commandPool;
+    private final Device device;
+    private final ForwardRenderActivity fwdRenderActivity;
+    private final Queue.GraphicsQueue graphQueue;
+    private final Instance instance;
+    private final PhysicalDevice physicalDevice;
+    private final PipelineCache pipelineCache;
+    private final Queue.PresentQueue presentQueue;
+    private final Surface surface;
+    private final List<VulkanModel> vulkanModels;
+
     private SwapChain swapChain;
-    private List<VulkanModel> vulkanModels;
 
     public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();

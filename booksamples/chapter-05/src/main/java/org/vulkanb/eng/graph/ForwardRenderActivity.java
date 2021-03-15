@@ -11,11 +11,11 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class ForwardRenderActivity {
 
-    private CommandBuffer[] commandBuffers;
-    private Fence[] fences;
-    private FrameBuffer[] frameBuffers;
-    private SwapChainRenderPass renderPass;
-    private SwapChain swapChain;
+    private final CommandBuffer[] commandBuffers;
+    private final Fence[] fences;
+    private final FrameBuffer[] frameBuffers;
+    private final SwapChainRenderPass renderPass;
+    private final SwapChain swapChain;
 
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool) {
         this.swapChain = swapChain;

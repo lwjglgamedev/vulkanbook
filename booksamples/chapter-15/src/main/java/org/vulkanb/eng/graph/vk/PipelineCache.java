@@ -10,9 +10,11 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class PipelineCache {
+
     private static final Logger LOGGER = LogManager.getLogger();
-    private Device device;
-    private long vkPipelineCache;
+
+    private final Device device;
+    private final long vkPipelineCache;
 
     public PipelineCache(Device device) {
         LOGGER.debug("Creating pipeline cache");

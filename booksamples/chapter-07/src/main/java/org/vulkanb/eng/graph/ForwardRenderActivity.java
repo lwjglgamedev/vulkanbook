@@ -20,16 +20,18 @@ public class ForwardRenderActivity {
     private static final String FRAGMENT_SHADER_FILE_SPV = FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/fwd_vertex.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
-    private CommandBuffer[] commandBuffers;
-    private Attachment[] depthAttachments;
-    private Device device;
-    private Fence[] fences;
+
+    private final CommandBuffer[] commandBuffers;
+    private final Device device;
+    private final Fence[] fences;
+    private final ShaderProgram fwdShaderProgram;
+    private final Pipeline pipeLine;
+    private final PipelineCache pipelineCache;
+    private final SwapChainRenderPass renderPass;
+    private final Scene scene;
+
     private FrameBuffer[] frameBuffers;
-    private ShaderProgram fwdShaderProgram;
-    private Pipeline pipeLine;
-    private PipelineCache pipelineCache;
-    private SwapChainRenderPass renderPass;
-    private Scene scene;
+    private Attachment[] depthAttachments;
     private SwapChain swapChain;
 
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {

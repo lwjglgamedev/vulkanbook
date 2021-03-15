@@ -36,10 +36,11 @@ public class GeometryAttachments {
 
     public static final int NUMBER_ATTACHMENTS = 2;
     public static final int NUMBER_COLOR_ATTACHMENTS = NUMBER_ATTACHMENTS - 1;
-    private List<Attachment> attachments;
-    private Attachment deptAttachment;
-    private int height;
-    private int width;
+    
+    private final List<Attachment> attachments;
+    private final Attachment deptAttachment;
+    private final int height;
+    private final int width;
 
     public GeometryAttachments(Device device, int width, int height) {
         this.width = width;
@@ -93,8 +94,9 @@ The next step is to define the render pass used to render the geometry. We will 
 public class GeometryRenderPass {
 
     private static final int MAX_SAMPLES = 1;
-    private Device device;
-    private long vkRenderPass;
+    
+    private final Device device;
+    private final long vkRenderPass;
 
     public GeometryRenderPass(Device device, List<Attachment> attachments) {
         this.device = device;
@@ -252,9 +254,10 @@ public class GeometryFrameBuffer {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
+    private final GeometryRenderPass geometryRenderPass;
+    
     private FrameBuffer frameBuffer;
     private GeometryAttachments geometryAttachments;
-    private GeometryRenderPass geometryRenderPass;
 
     public GeometryFrameBuffer(SwapChain swapChain) {
         LOGGER.debug("Creating GeometryFrameBuffer");
@@ -761,8 +764,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class LightingRenderPass {
 
-    private Device device;
-    private long vkRenderPass;
+    
+    private final Device device;
+    private final long vkRenderPass;
 
     public LightingRenderPass(SwapChain swapChain) {
         device = swapChain.getDevice();
@@ -837,9 +841,12 @@ import java.nio.LongBuffer;
 import java.util.Arrays;
 
 public class LightingFrameBuffer {
+    
     private static final Logger LOGGER = LogManager.getLogger();
+
+    private final LightingRenderPass lightingRenderPass;
+    
     private FrameBuffer[] frameBuffers;
-    private LightingRenderPass lightingRenderPass;
 
     public LightingFrameBuffer(SwapChain swapChain) {
         LOGGER.debug("Creating Lighting FrameBuffer");
@@ -1047,9 +1054,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class AttachmentsDescriptorSet extends DescriptorSet {
 
-    private int binding;
-    private Device device;
-    private TextureSampler textureSampler;
+    private final Device device;
+    private final int binding;
+    private final TextureSampler textureSampler;
 
     public AttachmentsDescriptorSet(DescriptorPool descriptorPool, AttachmentsLayout descriptorSetLayout,
                                     List<Attachment> attachments, int binding) {

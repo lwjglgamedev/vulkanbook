@@ -19,19 +19,20 @@ public class AnimationComputeActivity {
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
     private static final int LOCAL_SIZE_X = 32;
 
-    private MemoryBarrier memoryBarrier;
+    private final Device device;
+    private final MemoryBarrier memoryBarrier;
+    private final Queue.ComputeQueue computeQueue;
+    // Key is the entity id
+    private final Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
+    // Key is the model id
+    private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
+    private final Scene scene;
+
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
-    private Queue.ComputeQueue computeQueue;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
-    private Device device;
-    // Key is the entity id
-    private Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
     private Fence fence;
-    // Key is the model id
-    private Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
-    private Scene scene;
     private ShaderProgram shaderProgram;
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;

@@ -15,8 +15,8 @@ public class ShaderProgram {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private Device device;
-    private ShaderModule[] shaderModules;
+    private final Device device;
+    private final ShaderModule[] shaderModules;
 
     public ShaderProgram(Device device, ShaderModuleData[] shaderModuleData) {
         try {

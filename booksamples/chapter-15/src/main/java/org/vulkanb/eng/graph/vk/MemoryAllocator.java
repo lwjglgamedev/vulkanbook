@@ -10,7 +10,7 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class MemoryAllocator {
 
-    private long vmaAllocator;
+    private final long vmaAllocator;
 
     public MemoryAllocator(Instance instance, PhysicalDevice physicalDevice, VkDevice vkDevice) {
         try (MemoryStack stack = MemoryStack.stackPush()) {

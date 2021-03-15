@@ -10,8 +10,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ImageView {
 
-    private Device device;
-    private long vkImageView;
+    private final Device device;
+    private final long vkImageView;
 
     public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
         this.device = device;

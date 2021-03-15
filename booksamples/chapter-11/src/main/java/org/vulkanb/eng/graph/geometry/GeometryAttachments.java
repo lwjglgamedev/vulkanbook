@@ -10,10 +10,11 @@ public class GeometryAttachments {
 
     private static final int NUMBER_ATTACHMENTS = 4;
     public static final int NUMBER_COLOR_ATTACHMENTS = NUMBER_ATTACHMENTS - 1;
-    private List<Attachment> attachments;
-    private Attachment deptAttachment;
-    private int height;
-    private int width;
+
+    private final List<Attachment> attachments;
+    private final Attachment deptAttachment;
+    private final int height;
+    private final int width;
 
     public GeometryAttachments(Device device, int width, int height) {
         this.width = width;

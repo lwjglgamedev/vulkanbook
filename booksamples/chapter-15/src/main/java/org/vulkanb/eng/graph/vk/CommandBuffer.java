@@ -9,16 +9,18 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandBuffer {
+
     private static final Logger LOGGER = LogManager.getLogger();
-    private CommandPool commandPool;
-    private boolean oneTimeSubmit;
-    private VkCommandBuffer vkCommandBuffer;
+
+    private final CommandPool commandPool;
+    private final boolean oneTimeSubmit;
+    private final VkCommandBuffer vkCommandBuffer;
 
     public CommandBuffer(CommandPool commandPool, boolean primary, boolean oneTimeSubmit) {
         LOGGER.trace("Creating command buffer");
         this.commandPool = commandPool;
         this.oneTimeSubmit = oneTimeSubmit;
-        VkDevice vkDevice = this.commandPool.getDevice().getVkDevice();
+        VkDevice vkDevice = commandPool.getDevice().getVkDevice();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.callocStack(stack)

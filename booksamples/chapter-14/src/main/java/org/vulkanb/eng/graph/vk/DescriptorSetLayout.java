@@ -13,9 +13,9 @@ public abstract class DescriptorSetLayout {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    protected long vkDescriptorLayout;
+    private final Device device;
 
-    private Device device;
+    protected long vkDescriptorLayout;
 
     protected DescriptorSetLayout(Device device) {
         this.device = device;

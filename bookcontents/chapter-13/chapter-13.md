@@ -238,8 +238,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class ShadowsRenderPass {
 
     private static final int MAX_SAMPLES = 1;
-    private Device device;
-    private long vkRenderPass;
+    
+    private final Device device;
+    private final long vkRenderPass;
 
     public ShadowsRenderPass(Device device, Attachment depthAttachment) {
         this.device = device;

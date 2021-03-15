@@ -6,11 +6,12 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Render {
 
-    private Device device;
-    private Queue.GraphicsQueue graphQueue;
-    private Instance instance;
-    private PhysicalDevice physicalDevice;
-    private Surface surface;
+    private final Device device;
+    private final Queue.GraphicsQueue graphQueue;
+    private final Instance instance;
+    private final PhysicalDevice physicalDevice;
+    private final Surface surface;
+
     private SwapChain swapChain;
 
     public Render(Window window, Scene scene) {
