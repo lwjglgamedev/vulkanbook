@@ -7,7 +7,7 @@ import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
-public class Window implements GLFWFramebufferSizeCallbackI {
+public class Window {
 
     private int height;
     private MouseInput mouseInput;
@@ -76,11 +76,6 @@ public class Window implements GLFWFramebufferSizeCallbackI {
 
     public long getWindowHandle() {
         return windowHandle;
-    }
-
-    @Override
-    public void invoke(long handle, int width, int height) {
-        resize(width, height);
     }
 
     public boolean isKeyPressed(int keyCode) {

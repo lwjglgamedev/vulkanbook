@@ -225,7 +225,7 @@ import org.lwjgl.system.MemoryUtil;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
-public class Window implements GLFWFramebufferSizeCallbackI {
+public class Window {
 
     private int height;
     private GLFWKeyCallbackI keyCallback;
@@ -289,7 +289,7 @@ if (!GLFWVulkan.glfwVulkanSupported()) {
 The code above, will test if the minimal requirements to use Vulkan are available (the Vulkan loader and a minimal functional ICD). This does not imply that Vulkan will work properly, but it is a minimum. Without this there is no sense in going on. The rest of the methods are basic ones to free resources, handling window resizing, etc.
 
 ```java
-public class Window implements GLFWFramebufferSizeCallbackI {
+public class Window {
     ...
     public void cleanup() {
         glfwFreeCallbacks(windowHandle);
@@ -311,11 +311,6 @@ public class Window implements GLFWFramebufferSizeCallbackI {
 
     public long getWindowHandle() {
         return windowHandle;
-    }
-
-    @Override
-    public void invoke(long handle, int width, int height) {
-        resize(width, height);
     }
     
     public boolean isKeyPressed(int keyCode) {
