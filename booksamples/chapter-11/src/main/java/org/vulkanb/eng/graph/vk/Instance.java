@@ -8,6 +8,7 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.lwjgl.vulkan.EXTDebugUtils.*;
 import static org.lwjgl.vulkan.VK11.*;
@@ -24,6 +25,7 @@ public class Instance {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final VkInstance vkInstance;
+
     private VkDebugUtilsMessengerCreateInfoEXT debugUtils;
     private long vkDebugHandle;
 
@@ -41,8 +43,8 @@ public class Instance {
                     .apiVersion(VK_API_VERSION_1_1);
 
             // Validation layers
-            String[] validationLayers = validate ? getSupportedValidationLayers(stack) : null;
-            int numValidationLayers = validationLayers != null ? validationLayers.length : 0;
+            List<String> validationLayers = getSupportedValidationLayers();
+            int numValidationLayers = validationLayers.size();
             boolean supportsValidation = validate;
             if (validate && numValidationLayers == 0) {
                 supportsValidation = false;
@@ -55,8 +57,8 @@ public class Instance {
             if (supportsValidation) {
                 requiredLayers = stack.mallocPointer(numValidationLayers);
                 for (int i = 0; i < numValidationLayers; i++) {
-                    LOGGER.debug("Using validation layer [{}]", validationLayers[i]);
-                    requiredLayers.put(i, stack.ASCII(validationLayers[i]));
+                    LOGGER.debug("Using validation layer [{}]", validationLayers.get(i));
+                    requiredLayers.put(i, stack.ASCII(validationLayers.get(i)));
                 }
             }
 
@@ -105,7 +107,7 @@ public class Instance {
     }
 
     private static VkDebugUtilsMessengerCreateInfoEXT createDebugCallBack() {
-        VkDebugUtilsMessengerCreateInfoEXT result = VkDebugUtilsMessengerCreateInfoEXT
+        return VkDebugUtilsMessengerCreateInfoEXT
                 .calloc()
                 .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
                 .messageSeverity(MESSAGE_SEVERITY_BITMASK)
@@ -124,7 +126,6 @@ public class Instance {
                     LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     return VK_FALSE;
                 });
-        return result;
     }
 
     public void cleanup() {
@@ -139,52 +140,60 @@ public class Instance {
         vkDestroyInstance(vkInstance, null);
     }
 
-    private String[] getSupportedValidationLayers(MemoryStack stack) {
-        Set<String> supportedLayers = new HashSet<>();
-        int[] numLayersArr = new int[1];
-        vkEnumerateInstanceLayerProperties(numLayersArr, null);
-        int numLayers = numLayersArr[0];
-        LOGGER.debug("Instance supports [{}] layers", numLayers);
+    private List<String> getSupportedValidationLayers() {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer numLayersArr = stack.callocInt(1);
+            vkEnumerateInstanceLayerProperties(numLayersArr, null);
+            int numLayers = numLayersArr.get(0);
+            LOGGER.debug("Instance supports [{}] layers", numLayers);
 
-        VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
-        vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
-        for (int i = 0; i < numLayers; i++) {
-            VkLayerProperties props = propsBuf.get(i);
-            String layerName = props.layerNameString();
-            supportedLayers.add(layerName);
-            LOGGER.debug("Supported layer [{}]", layerName);
-        }
-
-        String[][] validationLayers = new String[][]{
-                // Preferred one
-                {"VK_LAYER_KHRONOS_validation"},
-                // If not available, check LunarG meta layer
-                {"VK_LAYER_LUNARG_standard_validation"},
-                // If not available, check individual layers
-                {
-                        "VK_LAYER_GOOGLE_threading",
-                        "VK_LAYER_LUNARG_parameter_validation",
-                        "VK_LAYER_LUNARG_object_tracker",
-                        "VK_LAYER_LUNARG_core_validation",
-                        "VK_LAYER_GOOGLE_unique_objects",
-                },
-                // Last resort
-                {"VK_LAYER_LUNARG_core_validation"}
-        };
-
-        String[] selectedLayers = null;
-        for (String[] layers : validationLayers) {
-            boolean supported = true;
-            for (String layerName : layers) {
-                supported = supported && supportedLayers.contains(layerName);
+            VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
+            vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
+            List<String> supportedLayers = new ArrayList<>();
+            for (int i = 0; i < numLayers; i++) {
+                VkLayerProperties props = propsBuf.get(i);
+                String layerName = props.layerNameString();
+                supportedLayers.add(layerName);
+                LOGGER.debug("Supported layer [{}]", layerName);
             }
-            if (supported) {
-                selectedLayers = layers;
-                break;
-            }
-        }
 
-        return selectedLayers;
+            List<String> layersToUse = new ArrayList<>();
+
+            // Main validation layer
+            if (supportedLayers.contains("VK_LAYER_KHRONOS_validation")) {
+                layersToUse.add("VK_LAYER_KHRONOS_validation");
+                return layersToUse;
+            }
+
+            // Fallback 1
+            if (supportedLayers.contains("VK_LAYER_LUNARG_standard_validation")) {
+                layersToUse.add("VK_LAYER_KHRONOS_validation");
+                return layersToUse;
+            }
+
+            // Fallback 2 (set)
+            List<String> requestedLayers = new ArrayList<>();
+            requestedLayers.add("VK_LAYER_GOOGLE_threading");
+            requestedLayers.add("VK_LAYER_LUNARG_parameter_validation");
+            requestedLayers.add("VK_LAYER_LUNARG_object_tracker");
+            requestedLayers.add("VK_LAYER_LUNARG_core_validation");
+            requestedLayers.add("VK_LAYER_GOOGLE_unique_objects");
+
+            List<String> overlap = requestedLayers.stream().filter(requestedLayers::contains).collect(Collectors.toList());
+
+            if (overlap.size() > 0) {
+                return overlap;
+            }
+
+            // Fallback 3
+            if (supportedLayers.contains("VK_LAYER_LUNARG_core_validation")) {
+                layersToUse.add("VK_LAYER_LUNARG_core_validation");
+                return layersToUse;
+            }
+
+            // Returns empty list
+            return layersToUse;
+        }
     }
 
     public VkInstance getVkInstance() {

@@ -19,16 +19,17 @@ public class LightingRenderActivity {
     private static final String LIGHTING_VERTEX_SHADER_FILE_GLSL = "resources/shaders/lighting_vertex.glsl";
     private static final String LIGHTING_VERTEX_SHADER_FILE_SPV = LIGHTING_VERTEX_SHADER_FILE_GLSL + ".spv";
 
+    private final Device device;
+    private final LightingFrameBuffer lightingFrameBuffer;
+    private final PipelineCache pipelineCache;
+
     private AttachmentsDescriptorSet attachmentsDescriptorSet;
     private AttachmentsLayout attachmentsLayout;
     private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
-    private Device device;
     private Fence[] fences;
-    private LightingFrameBuffer lightingFrameBuffer;
     private Pipeline pipeline;
-    private PipelineCache pipelineCache;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
 

@@ -11,7 +11,7 @@ public class Queue {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private VkQueue vkQueue;
+    private final VkQueue vkQueue;
 
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
         LOGGER.debug("Creating queue");

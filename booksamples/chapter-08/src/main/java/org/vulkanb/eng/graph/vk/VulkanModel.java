@@ -13,8 +13,8 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class VulkanModel {
 
-    private String modelId;
-    private List<VulkanModel.VulkanMaterial> vulkanMaterialList;
+    private final String modelId;
+    private final List<VulkanModel.VulkanMaterial> vulkanMaterialList;
 
     public VulkanModel(String modelId) {
         this.modelId = modelId;

@@ -131,12 +131,13 @@ Let's now review the definition of the instance attributes and methods of the `P
 public class PhysicalDevice {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private VkExtensionProperties.Buffer vkDeviceExtensions;
-    private VkPhysicalDeviceMemoryProperties vkMemoryProperties;
-    private VkPhysicalDevice vkPhysicalDevice;
-    private VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
-    private VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
-    private VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
+    
+    private final VkExtensionProperties.Buffer vkDeviceExtensions;
+    private final VkPhysicalDeviceMemoryProperties vkMemoryProperties;
+    private final VkPhysicalDevice vkPhysicalDevice;
+    private final VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
+    private final VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
+    private final VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
     ...
 }
 ```
@@ -162,26 +163,26 @@ public class PhysicalDevice {
 
             // Get device properties
             vkPhysicalDeviceProperties = VkPhysicalDeviceProperties.calloc();
-            vkGetPhysicalDeviceProperties(this.vkPhysicalDevice, vkPhysicalDeviceProperties);
+            vkGetPhysicalDeviceProperties(vkPhysicalDevice, vkPhysicalDeviceProperties);
 
             // Get device extensions
-            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, null),
+            vkCheck(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, (String) null, intBuffer, null),
                     "Failed to get number of device extension properties");
             vkDeviceExtensions = VkExtensionProperties.calloc(intBuffer.get(0));
-            vkCheck(vkEnumerateDeviceExtensionProperties(this.vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
+            vkCheck(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
                     "Failed to get extension properties");
 
             // Get Queue family properties
-            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, null);
+            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, intBuffer, null);
             vkQueueFamilyProps = VkQueueFamilyProperties.calloc(intBuffer.get(0));
-            vkGetPhysicalDeviceQueueFamilyProperties(this.vkPhysicalDevice, intBuffer, vkQueueFamilyProps);
+            vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, intBuffer, vkQueueFamilyProps);
 
             vkPhysicalDeviceFeatures = VkPhysicalDeviceFeatures.calloc();
-            vkGetPhysicalDeviceFeatures(this.vkPhysicalDevice, vkPhysicalDeviceFeatures);
+            vkGetPhysicalDeviceFeatures(vkPhysicalDevice, vkPhysicalDeviceFeatures);
 
             // Get Memory information and properties
             vkMemoryProperties = VkPhysicalDeviceMemoryProperties.calloc();
-            vkGetPhysicalDeviceMemoryProperties(this.vkPhysicalDevice, vkMemoryProperties);
+            vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, vkMemoryProperties);
         }
     }
     ...
@@ -310,8 +311,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class Device {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private PhysicalDevice physicalDevice;
-    private VkDevice vkDevice;
+    
+    private final PhysicalDevice physicalDevice;
+    private final VkDevice vkDevice;
 ```
 
 The Vulkan structure `VkDevice` is the one that will hold or Vulkan logical device. We will use that structure for the creation of the resources we will need later on. We will hold also a reference to the `PhysicalDevice` instance (which will be passed in the constructor) for convenience (some calls will require later on both the logical and the physical devices). It is turn now for the constructor, which starts like this:
@@ -480,8 +482,9 @@ import java.nio.LongBuffer;
 public class Surface {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private PhysicalDevice physicalDevice;
-    private long vkSurface;
+    
+    private final PhysicalDevice physicalDevice;
+    private final long vkSurface;
 
     public Surface(PhysicalDevice physicalDevice, long windowHandle) {
         LOGGER.debug("Creating Vulkan surface");
@@ -529,7 +532,7 @@ public class Queue {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private VkQueue vkQueue;
+    private final VkQueue vkQueue;
 
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
         LOGGER.debug("Creating queue");
@@ -605,11 +608,11 @@ Now that we have finished our `PhysicalDevice`, `Device`, `Surface` and `Queue` 
 ```java
 public class Render {
     ...
-    private Device device;
-    private Queue.GraphicsQueue graphQueue;
+    private final Device device;
+    private final Queue.GraphicsQueue graphQueue;
     ...
-    private PhysicalDevice physicalDevice;
-    private Surface surface;
+    private final PhysicalDevice physicalDevice;
+    private final Surface surface;
     ...
 }
 ```

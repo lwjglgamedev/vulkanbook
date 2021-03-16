@@ -7,7 +7,7 @@ import java.util.*;
 
 public class TextureCache {
 
-    private Map<String, Texture> textureMap;
+    private final Map<String, Texture> textureMap;
 
     public TextureCache() {
         textureMap = new HashMap<>();

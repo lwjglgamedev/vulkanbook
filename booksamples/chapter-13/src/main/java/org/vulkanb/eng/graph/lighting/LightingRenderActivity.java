@@ -22,23 +22,24 @@ public class LightingRenderActivity {
     private static final String LIGHTING_VERTEX_SHADER_FILE_GLSL = "resources/shaders/lighting_vertex.glsl";
     private static final String LIGHTING_VERTEX_SHADER_FILE_SPV = LIGHTING_VERTEX_SHADER_FILE_GLSL + ".spv";
 
+    private final Device device;
+    private final Vector4f auxVec;
+    private final LightSpecConstants lightSpecConstants;
+    private final LightingFrameBuffer lightingFrameBuffer;
+    private final PipelineCache pipelineCache;
+    private final Scene scene;
+
     private AttachmentsDescriptorSet attachmentsDescriptorSet;
     private AttachmentsLayout attachmentsLayout;
-    private Vector4f auxVec;
     private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
-    private Device device;
     private Fence[] fences;
     private VulkanBuffer[] invMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] invMatricesDescriptorSets;
-    private LightSpecConstants lightSpecConstants;
-    private LightingFrameBuffer lightingFrameBuffer;
     private VulkanBuffer[] lightsBuffers;
     private DescriptorSet.UniformDescriptorSet[] lightsDescriptorSets;
     private Pipeline pipeline;
-    private PipelineCache pipelineCache;
-    private Scene scene;
     private ShaderProgram shaderProgram;
     private VulkanBuffer[] shadowsMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] shadowsMatricesDescriptorSets;

@@ -14,12 +14,13 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class VulkanBuffer {
 
-    private long allocation;
-    private long buffer;
-    private Device device;
+    private final long allocation;
+    private final long buffer;
+    private final Device device;
+    private final PointerBuffer pb;
+    private final long requestedSize;
+
     private long mappedMemory;
-    private PointerBuffer pb;
-    private long requestedSize;
 
     public VulkanBuffer(Device device, long size, int bufferUsage, int memoryUsage,
                         int requiredFlags) {

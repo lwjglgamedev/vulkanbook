@@ -9,8 +9,9 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class FrameBuffer {
-    private Device device;
-    private long vkFrameBuffer;
+
+    private final Device device;
+    private final long vkFrameBuffer;
 
     public FrameBuffer(Device device, int width, int height, LongBuffer pAttachments, long renderPass, int layers) {
         this.device = device;

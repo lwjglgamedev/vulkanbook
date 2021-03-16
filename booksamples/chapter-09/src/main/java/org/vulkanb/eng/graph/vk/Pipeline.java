@@ -10,10 +10,12 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Pipeline {
+
     private static final Logger LOGGER = LogManager.getLogger();
-    private Device device;
-    private long vkPipeline;
-    private long vkPipelineLayout;
+
+    private final Device device;
+    private final long vkPipeline;
+    private final long vkPipelineLayout;
 
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         LOGGER.debug("Creating pipeline");

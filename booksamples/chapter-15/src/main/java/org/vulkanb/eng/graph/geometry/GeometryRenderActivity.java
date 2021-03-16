@@ -20,23 +20,25 @@ public class GeometryRenderActivity {
     private static final String GEOMETRY_FRAGMENT_SHADER_FILE_SPV = GEOMETRY_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String GEOMETRY_VERTEX_SHADER_FILE_GLSL = "resources/shaders/geometry_vertex.glsl";
     private static final String GEOMETRY_VERTEX_SHADER_FILE_SPV = GEOMETRY_VERTEX_SHADER_FILE_GLSL + ".spv";
+
+    private final Device device;
+    private final GeometryFrameBuffer geometryFrameBuffer;
+    private final int materialSize;
+    private final MemoryBarrier memoryBarrier;
+    private final PipelineCache pipelineCache;
+    private final Scene scene;
+
     private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
-    private Device device;
     private Fence[] fences;
     private DescriptorSetLayout[] geometryDescriptorSetLayouts;
-    private GeometryFrameBuffer geometryFrameBuffer;
     private DescriptorSetLayout.DynUniformDescriptorSetLayout materialDescriptorSetLayout;
-    private int materialSize;
     private VulkanBuffer materialsBuffer;
     private DescriptorSet.DynUniformDescriptorSet materialsDescriptorSet;
-    private MemoryBarrier memoryBarrier;
     private Pipeline pipeLine;
-    private PipelineCache pipelineCache;
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
-    private Scene scene;
     private ShaderProgram shaderProgram;
     private SwapChain swapChain;
     private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;

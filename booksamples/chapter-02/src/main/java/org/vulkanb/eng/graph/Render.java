@@ -6,7 +6,7 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Render {
 
-    private Instance instance;
+    private final Instance instance;
 
     public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();

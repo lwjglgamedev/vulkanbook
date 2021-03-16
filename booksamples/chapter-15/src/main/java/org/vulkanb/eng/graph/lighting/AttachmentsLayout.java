@@ -11,6 +11,7 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class AttachmentsLayout extends DescriptorSetLayout {
+
     private static final Logger LOGGER = LogManager.getLogger();
 
     public AttachmentsLayout(Device device, int numAttachments) {

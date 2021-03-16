@@ -12,9 +12,10 @@ public class GeometryFrameBuffer {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
+    private final GeometryRenderPass geometryRenderPass;
+
     private FrameBuffer frameBuffer;
     private GeometryAttachments geometryAttachments;
-    private GeometryRenderPass geometryRenderPass;
 
     public GeometryFrameBuffer(SwapChain swapChain) {
         LOGGER.debug("Creating GeometryFrameBuffer");

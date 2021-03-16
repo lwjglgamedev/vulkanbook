@@ -11,8 +11,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class LightingRenderPass {
 
-    private Device device;
-    private long vkRenderPass;
+    private final Device device;
+    private final long vkRenderPass;
 
     public LightingRenderPass(SwapChain swapChain) {
         device = swapChain.getDevice();

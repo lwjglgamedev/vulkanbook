@@ -1,6 +1,7 @@
 package org.vulkanb.eng.graph.vk;
 
 public final class GraphConstants {
+
     public static final int FLOAT_LENGTH = 4;
     public static final int INT_LENGTH = 4;
     public static final int SHORT_LENGTH = 2;

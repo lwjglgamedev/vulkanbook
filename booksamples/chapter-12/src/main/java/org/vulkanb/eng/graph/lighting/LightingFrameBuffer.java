@@ -9,9 +9,12 @@ import java.nio.LongBuffer;
 import java.util.Arrays;
 
 public class LightingFrameBuffer {
+
     private static final Logger LOGGER = LogManager.getLogger();
+
+    private final LightingRenderPass lightingRenderPass;
+
     private FrameBuffer[] frameBuffers;
-    private LightingRenderPass lightingRenderPass;
 
     public LightingFrameBuffer(SwapChain swapChain) {
         LOGGER.debug("Creating Lighting FrameBuffer");

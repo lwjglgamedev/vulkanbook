@@ -13,10 +13,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class Device {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private MemoryAllocator memoryAllocator;
-    private PhysicalDevice physicalDevice;
-    private boolean samplerAnisotropy;
-    private VkDevice vkDevice;
+
+    private final MemoryAllocator memoryAllocator;
+    private final PhysicalDevice physicalDevice;
+    private final boolean samplerAnisotropy;
+    private final VkDevice vkDevice;
 
     public Device(Instance instance, PhysicalDevice physicalDevice) {
         LOGGER.debug("Creating device");

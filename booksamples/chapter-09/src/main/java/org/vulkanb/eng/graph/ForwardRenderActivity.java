@@ -19,25 +19,27 @@ public class ForwardRenderActivity {
     private static final String FRAGMENT_SHADER_FILE_SPV = FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/fwd_vertex.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
-    private CommandBuffer[] commandBuffers;
+
+    private final Device device;
+    private final CommandBuffer[] commandBuffers;
+    private final Fence[] fences;
+    private final ShaderProgram fwdShaderProgram;
+    private final int materialSize;
+    private final Pipeline pipeLine;
+    private final PipelineCache pipelineCache;
+    private final SwapChainRenderPass renderPass;
+    private final Scene scene;
+
     private Attachment[] depthAttachments;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
-    private Device device;
-    private Fence[] fences;
     private FrameBuffer[] frameBuffers;
-    private ShaderProgram fwdShaderProgram;
     private DescriptorSetLayout.DynUniformDescriptorSetLayout materialDescriptorSetLayout;
-    private int materialSize;
     private VulkanBuffer materialsBuffer;
     private DescriptorSet.DynUniformDescriptorSet materialsDescriptorSet;
-    private Pipeline pipeLine;
-    private PipelineCache pipelineCache;
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
     private VulkanBuffer projMatrixUniform;
-    private SwapChainRenderPass renderPass;
-    private Scene scene;
     private SwapChain swapChain;
     private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
     private TextureSampler textureSampler;

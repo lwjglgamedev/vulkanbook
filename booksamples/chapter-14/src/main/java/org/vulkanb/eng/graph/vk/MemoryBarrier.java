@@ -6,7 +6,7 @@ import static org.lwjgl.vulkan.VK11.VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 
 public class MemoryBarrier {
 
-    private VkMemoryBarrier.Buffer vkMemoryBarrier;
+    private final VkMemoryBarrier.Buffer vkMemoryBarrier;
 
     public MemoryBarrier(int srcAccessMask, int dstAccessMask) {
         vkMemoryBarrier = VkMemoryBarrier.calloc(1)

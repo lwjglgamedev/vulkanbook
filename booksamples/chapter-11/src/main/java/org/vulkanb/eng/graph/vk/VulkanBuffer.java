@@ -12,13 +12,14 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class VulkanBuffer {
 
-    private long allocationSize;
-    private long buffer;
-    private Device device;
+    private final long allocationSize;
+    private final long buffer;
+    private final Device device;
+    private final long memory;
+    private final PointerBuffer pb;
+    private final long requestedSize;
+
     private long mappedMemory;
-    private long memory;
-    private PointerBuffer pb;
-    private long requestedSize;
 
     public VulkanBuffer(Device device, long size, int usage, int reqMask) {
         this.device = device;

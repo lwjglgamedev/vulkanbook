@@ -21,15 +21,16 @@ public class ShadowRenderActivity {
     private static final String SHADOW_VERTEX_SHADER_FILE_GLSL = "resources/shaders/shadow_vertex.glsl";
     private static final String SHADOW_VERTEX_SHADER_FILE_SPV = SHADOW_VERTEX_SHADER_FILE_GLSL + ".spv";
 
+    private final Device device;
+    private final Scene scene;
+    private final ShadowsFrameBuffer shadowsFrameBuffer;
+
     private List<CascadeShadow> cascadeShadows;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
-    private Device device;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
-    private Scene scene;
     private ShaderProgram shaderProgram;
-    private ShadowsFrameBuffer shadowsFrameBuffer;
     private VulkanBuffer[] shadowsUniforms;
     private SwapChain swapChain;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;

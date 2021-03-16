@@ -10,8 +10,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Semaphore {
 
-    private Device device;
-    private long vkSemaphore;
+    private final Device device;
+    private final long vkSemaphore;
 
     public Semaphore(Device device) {
         this.device = device;

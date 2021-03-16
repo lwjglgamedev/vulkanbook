@@ -14,23 +14,26 @@ import org.vulkanb.eng.scene.*;
 import java.util.*;
 
 public class Render {
+
     private static final Logger LOGGER = LogManager.getLogger();
-    private AnimationComputeActivity animationComputeActivity;
-    private CommandPool commandPool;
-    private Device device;
-    private GeometryRenderActivity geometryRenderActivity;
-    private Queue.GraphicsQueue graphQueue;
-    private GuiRenderActivity guiRenderActivity;
-    private Instance instance;
-    private LightingRenderActivity lightingRenderActivity;
-    private PhysicalDevice physicalDevice;
-    private PipelineCache pipelineCache;
-    private Queue.PresentQueue presentQueue;
-    private ShadowRenderActivity shadowRenderActivity;
-    private Surface surface;
+
+    private final AnimationComputeActivity animationComputeActivity;
+    private final CommandPool commandPool;
+    private final Device device;
+    private final GeometryRenderActivity geometryRenderActivity;
+    private final Queue.GraphicsQueue graphQueue;
+    private final GuiRenderActivity guiRenderActivity;
+    private final Instance instance;
+    private final LightingRenderActivity lightingRenderActivity;
+    private final PhysicalDevice physicalDevice;
+    private final PipelineCache pipelineCache;
+    private final Queue.PresentQueue presentQueue;
+    private final ShadowRenderActivity shadowRenderActivity;
+    private final Surface surface;
+    private final TextureCache textureCache;
+    private final List<VulkanModel> vulkanModels;
+
     private SwapChain swapChain;
-    private TextureCache textureCache;
-    private List<VulkanModel> vulkanModels;
 
     public Render(Window window, Scene scene) {
         EngineProperties engProps = EngineProperties.getInstance();

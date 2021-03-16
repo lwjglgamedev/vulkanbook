@@ -30,10 +30,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 public class SwapChain {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private Device device;
-    private ImageView[] imageViews;
-    private SurfaceFormat surfaceFormat;
-    private long vkSwapChain;
+    
+    private final Device device;
+    private final ImageView[] imageViews;
+    private final SurfaceFormat surfaceFormat;
+    private final long vkSwapChain;
 
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
         LOGGER.debug("Creating Vulkan SwapChain");
@@ -313,7 +314,10 @@ Now we iterate over the images to create new `ImageView` instances. The `ImageVi
 ```java
 ...
 public class ImageView {
-    ...
+	
+    private final Device device;
+    private final long vkImageView;
+
     public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -383,7 +387,7 @@ Now we can use the `Swapchain` class in our `Render`class:
 public class Render {
     ...
     private SwapChain swapChain;
-    ...
+
     public Render(Window window, Scene scene) {
         ...
         swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),

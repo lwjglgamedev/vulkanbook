@@ -4,9 +4,9 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Attachment {
 
-    private boolean depthAttachment;
-    private Image image;
-    private ImageView imageView;
+    private final Image image;
+    private final ImageView imageView;
+    private final boolean depthAttachment;
 
     public Attachment(Image image, ImageView imageView, boolean depthAttachment) {
         this.image = image;
