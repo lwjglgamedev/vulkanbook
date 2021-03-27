@@ -1077,7 +1077,7 @@ public class Render {
     public void render(Window window, Scene scene) {
         swapChain.acquireNextImage();
 
-        fwdRenderActivity.recordCommandBuffers(meshList);
+        fwdRenderActivity.recordCommandBuffer(meshList);
         fwdRenderActivity.submit(presentQueue);
 
         swapChain.presentImage(graphQueue);
@@ -1087,7 +1087,7 @@ public class Render {
 
 We have created a new attribute named `vulkanModels` to hold the loaded models. The `loadModels` method just creates `VulkanModel` instances using the data contained in the array of `ModelData` instances. If you recall, this implies creating the underlying buffers and loading the data into them. 
 
-The `render` method has been changed also. Prior to submitting the command buffers to the queue we call to a method named `recordCommandBuffers` to record the draw commands. In the previous chapter, we just cleared the screen, so the command buffers could be pre-recorded, while, in this case, we record them form each frame. Strictly speaking, we could also pre-record them, we could just do that after the meshes have been updated. However, later on, in the next chapters, we will need to render the scene based on entities which may be more dynamic than the meshes. Keeping the recorded commands in sync with scene items may not be easy. Therefore, we have chosen a simple approach which just re-records them each frame. The usage of pre-recorded command buffers in the previous chapters was just to show that this an efficient pattern usage in Vulkan.
+The `render` method has been changed also. Prior to submitting the command buffers to the queue we call to a method named `recordCommandBuffer` to record the draw commands. In the previous chapter, we just cleared the screen, so the command buffers could be pre-recorded, while, in this case, we record them form each frame. Strictly speaking, we could also pre-record them, we could just do that after the meshes have been updated. However, later on, in the next chapters, we will need to render the scene based on entities which may be more dynamic than the meshes. Keeping the recorded commands in sync with scene items may not be easy. Therefore, we have chosen a simple approach which just re-records them each frame. The usage of pre-recorded command buffers in the previous chapters was just to show that this an efficient pattern usage in Vulkan.
 
 In the `ForwardRenderActivity` we remove the pre-recording form the constructor. Also we need to create the pipeline and the shaders that will be used. 
 
@@ -1144,12 +1144,12 @@ private EngineProperties() {
 
 Going back to the `ForwardRenderActivity` constructor, after the code that checks if recompilation is required, we just create a `ShaderProgram` instance with a vertex and a fragment shader modules. As it has been said, in the loop that iterates to create the command buffers, we have removed the pre-recording. The rest is the same. 
 
-We have created a new method named `recordCommandBuffers` which reuses some of the code from the last chapter. We first retrieve the command buffer that should be used for the current swap chain image,  set the clear values, create the render pass begin information and start the recording and the render pass:
+We have created a new method named `recordCommandBuffer` which reuses some of the code from the last chapter. We first retrieve the command buffer that should be used for the current swap chain image,  set the clear values, create the render pass begin information and start the recording and the render pass:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -1189,7 +1189,7 @@ Although the code looks similar to the one use din the previous chapter, there i
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         ...
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
@@ -1225,7 +1225,7 @@ After that, we define the scissor, which dimensions are set to the size of the f
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);

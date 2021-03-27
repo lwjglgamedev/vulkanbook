@@ -139,7 +139,7 @@ public class ForwardRenderActivity {
         }
     }
 
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();

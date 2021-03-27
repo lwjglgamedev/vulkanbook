@@ -118,7 +118,7 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
+    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
                                      Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {

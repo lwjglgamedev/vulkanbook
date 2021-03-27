@@ -97,9 +97,9 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
-        geometryRenderActivity.recordCommandBuffers(vulkanModels);
+        geometryRenderActivity.recordCommandBuffer(vulkanModels);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.prepareCommandBuffers();
+        lightingRenderActivity.prepareCommandBuffer();
         lightingRenderActivity.submit(graphQueue);
 
         if (swapChain.presentImage(graphQueue)) {

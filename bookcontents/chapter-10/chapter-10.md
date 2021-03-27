@@ -533,7 +533,7 @@ The `GeometryRenderActivity` also provides a method to record the command buffer
 ```java
 public class GeometryRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -1266,12 +1266,12 @@ public class EmptyVertexBufferStructure extends VertexInputStateInfo {
 
 We are just defining what the name of the class suggests, an empty definition of the structure of the vertex buffer, because we are not going to pass anything while rendering.
 
-Since we are prerecording the commands, the equivalent to the `recordCommandBuffers` has been transformed in a method that just blocks in the associated fences and renamed to to `prepareCommandBuffers`:
+Since we are prerecording the commands, the equivalent to the `recordCommandBuffer` has been transformed in a method that just blocks in the associated fences and renamed to to `prepareCommandBuffer`:
 
 ```java
 public class LightingRenderActivity {
     ...
-    public void prepareCommandBuffers() {
+    public void prepareCommandBuffer() {
         int idx = swapChain.getCurrentFrame();
         Fence fence = fences[idx];
 
@@ -1387,9 +1387,9 @@ public class Render {
 
     public void render(Window window, Scene scene) {
         ...
-        geometryRenderActivity.recordCommandBuffers(meshList);
+        geometryRenderActivity.recordCommandBuffer(meshList);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.prepareCommandBuffers();
+        lightingRenderActivity.prepareCommandBuffer();
         lightingRenderActivity.submit(graphQueue);
         ...
     }

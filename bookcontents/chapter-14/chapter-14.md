@@ -1242,11 +1242,11 @@ public class GeometryRenderActivity {
 }
 ``` 
 
-That barrier will be used when recording the commands that will render the scene, therefore, we need to modify the `recordCommandBuffers` method and submit the barrier. It will  state that in order to read memory contents (the `VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT` flag that we used when creating the barrier) form the vertex shader, we need the compute shader to finish writing to memory:
+That barrier will be used when recording the commands that will render the scene, therefore, we need to modify the `recordCommandBuffer` method and submit the barrier. It will  state that in order to read memory contents (the `VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT` flag that we used when creating the barrier) form the vertex shader, we need the compute shader to finish writing to memory:
 ```java
 public class GeometryRenderActivity {
     ...
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
+    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
                                      Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         ...
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
@@ -1263,7 +1263,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-You can see that the `recordCommandBuffers` has a new reference to the buffers that hold the animated vertices for each of the entities. This will be used in the `recordEntities` method. In this method, we just need to check if the entity is related to a model that has animations or not. If so, instead of using the data associated to the meshes of the model, we use the buffer associated to the animation for that entity.
+You can see that the `recordCommandBuffer` has a new reference to the buffers that hold the animated vertices for each of the entities. This will be used in the `recordEntities` method. In this method, we just need to check if the entity is related to a model that has animations or not. If so, instead of using the data associated to the meshes of the model, we use the buffer associated to the animation for that entity.
 ```java
     private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
                                 List<VulkanModel> vulkanModelList,
@@ -1316,7 +1316,7 @@ We need also to update the code that renders shadow cascades. The changes are qu
 ```java
 public class ShadowRenderActivity {
     ...
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
+    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
                                      Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         ...
             recordEntities(stack, cmdHandle, vulkanModelList, entityAnimationsBuffers);
@@ -1418,8 +1418,8 @@ public class Render {
         animationComputeActivity.submit();
 
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
-        geometryRenderActivity.recordCommandBuffers(commandBuffer, vulkanModels, animationComputeActivity.getEntityAnimationsBuffers());
-        shadowRenderActivity.recordCommandBuffers(commandBuffer, vulkanModels, animationComputeActivity.getEntityAnimationsBuffers());
+        geometryRenderActivity.recordCommandBuffer(commandBuffer, vulkanModels, animationComputeActivity.getEntityAnimationsBuffers());
+        shadowRenderActivity.recordCommandBuffer(commandBuffer, vulkanModels, animationComputeActivity.getEntityAnimationsBuffers());
         ...
     }
     ...

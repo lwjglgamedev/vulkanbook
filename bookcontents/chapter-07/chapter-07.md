@@ -696,7 +696,7 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
-        fwdRenderActivity.recordCommandBuffers(vulkanModels);
+        fwdRenderActivity.recordCommandBuffer(vulkanModels);
         fwdRenderActivity.submit(presentQueue);
 
         if (swapChain.presentImage(graphQueue)) {
@@ -811,12 +811,12 @@ public class ForwardRenderActivity {
 }
 ```
 
-We need also to update the `recordCommandBuffers` method, to take the depth buffer into consideration, to actually use the push constants and to modify how we render to use the game entities. Let's start by the depth buffer:
+We need also to update the `recordCommandBuffer` method, to take the depth buffer into consideration, to actually use the push constants and to modify how we render to use the game entities. Let's start by the depth buffer:
 
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
     ...
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(2, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
@@ -832,7 +832,7 @@ In previous chapters, we just recorded commands to clear the color attachment. N
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer offsets = stack.mallocLong(1);
             offsets.put(0, 0L);

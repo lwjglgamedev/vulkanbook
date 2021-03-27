@@ -707,7 +707,7 @@ Finally, we just need to update a little bit the way we record the commands to b
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer descriptorSets = stack.mallocLong(4)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())

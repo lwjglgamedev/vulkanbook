@@ -235,7 +235,7 @@ public class LightingRenderActivity {
         }
     }
 
-    public void prepareCommandBuffers(List<CascadeShadow> cascadeShadows) {
+    public void prepareCommandBuffer(List<CascadeShadow> cascadeShadows) {
         int idx = swapChain.getCurrentFrame();
         Fence fence = fences[idx];
 

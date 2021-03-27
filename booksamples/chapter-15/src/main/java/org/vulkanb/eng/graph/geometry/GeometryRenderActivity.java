@@ -185,8 +185,8 @@ public class GeometryRenderActivity {
         return geometryFrameBuffer.geometryAttachments().getAttachments();
     }
 
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
-                                     Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
+                                    Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();

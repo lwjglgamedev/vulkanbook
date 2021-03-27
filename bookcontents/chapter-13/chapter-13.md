@@ -639,12 +639,12 @@ public class ShadowRenderActivity {
 }
 ```
 
-Let's examine now the methods that render the scene to generate the depth maps, called `recordCommandBuffers` and `recordEntities`:
+Let's examine now the methods that render the scene to generate the depth maps, called `recordCommandBuffer` and `recordEntities`:
 
 ```java
 public class ShadowRenderActivity {
     ...
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
@@ -863,7 +863,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-The code in the `beginRecording` method was previously contained in the `recordCommandBuffers`. Since we will be sharing the commands, we need to split the recording of the drawing commands with the drawing commands themselves. Therefore, we need also a `endRecording` method:
+The code in the `beginRecording` method was previously contained in the `recordCommandBuffer`. Since we will be sharing the commands, we need to split the recording of the drawing commands with the drawing commands themselves. Therefore, we need also a `endRecording` method:
 
 ```java
 public class GeometryRenderActivity {
@@ -875,12 +875,12 @@ public class GeometryRenderActivity {
 }
 ```
 
-As a result, the `recordCommandBuffers` method needs to be modified to remove the code that starts and finalizes the recording. This method will received now a `CommandBuffer` as a parameter, which will be used for the recording, but the rest is the same:
+As a result, the `recordCommandBuffer` method needs to be modified to remove the code that starts and finalizes the recording. This method will received now a `CommandBuffer` as a parameter, which will be used for the recording, but the rest is the same:
 
 ```java
 public class GeometryRenderActivity {
     ...
-    public void recordCommandBuffers(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
@@ -1225,7 +1225,7 @@ public class LightingRenderActivity {
         ...
     }
 
-    public void prepareCommandBuffers(List<CascadeShadow> cascadeShadows) {
+    public void prepareCommandBuffer(List<CascadeShadow> cascadeShadows) {
         ...
         updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(), lightsBuffers[idx]);
         updateInvMatrices(scene, invMatricesBuffers[idx]);
@@ -1385,11 +1385,11 @@ public class Render {
     public void render(Window window, Scene scene) {
         ...
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
-        geometryRenderActivity.recordCommandBuffers(commandBuffer, meshList, scene);
-        shadowRenderActivity.recordCommandBuffers(commandBuffer, meshList, scene);
+        geometryRenderActivity.recordCommandBuffer(commandBuffer, meshList, scene);
+        shadowRenderActivity.recordCommandBuffer(commandBuffer, meshList, scene);
         geometryRenderActivity.endRecording(commandBuffer);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.prepareCommandBuffers(scene, shadowRenderActivity.getShadowCascades());
+        lightingRenderActivity.prepareCommandBuffer(scene, shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.submit(graphQueue);
 
         if (swapChain.presentImage(graphQueue)) {

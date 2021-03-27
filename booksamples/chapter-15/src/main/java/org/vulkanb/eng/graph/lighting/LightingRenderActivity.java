@@ -193,7 +193,7 @@ public class LightingRenderActivity {
         return lightingFrameBuffer;
     }
 
-    public void recordCommandBuffers(CommandBuffer commandBuffer) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int idx = swapChain.getCurrentFrame();
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();

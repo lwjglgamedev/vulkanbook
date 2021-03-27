@@ -8,16 +8,15 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
-	<!-- Test LWJGL SNAPSHOT version
-	<repositories>
-		<repository>
-			<id>sonatype-snapshots</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-			<releases><enabled>false</enabled></releases>
-			<snapshots><enabled>true</enabled></snapshots>
-		</repository>
-	</repositories>
-	-->
+    <!-- Test LWJGL SNAPSHOT version -->
+    <repositories>
+        <repository>
+            <id>sonatype-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+    </repositories>
 	
     <build>
         <plugins>
@@ -28,12 +27,10 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
-                    <compilerArgs>
-                        <arg>--enable-preview</arg>
-                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>${maven-dependency-plugin.version}</version>
                 <executions>
@@ -119,15 +116,13 @@
         <built.by>vulkanb</built.by>
         <main.class>org.vulkanb.Main</main.class>
         <!-- Versions -->
-        <java.version>15</java.version>
+        <java.version>16</java.version>
 		
-		<imgui-java.version>1.81.2</imgui-java.version>
+        <imgui-java.version>1.81.2</imgui-java.version>
         <joml.version>1.10.0</joml.version>
-        <log4j.version>2.14.0</log4j.version>
-        <lwjgl.version>3.2.3</lwjgl.version>
-		<!-- LEJGL SNAPSHOT VERSION 
+        <log4j.version>2.14.1</log4j.version>
+        <!--<lwjgl.version>3.2.3</lwjgl.version>-->
         <lwjgl.version>3.3.0-SNAPSHOT</lwjgl.version>
-		-->
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-dependency-plugin.version>3.1.2</maven-dependency-plugin.version>
         <maven-jar-plugin.version>3.2.0</maven-jar-plugin.version>

@@ -499,12 +499,12 @@ public class GeometryRenderActivity {
 }
 ```
 
-The next change is to put the new descriptors into work by allowing them to be accessed in the shaders. Therefore we need to modify the `recordCommandBuffers` and the `recordEntities` methods in the `GeometryRenderActivity` class:
+The next change is to put the new descriptors into work by allowing them to be accessed in the shaders. Therefore we need to modify the `recordCommandBuffer` and the `recordEntities` methods in the `GeometryRenderActivity` class:
 
 ```java
 public class GeometryRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer descriptorSets = stack.mallocLong(6)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
@@ -808,11 +808,11 @@ public class LightingRenderActivity {
 }
 ```
 
-In the `prepareCommandBuffers` method we will update the current lights buffer in each render loop (they can be dynamically changed), while in the `resize` method we need just to update the inverse projection matrix (by calling a new method named `updateInvProjMatrix`):
+In the `prepareCommandBuffer` method we will update the current lights buffer in each render loop (they can be dynamically changed), while in the `resize` method we need just to update the inverse projection matrix (by calling a new method named `updateInvProjMatrix`):
 ```java
 public class LightingRenderActivity {
     ...
-    public void prepareCommandBuffers() {
+    public void prepareCommandBuffer() {
         int idx = swapChain.getCurrentFrame();
         Fence fence = fences[idx];
 

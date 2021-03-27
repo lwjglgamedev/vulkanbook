@@ -20,6 +20,7 @@ public class MemoryAllocator {
                     .set(instance.getVkInstance(), vkDevice);
 
             VmaAllocatorCreateInfo createInfo = VmaAllocatorCreateInfo.callocStack(stack)
+                    .instance(instance.getVkInstance())
                     .device(vkDevice)
                     .physicalDevice(physicalDevice.getVkPhysicalDevice())
                     .pVulkanFunctions(vmaVulkanFunctions);

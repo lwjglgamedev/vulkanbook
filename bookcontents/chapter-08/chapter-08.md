@@ -1241,11 +1241,11 @@ public class ForwardRenderActivity {
 }
 ```
 
-We need also to update the `recordCommandBuffers` like this:
+We need also to update the `recordCommandBuffer` like this:
 ```java
 public class ForwardRenderActivity {
     ...
-    public void recordCommandBuffers(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer descriptorSets = stack.mallocLong(2)
                     .put(0, matrixDescriptorSet.getVkDescriptorSet());

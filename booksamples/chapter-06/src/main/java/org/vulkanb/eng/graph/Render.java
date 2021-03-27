@@ -64,7 +64,7 @@ public class Render {
     public void render(Window window, Scene scene) {
         swapChain.acquireNextImage();
 
-        fwdRenderActivity.recordCommandBuffers(vulkanModels);
+        fwdRenderActivity.recordCommandBuffer(vulkanModels);
         fwdRenderActivity.submit(presentQueue);
 
         swapChain.presentImage(graphQueue);

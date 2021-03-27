@@ -90,11 +90,11 @@ public class Render {
         }
 
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
-        geometryRenderActivity.recordCommandBuffers(commandBuffer, vulkanModels);
-        shadowRenderActivity.recordCommandBuffers(commandBuffer, vulkanModels);
+        geometryRenderActivity.recordCommandBuffer(commandBuffer, vulkanModels);
+        shadowRenderActivity.recordCommandBuffer(commandBuffer, vulkanModels);
         geometryRenderActivity.endRecording(commandBuffer);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.prepareCommandBuffers(shadowRenderActivity.getShadowCascades());
+        lightingRenderActivity.prepareCommandBuffer(shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.submit(graphQueue);
 
         if (swapChain.presentImage(graphQueue)) {

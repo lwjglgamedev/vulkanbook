@@ -218,7 +218,7 @@ public class LightingRenderActivity {
         }
     }
 
-    public void prepareCommandBuffers() {
+    public void prepareCommandBuffer() {
         int idx = swapChain.getCurrentFrame();
         Fence fence = fences[idx];
 
