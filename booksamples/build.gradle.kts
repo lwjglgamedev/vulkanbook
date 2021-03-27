@@ -20,11 +20,12 @@ subprojects {
 
     repositories {
 	    mavenCentral()
+		maven(url="https://oss.sonatype.org/content/repositories/snapshots/")
     }
 
     val jomlVersion = "1.10.0"
     val log4jVersion = "2.14.0"
-    val lwjglVersion = "3.2.3"
+    val lwjglVersion = "3.3.0-SNAPSHOT"
 	var imguiVersion = "1.81.2"
 
     dependencies {
