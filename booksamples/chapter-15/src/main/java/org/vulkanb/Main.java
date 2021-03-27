@@ -145,7 +145,7 @@ public class Main implements IAppLogic {
         @Override
         public void drawGui() {
             ImGui.newFrame();
-            ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
+            ImGui.setNextWindowPos(1700, 100, ImGuiCond.Always);
             ImGui.setNextWindowSize(200, 200);
             ImGui.begin("Test Window");
             ImGui.end();

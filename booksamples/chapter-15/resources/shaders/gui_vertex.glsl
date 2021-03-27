@@ -6,7 +6,6 @@ layout (location = 2) in vec4 inColor;
 
 layout (push_constant) uniform PushConstants {
     vec2 scale;
-    vec2 translate;
 } pushConstants;
 
 layout (location = 0) out vec2 outTextCoords;
@@ -21,5 +20,5 @@ void main()
 {
     outTextCoords = inTextCoords;
     outColor = inColor;
-    gl_Position = vec4(inPos * pushConstants.scale + pushConstants.translate, 0.0, 1.0);
+    gl_Position = vec4(inPos * pushConstants.scale + vec2(-1.0, 1.0), 0.0, 1.0);
 }

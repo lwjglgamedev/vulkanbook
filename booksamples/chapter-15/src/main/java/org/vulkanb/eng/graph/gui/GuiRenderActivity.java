@@ -16,7 +16,6 @@ import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: Maintain y axis convention
 public class GuiRenderActivity {
 
     private static final String GUI_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/gui_fragment.glsl";
@@ -146,8 +145,8 @@ public class GuiRenderActivity {
 
             VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
                     .x(0)
-                    .y(0)
-                    .height(height)
+                    .y(height)
+                    .height(-height)
                     .width(width)
                     .minDepth(0.0f)
                     .maxDepth(1.0f);
@@ -161,11 +160,9 @@ public class GuiRenderActivity {
             vkCmdBindIndexBuffer(cmdHandle, indicesBuffers[idx].getBuffer(), 0, VK_INDEX_TYPE_UINT16);
 
             ImGuiIO io = ImGui.getIO();
-            FloatBuffer pushConstantBuffer = stack.mallocFloat(4);
+            FloatBuffer pushConstantBuffer = stack.mallocFloat(2);
             pushConstantBuffer.put(0, 2.0f / io.getDisplaySizeX());
-            pushConstantBuffer.put(1, 2.0f / io.getDisplaySizeY());
-            pushConstantBuffer.put(2, -1.0f);
-            pushConstantBuffer.put(3, -1.0f);
+            pushConstantBuffer.put(1, -2.0f / io.getDisplaySizeY());
             vkCmdPushConstants(cmdHandle, pipeline.getVkPipelineLayout(),
                     VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
 
