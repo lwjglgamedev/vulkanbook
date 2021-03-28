@@ -26,7 +26,6 @@ public class LightingRenderActivity {
     private final Vector4f auxVec;
     private final LightSpecConstants lightSpecConstants;
     private final LightingFrameBuffer lightingFrameBuffer;
-    private final PipelineCache pipelineCache;
     private final Scene scene;
 
     private AttachmentsDescriptorSet attachmentsDescriptorSet;
