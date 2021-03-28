@@ -17,4 +17,4 @@ The book is structured in the following chapters:
 - [Chapter 12](chapter-12/chapter-12.md): Vulkan Memory Allocator and specialization constants.
 - [Chapter 13](chapter-13/chapter-13.md): Cascade shadows.
 - [Chapter 14](chapter-14/chapter-14.md): Animation.
-- [Chapter 15](chapter-14/chapter-14.md): GUI.
+- [Chapter 15](chapter-14/chapter-14.md): Render of GUI elements through ImGui.

@@ -12,8 +12,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class AttachmentsDescriptorSet extends DescriptorSet {
 
-    private final Device device;
     private final int binding;
+    private final Device device;
     private final TextureSampler textureSampler;
 
     public AttachmentsDescriptorSet(DescriptorPool descriptorPool, AttachmentsLayout descriptorSetLayout,

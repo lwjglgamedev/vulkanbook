@@ -130,7 +130,7 @@ public class Main implements IAppLogic {
         lightDirection.w = 0.0f;
     }
 
-    static class DemoGui implements IGuiInstance {
+    private static class DemoGui implements IGuiInstance {
         @Override
         public void drawGui() {
             ImGui.newFrame();
@@ -141,11 +141,11 @@ public class Main implements IAppLogic {
         }
     }
 
-    static class SimpleGui implements IGuiInstance {
+    private static class SimpleGui implements IGuiInstance {
         @Override
         public void drawGui() {
             ImGui.newFrame();
-            ImGui.setNextWindowPos(1700, 100, ImGuiCond.Always);
+            ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
             ImGui.setNextWindowSize(200, 200);
             ImGui.begin("Test Window");
             ImGui.end();

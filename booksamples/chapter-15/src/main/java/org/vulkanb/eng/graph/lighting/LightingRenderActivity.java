@@ -22,8 +22,8 @@ public class LightingRenderActivity {
     private static final String LIGHTING_VERTEX_SHADER_FILE_GLSL = "resources/shaders/lighting_vertex.glsl";
     private static final String LIGHTING_VERTEX_SHADER_FILE_SPV = LIGHTING_VERTEX_SHADER_FILE_GLSL + ".spv";
 
-    private final Device device;
     private final Vector4f auxVec;
+    private final Device device;
     private final LightSpecConstants lightSpecConstants;
     private final LightingFrameBuffer lightingFrameBuffer;
     private final Scene scene;

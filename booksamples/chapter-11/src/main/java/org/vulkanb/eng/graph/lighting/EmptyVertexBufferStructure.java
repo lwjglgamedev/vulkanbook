@@ -13,9 +13,4 @@ public class EmptyVertexBufferStructure extends VertexInputStateInfo {
                 .pVertexBindingDescriptions(null)
                 .pVertexAttributeDescriptions(null);
     }
-
-    @Override
-    public void cleanup() {
-        vi.free();
-    }
 }

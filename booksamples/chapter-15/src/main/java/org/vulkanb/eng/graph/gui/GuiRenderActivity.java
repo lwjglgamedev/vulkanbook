@@ -79,7 +79,7 @@ public class GuiRenderActivity {
     private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
-                GraphConstants.FLOAT_LENGTH * 4,
+                GraphConstants.FLOAT_LENGTH * 2,
                 new ImGuiVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
@@ -123,7 +123,7 @@ public class GuiRenderActivity {
         indicesBuffers = new VulkanBuffer[swapChain.getNumImages()];
     }
 
-    public void render(Scene scene, CommandBuffer commandBuffer) {
+    public void recordCommandBuffer(Scene scene, CommandBuffer commandBuffer) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int idx = swapChain.getCurrentFrame();
 

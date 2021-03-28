@@ -914,7 +914,7 @@ public class LightingRenderActivity {
         createShaders();
         createDescriptorPool(attachments);
         createDescriptorSets(attachments);
-        createPipeline();
+        createPipeline(pipelineCache);
         createCommandBuffers(commandPool, numImages);
 
         for (int i = 0; i < numImages; i++) {
@@ -1128,7 +1128,7 @@ Going back to the `LightingRenderActivity` class, the `createPipeline` is almost
 ```java
 public class LightingRenderActivity {
     ...
-    private void createPipeline() {
+    private void createPipeline(PipelineCache pipelineCache) {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false, 0,
                 new EmptyVertexBufferStructure(), descriptorSetLayouts);
@@ -1255,11 +1255,6 @@ public class EmptyVertexBufferStructure extends VertexInputStateInfo {
         vi.sType(VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
                 .pVertexBindingDescriptions(null)
                 .pVertexAttributeDescriptions(null);
-    }
-
-    @Override
-    public void cleanup() {
-        vi.free();
     }
 }
 ```

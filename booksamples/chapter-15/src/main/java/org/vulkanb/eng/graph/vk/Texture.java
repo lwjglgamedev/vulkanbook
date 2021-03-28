@@ -11,20 +11,19 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Texture {
 
-    private static final Logger LOGGER = LogManager.getLogger();
     // RGBA
     private static final int BYTES_PER_PIXEL = 4;
+    private static final Logger LOGGER = LogManager.getLogger();
 
-    private String fileName;
     private final int height;
-    private Image image;
-    private ImageView imageView;
     private final int mipLevels;
     private final int width;
-
-    private VulkanBuffer stgBuffer;
-    private boolean recordedTransition;
+    private String fileName;
     private boolean hasTransparencies;
+    private Image image;
+    private ImageView imageView;
+    private boolean recordedTransition;
+    private VulkanBuffer stgBuffer;
 
     public Texture(Device device, String fileName, int imageFormat) {
         LOGGER.debug("Creating texture [{}]", fileName);
@@ -60,14 +59,6 @@ public class Texture {
         createTextureResources(device, buf, imageFormat);
     }
 
-    private void createTextureResources(Device device, ByteBuffer buf, int imageFormat) {
-        createStgBuffer(device, buf);
-        image = new Image(device, width, height, imageFormat,
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                mipLevels, 1);
-        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
-    }
-
     public void cleanup() {
         cleanupStgBuffer();
         imageView.cleanup();
@@ -91,6 +82,14 @@ public class Texture {
         data.flip();
 
         stgBuffer.unMap();
+    }
+
+    private void createTextureResources(Device device, ByteBuffer buf, int imageFormat) {
+        createStgBuffer(device, buf);
+        image = new Image(device, width, height, imageFormat,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                mipLevels, 1);
+        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
     }
 
     public String getFileName() {

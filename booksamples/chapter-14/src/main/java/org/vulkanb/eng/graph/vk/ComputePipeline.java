@@ -1,20 +1,16 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.VkComputePipelineCreateInfo;
-import org.lwjgl.vulkan.VkPipelineLayoutCreateInfo;
-import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo;
+import org.lwjgl.vulkan.*;
 
-import java.nio.ByteBuffer;
-import java.nio.LongBuffer;
+import java.nio.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ComputePipeline {
-
+    
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final Device device;
@@ -41,7 +37,7 @@ public class ComputePipeline {
                     .pName(main);
 
             DescriptorSetLayout[] descriptorSetLayouts = pipeLineCreationInfo.descriptorSetLayouts();
-            int numLayouts = descriptorSetLayouts.length;
+            int numLayouts = descriptorSetLayouts != null ? descriptorSetLayouts.length : 0;
             LongBuffer ppLayout = stack.mallocLong(numLayouts);
             for (int i = 0; i < numLayouts; i++) {
                 ppLayout.put(i, descriptorSetLayouts[i].getVkDescriptorLayout());

@@ -21,7 +21,6 @@ public class LightingRenderActivity {
 
     private final Device device;
     private final LightingFrameBuffer lightingFrameBuffer;
-    private final PipelineCache pipelineCache;
 
     private AttachmentsDescriptorSet attachmentsDescriptorSet;
     private AttachmentsLayout attachmentsLayout;
@@ -36,7 +35,6 @@ public class LightingRenderActivity {
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
                                   List<Attachment> attachments) {
         this.swapChain = swapChain;
-        this.pipelineCache = pipelineCache;
         device = swapChain.getDevice();
 
         lightingFrameBuffer = new LightingFrameBuffer(swapChain);
@@ -44,7 +42,7 @@ public class LightingRenderActivity {
         createShaders();
         createDescriptorPool(attachments);
         createDescriptorSets(attachments);
-        createPipeline();
+        createPipeline(pipelineCache);
         createCommandBuffers(commandPool, numImages);
 
         for (int i = 0; i < numImages; i++) {
@@ -89,7 +87,7 @@ public class LightingRenderActivity {
                 attachments, 0);
     }
 
-    private void createPipeline() {
+    private void createPipeline(PipelineCache pipelineCache) {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, false, 0,
                 new EmptyVertexBufferStructure(), descriptorSetLayouts);

@@ -624,7 +624,7 @@ public class ComputePipeline {
     public ComputePipeline(PipelineCache pipelineCache, ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
             DescriptorSetLayout[] descriptorSetLayouts = pipeLineCreationInfo.descriptorSetLayouts();
-            int numLayouts = descriptorSetLayouts.length;
+            int numLayouts = descriptorSetLayouts != null ? descriptorSetLayouts.length : 0;
             LongBuffer ppLayout = stack.mallocLong(numLayouts);
             for (int i = 0; i < numLayouts; i++) {
                 ppLayout.put(i, descriptorSetLayouts[i].getVkDescriptorLayout());

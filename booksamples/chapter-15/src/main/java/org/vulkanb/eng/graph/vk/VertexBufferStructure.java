@@ -78,4 +78,5 @@ public class VertexBufferStructure extends VertexInputStateInfo {
         viBindings.free();
         viAttrs.free();
     }
+
 }
