@@ -84,8 +84,8 @@ public class ModelLoader {
     private static ModelData.MeshData processMesh(AIMesh aiMesh) {
         ...
         List<Float> normals = processNormals(aiMesh);
-        List<Float> tangents = processTangents(aiMesh);
-        List<Float> biTangents = processBitangents(aiMesh);
+        List<Float> tangents = processTangents(aiMesh, normals);
+        List<Float> biTangents = processBitangents(aiMesh, normals);
         ...
         return new ModelData.MeshData(listFloatToArray(vertices), listFloatToArray(normals), listFloatToArray(tangents),
                 listFloatToArray(biTangents), listFloatToArray(textCoords), listIntToArray(indices), materialIdx);
@@ -111,7 +111,7 @@ Going back to the `ModelLoader` class, the new methods are quite straight forwar
 ```java
 public class ModelLoader {
     ...
-    private static List<Float> processBitangents(AIMesh aiMesh) {
+    private static List<Float> processBitangents(AIMesh aiMesh, List<Float> normals) {
         List<Float> biTangents = new ArrayList<>();
         AIVector3D.Buffer aiBitangents = aiMesh.mBitangents();
         while (aiBitangents != null && aiBitangents.remaining() > 0) {
@@ -119,6 +119,11 @@ public class ModelLoader {
             biTangents.add(aiBitangent.x());
             biTangents.add(aiBitangent.y());
             biTangents.add(aiBitangent.z());
+        }
+
+        // Assimp may not calculate tangents with models that do not have texture coordinates. Just create empty values
+        if (biTangents.size() == 0) {
+            biTangents = new ArrayList<>(Collections.nCopies(normals.size(), 0.0f));
         }
         return biTangents;
     }
@@ -136,7 +141,7 @@ public class ModelLoader {
         return normals;
     }
 
-    private static List<Float> processTangents(AIMesh aiMesh) {
+    private static List<Float> processTangents(AIMesh aiMesh, List<Float> normals) {
         List<Float> tangents = new ArrayList<>();
         AIVector3D.Buffer aiTangents = aiMesh.mTangents();
         while (aiTangents != null && aiTangents.remaining() > 0) {
@@ -145,13 +150,18 @@ public class ModelLoader {
             tangents.add(aiTangent.y());
             tangents.add(aiTangent.z());
         }
+
+        // Assimp may not calculate tangents with models that do not have texture coordinates. Just create empty values
+        if (tangents.size() == 0) {
+            tangents = new ArrayList<>(Collections.nCopies(normals.size(), 0.0f));
+        }
         return tangents;
     }
     ...
 }
 ```
 
-In order to get that data, we just call the `mNormals`, `mTangents` and `mBitangents` methods over an `AIMesh` instance to get those coordinates. Keep in mind that when we are loading that model using assimp, we are using the `aiProcess_CalcTangentSpace` so the tangents and bitangents are automatically calculated even if they are not present in the model.
+In order to get that data, we just call the `mNormals`, `mTangents` and `mBitangents` methods over an `AIMesh` instance to get those coordinates. Keep in mind that when we are loading that model using Assimp, we are using the `aiProcess_CalcTangentSpace` so the tangents and bitangents are automatically calculated even if they are not present in the model. Keep also in mind that, for models that do not define texture coordinates, Assimp does not calculate tangents and bi-tangents. In this specific case, we just create empty lists filled up with zeros (their values will not be used but we need that space to construct a single vertex structure).
 
 The next step is to modify how the Vulkan buffer gets populated to include the new data. This is done in the `VulkanModel` class:
 
