@@ -314,12 +314,14 @@ public class GuiRenderActivity {
                 return;
             }
             guiInstance.drawGui();
-
             updateBuffers(idx);
 
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
             int height = swapChainExtent.height();
+            if (vertexBuffers[idx] == null) {
+                return;
+            }
 
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
@@ -378,7 +380,7 @@ public class GuiRenderActivity {
 }
 ```
 
-The first thing you may notice is that we receive a reference to a `CommandBuffer` instance where we will record the drawing commands. As it has been said before, we will use the same command buffer used in the lighting phase, therefore, we need that as a parameter. The first thing we do in the `recordCommandBuffer`, method is retrieve the current image and access the `Scene` class to retrieve the GUI instance. This is a new attribute in the `Scene` class which will hold an implementation responsible of actually invoking ImGui functions that will define the GUI elements (the calls to construct the GUI). Depending on the application state, the GUI elements will be different, therefore that construction cannot reside in the `GuiRenderActivity` class, this should be done in the application which will properly set the `IGuiInstance` instance which needs to be used in each instant through that new attribute in the `Scene` class. If there is a GUI implementation we call the `drawGui` method. If there is no value for that, irt means that we should not display any GUI and we just need to return. We will see later on some sample implementations for the `IGuiInstance` interface, which just defines a single method to draw the GUI elements:
+The first thing you may notice is that we receive a reference to a `CommandBuffer` instance where we will record the drawing commands. As it has been said before, we will use the same command buffer used in the lighting phase, therefore, we need that as a parameter. The first thing we do in the `recordCommandBuffer`, method is retrieve the current image and access the `Scene` class to retrieve the GUI instance. This is a new attribute in the `Scene` class which will hold an implementation responsible of actually invoking ImGui functions that will define the GUI elements (the calls to construct the GUI). Depending on the application state, the GUI elements will be different, therefore that construction cannot reside in the `GuiRenderActivity` class, this should be done in the application which will properly set the `IGuiInstance` instance which needs to be used in each instant through that new attribute in the `Scene` class. If there is a GUI implementation we call the `drawGui` method. If there is no value for that, it means that we should not display any GUI and we just need to return. We will see later on some sample implementations for the `IGuiInstance` interface, which just defines a single method to draw the GUI elements:
 ```java
 package org.vulkanb.eng.scene;
 
@@ -387,7 +389,7 @@ public interface IGuiInstance {
 }
 ```
 
-Going back to the the `recordCommandBuffer` of the `GuiRenderActivity` class, after calling the `drawGui` method, ImGui will have updated its internal buffers that will hold the vertices and indices data required to render the GUI. After that we need to be able to use that data in our GPU. This is what the `updateBuffers` method do, it copies ImGui data to Vulkan buffers that can be used for rendering the GUI. We will see the implementation later on, but it is important to keep in mind what this method does.
+Going back to the the `recordCommandBuffer` of the `GuiRenderActivity` class, after calling the `drawGui` method, ImGui will have updated its internal buffers that will hold the vertices and indices data required to render the GUI. After that we need to be able to use that data in our GPU. This is what the `updateBuffers` method do, it copies ImGui data to Vulkan buffers that can be used for rendering the GUI. We will see the implementation later on, but it is important to keep in mind what this method does. Yo may notice that we add an extra check about updating the buffers to see if they are null for the current frame. The reason for this is that ImGui may need a frame to figure out the proper size of the elements if the windows do not have a fixed size. Therefore, buffers may not have been populated, and we will need to wait for the next frame.
 
 The next step is to bind the pipeline, set the view port and bind the buffers that will hold the GUI vertices and indices. After that, we setup a push constants buffer which will have a scale factor. ImGui will use a coordinate system which sets `(0, 0)` at the top left corner of the screen and `(width, height)` as the the bottom right corner, being `width` and `height` the values set in the `ImGuiIO` `setDisplaySize` method call. We need to transform from that coordinate system to one in the range of `[-1, 1]` for x and y axis, which will be done in the vertex shader with the help of that scaling factor. After that, we iterate over the buffer subsets defined by ImGui, applying a start and end offset along with a scissor area to limit the drawing region. For each of those regions, we submit a drawing command.
 

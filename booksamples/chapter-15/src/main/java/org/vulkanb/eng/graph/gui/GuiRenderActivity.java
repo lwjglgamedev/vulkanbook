@@ -132,8 +132,10 @@ public class GuiRenderActivity {
                 return;
             }
             guiInstance.drawGui();
-
             updateBuffers(idx);
+            if (vertexBuffers[idx] == null) {
+                return;
+            }
 
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
