@@ -23,10 +23,10 @@ subprojects {
 		maven(url="https://oss.sonatype.org/content/repositories/snapshots/")
     }
 
-    val jomlVersion = "1.10.0"
-    val log4jVersion = "2.14.0"
+    val jomlVersion = "1.10.1"
+    val log4jVersion = "2.14.1"
     val lwjglVersion = "3.3.0-SNAPSHOT"
-	var imguiVersion = "1.81.2"
+	var imguiVersion = "1.82.1"
 
     dependencies {
         implementation("org.apache.logging.log4j:log4j-api:$log4jVersion")

@@ -1036,7 +1036,7 @@ public class AnimationComputeActivity {
             for (VulkanModel vulkanModel : vulkanModelList) {
                 String modelId = vulkanModel.getModelId();
                 List<Entity> entities = scene.getEntitiesByModelId(modelId);
-                if (entities.isEmpty() || !vulkanModel.hasAnimations()) {
+                if (entities == null || entities.isEmpty() || !vulkanModel.hasAnimations()) {
                     continue;
                 }
 
