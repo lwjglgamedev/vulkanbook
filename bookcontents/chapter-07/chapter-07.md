@@ -89,7 +89,7 @@ public class Image {
             ...
             // Get memory requirements for this object
             VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
-            vkGetImageMemoryRequirements(device.getVkDevice(), getVkImage(), memReqs);
+            vkGetImageMemoryRequirements(device.getVkDevice(), vkImage, memReqs);
             ...
         }
         ...
@@ -131,7 +131,7 @@ public class Image {
             vkMemory = lp.get(0);
 
             // Bind memory
-            vkCheck(vkBindImageMemory(device.getVkDevice(), getVkImage(), getVkMemory(), 0),
+            vkCheck(vkBindImageMemory(device.getVkDevice(), vkImage, vkMemory, 0),
                     "Failed to bind image memory");
         }
     }
