@@ -11,8 +11,6 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Texture {
 
-    // RGBA
-    private static final int BYTES_PER_PIXEL = 4;
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final int height;
@@ -73,7 +71,7 @@ public class Texture {
     }
 
     private void createStgBuffer(Device device, ByteBuffer data) {
-        int size = width * height * BYTES_PER_PIXEL;
+        int size = data.remaining();
         stgBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         long mappedMemory = stgBuffer.map();
