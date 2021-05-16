@@ -9,3 +9,4 @@ target/
 build/
 *.log
 *.cap
+*.cmd

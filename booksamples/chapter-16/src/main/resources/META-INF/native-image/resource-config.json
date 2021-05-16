@@ -1,0 +1,19 @@
+{
+  "resources":{
+  "includes":[
+    {"pattern":"\\QMETA-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat\\E"}, 
+    {"pattern":"\\QMETA-INF/services/org.apache.logging.log4j.core.util.ContextDataProvider\\E"}, 
+    {"pattern":"\\QMETA-INF/services/org.apache.logging.log4j.spi.Provider\\E"}, 
+    {"pattern":"\\QMETA-INF/services/org.apache.logging.log4j.util.PropertySource\\E"}, 
+    {"pattern":"\\Qeng.properties\\E"}, 
+    {"pattern":"\\Qio/imgui/java/native-bin/imgui-java64.dll\\E"}, 
+    {"pattern":"\\Qlog4j2.xml\\E"}, 
+    {"pattern":"\\Qorg/lwjgl/system/APIUtil.class\\E"}, 
+    {"pattern":"\\Qwindows/x64/org/lwjgl/assimp/assimp.dll\\E"}, 
+    {"pattern":"\\Qwindows/x64/org/lwjgl/glfw/glfw.dll\\E"}, 
+    {"pattern":"\\Qwindows/x64/org/lwjgl/lwjgl.dll\\E"}, 
+    {"pattern":"\\Qwindows/x64/org/lwjgl/stb/lwjgl_stb.dll\\E"}, 
+    {"pattern":"\\Qwindows/x64/org/lwjgl/vma/lwjgl_vma.dll\\E"}
+  ]},
+  "bundles":[]
+}
