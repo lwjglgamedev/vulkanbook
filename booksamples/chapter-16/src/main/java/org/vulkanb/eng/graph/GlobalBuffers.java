@@ -206,7 +206,6 @@ public class GlobalBuffers {
         }
     }
 
-    // TODO: Transparencies
     public List<VulkanModel> loadModels(List<ModelData> modelDataList, TextureCache textureCache, CommandPool commandPool, Queue queue) {
         List<VulkanModel> vulkanModelList = new ArrayList<>();
         List<Texture> textureList = new ArrayList<>();

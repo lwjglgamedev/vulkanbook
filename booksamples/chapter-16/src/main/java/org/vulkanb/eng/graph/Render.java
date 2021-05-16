@@ -99,7 +99,6 @@ public class Render {
 
     public void loadModels(List<ModelData> modelDataList) {
         LOGGER.debug("Loading {} model(s)", modelDataList.size());
-        //vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue, globalBuffers));
         vulkanModels.addAll(globalBuffers.loadModels(modelDataList, textureCache, commandPool, graphQueue));
         LOGGER.debug("Loaded {} model(s)", modelDataList.size());
 

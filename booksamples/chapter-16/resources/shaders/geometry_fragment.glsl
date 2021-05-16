@@ -46,9 +46,14 @@ vec3 calcNormal(Material material, vec3 normal, vec2 textCoords, mat3 TBN) {
 void main()
 {
     Material material = materialsBuf.data[inMatIdx];
-    outAlbedo= calcAlbedo(material);
-
-    mat3 TBN = mat3(inTangent, inBitangent, inNormal);
+    outAlbedo = calcAlbedo(material);
+	
+    // Hack to avoid transparent PBR artifacts
+    if (outAlbedo.a < 0.5) {
+        discard;
+    }
+    
+	mat3 TBN = mat3(inTangent, inBitangent, inNormal);
     vec3 newNormal = calcNormal(material, inNormal, inTextCoords, TBN);
     // Transform normals from [-1, 1] to [0, 1]
     outNormal = vec4(0.5 * newNormal + 0.5, 1.0);
