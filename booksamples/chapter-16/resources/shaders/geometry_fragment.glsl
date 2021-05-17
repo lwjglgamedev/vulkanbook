@@ -36,12 +36,27 @@ vec4 calcAlbedo(Material material) {
 
 vec3 calcNormal(Material material, vec3 normal, vec2 textCoords, mat3 TBN) {
     vec3 newNormal = normal;
-    if (material.normalMapIdx > 0) {
+    if (material.normalMapIdx >= 0) {
         newNormal = texture(textSampler[material.normalMapIdx], textCoords).rgb;
         newNormal = normalize(newNormal * 2.0 - 1.0);
         newNormal = normalize(TBN * newNormal);
     }
     return newNormal;
+}
+
+vec2 calcRoughnessMetallicFactor(Material material, vec2 textCoords) {
+    float roughnessFactor = 0.0f;
+    float metallicFactor = 0.0f;
+    if (material.metalRoughMapIdx >= 0) {
+        vec4 metRoughValue = texture(textSampler[material.metalRoughMapIdx], textCoords);
+        roughnessFactor = metRoughValue.g;
+        metallicFactor = metRoughValue.b;
+    } else {
+        roughnessFactor = material.roughnessFactor;
+        metallicFactor = material.metallicFactor;
+    }
+
+    return vec2(roughnessFactor, metallicFactor);
 }
 
 void main()
@@ -60,16 +75,7 @@ void main()
     outNormal = vec4(0.5 * newNormal + 0.5, 1.0);
 
     float ao = 0.5f;
-    float roughnessFactor = 0.0f;
-    float metallicFactor = 0.0f;
-    if (material.metalRoughMapIdx > 0) {
-        vec4 metRoughValue = texture(textSampler[material.metalRoughMapIdx], inTextCoords);
-        roughnessFactor = metRoughValue.g;
-        metallicFactor = metRoughValue.b;
-    } else {
-        roughnessFactor = material.roughnessFactor;
-        metallicFactor = material.metallicFactor;
-    }
+    vec2 roughmetfactor = calcRoughnessMetallicFactor(material, inTextCoords);
 
-    outPBR = vec4(ao, roughnessFactor, metallicFactor, 1.0f);
+    outPBR = vec4(ao, roughmetfactor.x, roughmetfactor.y, 1.0f);
 }

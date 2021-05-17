@@ -2,6 +2,7 @@ package org.vulkanb.eng.graph;
 
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
+import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
@@ -11,6 +12,10 @@ import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
+// TODO: Test multiple game items sharing the same model
+// TODO: Test multiple game items using different models
+// TODO: Test models with no textures
+// TODO: Test animation
 public class GlobalBuffers {
 
     private static final int BUFF_SIZE = 1024 * 1024 * 20;
@@ -230,6 +235,14 @@ public class GlobalBuffers {
             List<VulkanModel.VulkanMaterial> vulkanMaterialList = loadMaterials(device, textureCache, materialsStgBuffer,
                     modelData.getMaterialList(), textureList);
             loadMeshes(verticesStgBuffer, indicesStgBuffer, modelData.getMeshDataList(), vulkanModel, vulkanMaterialList);
+        }
+
+        // We need to ensure that at least we have onte texture
+        if (textureList.isEmpty()) {
+            EngineProperties engineProperties = EngineProperties.getInstance();
+            Texture defaultTexture = textureCache.createTexture(device, engineProperties.getDefaultTexturePath(),
+                    VK_FORMAT_R8G8B8A8_SRGB);
+            textureList.add(defaultTexture);
         }
 
         materialsStgBuffer.recordTransferCommand(cmd, materialsBuffer);

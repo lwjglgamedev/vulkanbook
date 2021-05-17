@@ -51,7 +51,6 @@ public class GeometryRenderActivity {
     private VulkanBuffer[] viewMatricesBuffer;
     private DescriptorSet.UniformDescriptorSet[] viewMatricesDescriptorSets;
 
-    // TODO: What to do if there are no textures and descriptor set is null
     public GeometryRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene,
                                   GlobalBuffers globalBuffers) {
         this.swapChain = swapChain;
