@@ -1,5 +1,7 @@
 #version 450
 
+layout (constant_id = 0) const int MAX_TEXTURES = 100;
+
 layout(location = 0) in vec3 inNormal;
 layout(location = 1) in vec3 inTangent;
 layout(location = 2) in vec3 inBitangent;
@@ -22,8 +24,7 @@ struct Material {
 layout (std430, set=2, binding=0) readonly buffer srcBuf {
     Material data[];
 } materialsBuf;
-// TODO: Use constant here
-layout(set = 3, binding = 0) uniform sampler2D textSampler[68];
+layout(set = 3, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
 
 vec4 calcAlbedo(Material material) {
     outAlbedo = material.diffuseColor;
@@ -47,13 +48,13 @@ void main()
 {
     Material material = materialsBuf.data[inMatIdx];
     outAlbedo = calcAlbedo(material);
-	
+
     // Hack to avoid transparent PBR artifacts
     if (outAlbedo.a < 0.5) {
         discard;
     }
-    
-	mat3 TBN = mat3(inTangent, inBitangent, inNormal);
+
+    mat3 TBN = mat3(inTangent, inBitangent, inNormal);
     vec3 newNormal = calcNormal(material, inNormal, inTextCoords, TBN);
     // Transform normals from [-1, 1] to [0, 1]
     outNormal = vec4(0.5 * newNormal + 0.5, 1.0);

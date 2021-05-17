@@ -25,6 +25,7 @@ public class GeometryRenderActivity {
 
     private final Device device;
     private final GeometryFrameBuffer geometryFrameBuffer;
+    private final GeometrySpecConstants geometrySpecConstants;
     private final int materialSize;
     private final MemoryBarrier memoryBarrier;
     private final PipelineCache pipelineCache;
@@ -50,13 +51,15 @@ public class GeometryRenderActivity {
     private VulkanBuffer[] viewMatricesBuffer;
     private DescriptorSet.UniformDescriptorSet[] viewMatricesDescriptorSets;
 
-    // TODO: Waht to do if textureDescriptorSet is null
+    // TODO: What to do if there are no textures and descriptor set is null
     public GeometryRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene,
                                   GlobalBuffers globalBuffers) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
         this.scene = scene;
         device = swapChain.getDevice();
+        geometrySpecConstants = new GeometrySpecConstants();
+
         geometryFrameBuffer = new GeometryFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
         materialSize = calcMaterialsUniformSize();
@@ -93,6 +96,7 @@ public class GeometryRenderActivity {
 
     public void cleanup() {
         pipeLine.cleanup();
+        geometrySpecConstants.cleanup();
         Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
@@ -130,9 +134,7 @@ public class GeometryRenderActivity {
     private void createDescriptorSets(int numImages, GlobalBuffers globalBuffers) {
         EngineProperties engineProperties = EngineProperties.getInstance();
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
-        // TODO: Maxium number of elements
-        int numArrays = 69;
-        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, numArrays, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, engineProperties.getMaxTextures(), 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         materialDescriptorSetLayout = new DescriptorSetLayout.DynUniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
@@ -178,7 +180,8 @@ public class GeometryRenderActivity {
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, GEOMETRY_VERTEX_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, GEOMETRY_FRAGMENT_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, GEOMETRY_FRAGMENT_SHADER_FILE_SPV,
+                                geometrySpecConstants.getSpecInfo()),
                 });
     }
 
@@ -192,7 +195,17 @@ public class GeometryRenderActivity {
 
     public void loadModels(TextureCache textureCache) {
         device.waitIdle();
-        List<Texture> textureList = textureCache.getAsList();
+        // Size of the descriptor is setup in the layout, we need to fill up the texture list
+        // up to the number defined in the layout (reusing last texture)
+        List<Texture> textureList = new ArrayList<>();
+        List<Texture> textureCacheList = textureCache.getAsList();
+        int textureCacheSize = textureCacheList.size();
+        textureList.addAll(textureCacheList);
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        int maxTextures = engineProperties.getMaxTextures();
+        for (int i = 0; i < maxTextures - textureCacheSize; i++) {
+            textureList.add(textureCacheList.get(textureCacheSize - 1));
+        }
         textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout, textureList,
                 textureSampler, 0);
     }

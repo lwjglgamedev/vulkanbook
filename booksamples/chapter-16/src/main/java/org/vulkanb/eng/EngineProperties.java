@@ -8,11 +8,12 @@ import java.util.Properties;
 public class EngineProperties {
     private static final float DEFAULT_FOV = 60.0f;
     private static final int DEFAULT_MAX_JOINTS_MATRICES_LISTS = 100;
-    private static final int DEFAULT_STORAGES_BUFFERS = 100;
     private static final int DEFAULT_MAX_MATERIALS = 500;
+    private static final int DEFAULT_MAX_TEXURES = 100;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final float DEFAULT_SHADOW_BIAS = 0.00005f;
     private static final int DEFAULT_SHADOW_MAP_SIZE = 2048;
+    private static final int DEFAULT_STORAGES_BUFFERS = 100;
     private static final int DEFAULT_UPS = 30;
     private static final float DEFAULT_Z_FAR = 100.f;
     private static final float DEFAULT_Z_NEAR = 1.0f;
@@ -22,8 +23,9 @@ public class EngineProperties {
     private String defaultTexturePath;
     private float fov;
     private int maxJointsMatricesLists;
-    private int maxStorageBuffers;
     private int maxMaterials;
+    private int maxStorageBuffers;
+    private int maxTextures;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -60,6 +62,7 @@ public class EngineProperties {
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
             maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", DEFAULT_STORAGES_BUFFERS).toString());
             maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", DEFAULT_MAX_JOINTS_MATRICES_LISTS).toString());
+            maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", DEFAULT_MAX_TEXURES).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -84,12 +87,16 @@ public class EngineProperties {
         return maxJointsMatricesLists;
     }
 
+    public int getMaxMaterials() {
+        return maxMaterials;
+    }
+
     public int getMaxStorageBuffers() {
         return maxStorageBuffers;
     }
 
-    public int getMaxMaterials() {
-        return maxMaterials;
+    public int getMaxTextures() {
+        return maxTextures;
     }
 
     public String getPhysDeviceName() {
