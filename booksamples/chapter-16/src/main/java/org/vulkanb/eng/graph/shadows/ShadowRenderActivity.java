@@ -85,8 +85,8 @@ public class ShadowRenderActivity {
     private void createPipeline(PipelineCache pipelineCache) {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 shadowsFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram,
-                GeometryAttachments.NUMBER_COLOR_ATTACHMENTS, true, true, GraphConstants.MAT4X4_SIZE,
-                new VertexBufferStructure(), descriptorSetLayouts);
+                GeometryAttachments.NUMBER_COLOR_ATTACHMENTS, true, true, 0,
+                new InstancedVertexBufferStructure(), descriptorSetLayouts);
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
     }
 
@@ -178,14 +178,12 @@ public class ShadowRenderActivity {
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            // TODO: Do not use push constants
-            setPushConstant(pipeLine, cmdHandle, new Matrix4f());
+            LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
+            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getModelMatricesBuffer().getBuffer());
 
-            LongBuffer vertexBuffer = stack.mallocLong(1);
-            vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
+            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
             vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+            vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
             vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
             VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();

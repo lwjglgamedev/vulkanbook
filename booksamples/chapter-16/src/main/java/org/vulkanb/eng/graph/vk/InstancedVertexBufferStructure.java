@@ -2,22 +2,24 @@ package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.vulkan.*;
 
-import static org.lwjgl.vulkan.VK11.*;
+import static org.lwjgl.vulkan.VK10.*;
 
-public class VertexBufferStructure extends VertexInputStateInfo {
+// TODO: Try to extract common code
+// TODO: Use in shadows
+public class InstancedVertexBufferStructure extends VertexInputStateInfo {
 
     public static final int TEXT_COORD_COMPONENTS = 2;
     private static final int NORMAL_COMPONENTS = 3;
-    private static final int NUMBER_OF_ATTRIBUTES = 5;
+    private static final int NUMBER_OF_ATTRIBUTES = 9;
     private static final int POSITION_COMPONENTS = 3;
     public static final int SIZE_IN_BYTES = (POSITION_COMPONENTS + NORMAL_COMPONENTS * 3 + TEXT_COORD_COMPONENTS) * GraphConstants.FLOAT_LENGTH;
 
     private final VkVertexInputAttributeDescription.Buffer viAttrs;
     private final VkVertexInputBindingDescription.Buffer viBindings;
 
-    public VertexBufferStructure() {
+    public InstancedVertexBufferStructure() {
         viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);
-        viBindings = VkVertexInputBindingDescription.calloc(1);
+        viBindings = VkVertexInputBindingDescription.calloc(2);
         vi = VkPipelineVertexInputStateCreateInfo.calloc();
 
         int i = 0;
@@ -60,10 +62,27 @@ public class VertexBufferStructure extends VertexInputStateInfo {
                 .format(VK_FORMAT_R32G32_SFLOAT)
                 .offset(NORMAL_COMPONENTS * GraphConstants.FLOAT_LENGTH * 3 + POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
 
+        // Model Matrix as a set of 4 Vectors
+        i++;
+        for (int j = 0; j < 4; j++) {
+            viAttrs.get(i + j)
+                    .binding(1)
+                    .location(j + i)
+                    .format(VK_FORMAT_R32G32B32A32_SFLOAT)
+                    .offset(j * GraphConstants.VEC4_SIZE);
+        }
+
+        // Non instanced data
         viBindings.get(0)
                 .binding(0)
                 .stride(SIZE_IN_BYTES)
                 .inputRate(VK_VERTEX_INPUT_RATE_VERTEX);
+
+        // Instanced data
+        viBindings.get(1)
+                .binding(1)
+                .stride(GraphConstants.MAT4X4_SIZE)
+                .inputRate(VK_VERTEX_INPUT_RATE_INSTANCE);
 
         vi
                 .sType(VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)

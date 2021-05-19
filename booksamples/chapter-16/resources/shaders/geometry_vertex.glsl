@@ -6,6 +6,9 @@ layout(location = 2) in vec3 entityTangent;
 layout(location = 3) in vec3 entityBitangent;
 layout(location = 4) in vec2 entityTextCoords;
 
+// Instanced attributes
+layout (location = 5) in mat4 entityModelMatrix;
+
 layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec3 outTangent;
 layout(location = 2) out vec3 outBitangent;
@@ -24,14 +27,9 @@ layout(set = 1, binding = 0) uniform ViewUniform {
     mat4 viewMatrix;
 } viewUniform;
 
-// TODO: We cannot use this anymore
-layout(push_constant) uniform matrices {
-    mat4 modelMatrix;
-} push_constants;
-
 void main()
 {
-    mat4 modelViewMatrix = viewUniform.viewMatrix * push_constants.modelMatrix;
+    mat4 modelViewMatrix = viewUniform.viewMatrix * entityModelMatrix;
     outNormal     = normalize(modelViewMatrix * vec4(entityNormal, 0)).xyz;
     outTangent    = normalize(modelViewMatrix * vec4(entityTangent, 0)).xyz;
     outBitangent  = normalize(modelViewMatrix * vec4(entityBitangent, 0)).xyz;

@@ -1,6 +1,5 @@
 package org.vulkanb.eng.graph.geometry;
 
-import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -164,8 +163,8 @@ public class GeometryRenderActivity {
     private void createPipeline() {
         Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
                 geometryFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram, GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
-                true, true, GraphConstants.MAT4X4_SIZE,
-                new VertexBufferStructure(), geometryDescriptorSetLayouts);
+                true, true, 0,
+                new InstancedVertexBufferStructure(), geometryDescriptorSetLayouts);
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
     }
@@ -210,7 +209,8 @@ public class GeometryRenderActivity {
     }
 
     // TODO: Check if commands can be pre-recorded
-    public void recordCommandBuffer(CommandBuffer commandBuffer, Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers,
+    // TODO: Chaage order of the parameters
+    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModels, Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers,
                                     GlobalBuffers globalBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
@@ -274,18 +274,18 @@ public class GeometryRenderActivity {
 
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
-            // TODO: Remove push constants
-            VulkanUtils.setMatrixAsPushConstant(pipeLine, cmdHandle, new Matrix4f());
 
-            LongBuffer vertexBuffer = stack.mallocLong(1);
-            vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
+            LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
+            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getModelMatricesBuffer().getBuffer());
+
+            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
             vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+            vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
             vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
             VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
-            vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getDrawCount(), VkDrawIndexedIndirectCommand.SIZEOF);
+            vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getDrawCount(),
+                    VkDrawIndexedIndirectCommand.SIZEOF);
 
             vkCmdEndRenderPass(cmdHandle);
         }

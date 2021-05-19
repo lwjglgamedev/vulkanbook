@@ -6,11 +6,10 @@ layout(location = 2) in vec3 entityTangent;
 layout(location = 3) in vec3 entityBitangent;
 layout(location = 4) in vec2 entityTextCoords;
 
-layout(push_constant) uniform matrices {
-    mat4 modelMatrix;
-} push_constants;
+// Instanced attributes
+layout (location = 5) in mat4 entityModelMatrix;
 
 void main()
 {
-    gl_Position = push_constants.modelMatrix * vec4(entityPos, 1.0f);
+    gl_Position = entityModelMatrix * vec4(entityPos, 1.0f);
 }

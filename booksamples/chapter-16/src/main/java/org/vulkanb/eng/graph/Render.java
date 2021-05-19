@@ -108,7 +108,7 @@ public class Render {
 
     public void render(Window window, Scene scene) {
         if (!globalBuffers.isIndirectRecorded()) {
-            globalBuffers.loadGameItems(vulkanModels, scene, commandPool, graphQueue);
+            globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue);
         }
         if (window.getWidth() <= 0 && window.getHeight() <= 0) {
             return;
@@ -120,11 +120,13 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
+        globalBuffers.fillModelMatrices(scene, vulkanModels);
+
         //animationComputeActivity.recordCommandBuffer(vulkanModels);
         //animationComputeActivity.submit();
 
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
-        geometryRenderActivity.recordCommandBuffer(commandBuffer, animationComputeActivity.getEntityAnimationsBuffers(),
+        geometryRenderActivity.recordCommandBuffer(commandBuffer, vulkanModels, animationComputeActivity.getEntityAnimationsBuffers(),
                 globalBuffers);
         shadowRenderActivity.recordCommandBuffer(commandBuffer, animationComputeActivity.getEntityAnimationsBuffers(),
                 globalBuffers);
