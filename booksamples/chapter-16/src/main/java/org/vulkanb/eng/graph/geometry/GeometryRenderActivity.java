@@ -35,6 +35,7 @@ public class GeometryRenderActivity {
     private Map<String, TextureDescriptorSet> descriptorSetMap;
     private Fence[] fences;
     private DescriptorSetLayout[] geometryDescriptorSetLayouts;
+    private DescriptorSet.StorageDescriptorSet indCommandsDescriptorSet;
     private DescriptorSetLayout.DynUniformDescriptorSetLayout materialDescriptorSetLayout;
     private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
     private Pipeline pipeLine;
@@ -134,10 +135,11 @@ public class GeometryRenderActivity {
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, engineProperties.getMaxTextures(), 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         materialDescriptorSetLayout = new DescriptorSetLayout.DynUniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
-        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformDescriptorSetLayout,
                 uniformDescriptorSetLayout,
+                storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 textureDescriptorSetLayout,
         };
@@ -147,6 +149,8 @@ public class GeometryRenderActivity {
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
+        indCommandsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
+                globalBuffers.getIndirectBuffer(), 0);
         materialsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
                 globalBuffers.getMaterialsBuffer(), 0);
 
@@ -264,11 +268,12 @@ public class GeometryRenderActivity {
                             .y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer descriptorSets = stack.mallocLong(4)
+            LongBuffer descriptorSets = stack.mallocLong(5)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
-                    .put(2, materialsDescriptorSet.getVkDescriptorSet())
-                    .put(3, textureDescriptorSet.getVkDescriptorSet());
+                    .put(2, indCommandsDescriptorSet.getVkDescriptorSet())
+                    .put(3, materialsDescriptorSet.getVkDescriptorSet())
+                    .put(4, textureDescriptorSet.getVkDescriptorSet());
 
             VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
 
@@ -285,7 +290,7 @@ public class GeometryRenderActivity {
 
             VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
             vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getDrawCount(),
-                    VkDrawIndexedIndirectCommand.SIZEOF);
+                    GlobalBuffers.IND_COMMAND_STRIDE);
 
             vkCmdEndRenderPass(cmdHandle);
         }

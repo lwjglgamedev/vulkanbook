@@ -18,6 +18,8 @@ import static org.lwjgl.vulkan.VK11.*;
 // TODO: Test animation
 public class GlobalBuffers {
 
+    public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF + GraphConstants.INT_LENGTH;
+
     private static final int BUFF_SIZE = 1024 * 1024 * 20;
     // Handle std430 alignment
     private static final int MATERIAL_PADDING = GraphConstants.FLOAT_LENGTH * 3;
@@ -95,11 +97,17 @@ public class GlobalBuffers {
 
             cmd.beginRecording();
 
-            StgBuffer indirectStgBuffer = new StgBuffer(device, BUFF_SIZE);
+            // TODO: this size should be mutiple of commands
+            int maxNumCommands = 1000;
+            StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * maxNumCommands);
+            // TODO: This buffer may not be required
             ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
-            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
+            // TODO: Configure this
+            ByteBuffer intBuffer = ByteBuffer.allocateDirect(VkDrawIndexedIndirectCommand.SIZEOF * maxNumCommands);
+            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(intBuffer);
 
             int numModelMatrices = 0;
+            int firstInstance = 0;
             for (VulkanModel vulkanModel : vulkanModelList) {
                 List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
                 if (entities.isEmpty()) {
@@ -111,10 +119,15 @@ public class GlobalBuffers {
                     indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
                     indexedIndirectCommand.instanceCount(entities.size());
                     indexedIndirectCommand.vertexOffset(vulkanMesh.verticesOffset() / VertexBufferStructure.SIZE_IN_BYTES);
-                    indexedIndirectCommand.firstInstance(vulkanMesh.globalMaterialIdx());
+                    indexedIndirectCommand.firstInstance(firstInstance);
 
                     indCommandBuffer.put(indexedIndirectCommand);
+
+                    dataBuffer.put(drawCount * IND_COMMAND_STRIDE, intBuffer, drawCount * VkDrawIndexedIndirectCommand.SIZEOF, VkDrawIndexedIndirectCommand.SIZEOF);
+                    dataBuffer.putInt(drawCount * IND_COMMAND_STRIDE + VkDrawIndexedIndirectCommand.SIZEOF, vulkanMesh.globalMaterialIdx());
+
                     drawCount++;
+                    firstInstance++;
                     numModelMatrices = numModelMatrices + entities.size();
                 }
             }
