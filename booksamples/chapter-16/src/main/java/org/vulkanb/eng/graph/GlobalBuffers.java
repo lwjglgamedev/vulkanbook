@@ -12,9 +12,6 @@ import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: Test multiple game items sharing the same model
-// TODO: Test multiple game items using different models
-// TODO: Test models with no textures
 // TODO: Test animation
 public class GlobalBuffers {
 
@@ -30,11 +27,11 @@ public class GlobalBuffers {
     private final VulkanBuffer indirectBuffer;
     private final VulkanBuffer materialsBuffer;
     private final VulkanBuffer verticesBuffer;
-    private int drawCount;
     // TODO: Check this
     private boolean indirectRecorded;
     // TODO: One model for image
     private VulkanBuffer modelMatricesBuffer;
+    private int numIndirectCommands;
 
     public GlobalBuffers(Device device) {
         indirectRecorded = false;
@@ -47,7 +44,7 @@ public class GlobalBuffers {
         materialsBuffer = new VulkanBuffer(device, BUFF_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
-        drawCount = 0;
+        numIndirectCommands = 0;
     }
 
     public void cleanup() {
@@ -58,10 +55,6 @@ public class GlobalBuffers {
         if (modelMatricesBuffer != null) {
             modelMatricesBuffer.cleanup();
         }
-    }
-
-    public int getDrawCount() {
-        return drawCount;
     }
 
     public VulkanBuffer getIndicesBuffer() {
@@ -80,6 +73,10 @@ public class GlobalBuffers {
         return modelMatricesBuffer;
     }
 
+    public int getNumIndirectCommands() {
+        return numIndirectCommands;
+    }
+
     public VulkanBuffer getVerticesBuffer() {
         return verticesBuffer;
     }
@@ -90,22 +87,14 @@ public class GlobalBuffers {
 
     public void loadEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool, Queue
             queue) {
-        drawCount = 0;
+        numIndirectCommands = 0;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = commandPool.getDevice();
             CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
 
             cmd.beginRecording();
 
-            // TODO: this size should be mutiple of commands
-            int maxNumCommands = 1000;
-            StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * maxNumCommands);
-            // TODO: This buffer may not be required
-            ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
-            // TODO: Configure this
-            ByteBuffer intBuffer = ByteBuffer.allocateDirect(VkDrawIndexedIndirectCommand.SIZEOF * maxNumCommands);
-            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(intBuffer);
-
+            List<IndCommandData> indexedIndirectCommandList = new ArrayList<>();
             int numModelMatrices = 0;
             int firstInstance = 0;
             for (VulkanModel vulkanModel : vulkanModelList) {
@@ -120,17 +109,28 @@ public class GlobalBuffers {
                     indexedIndirectCommand.instanceCount(entities.size());
                     indexedIndirectCommand.vertexOffset(vulkanMesh.verticesOffset() / VertexBufferStructure.SIZE_IN_BYTES);
                     indexedIndirectCommand.firstInstance(firstInstance);
+                    indexedIndirectCommandList.add(new IndCommandData(vulkanMesh, indexedIndirectCommand));
 
-                    indCommandBuffer.put(indexedIndirectCommand);
-
-                    dataBuffer.put(drawCount * IND_COMMAND_STRIDE, intBuffer, drawCount * VkDrawIndexedIndirectCommand.SIZEOF, VkDrawIndexedIndirectCommand.SIZEOF);
-                    dataBuffer.putInt(drawCount * IND_COMMAND_STRIDE + VkDrawIndexedIndirectCommand.SIZEOF, vulkanMesh.globalMaterialIdx());
-
-                    drawCount++;
+                    numIndirectCommands++;
                     firstInstance++;
                     numModelMatrices = numModelMatrices + entities.size();
                 }
             }
+            StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
+            ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
+            ByteBuffer backBuffer = ByteBuffer.allocateDirect(VkDrawIndexedIndirectCommand.SIZEOF * numIndirectCommands);
+            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(backBuffer);
+
+            for (int i = 0; i < numIndirectCommands; i++) {
+                IndCommandData indCommandData = indexedIndirectCommandList.get(i);
+                indCommandBuffer.put(indCommandData.indexedIndirectCommand());
+                dataBuffer.put(i * IND_COMMAND_STRIDE, backBuffer, i * VkDrawIndexedIndirectCommand.SIZEOF,
+                        VkDrawIndexedIndirectCommand.SIZEOF);
+                dataBuffer.putInt(i * IND_COMMAND_STRIDE + VkDrawIndexedIndirectCommand.SIZEOF,
+                        indCommandData.vulkanMesh().globalMaterialIdx());
+            }
+
+
             modelMatricesBuffer = new VulkanBuffer(device, numModelMatrices * GraphConstants.MAT4X4_SIZE,
                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
@@ -309,6 +309,11 @@ public class GlobalBuffers {
         textureList.forEach(Texture::cleanupStgBuffer);
 
         return vulkanModelList;
+    }
+
+    private record IndCommandData(VulkanModel.VulkanMesh vulkanMesh,
+                                  VkDrawIndexedIndirectCommand indexedIndirectCommand) {
+
     }
 
     private static class StgBuffer {

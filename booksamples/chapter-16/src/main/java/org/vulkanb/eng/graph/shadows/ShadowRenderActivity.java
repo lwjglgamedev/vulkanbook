@@ -186,7 +186,7 @@ public class ShadowRenderActivity {
             vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
             VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
-            vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getDrawCount(),
+            vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
                     GlobalBuffers.IND_COMMAND_STRIDE);
 
             vkCmdEndRenderPass(cmdHandle);
