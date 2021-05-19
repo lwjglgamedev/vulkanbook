@@ -119,9 +119,8 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
-    public void recordCommandBuffer(CommandBuffer commandBuffer,
-                                    Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers,
-                                    GlobalBuffers globalBuffers) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers,
+                                    Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);

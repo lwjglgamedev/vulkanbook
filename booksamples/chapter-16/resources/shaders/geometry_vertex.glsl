@@ -46,8 +46,6 @@ void main()
     outTangent    = normalize(modelViewMatrix * vec4(entityTangent, 0)).xyz;
     outBitangent  = normalize(modelViewMatrix * vec4(entityBitangent, 0)).xyz;
     outTextCoords = entityTextCoords;
-    uint idx = uint(gl_DrawID);
-    IndCommand indCommand = indCommadnsBuf.indCommands[idx];
-    outMatIdx     = indCommand.materialIdx;
+    outMatIdx     = indCommadnsBuf.indCommands[gl_DrawID].materialIdx;
     gl_Position   = projUniform.projectionMatrix * modelViewMatrix * vec4(entityPos, 1);
 }

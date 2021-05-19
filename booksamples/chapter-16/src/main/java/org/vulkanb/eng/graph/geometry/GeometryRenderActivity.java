@@ -213,9 +213,8 @@ public class GeometryRenderActivity {
     }
 
     // TODO: Check if commands can be pre-recorded
-    // TODO: Chaage order of the parameters
-    public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModels, Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers,
-                                    GlobalBuffers globalBuffers) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers, Map<String,
+            List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
