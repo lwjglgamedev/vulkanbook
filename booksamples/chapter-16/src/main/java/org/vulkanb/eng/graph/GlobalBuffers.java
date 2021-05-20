@@ -15,7 +15,7 @@ import static org.lwjgl.vulkan.VK11.*;
 // TODO: Test animation
 public class GlobalBuffers {
 
-    public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF + GraphConstants.INT_LENGTH;
+    public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
 
     private static final int BUFF_SIZE = 1024 * 1024 * 20;
     // Handle std430 alignment
@@ -30,7 +30,7 @@ public class GlobalBuffers {
     // TODO: Check this
     private boolean indirectRecorded;
     // TODO: One model for image
-    private VulkanBuffer modelMatricesBuffer;
+    private VulkanBuffer instanceDataBuffer;
     private int numIndirectCommands;
 
     public GlobalBuffers(Device device) {
@@ -52,8 +52,8 @@ public class GlobalBuffers {
         indicesBuffer.cleanup();
         indirectBuffer.cleanup();
         materialsBuffer.cleanup();
-        if (modelMatricesBuffer != null) {
-            modelMatricesBuffer.cleanup();
+        if (instanceDataBuffer != null) {
+            instanceDataBuffer.cleanup();
         }
     }
 
@@ -65,12 +65,12 @@ public class GlobalBuffers {
         return indirectBuffer;
     }
 
-    public VulkanBuffer getMaterialsBuffer() {
-        return materialsBuffer;
+    public VulkanBuffer getInstanceDataBuffer() {
+        return instanceDataBuffer;
     }
 
-    public VulkanBuffer getModelMatricesBuffer() {
-        return modelMatricesBuffer;
+    public VulkanBuffer getMaterialsBuffer() {
+        return materialsBuffer;
     }
 
     public int getNumIndirectCommands() {
@@ -95,7 +95,7 @@ public class GlobalBuffers {
             cmd.beginRecording();
 
             List<IndCommandData> indexedIndirectCommandList = new ArrayList<>();
-            int numModelMatrices = 0;
+            int numInstances = 0;
             int firstInstance = 0;
             for (VulkanModel vulkanModel : vulkanModelList) {
                 List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
@@ -113,25 +113,19 @@ public class GlobalBuffers {
 
                     numIndirectCommands++;
                     firstInstance++;
-                    numModelMatrices = numModelMatrices + entities.size();
+                    numInstances = numInstances + entities.size();
                 }
             }
             StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
             ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
-            ByteBuffer backBuffer = ByteBuffer.allocateDirect(VkDrawIndexedIndirectCommand.SIZEOF * numIndirectCommands);
-            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(backBuffer);
+            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
             for (int i = 0; i < numIndirectCommands; i++) {
                 IndCommandData indCommandData = indexedIndirectCommandList.get(i);
                 indCommandBuffer.put(indCommandData.indexedIndirectCommand());
-                dataBuffer.put(i * IND_COMMAND_STRIDE, backBuffer, i * VkDrawIndexedIndirectCommand.SIZEOF,
-                        VkDrawIndexedIndirectCommand.SIZEOF);
-                dataBuffer.putInt(i * IND_COMMAND_STRIDE + VkDrawIndexedIndirectCommand.SIZEOF,
-                        indCommandData.vulkanMesh().globalMaterialIdx());
             }
 
-
-            modelMatricesBuffer = new VulkanBuffer(device, numModelMatrices * GraphConstants.MAT4X4_SIZE,
+            instanceDataBuffer = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
             indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
@@ -143,6 +137,28 @@ public class GlobalBuffers {
         }
 
         indirectRecorded = true;
+    }
+
+    public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels) {
+        long mappedMemory = instanceDataBuffer.map();
+        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) instanceDataBuffer.getRequestedSize());
+        instanceDataBuffer.map();
+        int pos = 0;
+        for (VulkanModel vulkanModel : vulkanModels) {
+            List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
+            if (entities.isEmpty()) {
+                continue;
+            }
+            for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
+                for (Entity entity : entities) {
+                    entity.getModelMatrix().get(pos, dataBuffer);
+                    pos += GraphConstants.MAT4X4_SIZE;
+                    dataBuffer.putInt(pos, vulkanMesh.globalMaterialIdx());
+                    pos += GraphConstants.INT_LENGTH;
+                }
+            }
+        }
+        instanceDataBuffer.unMap();
     }
 
     private List<VulkanModel.VulkanMaterial> loadMaterials(Device device, TextureCache textureCache, StgBuffer
@@ -237,26 +253,6 @@ public class GlobalBuffers {
 
             Arrays.stream(indices).forEach(i -> indicesData.putInt(i));
         }
-    }
-
-    public void loadModelMatrices(Scene scene, List<VulkanModel> vulkanModels) {
-        long mappedMemory = modelMatricesBuffer.map();
-        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) modelMatricesBuffer.getRequestedSize());
-        modelMatricesBuffer.map();
-        int pos = 0;
-        for (VulkanModel vulkanModel : vulkanModels) {
-            List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
-            if (entities.isEmpty()) {
-                continue;
-            }
-            for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
-                for (Entity entity : entities) {
-                    entity.getModelMatrix().get(pos, dataBuffer);
-                    pos += GraphConstants.MAT4X4_SIZE;
-                }
-            }
-        }
-        modelMatricesBuffer.unMap();
     }
 
     public List<VulkanModel> loadModels(List<ModelData> modelDataList, TextureCache textureCache, CommandPool

@@ -135,11 +135,10 @@ public class GeometryRenderActivity {
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, engineProperties.getMaxTextures(), 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         materialDescriptorSetLayout = new DescriptorSetLayout.DynUniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
-        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformDescriptorSetLayout,
                 uniformDescriptorSetLayout,
-                storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 textureDescriptorSetLayout,
         };
@@ -267,12 +266,11 @@ public class GeometryRenderActivity {
                             .y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer descriptorSets = stack.mallocLong(5)
+            LongBuffer descriptorSets = stack.mallocLong(4)
                     .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
                     .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
-                    .put(2, indCommandsDescriptorSet.getVkDescriptorSet())
-                    .put(3, materialsDescriptorSet.getVkDescriptorSet())
-                    .put(4, textureDescriptorSet.getVkDescriptorSet());
+                    .put(2, materialsDescriptorSet.getVkDescriptorSet())
+                    .put(3, textureDescriptorSet.getVkDescriptorSet());
 
             VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
 
@@ -280,7 +278,7 @@ public class GeometryRenderActivity {
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
             LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
-            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getModelMatricesBuffer().getBuffer());
+            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
 
             LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
             vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);

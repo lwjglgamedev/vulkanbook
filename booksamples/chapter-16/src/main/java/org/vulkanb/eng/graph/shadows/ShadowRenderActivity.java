@@ -178,7 +178,7 @@ public class ShadowRenderActivity {
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
             LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
-            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getModelMatricesBuffer().getBuffer());
+            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
 
             LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
             vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);

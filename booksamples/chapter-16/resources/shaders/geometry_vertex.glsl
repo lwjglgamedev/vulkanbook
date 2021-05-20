@@ -8,6 +8,7 @@ layout(location = 4) in vec2 entityTextCoords;
 
 // Instanced attributes
 layout (location = 5) in mat4 entityModelMatrix;
+layout (location = 9) in uint entityMatIdx;
 
 layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec3 outTangent;
@@ -20,24 +21,12 @@ out gl_PerVertex
     vec4 gl_Position;
 };
 
-struct IndCommand {
-    uint indexCount;
-    uint instanceCount;
-    uint firstIndex;
-    int  vertexOffset;
-    uint firstInstance;
-    uint materialIdx;
-};
-
 layout(set = 0, binding = 0) uniform ProjUniform {
     mat4 projectionMatrix;
 } projUniform;
 layout(set = 1, binding = 0) uniform ViewUniform {
     mat4 viewMatrix;
 } viewUniform;
-layout (std430, set=2, binding=0) readonly buffer IndCommadnsBuf {
-    IndCommand indCommands[];
-} indCommadnsBuf;
 
 void main()
 {
@@ -46,6 +35,6 @@ void main()
     outTangent    = normalize(modelViewMatrix * vec4(entityTangent, 0)).xyz;
     outBitangent  = normalize(modelViewMatrix * vec4(entityBitangent, 0)).xyz;
     outTextCoords = entityTextCoords;
-    outMatIdx     = indCommadnsBuf.indCommands[gl_DrawID].materialIdx;
+    outMatIdx     = entityMatIdx;
     gl_Position   = projUniform.projectionMatrix * modelViewMatrix * vec4(entityPos, 1);
 }

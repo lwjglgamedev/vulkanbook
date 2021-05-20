@@ -120,7 +120,7 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
-        globalBuffers.loadModelMatrices(scene, vulkanModels);
+        globalBuffers.loadInstanceData(scene, vulkanModels);
 
         //animationComputeActivity.recordCommandBuffer(vulkanModels);
         //animationComputeActivity.submit();

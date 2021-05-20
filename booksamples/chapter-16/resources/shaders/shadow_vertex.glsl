@@ -8,6 +8,7 @@ layout(location = 4) in vec2 entityTextCoords;
 
 // Instanced attributes
 layout (location = 5) in mat4 entityModelMatrix;
+layout (location = 9) in uint entityMatIdx;
 
 void main()
 {
