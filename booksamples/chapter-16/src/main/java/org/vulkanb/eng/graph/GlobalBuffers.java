@@ -94,7 +94,7 @@ public class GlobalBuffers {
 
             cmd.beginRecording();
 
-            List<IndCommandData> indexedIndirectCommandList = new ArrayList<>();
+            List<VkDrawIndexedIndirectCommand> indexedIndirectCommandList = new ArrayList<>();
             int numInstances = 0;
             int firstInstance = 0;
             for (VulkanModel vulkanModel : vulkanModelList) {
@@ -109,7 +109,7 @@ public class GlobalBuffers {
                     indexedIndirectCommand.instanceCount(entities.size());
                     indexedIndirectCommand.vertexOffset(vulkanMesh.verticesOffset() / VertexBufferStructure.SIZE_IN_BYTES);
                     indexedIndirectCommand.firstInstance(firstInstance);
-                    indexedIndirectCommandList.add(new IndCommandData(vulkanMesh, indexedIndirectCommand));
+                    indexedIndirectCommandList.add(indexedIndirectCommand);
 
                     numIndirectCommands++;
                     firstInstance++;
@@ -120,10 +120,7 @@ public class GlobalBuffers {
             ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
             VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
-            for (int i = 0; i < numIndirectCommands; i++) {
-                IndCommandData indCommandData = indexedIndirectCommandList.get(i);
-                indCommandBuffer.put(indCommandData.indexedIndirectCommand());
-            }
+            indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
 
             instanceDataBuffer = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
@@ -305,11 +302,6 @@ public class GlobalBuffers {
         textureList.forEach(Texture::cleanupStgBuffer);
 
         return vulkanModelList;
-    }
-
-    private record IndCommandData(VulkanModel.VulkanMesh vulkanMesh,
-                                  VkDrawIndexedIndirectCommand indexedIndirectCommand) {
-
     }
 
     private static class StgBuffer {
