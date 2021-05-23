@@ -26,10 +26,6 @@ public class Entity {
         return entityAnimation;
     }
 
-    public void setEntityAnimation(EntityAnimation entityAnimation) {
-        this.entityAnimation = entityAnimation;
-    }
-
     public String getId() {
         return id;
     }
@@ -54,15 +50,23 @@ public class Entity {
         return scale;
     }
 
-    public void setScale(float scale) {
-        this.scale = scale;
-        updateModelMatrix();
+    public boolean hasAnimation() {
+        return entityAnimation != null;
+    }
+
+    public void setEntityAnimation(EntityAnimation entityAnimation) {
+        this.entityAnimation = entityAnimation;
     }
 
     public final void setPosition(float x, float y, float z) {
         position.x = x;
         position.y = y;
         position.z = z;
+        updateModelMatrix();
+    }
+
+    public void setScale(float scale) {
+        this.scale = scale;
         updateModelMatrix();
     }
 
@@ -85,20 +89,20 @@ public class Entity {
             return animationIdx;
         }
 
-        public void setAnimationIdx(int animationIdx) {
-            this.animationIdx = animationIdx;
-        }
-
         public int getCurrentFrame() {
             return currentFrame;
         }
 
-        public void setCurrentFrame(int currentFrame) {
-            this.currentFrame = currentFrame;
-        }
-
         public boolean isStarted() {
             return started;
+        }
+
+        public void setAnimationIdx(int animationIdx) {
+            this.animationIdx = animationIdx;
+        }
+
+        public void setCurrentFrame(int currentFrame) {
+            this.currentFrame = currentFrame;
         }
 
         public void setStarted(boolean started) {

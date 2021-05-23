@@ -71,6 +71,7 @@ public class AnimationComputeActivity {
         int maxStorageBuffers = engineProperties.getMaxStorageBuffers();
         int maxJointsMatricesLists = engineProperties.getMaxJointsMatricesLists();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
+        // TODO: Max storage buffers should be fixed now
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxStorageBuffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxJointsMatricesLists, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
@@ -80,6 +81,7 @@ public class AnimationComputeActivity {
         storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
+                storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
