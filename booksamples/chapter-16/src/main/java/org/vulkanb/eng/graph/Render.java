@@ -81,34 +81,18 @@ public class Render {
         instance.cleanup();
     }
 
-    public void loadAnimation(Entity entity) {
-        /*
-        String modelId = entity.getModelId();
-        Optional<VulkanModel> optModel = vulkanModels.stream().filter(m -> m.getModelId().equals(modelId)).findFirst();
-        if (optModel.isEmpty()) {
-            throw new RuntimeException("Could not find model [" + modelId + "]");
-        }
-        VulkanModel vulkanModel = optModel.get();
-        if (!vulkanModel.hasAnimations()) {
-            throw new RuntimeException("Model [" + modelId + "] does not define animations");
-        }
-
-        animationComputeActivity.registerEntity(vulkanModel, entity);
-         */
-    }
-
     public void loadModels(List<ModelData> modelDataList) {
         LOGGER.debug("Loading {} model(s)", modelDataList.size());
         vulkanModels.addAll(globalBuffers.loadModels(modelDataList, textureCache, commandPool, graphQueue));
         LOGGER.debug("Loaded {} model(s)", modelDataList.size());
 
         geometryRenderActivity.loadModels(textureCache);
-        //animationComputeActivity.registerModels(vulkanModels);
     }
 
     public void render(Window window, Scene scene) {
         if (!globalBuffers.isIndirectRecorded()) {
             globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue);
+            animationComputeActivity.onAnimatedEntitiesLoaded(globalBuffers);
         }
         if (window.getWidth() <= 0 && window.getHeight() <= 0) {
             return;
@@ -122,8 +106,8 @@ public class Render {
 
         globalBuffers.loadInstanceData(scene, vulkanModels);
 
-        //animationComputeActivity.recordCommandBuffer(vulkanModels);
-        //animationComputeActivity.submit();
+        animationComputeActivity.recordCommandBuffer(globalBuffers, vulkanModels);
+        animationComputeActivity.submit();
 
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
         geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
