@@ -13,7 +13,7 @@ layout (std430, set=2, binding=0) buffer dstBuf {
 } dstVector;
 
 // TODO: Move this to storage buffer
-layout (std430, set=1, binding=0) readonly buffer jointBuf {
+layout (std430, set=3, binding=0) readonly buffer jointBuf {
     mat4 data[];
 } jointMatrices;
 

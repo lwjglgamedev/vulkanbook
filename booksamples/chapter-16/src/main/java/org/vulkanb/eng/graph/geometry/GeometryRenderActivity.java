@@ -5,7 +5,6 @@ import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.*;
-import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.Scene;
@@ -212,8 +211,7 @@ public class GeometryRenderActivity {
     }
 
     // TODO: Check if commands can be pre-recorded
-    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers, Map<String,
-            List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();

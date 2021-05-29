@@ -77,6 +77,18 @@ public class GlobalBuffers {
         }
     }
 
+    public VulkanBuffer getAnimInstanceDataBuffer() {
+        return animInstanceDataBuffer;
+    }
+
+    public VulkanBuffer getAnimJointMatricesBuffer() {
+        return animJointMatricesBuffer;
+    }
+
+    public VulkanBuffer getAnimWeightsBuffer() {
+        return animWeightsBuffer;
+    }
+
     public VulkanBuffer getIndicesBuffer() {
         return indicesBuffer;
     }
@@ -155,10 +167,11 @@ public class GlobalBuffers {
         }
     }
 
-    private void loadAnimationData(ModelData modelData, StgBuffer animJointMatricesStgBuffer) {
+    private void loadAnimationData(ModelData modelData, VulkanModel vulkanModel, StgBuffer animJointMatricesStgBuffer) {
         List<ModelData.Animation> animationsList = modelData.getAnimationsList();
-        boolean hasAnimation = animationsList != null && !animationsList.isEmpty();
-        if (!hasAnimation) {
+        boolean hasAnimations = animationsList != null && !animationsList.isEmpty();
+        vulkanModel.setHasAnimations(hasAnimations);
+        if (!hasAnimations) {
             return;
         }
         ByteBuffer dataBuffer = animJointMatricesStgBuffer.getDataBuffer();
@@ -329,7 +342,7 @@ public class GlobalBuffers {
             List<VulkanModel.VulkanMaterial> vulkanMaterialList = loadMaterials(device, textureCache, materialsStgBuffer,
                     modelData.getMaterialList(), textureList);
             loadMeshes(verticesStgBuffer, indicesStgBuffer, animWeightsStgBuffer, modelData, vulkanModel, vulkanMaterialList);
-            loadAnimationData(modelData, animJointMatricesStgBuffer);
+            loadAnimationData(modelData, vulkanModel, animJointMatricesStgBuffer);
         }
 
         // We need to ensure that at least we have one texture

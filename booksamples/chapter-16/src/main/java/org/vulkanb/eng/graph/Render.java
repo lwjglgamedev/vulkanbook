@@ -126,8 +126,8 @@ public class Render {
         //animationComputeActivity.submit();
 
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
-        geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, animationComputeActivity.getEntityAnimationsBuffers());
-        shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, animationComputeActivity.getEntityAnimationsBuffers());
+        geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
+        shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
         geometryRenderActivity.endRecording(commandBuffer);
         geometryRenderActivity.submit(graphQueue);
         commandBuffer = lightingRenderActivity.beginRecording(shadowRenderActivity.getShadowCascades());

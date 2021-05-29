@@ -2,11 +2,14 @@ package org.vulkanb.eng.graph.animation;
 
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
+import org.lwjgl.vulkan.VkCommandBuffer;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.*;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.Scene;
+import org.vulkanb.eng.scene.*;
 
+import java.nio.LongBuffer;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
@@ -18,21 +21,20 @@ public class AnimationComputeActivity {
     private static final int LOCAL_SIZE_X = 32;
     private final Queue.ComputeQueue computeQueue;
     private final Device device;
-    // Key is the entity id
-    private final Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
     private final MemoryBarrier memoryBarrier;
-    // Key is the model id
-    private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
     private final Scene scene;
 
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
+    private DescriptorSet.StorageDescriptorSet dstVerticesDescriptorSet;
     private Fence fence;
+    private DescriptorSet.StorageDescriptorSet jointMatricesDescriptorSet;
     private ShaderProgram shaderProgram;
+    private DescriptorSet.StorageDescriptorSet srcVerticesDescriptorSet;
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
-    private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
+    private DescriptorSet.StorageDescriptorSet weightsDescriptorSet;
 
     public AnimationComputeActivity(CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.scene = scene;
@@ -43,8 +45,6 @@ public class AnimationComputeActivity {
         createShaders();
         createPipeline(pipelineCache);
         createCommandBuffers(commandPool);
-        modelDescriptorSetsMap = new HashMap<>();
-        entityAnimationsBuffers = new HashMap<>();
         memoryBarrier = new MemoryBarrier(0, VK_ACCESS_SHADER_WRITE_BIT);
     }
 
@@ -54,11 +54,7 @@ public class AnimationComputeActivity {
         commandBuffer.cleanup();
         descriptorPool.cleanup();
         storageDescriptorSetLayout.cleanup();
-        uniformDescriptorSetLayout.cleanup();
         fence.cleanup();
-        for (Map.Entry<String, List<EntityAnimationBuffer>> entry : entityAnimationsBuffers.entrySet()) {
-            entry.getValue().forEach(EntityAnimationBuffer::cleanup);
-        }
     }
 
     private void createCommandBuffers(CommandPool commandPool) {
@@ -67,25 +63,18 @@ public class AnimationComputeActivity {
     }
 
     private void createDescriptorPool() {
-        EngineProperties engineProperties = EngineProperties.getInstance();
-        int maxStorageBuffers = engineProperties.getMaxStorageBuffers();
-        int maxJointsMatricesLists = engineProperties.getMaxJointsMatricesLists();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        // TODO: Max storage buffers should be fixed now
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxStorageBuffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxJointsMatricesLists, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
     private void createDescriptorSets() {
         storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
-        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
-                uniformDescriptorSetLayout,
         };
     }
 
@@ -106,12 +95,18 @@ public class AnimationComputeActivity {
                 });
     }
 
-    public Map<String, List<EntityAnimationBuffer>> getEntityAnimationsBuffers() {
-        return entityAnimationsBuffers;
+    public void onAnimatedEntitiesLoaded(GlobalBuffers globalBuffers) {
+        srcVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getVerticesBuffer(), 0);
+        weightsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getAnimWeightsBuffer(), 0);
+        dstVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getAnimInstanceDataBuffer(), 0);
+        jointMatricesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getAnimJointMatricesBuffer(), 0);
     }
 
-    /*
-    public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(GlobalBuffers globalBuffers, List<VulkanModel> vulkanModelList) {
         fence.fenceWait();
         fence.reset();
 
@@ -128,6 +123,13 @@ public class AnimationComputeActivity {
 
             LongBuffer descriptorSets = stack.mallocLong(4);
 
+            descriptorSets.put(0, srcVerticesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(1, weightsDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(2, dstVerticesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(3, jointMatricesDescriptorSet.getVkDescriptorSet());
+            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    computePipeline.getVkPipelineLayout(), 0, descriptorSets, null);
+
             for (VulkanModel vulkanModel : vulkanModelList) {
                 String modelId = vulkanModel.getModelId();
                 List<Entity> entities = scene.getEntitiesByModelId(modelId);
@@ -135,92 +137,24 @@ public class AnimationComputeActivity {
                     continue;
                 }
 
-                ModelDescriptorSets modelDescriptorSets = modelDescriptorSetsMap.get(modelId);
-                int meshCount = 0;
-                for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
-                    for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
-                        MeshDescriptorSets meshDescriptorSets = modelDescriptorSets.meshesDescriptorSets.get(meshCount);
-                        descriptorSets.put(0, meshDescriptorSets.srcDescriptorSet.getVkDescriptorSet());
-                        descriptorSets.put(1, meshDescriptorSets.weightsDescriptorSet.getVkDescriptorSet());
-
-                        for (Entity entity : entities) {
-                            List<EntityAnimationBuffer> animationsBuffer = entityAnimationsBuffers.get(entity.getId());
-                            EntityAnimationBuffer entityAnimationBuffer = animationsBuffer.get(meshCount);
-                            descriptorSets.put(2, entityAnimationBuffer.descriptorSet().getVkDescriptorSet());
-
-                            Entity.EntityAnimation entityAnimation = entity.getEntityAnimation();
-                            if (!entityAnimation.isStarted()) {
-                                continue;
-                            }
-                            DescriptorSet jointMatricesDescriptorSet = modelDescriptorSets.jointMatricesBufferDescriptorSets.
-                                    get(entityAnimation.getAnimationIdx()).get(entityAnimation.getCurrentFrame());
-                            descriptorSets.put(3, jointMatricesDescriptorSet.getVkDescriptorSet());
-
-                            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                    computePipeline.getVkPipelineLayout(), 0, descriptorSets, null);
-
-                            vkCmdDispatch(cmdHandle, meshDescriptorSets.groupSize(), 1, 1);
+                for (VulkanModel.VulkanMesh mesh : vulkanModel.getVulkanMeshList()) {
+                    for (Entity entity : entities) {
+                        Entity.EntityAnimation entityAnimation = entity.getEntityAnimation();
+                        if (!entityAnimation.isStarted()) {
+                            continue;
                         }
-                        meshCount++;
+
+                        // TODO: Cache this
+                        int vertexSize = 14 * GraphConstants.FLOAT_LENGTH;
+                        int groupSize = (int) Math.ceil((mesh.verticesSize() / vertexSize) / (float) LOCAL_SIZE_X);
+
+                        vkCmdDispatch(cmdHandle, groupSize, 1, 1);
                     }
                 }
             }
         }
         commandBuffer.endRecording();
     }
-
-
-    public void registerEntity(VulkanModel vulkanModel, Entity entity) {
-        List<EntityAnimationBuffer> bufferList = new ArrayList<>();
-        entityAnimationsBuffers.put(entity.getId(), bufferList);
-        for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
-            for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
-                VulkanBuffer animationBuffer = new VulkanBuffer(device, mesh.verticesBuffer().getRequestedSize(),
-                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
-                DescriptorSet descriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
-                        storageDescriptorSetLayout, animationBuffer, 0);
-                bufferList.add(new EntityAnimationBuffer(animationBuffer, descriptorSet));
-            }
-        }
-    }
-     */
-
-    /*
-    public void registerModels(List<VulkanModel> vulkanModels) {
-        for (VulkanModel vulkanModel : vulkanModels) {
-            if (!vulkanModel.hasAnimations()) {
-                continue;
-            }
-            String modelId = vulkanModel.getModelId();
-            List<List<DescriptorSet>> jointMatricesBufferDescriptorSets = new ArrayList<>();
-            for (VulkanModel.VulkanAnimation animation : vulkanModel.getAnimationList()) {
-                List<DescriptorSet> animationFrames = new ArrayList<>();
-                for (VulkanBuffer jointsMatricesBuffer : animation.frameBufferList()) {
-                    animationFrames.add(new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
-                            jointsMatricesBuffer, 0));
-                }
-                jointMatricesBufferDescriptorSets.add(animationFrames);
-            }
-
-            List<MeshDescriptorSets> meshDescriptorSetsList = new ArrayList<>();
-            for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
-                for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
-                    int vertexSize = 14 * GraphConstants.FLOAT_LENGTH;
-                    int groupSize = (int) Math.ceil((mesh.verticesBuffer().getRequestedSize() / vertexSize) / (float) LOCAL_SIZE_X);
-                    MeshDescriptorSets meshDescriptorSets = new MeshDescriptorSets(
-                            new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout, mesh.verticesBuffer(), 0),
-                            groupSize,
-                            new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout, mesh.weightsBuffer(), 0)
-                    );
-                    meshDescriptorSetsList.add(meshDescriptorSets);
-                }
-            }
-
-            ModelDescriptorSets modelDescriptorSets = new ModelDescriptorSets(meshDescriptorSetsList, jointMatricesBufferDescriptorSets);
-            modelDescriptorSetsMap.put(modelId, modelDescriptorSets);
-        }
-    }
-     */
 
     public void submit() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -230,19 +164,5 @@ public class AnimationComputeActivity {
                     null,
                     fence);
         }
-    }
-
-    public record EntityAnimationBuffer(VulkanBuffer verticesBuffer, DescriptorSet descriptorSet) {
-        public void cleanup() {
-            verticesBuffer.cleanup();
-        }
-    }
-
-    record MeshDescriptorSets(DescriptorSet srcDescriptorSet, int groupSize,
-                              DescriptorSet weightsDescriptorSet) {
-    }
-
-    record ModelDescriptorSets(List<MeshDescriptorSets> meshesDescriptorSets,
-                               List<List<DescriptorSet>> jointMatricesBufferDescriptorSets) {
     }
 }

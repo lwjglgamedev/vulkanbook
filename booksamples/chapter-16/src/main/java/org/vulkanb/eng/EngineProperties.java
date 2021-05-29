@@ -60,8 +60,6 @@ public class EngineProperties {
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", DEFAULT_SHADOW_BIAS).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", DEFAULT_SHADOW_MAP_SIZE).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
-            maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", DEFAULT_STORAGES_BUFFERS).toString());
-            maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", DEFAULT_MAX_JOINTS_MATRICES_LISTS).toString());
             maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", DEFAULT_MAX_TEXURES).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
@@ -83,16 +81,8 @@ public class EngineProperties {
         return fov;
     }
 
-    public int getMaxJointsMatricesLists() {
-        return maxJointsMatricesLists;
-    }
-
     public int getMaxMaterials() {
         return maxMaterials;
-    }
-
-    public int getMaxStorageBuffers() {
-        return maxStorageBuffers;
     }
 
     public int getMaxTextures() {
