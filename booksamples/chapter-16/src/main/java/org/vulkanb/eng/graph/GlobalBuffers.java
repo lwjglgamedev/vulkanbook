@@ -16,6 +16,7 @@ import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Test animation
 // TODO: Test again with multiple models
+// TODO: Test with no animations
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
     private static final int BUFF_SIZE = 1024 * 1024 * 20;
@@ -225,6 +226,9 @@ public class GlobalBuffers {
     }
 
     public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels) {
+        if (instanceDataBuffer == null) {
+            return;
+        }
         long mappedMemory = instanceDataBuffer.map();
         ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) instanceDataBuffer.getRequestedSize());
         instanceDataBuffer.map();
@@ -434,21 +438,25 @@ public class GlobalBuffers {
                     numInstances = numInstances + entities.size();
                 }
             }
-            StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
-            ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
-            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
+            StgBuffer indirectStgBuffer = null;
+            if (numIndirectCommands > 0) {
+                indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
+                ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
+                VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
-            indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
+                indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
 
-            instanceDataBuffer = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                instanceDataBuffer = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
-            indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
-
+                indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
+            }
             cmd.endRecording();
             cmd.submitAndWait(device, queue);
             cmd.cleanup();
-            indirectStgBuffer.cleanup();
+            if (indirectStgBuffer != null) {
+                indirectStgBuffer.cleanup();
+            }
         }
 
         indirectRecorded = true;
