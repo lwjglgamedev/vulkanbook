@@ -9,7 +9,7 @@ import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
 
-import java.nio.LongBuffer;
+import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
@@ -79,8 +79,10 @@ public class AnimationComputeActivity {
     }
 
     private void createPipeline(PipelineCache pipelineCache) {
+        // TODO: Make this a constant ?
+        int pushConstantsSize = GraphConstants.INT_LENGTH * 4;
         ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo = new ComputePipeline.PipeLineCreationInfo(shaderProgram,
-                descriptorSetLayouts);
+                descriptorSetLayouts, pushConstantsSize);
         computePipeline = new ComputePipeline(pipelineCache, pipeLineCreationInfo);
     }
 
@@ -102,7 +104,7 @@ public class AnimationComputeActivity {
         weightsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
                 storageDescriptorSetLayout, globalBuffers.getAnimWeightsBuffer(), 0);
         dstVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
-                storageDescriptorSetLayout, globalBuffers.getAnimInstanceDataBuffer(), 0);
+                storageDescriptorSetLayout, globalBuffers.getAnimVerticesBuffer(), 0);
         jointMatricesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
                 storageDescriptorSetLayout, globalBuffers.getAnimJointMatricesBuffer(), 0);
     }
@@ -131,26 +133,34 @@ public class AnimationComputeActivity {
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
                     computePipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            for (VulkanModel vulkanModel : vulkanModelList) {
-                String modelId = vulkanModel.getModelId();
-                List<Entity> entities = scene.getEntitiesByModelId(modelId);
-                if (entities == null || entities.isEmpty() || !vulkanModel.hasAnimations()) {
+            List<VulkanAnimEntity> vulkanAnimEntityList = globalBuffers.getVulkanAnimEntityList();
+            for (VulkanAnimEntity vulkanAnimEntity : vulkanAnimEntityList) {
+                Entity entity = vulkanAnimEntity.getEntity();
+                Entity.EntityAnimation entityAnimation = entity.getEntityAnimation();
+                if (!entityAnimation.isStarted()) {
                     continue;
                 }
 
-                for (VulkanModel.VulkanMesh mesh : vulkanModel.getVulkanMeshList()) {
-                    for (Entity entity : entities) {
-                        Entity.EntityAnimation entityAnimation = entity.getEntityAnimation();
-                        if (!entityAnimation.isStarted()) {
-                            continue;
-                        }
+                for (VulkanAnimEntity.VulkanAnimMesh vulkanAnimMesh : vulkanAnimEntity.getVulkanAnimMeshList()) {
+                    VulkanModel.VulkanMesh mesh = vulkanAnimMesh.vulkanMesh();
 
-                        // TODO: Cache this
-                        int vertexSize = 14 * GraphConstants.FLOAT_LENGTH;
-                        int groupSize = (int) Math.ceil((mesh.verticesSize() / vertexSize) / (float) LOCAL_SIZE_X);
+                    int vertexSize = 14 * GraphConstants.FLOAT_LENGTH;
+                    int groupSize = (int) Math.ceil((mesh.verticesSize() / vertexSize) / (float) LOCAL_SIZE_X);
 
-                        vkCmdDispatch(cmdHandle, groupSize, 1, 1);
-                    }
+                    // Push constants
+                    // TODO: Get current Animation
+                    VulkanModel vulkanModel = vulkanAnimEntity.getVulkanModel();
+                    int jointMatricesOffset = vulkanModel.getVulkanAnimationDataList().get(0).getVulkanAnimationFrameList().get(0).jointMatricesOffset();
+
+                    ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.INT_LENGTH * 4);
+                    pushConstantBuffer.putInt(0, mesh.verticesOffset());
+                    pushConstantBuffer.putInt(1, mesh.weightsOffset());
+                    pushConstantBuffer.putInt(2, jointMatricesOffset);
+                    pushConstantBuffer.putInt(3, vulkanAnimMesh.meshOffset());
+                    vkCmdPushConstants(cmdHandle, computePipeline.getVkPipelineLayout(),
+                            VK_SHADER_STAGE_COMPUTE_BIT, 0, pushConstantBuffer);
+
+                    vkCmdDispatch(cmdHandle, groupSize, 1, 1);
                 }
             }
         }

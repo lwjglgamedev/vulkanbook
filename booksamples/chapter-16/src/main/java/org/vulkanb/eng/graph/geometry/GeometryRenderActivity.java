@@ -275,16 +275,29 @@ public class GeometryRenderActivity {
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
-            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
-
+            LongBuffer vertexBuffer = stack.mallocLong(1);
+            LongBuffer instanceBuffer = stack.mallocLong(1);
             LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
+
+            // Draw commands for non animated models
+            vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
+            instanceBuffer.put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
+
             vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
             vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
             vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+            VulkanBuffer staticIndirectBuffer = globalBuffers.getIndirectBuffer();
+            vkCmdDrawIndexedIndirect(cmdHandle, staticIndirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
+                    GlobalBuffers.IND_COMMAND_STRIDE);
 
-            VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
-            vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
+            // Draw commands for  animated models
+            vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
+            instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffer().getBuffer());
+
+            vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+            vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
+            VulkanBuffer animIndirectBuffer = globalBuffers.getAnimIndirectBuffer();
+            vkCmdDrawIndexedIndirect(cmdHandle, animIndirectBuffer.getBuffer(), 0, globalBuffers.getNumAnimIndirectCommands(),
                     GlobalBuffers.IND_COMMAND_STRIDE);
 
             vkCmdEndRenderPass(cmdHandle);

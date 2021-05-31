@@ -15,6 +15,7 @@ import java.util.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Test animation
+// TODO: Test again with multiple models
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
     private static final int BUFF_SIZE = 1024 * 1024 * 20;
@@ -26,18 +27,20 @@ public class GlobalBuffers {
             GraphConstants.FLOAT_LENGTH * 2 + MATERIAL_PADDING;
     private final VulkanBuffer animIndirectBuffer;
     private final VulkanBuffer animJointMatricesBuffer;
+    private final VulkanBuffer animVerticesBuffer;
     private final VulkanBuffer animWeightsBuffer;
     private final VulkanBuffer indicesBuffer;
     private final VulkanBuffer indirectBuffer;
     private final VulkanBuffer materialsBuffer;
     private final VulkanBuffer verticesBuffer;
     private VulkanBuffer animInstanceDataBuffer;
-    // TODO: Check this
     private boolean indirectRecorded;
     // TODO: One model for image
     private VulkanBuffer instanceDataBuffer;
-    private int numAnimIndrectCommands;
+    private int numAnimIndirectCommands;
     private int numIndirectCommands;
+    // TODO: Check this
+    private List<VulkanAnimEntity> vulkanAnimEntityList;
 
     // TODO: manage size
     public GlobalBuffers(Device device) {
@@ -53,6 +56,8 @@ public class GlobalBuffers {
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         materialsBuffer = new VulkanBuffer(device, BUFF_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+        animVerticesBuffer = new VulkanBuffer(device, BUFF_SIZE, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         animJointMatricesBuffer = new VulkanBuffer(device, BUFF_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         animWeightsBuffer = new VulkanBuffer(device, BUFF_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -65,6 +70,7 @@ public class GlobalBuffers {
         verticesBuffer.cleanup();
         indicesBuffer.cleanup();
         indirectBuffer.cleanup();
+        animVerticesBuffer.cleanup();
         animIndirectBuffer.cleanup();
         materialsBuffer.cleanup();
         animJointMatricesBuffer.cleanup();
@@ -77,12 +83,20 @@ public class GlobalBuffers {
         }
     }
 
+    public VulkanBuffer getAnimIndirectBuffer() {
+        return animIndirectBuffer;
+    }
+
     public VulkanBuffer getAnimInstanceDataBuffer() {
         return animInstanceDataBuffer;
     }
 
     public VulkanBuffer getAnimJointMatricesBuffer() {
         return animJointMatricesBuffer;
+    }
+
+    public VulkanBuffer getAnimVerticesBuffer() {
+        return animVerticesBuffer;
     }
 
     public VulkanBuffer getAnimWeightsBuffer() {
@@ -105,8 +119,8 @@ public class GlobalBuffers {
         return materialsBuffer;
     }
 
-    public int getNumAnimIndrectCommands() {
-        return numAnimIndrectCommands;
+    public int getNumAnimIndirectCommands() {
+        return numAnimIndirectCommands;
     }
 
     public int getNumIndirectCommands() {
@@ -117,46 +131,61 @@ public class GlobalBuffers {
         return verticesBuffer;
     }
 
+    public List<VulkanAnimEntity> getVulkanAnimEntityList() {
+        return vulkanAnimEntityList;
+    }
+
     public boolean isIndirectRecorded() {
         return indirectRecorded;
     }
 
     private void loadAnimEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool, Queue
             queue) {
-        numAnimIndrectCommands = 0;
+        vulkanAnimEntityList = new ArrayList<>();
+        numAnimIndirectCommands = 0;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = commandPool.getDevice();
             CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
 
             cmd.beginRecording();
 
+            int bufferOffset = 0;
             List<VkDrawIndexedIndirectCommand> indexedIndirectCommandList = new ArrayList<>();
             for (VulkanModel vulkanModel : vulkanModelList) {
                 List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
                 if (entities.isEmpty()) {
                     continue;
                 }
-                for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
-                    entities.stream().filter(e -> e.hasAnimation()).forEach(e -> {
+                for (Entity entity : entities) {
+                    if (!entity.hasAnimation()) {
+                        continue;
+                    }
+                    VulkanAnimEntity vulkanAnimEntity = new VulkanAnimEntity(entity, vulkanModel);
+                    vulkanAnimEntityList.add(vulkanAnimEntity);
+                    List<VulkanAnimEntity.VulkanAnimMesh> vulkanAnimMeshList = vulkanAnimEntity.getVulkanAnimMeshList();
+                    for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
                         VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.callocStack(stack);
                         indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
                         indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
                         indexedIndirectCommand.instanceCount(1);
-                        indexedIndirectCommand.vertexOffset(vulkanMesh.verticesOffset() / VertexBufferStructure.SIZE_IN_BYTES);
+                        indexedIndirectCommand.vertexOffset(bufferOffset / VertexBufferStructure.SIZE_IN_BYTES);
                         indexedIndirectCommand.firstInstance(0);
                         indexedIndirectCommandList.add(indexedIndirectCommand);
-                    });
+
+                        vulkanAnimMeshList.add(new VulkanAnimEntity.VulkanAnimMesh(bufferOffset, vulkanMesh));
+                        bufferOffset += vulkanMesh.verticesSize();
+                    }
                 }
             }
-            numAnimIndrectCommands = indexedIndirectCommandList.size();
-            StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numAnimIndrectCommands);
+            numAnimIndirectCommands = indexedIndirectCommandList.size();
+            StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numAnimIndirectCommands);
             ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
             VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
             indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
 
-            animInstanceDataBuffer = new VulkanBuffer(device, numAnimIndrectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
-                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+            animInstanceDataBuffer = new VulkanBuffer(device, numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
             indirectStgBuffer.recordTransferCommand(cmd, animIndirectBuffer);
 
@@ -169,16 +198,16 @@ public class GlobalBuffers {
 
     private void loadAnimationData(ModelData modelData, VulkanModel vulkanModel, StgBuffer animJointMatricesStgBuffer) {
         List<ModelData.Animation> animationsList = modelData.getAnimationsList();
-        boolean hasAnimations = animationsList != null && !animationsList.isEmpty();
-        vulkanModel.setHasAnimations(hasAnimations);
-        if (!hasAnimations) {
+        if (!modelData.hasAnimations()) {
             return;
         }
         ByteBuffer dataBuffer = animJointMatricesStgBuffer.getDataBuffer();
         for (ModelData.Animation animation : animationsList) {
-            // TODO: record number of frames
+            VulkanModel.VulkanAnimationData vulkanAnimationData = new VulkanModel.VulkanAnimationData();
+            vulkanModel.addVulkanAnimationData(vulkanAnimationData);
             List<ModelData.AnimatedFrame> frameList = animation.frames();
             for (ModelData.AnimatedFrame frame : frameList) {
+                vulkanAnimationData.addVulkanAnimationFrame(new VulkanModel.VulkanAnimationFrame(dataBuffer.position()));
                 Matrix4f[] matrices = frame.jointMatrices();
                 int numMatrices = matrices.length;
                 for (int i = 0; i < numMatrices; i++) {
@@ -202,7 +231,7 @@ public class GlobalBuffers {
         int pos = 0;
         for (VulkanModel vulkanModel : vulkanModels) {
             List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
-            if (entities.isEmpty()) {
+            if (entities.isEmpty() || vulkanModel.hasAnimations()) {
                 continue;
             }
             for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
@@ -286,7 +315,7 @@ public class GlobalBuffers {
                 globalMaterialIdx = vulkanMaterialList.get(localMaterialIdx).globalMaterialIdx();
             }
             vulkanModel.addVulkanMesh(new VulkanModel.VulkanMesh(verticesSize, indices.length,
-                    verticesData.position(), indicesData.position(), globalMaterialIdx));
+                    verticesData.position(), indicesData.position(), globalMaterialIdx, animWeightsStgBuffer.getDataBuffer().position()));
 
             int rows = positions.length / 3;
             for (int row = 0; row < rows; row++) {
@@ -336,7 +365,7 @@ public class GlobalBuffers {
         loadMaterials(device, textureCache, materialsStgBuffer, defaultMaterialList, textureList);
 
         for (ModelData modelData : modelDataList) {
-            VulkanModel vulkanModel = new VulkanModel(modelData.getModelId());
+            VulkanModel vulkanModel = new VulkanModel(modelData.getModelId(), modelData.hasAnimations());
             vulkanModelList.add(vulkanModel);
 
             List<VulkanModel.VulkanMaterial> vulkanMaterialList = loadMaterials(device, textureCache, materialsStgBuffer,
@@ -388,7 +417,7 @@ public class GlobalBuffers {
             int firstInstance = 0;
             for (VulkanModel vulkanModel : vulkanModelList) {
                 List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
-                if (entities.isEmpty()) {
+                if (entities.isEmpty() || vulkanModel.hasAnimations()) {
                     continue;
                 }
                 for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
