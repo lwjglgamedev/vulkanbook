@@ -118,6 +118,7 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
+    // TODO: Shadow for animated items
     public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
@@ -175,17 +176,19 @@ public class ShadowRenderActivity {
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
-            LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
+            if (globalBuffers.getNumIndirectCommands() > 0) {
+                LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
+                LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
 
-            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
-            vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-            vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
-            vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+                LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
+                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
+                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-            VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
-            vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
-                    GlobalBuffers.IND_COMMAND_STRIDE);
+                VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
+                vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
+                        GlobalBuffers.IND_COMMAND_STRIDE);
+            }
 
             vkCmdEndRenderPass(cmdHandle);
         }

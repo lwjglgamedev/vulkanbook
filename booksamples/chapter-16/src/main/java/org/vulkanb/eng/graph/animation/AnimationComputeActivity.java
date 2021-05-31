@@ -153,10 +153,11 @@ public class AnimationComputeActivity {
                     int jointMatricesOffset = vulkanModel.getVulkanAnimationDataList().get(0).getVulkanAnimationFrameList().get(0).jointMatricesOffset();
 
                     ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.INT_LENGTH * 4);
-                    pushConstantBuffer.putInt(0, mesh.verticesOffset());
-                    pushConstantBuffer.putInt(1, mesh.weightsOffset());
-                    pushConstantBuffer.putInt(2, jointMatricesOffset);
-                    pushConstantBuffer.putInt(3, vulkanAnimMesh.meshOffset());
+                    pushConstantBuffer.putInt(mesh.verticesOffset());
+                    pushConstantBuffer.putInt(mesh.weightsOffset());
+                    pushConstantBuffer.putInt(jointMatricesOffset);
+                    pushConstantBuffer.putInt(vulkanAnimMesh.meshOffset());
+                    pushConstantBuffer.flip();
                     vkCmdPushConstants(cmdHandle, computePipeline.getVkPipelineLayout(),
                             VK_SHADER_STAGE_COMPUTE_BIT, 0, pushConstantBuffer);
 
