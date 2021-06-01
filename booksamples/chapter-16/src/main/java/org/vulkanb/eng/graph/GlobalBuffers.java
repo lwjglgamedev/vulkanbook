@@ -197,6 +197,31 @@ public class GlobalBuffers {
         }
     }
 
+    public void loadAnimInstanceData(Scene scene, List<VulkanModel> vulkanModels) {
+        if (animInstanceDataBuffer == null) {
+            return;
+        }
+        long mappedMemory = animInstanceDataBuffer.map();
+        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) animInstanceDataBuffer.getRequestedSize());
+        animInstanceDataBuffer.map();
+        int pos = 0;
+        for (VulkanModel vulkanModel : vulkanModels) {
+            List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
+            if (entities.isEmpty() || !vulkanModel.hasAnimations()) {
+                continue;
+            }
+            for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
+                for (Entity entity : entities) {
+                    entity.getModelMatrix().get(pos, dataBuffer);
+                    pos += GraphConstants.MAT4X4_SIZE;
+                    dataBuffer.putInt(pos, vulkanMesh.globalMaterialIdx());
+                    pos += GraphConstants.INT_LENGTH;
+                }
+            }
+        }
+        animInstanceDataBuffer.unMap();
+    }
+
     private void loadAnimationData(ModelData modelData, VulkanModel vulkanModel, StgBuffer animJointMatricesStgBuffer) {
         List<ModelData.Animation> animationsList = modelData.getAnimationsList();
         if (!modelData.hasAnimations()) {
@@ -225,6 +250,7 @@ public class GlobalBuffers {
         loadAnimEntities(vulkanModelList, scene, commandPool, queue);
     }
 
+    // TODO: Merge with loadAnimnstanceData
     public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels) {
         if (instanceDataBuffer == null) {
             return;
@@ -343,7 +369,7 @@ public class GlobalBuffers {
 
             Arrays.stream(indices).forEach(i -> indicesData.putInt(i));
 
-            loadWeightsBuffer(modelData, meshData, animWeightsStgBuffer, meshCount);
+            loadWeightsBuffer(modelData, animWeightsStgBuffer, meshCount);
             meshCount++;
         }
     }
@@ -462,7 +488,7 @@ public class GlobalBuffers {
         indirectRecorded = true;
     }
 
-    private void loadWeightsBuffer(ModelData modelData, ModelData.MeshData meshData, StgBuffer animWeightsBuffer, int meshCount) {
+    private void loadWeightsBuffer(ModelData modelData, StgBuffer animWeightsBuffer, int meshCount) {
         List<ModelData.AnimMeshData> animMeshDataList = modelData.getAnimMeshDataList();
         if (animMeshDataList == null || animMeshDataList.isEmpty()) {
             return;

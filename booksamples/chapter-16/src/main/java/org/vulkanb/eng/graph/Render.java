@@ -104,7 +104,9 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
+        // TODO: Fix this for animated models
         globalBuffers.loadInstanceData(scene, vulkanModels);
+        globalBuffers.loadAnimInstanceData(scene, vulkanModels);
 
         animationComputeActivity.recordCommandBuffer(globalBuffers, vulkanModels);
         animationComputeActivity.submit();
