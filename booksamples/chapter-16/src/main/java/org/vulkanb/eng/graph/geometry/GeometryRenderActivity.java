@@ -292,8 +292,8 @@ public class GeometryRenderActivity {
                         GlobalBuffers.IND_COMMAND_STRIDE);
             }
 
+            // Draw commands for  animated models
             if (globalBuffers.getNumAnimIndirectCommands() > 0) {
-                // Draw commands for  animated models
                 vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
                 instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffer().getBuffer());
 

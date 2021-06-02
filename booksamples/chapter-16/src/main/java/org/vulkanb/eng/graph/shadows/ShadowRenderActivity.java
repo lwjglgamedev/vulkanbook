@@ -118,7 +118,7 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
-    // TODO: Shadow for animated items
+    // TODO: Check if commands can be pre-recorded
     public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
@@ -176,17 +176,34 @@ public class ShadowRenderActivity {
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
-            if (globalBuffers.getNumIndirectCommands() > 0) {
-                LongBuffer vertexBuffer = stack.mallocLong(1).put(0, globalBuffers.getVerticesBuffer().getBuffer());
-                LongBuffer instanceBuffer = stack.mallocLong(1).put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
+            LongBuffer vertexBuffer = stack.mallocLong(1);
+            LongBuffer instanceBuffer = stack.mallocLong(1);
+            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
 
-                LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
+            // Draw commands for non animated models
+            if (globalBuffers.getNumIndirectCommands() > 0) {
+                vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
+
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                 vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
                 vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
                 VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
                 vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
+                        GlobalBuffers.IND_COMMAND_STRIDE);
+            }
+
+            if (globalBuffers.getNumAnimIndirectCommands() > 0) {
+                // Draw commands for  animated models
+                vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffer().getBuffer());
+
+                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
+                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+                VulkanBuffer animIndirectBuffer = globalBuffers.getAnimIndirectBuffer();
+                vkCmdDrawIndexedIndirect(cmdHandle, animIndirectBuffer.getBuffer(), 0, globalBuffers.getNumAnimIndirectCommands(),
                         GlobalBuffers.IND_COMMAND_STRIDE);
             }
 

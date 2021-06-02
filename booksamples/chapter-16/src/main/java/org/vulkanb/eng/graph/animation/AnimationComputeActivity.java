@@ -14,7 +14,6 @@ import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: Fix normal issues
 public class AnimationComputeActivity {
 
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
@@ -142,7 +141,6 @@ public class AnimationComputeActivity {
                     continue;
                 }
 
-                // TODO: Get current Animation
                 VulkanModel vulkanModel = vulkanAnimEntity.getVulkanModel();
                 int animationIdx = entity.getEntityAnimation().getAnimationIdx();
                 int currentFrame = entity.getEntityAnimation().getCurrentFrame();
