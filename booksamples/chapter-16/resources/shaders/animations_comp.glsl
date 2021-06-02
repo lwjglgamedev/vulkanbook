@@ -12,7 +12,6 @@ layout (std430, set=2, binding=0) buffer dstBuf {
     float data[];
 } dstVector;
 
-// TODO: Move this to storage buffer
 layout (std430, set=3, binding=0) readonly buffer jointBuf {
     mat4 data[];
 } jointMatrices;
@@ -26,7 +25,7 @@ layout(push_constant) uniform pushConstants {
     uint dstOffset;
 } push_constants;
 
-
+// TODO: Weoghts for normals
 void main()
 {
     uint baseIdxWeightsBuf  = push_constants.weightsOffset + int(gl_GlobalInvocationID.x) * 8;
@@ -53,9 +52,9 @@ void main()
     weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * normal +
     weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * normal +
     weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * normal;
-    dstVector.data[baseIdxDstBuf] = normal.x / normal.w;
-    dstVector.data[baseIdxDstBuf + 1] = normal.y / normal.w;
-    dstVector.data[baseIdxDstBuf + 2] = normal.z / normal.w;
+    dstVector.data[baseIdxDstBuf] = normal.x;
+    dstVector.data[baseIdxDstBuf + 1] = normal.y;
+    dstVector.data[baseIdxDstBuf + 2] = normal.z;
 
     baseIdxSrcBuf += 3;
     baseIdxDstBuf += 3;
@@ -65,9 +64,9 @@ void main()
     weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * tangent +
     weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * tangent +
     weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * tangent;
-    dstVector.data[baseIdxDstBuf] = tangent.x / tangent.w;
-    dstVector.data[baseIdxDstBuf + 1] = tangent.y / tangent.w;
-    dstVector.data[baseIdxDstBuf + 2] = tangent.z / tangent.w;
+    dstVector.data[baseIdxDstBuf] = tangent.x;
+    dstVector.data[baseIdxDstBuf + 1] = tangent.y;
+    dstVector.data[baseIdxDstBuf + 2] = tangent.z;
 
     baseIdxSrcBuf += 3;
     baseIdxDstBuf += 3;
@@ -77,9 +76,9 @@ void main()
     weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * bitangent +
     weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * bitangent +
     weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * bitangent;
-    dstVector.data[baseIdxDstBuf] = bitangent.x / bitangent.w;
-    dstVector.data[baseIdxDstBuf + 1] = bitangent.y / bitangent.w;
-    dstVector.data[baseIdxDstBuf + 2] = bitangent.z / bitangent.w;
+    dstVector.data[baseIdxDstBuf] = bitangent.x;
+    dstVector.data[baseIdxDstBuf + 1] = bitangent.y;
+    dstVector.data[baseIdxDstBuf + 2] = bitangent.z;
 
     baseIdxSrcBuf += 3;
     baseIdxDstBuf += 3;

@@ -151,6 +151,7 @@ public class GlobalBuffers {
             cmd.beginRecording();
 
             int bufferOffset = 0;
+            int firstInstance = 0;
             List<VkDrawIndexedIndirectCommand> indexedIndirectCommandList = new ArrayList<>();
             for (VulkanModel vulkanModel : vulkanModelList) {
                 List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
@@ -170,11 +171,12 @@ public class GlobalBuffers {
                         indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
                         indexedIndirectCommand.instanceCount(1);
                         indexedIndirectCommand.vertexOffset(bufferOffset / VertexBufferStructure.SIZE_IN_BYTES);
-                        indexedIndirectCommand.firstInstance(0);
+                        indexedIndirectCommand.firstInstance(firstInstance);
                         indexedIndirectCommandList.add(indexedIndirectCommand);
 
                         vulkanAnimMeshList.add(new VulkanAnimEntity.VulkanAnimMesh(bufferOffset, vulkanMesh));
                         bufferOffset += vulkanMesh.verticesSize();
+                        firstInstance++;
                     }
                 }
             }

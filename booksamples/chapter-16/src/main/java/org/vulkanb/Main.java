@@ -11,6 +11,7 @@ import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 
+// TODO: Test without calling to set animation
 public class Main implements IAppLogic {
 
     private static final Logger LOGGER = LogManager.getLogger();
@@ -83,15 +84,11 @@ public class Main implements IAppLogic {
         }
         updateDirectionalLight();
 
-        // TODO: Test without calling to ste animation
-        /*
         Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
         if (entityAnimation.isStarted()) {
             int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
             entityAnimation.setCurrentFrame(currentFrame);
         }
-
-         */
     }
 
     @Override
@@ -105,7 +102,7 @@ public class Main implements IAppLogic {
         modelDataList.add(sponzaModelData);
         Entity sponzaEntity = new Entity("SponzaEntity", sponzaModelId, new Vector3f(0.0f, 0.0f, 0.0f));
         scene.addEntity(sponzaEntity);
-        */
+         */
 
         String bobModelId = "bob-model";
         ModelData bobModelData = ModelLoader.loadModel(bobModelId, "resources/models/bob/boblamp.md5mesh",
@@ -118,16 +115,6 @@ public class Main implements IAppLogic {
         bobEntity.updateModelMatrix();
         bobEntity.setEntityAnimation(new Entity.EntityAnimation(true, 0, 0));
         scene.addEntity(bobEntity);
-
-        /*
-        String cubeModelId = "cube";
-        ModelData cubeModelData = ModelLoader.loadModel(cubeModelId, "resources/models/cube/AnimatedCube.gltf",
-                "resources/models/cube", true);
-        modelDataList.add(cubeModelData);
-        Entity cubeEntity = new Entity("CubeEntity", cubeModelId, new Vector3f(0.0f, 0.0f, 0.0f));
-        cubeEntity.setEntityAnimation(new Entity.EntityAnimation(true, 0, 0));
-        scene.addEntity(cubeEntity);
-         */
 
         render.loadModels(modelDataList);
 

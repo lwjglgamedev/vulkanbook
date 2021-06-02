@@ -303,7 +303,6 @@ public class GeometryRenderActivity {
                 VulkanBuffer animIndirectBuffer = globalBuffers.getAnimIndirectBuffer();
                 vkCmdDrawIndexedIndirect(cmdHandle, animIndirectBuffer.getBuffer(), 0, globalBuffers.getNumAnimIndirectCommands(),
                         GlobalBuffers.IND_COMMAND_STRIDE);
-
             }
 
             vkCmdEndRenderPass(cmdHandle);

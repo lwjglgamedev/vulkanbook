@@ -14,6 +14,7 @@ import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 
+// TODO: Fix normal issues
 public class AnimationComputeActivity {
 
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
@@ -141,22 +142,23 @@ public class AnimationComputeActivity {
                     continue;
                 }
 
+                // TODO: Get current Animation
+                VulkanModel vulkanModel = vulkanAnimEntity.getVulkanModel();
+                int animationIdx = entity.getEntityAnimation().getAnimationIdx();
+                int currentFrame = entity.getEntityAnimation().getCurrentFrame();
+                int jointMatricesOffset = vulkanModel.getVulkanAnimationDataList().get(animationIdx).getVulkanAnimationFrameList().get(currentFrame).jointMatricesOffset();
+
                 for (VulkanAnimEntity.VulkanAnimMesh vulkanAnimMesh : vulkanAnimEntity.getVulkanAnimMeshList()) {
                     VulkanModel.VulkanMesh mesh = vulkanAnimMesh.vulkanMesh();
 
-                    int vertexSize = 14 * GraphConstants.FLOAT_LENGTH;
-                    int groupSize = (int) Math.ceil((mesh.verticesSize() / vertexSize) / (float) LOCAL_SIZE_X);
+                    int groupSize = (int) Math.ceil((mesh.verticesSize() / InstancedVertexBufferStructure.SIZE_IN_BYTES) / (float) LOCAL_SIZE_X);
 
                     // Push constants
-                    // TODO: Get current Animation
-                    VulkanModel vulkanModel = vulkanAnimEntity.getVulkanModel();
-                    int jointMatricesOffset = vulkanModel.getVulkanAnimationDataList().get(0).getVulkanAnimationFrameList().get(0).jointMatricesOffset();
-
                     ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.INT_LENGTH * 4);
-                    pushConstantBuffer.putInt(mesh.verticesOffset());
-                    pushConstantBuffer.putInt(mesh.weightsOffset());
-                    pushConstantBuffer.putInt(jointMatricesOffset);
-                    pushConstantBuffer.putInt(vulkanAnimMesh.meshOffset());
+                    pushConstantBuffer.putInt(mesh.verticesOffset() / GraphConstants.FLOAT_LENGTH);
+                    pushConstantBuffer.putInt(mesh.weightsOffset() / GraphConstants.FLOAT_LENGTH);
+                    pushConstantBuffer.putInt(jointMatricesOffset / GraphConstants.MAT4X4_SIZE);
+                    pushConstantBuffer.putInt(vulkanAnimMesh.meshOffset() / GraphConstants.FLOAT_LENGTH);
                     pushConstantBuffer.flip();
                     vkCmdPushConstants(cmdHandle, computePipeline.getVkPipelineLayout(),
                             VK_SHADER_STAGE_COMPUTE_BIT, 0, pushConstantBuffer);
