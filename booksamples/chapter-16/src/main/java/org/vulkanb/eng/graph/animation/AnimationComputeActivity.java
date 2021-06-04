@@ -97,7 +97,6 @@ public class AnimationComputeActivity {
     }
 
     public void onAnimatedEntitiesLoaded(GlobalBuffers globalBuffers) {
-        // TODO: Some of these descriptor sets can be created earlier
         srcVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
                 storageDescriptorSetLayout, globalBuffers.getVerticesBuffer(), 0);
         weightsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,

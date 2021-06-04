@@ -24,17 +24,14 @@ public class GeometryRenderActivity {
     private final Device device;
     private final GeometryFrameBuffer geometryFrameBuffer;
     private final GeometrySpecConstants geometrySpecConstants;
-    private final int materialSize;
     private final MemoryBarrier memoryBarrier;
     private final PipelineCache pipelineCache;
     private final Scene scene;
 
     private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
-    private Map<String, TextureDescriptorSet> descriptorSetMap;
     private Fence[] fences;
     private DescriptorSetLayout[] geometryDescriptorSetLayouts;
-    private DescriptorSet.StorageDescriptorSet indCommandsDescriptorSet;
     private DescriptorSetLayout.DynUniformDescriptorSetLayout materialDescriptorSetLayout;
     private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
     private Pipeline pipeLine;
@@ -60,7 +57,6 @@ public class GeometryRenderActivity {
 
         geometryFrameBuffer = new GeometryFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
-        materialSize = calcMaterialsUniformSize();
         createShaders();
         createDescriptorPool();
         createDescriptorSets(numImages, globalBuffers);
@@ -83,13 +79,6 @@ public class GeometryRenderActivity {
         commandBuffer.beginRecording();
 
         return commandBuffer;
-    }
-
-    private int calcMaterialsUniformSize() {
-        PhysicalDevice physDevice = device.getPhysicalDevice();
-        long minUboAlignment = physDevice.getVkPhysicalDeviceProperties().limits().minUniformBufferOffsetAlignment();
-        long mult = (GraphConstants.VEC4_SIZE * 9) / minUboAlignment + 1;
-        return (int) (mult * minUboAlignment);
     }
 
     public void cleanup() {
@@ -142,13 +131,10 @@ public class GeometryRenderActivity {
                 textureDescriptorSetLayout,
         };
 
-        descriptorSetMap = new HashMap<>();
         textureSampler = new TextureSampler(device, 1);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
-        indCommandsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
-                globalBuffers.getIndirectBuffer(), 0);
         materialsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
                 globalBuffers.getMaterialsBuffer(), 0);
 
@@ -197,10 +183,9 @@ public class GeometryRenderActivity {
         device.waitIdle();
         // Size of the descriptor is setup in the layout, we need to fill up the texture list
         // up to the number defined in the layout (reusing last texture)
-        List<Texture> textureList = new ArrayList<>();
         List<Texture> textureCacheList = textureCache.getAsList();
         int textureCacheSize = textureCacheList.size();
-        textureList.addAll(textureCacheList);
+        List<Texture> textureList = new ArrayList<>(textureCacheList);
         EngineProperties engineProperties = EngineProperties.getInstance();
         int maxTextures = engineProperties.getMaxTextures();
         for (int i = 0; i < maxTextures - textureCacheSize; i++) {

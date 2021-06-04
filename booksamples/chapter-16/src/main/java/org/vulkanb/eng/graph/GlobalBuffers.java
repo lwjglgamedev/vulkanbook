@@ -186,7 +186,7 @@ public class GlobalBuffers {
                 ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
                 VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
-                indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
+                indexedIndirectCommandList.forEach(indCommandBuffer::put);
 
                 animInstanceDataBuffer = new VulkanBuffer(device, numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
@@ -239,9 +239,8 @@ public class GlobalBuffers {
             for (ModelData.AnimatedFrame frame : frameList) {
                 vulkanAnimationData.addVulkanAnimationFrame(new VulkanModel.VulkanAnimationFrame(dataBuffer.position()));
                 Matrix4f[] matrices = frame.jointMatrices();
-                int numMatrices = matrices.length;
-                for (int i = 0; i < numMatrices; i++) {
-                    matrices[i].get(dataBuffer);
+                for (Matrix4f matrix : matrices) {
+                    matrix.get(dataBuffer);
                     dataBuffer.position(dataBuffer.position() + GraphConstants.MAT4X4_SIZE);
                 }
             }
