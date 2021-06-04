@@ -40,9 +40,9 @@ void main()
     weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * position +
     weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * position +
     weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * position;
-    dstVector.data[baseIdxSrcBuf] = position.x / position.w;
-    dstVector.data[baseIdxSrcBuf + 1] = position.y / position.w;
-    dstVector.data[baseIdxSrcBuf + 2] = position.z / position.w;
+    dstVector.data[baseIdxDstBuf] = position.x / position.w;
+    dstVector.data[baseIdxDstBuf + 1] = position.y / position.w;
+    dstVector.data[baseIdxDstBuf + 2] = position.z / position.w;
 
     baseIdxSrcBuf += 3;
     baseIdxDstBuf += 3;

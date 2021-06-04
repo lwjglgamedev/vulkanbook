@@ -95,14 +95,12 @@ public class Main implements IAppLogic {
     public void init(Window window, Scene scene, Render render) {
         List<ModelData> modelDataList = new ArrayList<>();
 
-        /*
         String sponzaModelId = "sponza-model";
         ModelData sponzaModelData = ModelLoader.loadModel(sponzaModelId, "resources/models/sponza/Sponza.gltf",
                 "resources/models/sponza", false);
         modelDataList.add(sponzaModelData);
         Entity sponzaEntity = new Entity("SponzaEntity", sponzaModelId, new Vector3f(0.0f, 0.0f, 0.0f));
         scene.addEntity(sponzaEntity);
-         */
 
         String bobModelId = "bob-model";
         ModelData bobModelData = ModelLoader.loadModel(bobModelId, "resources/models/bob/boblamp.md5mesh",
