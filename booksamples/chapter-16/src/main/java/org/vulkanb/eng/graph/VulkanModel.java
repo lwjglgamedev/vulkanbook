@@ -7,14 +7,11 @@ public class VulkanModel {
     private final String modelId;
     private final List<VulkanAnimationData> vulkanAnimationDataList;
     private final List<VulkanModel.VulkanMesh> vulkanMeshList;
-    // TODO: This may not be required. Temporary
-    private boolean hasAnimations;
 
-    public VulkanModel(String modelId, boolean hasAnimations) {
+    public VulkanModel(String modelId) {
         this.modelId = modelId;
         vulkanMeshList = new ArrayList<>();
         vulkanAnimationDataList = new ArrayList<>();
-        this.hasAnimations = hasAnimations;
     }
 
     public void addVulkanAnimationData(VulkanAnimationData vulkanAnimationData) {
@@ -38,7 +35,7 @@ public class VulkanModel {
     }
 
     public boolean hasAnimations() {
-        return hasAnimations;
+        return vulkanAnimationDataList.size() > 0;
     }
 
     public static class VulkanAnimationData {

@@ -399,7 +399,7 @@ public class GlobalBuffers {
         loadMaterials(device, textureCache, materialsStgBuffer, defaultMaterialList, textureList);
 
         for (ModelData modelData : modelDataList) {
-            VulkanModel vulkanModel = new VulkanModel(modelData.getModelId(), modelData.hasAnimations());
+            VulkanModel vulkanModel = new VulkanModel(modelData.getModelId());
             vulkanModelList.add(vulkanModel);
 
             List<VulkanModel.VulkanMaterial> vulkanMaterialList = loadMaterials(device, textureCache, materialsStgBuffer,
