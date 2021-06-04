@@ -148,8 +148,6 @@ public class GlobalBuffers {
             Device device = commandPool.getDevice();
             CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
 
-            cmd.beginRecording();
-
             int bufferOffset = 0;
             int firstInstance = 0;
             List<VkDrawIndexedIndirectCommand> indexedIndirectCommandList = new ArrayList<>();
@@ -181,21 +179,25 @@ public class GlobalBuffers {
                 }
             }
             numAnimIndirectCommands = indexedIndirectCommandList.size();
-            StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numAnimIndirectCommands);
-            ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
-            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
+            if (numAnimIndirectCommands > 0) {
+                cmd.beginRecording();
 
-            indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
+                StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numAnimIndirectCommands);
+                ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
+                VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
-            animInstanceDataBuffer = new VulkanBuffer(device, numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
 
-            indirectStgBuffer.recordTransferCommand(cmd, animIndirectBuffer);
+                animInstanceDataBuffer = new VulkanBuffer(device, numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
-            cmd.endRecording();
-            cmd.submitAndWait(device, queue);
-            cmd.cleanup();
-            indirectStgBuffer.cleanup();
+                indirectStgBuffer.recordTransferCommand(cmd, animIndirectBuffer);
+
+                cmd.endRecording();
+                cmd.submitAndWait(device, queue);
+                cmd.cleanup();
+                indirectStgBuffer.cleanup();
+            }
         }
     }
 
@@ -442,8 +444,6 @@ public class GlobalBuffers {
             Device device = commandPool.getDevice();
             CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
 
-            cmd.beginRecording();
-
             List<VkDrawIndexedIndirectCommand> indexedIndirectCommandList = new ArrayList<>();
             int numInstances = 0;
             int firstInstance = 0;
@@ -466,9 +466,10 @@ public class GlobalBuffers {
                     numInstances = numInstances + entities.size();
                 }
             }
-            StgBuffer indirectStgBuffer = null;
             if (numIndirectCommands > 0) {
-                indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
+                cmd.beginRecording();
+
+                StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
                 ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
                 VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
@@ -478,11 +479,10 @@ public class GlobalBuffers {
                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
                 indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
-            }
-            cmd.endRecording();
-            cmd.submitAndWait(device, queue);
-            cmd.cleanup();
-            if (indirectStgBuffer != null) {
+
+                cmd.endRecording();
+                cmd.submitAndWait(device, queue);
+                cmd.cleanup();
                 indirectStgBuffer.cleanup();
             }
         }

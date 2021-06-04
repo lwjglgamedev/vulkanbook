@@ -79,7 +79,6 @@ public class AnimationComputeActivity {
     }
 
     private void createPipeline(PipelineCache pipelineCache) {
-        // TODO: Make this a constant ?
         int pushConstantsSize = GraphConstants.INT_LENGTH * 4;
         ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo = new ComputePipeline.PipeLineCreationInfo(shaderProgram,
                 descriptorSetLayouts, pushConstantsSize);

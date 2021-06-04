@@ -11,7 +11,6 @@ import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 
-// TODO: Test without calling to set animation
 public class Main implements IAppLogic {
 
     private static final Logger LOGGER = LogManager.getLogger();
@@ -85,7 +84,7 @@ public class Main implements IAppLogic {
         updateDirectionalLight();
 
         Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
-        if (entityAnimation.isStarted()) {
+        if (entityAnimation != null && entityAnimation.isStarted()) {
             int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
             entityAnimation.setCurrentFrame(currentFrame);
         }
