@@ -1,6 +1,5 @@
 package org.vulkanb.eng.graph.shadows;
 
-import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -10,7 +9,7 @@ import org.vulkanb.eng.graph.geometry.GeometryAttachments;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.Scene;
 
-import java.nio.*;
+import java.nio.LongBuffer;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
@@ -214,15 +213,6 @@ public class ShadowRenderActivity {
     public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;
         CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
-    }
-
-    private void setPushConstant(Pipeline pipeLine, VkCommandBuffer cmdHandle, Matrix4f matrix) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.MAT4X4_SIZE);
-            matrix.get(0, pushConstantBuffer);
-            vkCmdPushConstants(cmdHandle, pipeLine.getVkPipelineLayout(),
-                    VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
-        }
     }
 
     private void updateProjViewBuffers(int idx) {

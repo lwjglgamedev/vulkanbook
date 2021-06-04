@@ -15,26 +15,23 @@ import java.util.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Test again with multiple models: Check loadEntitiesModel buffer if it advances with each put operation
-// TODO: Test again with animation models:
+// TODO: Test again with animation models
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
-    private static final int BUFF_SIZE = 1024 * 1024 * 20;
     private static final Logger LOGGER = LogManager.getLogger();
     // Handle std430 alignment
     private static final int MATERIAL_PADDING = GraphConstants.FLOAT_LENGTH * 3;
     private static final int MATERIAL_SIZE = GraphConstants.VEC4_SIZE + GraphConstants.INT_LENGTH * 3 +
             GraphConstants.FLOAT_LENGTH * 2 + MATERIAL_PADDING;
-    private final VulkanBuffer animIndirectBuffer;
     private final VulkanBuffer animJointMatricesBuffer;
-    private final VulkanBuffer animVerticesBuffer;
     private final VulkanBuffer animWeightsBuffer;
     private final VulkanBuffer indicesBuffer;
     private final VulkanBuffer materialsBuffer;
     private final VulkanBuffer verticesBuffer;
+    private VulkanBuffer animIndirectBuffer;
     private VulkanBuffer animInstanceDataBuffer;
+    private VulkanBuffer animVerticesBuffer;
     private VulkanBuffer indirectBuffer;
-    // TODO: Check how can we remove this
-    private boolean indirectRecorded;
     // TODO: One model for image in the swap chain
     private VulkanBuffer instanceDataBuffer;
     private int numAnimIndirectCommands;
@@ -42,22 +39,16 @@ public class GlobalBuffers {
     // TODO: Check this
     private List<VulkanAnimEntity> vulkanAnimEntityList;
 
-    // TODO: manage size
     public GlobalBuffers(Device device) {
         LOGGER.debug("Creating global buffers");
-        indirectRecorded = false;
         EngineProperties engProps = EngineProperties.getInstance();
         verticesBuffer = new VulkanBuffer(device, engProps.getMaxVerticesBuffer(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         indicesBuffer = new VulkanBuffer(device, engProps.getMaxIndicesBuffer(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
-        animIndirectBuffer = new VulkanBuffer(device, BUFF_SIZE, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         int maxMaterials = engProps.getMaxMaterials();
         materialsBuffer = new VulkanBuffer(device, maxMaterials * GraphConstants.VEC4_SIZE * 9, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
-        animVerticesBuffer = new VulkanBuffer(device, BUFF_SIZE, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         animJointMatricesBuffer = new VulkanBuffer(device, engProps.getMaxJointMatricesBuffer(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         animWeightsBuffer = new VulkanBuffer(device, engProps.getMaxAnimWeightsBuffer(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -72,8 +63,12 @@ public class GlobalBuffers {
         if (indirectBuffer != null) {
             indirectBuffer.cleanup();
         }
-        animVerticesBuffer.cleanup();
-        animIndirectBuffer.cleanup();
+        if (animVerticesBuffer != null) {
+            animVerticesBuffer.cleanup();
+        }
+        if (animIndirectBuffer != null) {
+            animIndirectBuffer.cleanup();
+        }
         materialsBuffer.cleanup();
         animJointMatricesBuffer.cleanup();
         animWeightsBuffer.cleanup();
@@ -137,10 +132,6 @@ public class GlobalBuffers {
         return vulkanAnimEntityList;
     }
 
-    public boolean isIndirectRecorded() {
-        return indirectRecorded;
-    }
-
     private void loadAnimEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool, Queue
             queue) {
         vulkanAnimEntityList = new ArrayList<>();
@@ -179,11 +170,17 @@ public class GlobalBuffers {
                     }
                 }
             }
+            animVerticesBuffer = new VulkanBuffer(device, bufferOffset, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+
             numAnimIndirectCommands = indexedIndirectCommandList.size();
             if (numAnimIndirectCommands > 0) {
                 cmd.beginRecording();
 
                 StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numAnimIndirectCommands);
+                animIndirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgBuffer.getRequestedSize(),
+                        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
                 ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
                 VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
@@ -488,8 +485,6 @@ public class GlobalBuffers {
                 indirectStgBuffer.cleanup();
             }
         }
-
-        indirectRecorded = true;
     }
 
     private void loadWeightsBuffer(ModelData modelData, StgBuffer animWeightsBuffer, int meshCount) {

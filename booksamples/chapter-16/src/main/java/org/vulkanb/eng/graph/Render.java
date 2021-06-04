@@ -33,6 +33,7 @@ public class Render {
     private final Surface surface;
     private final TextureCache textureCache;
     private final List<VulkanModel> vulkanModels;
+    private long entitiesLoadedTimeStamp;
     private SwapChain swapChain;
 
     public Render(Window window, Scene scene) {
@@ -58,6 +59,7 @@ public class Render {
         animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache, scene);
         guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
                 lightingRenderActivity.getLightingFrameBuffer());
+        entitiesLoadedTimeStamp = 0;
     }
 
     public void cleanup() {
@@ -65,7 +67,6 @@ public class Render {
         graphQueue.waitIdle();
         device.waitIdle();
         textureCache.cleanup();
-        //vulkanModels.forEach(NewVulkanModel::cleanup);
         pipelineCache.cleanup();
         guiRenderActivity.cleanup();
         lightingRenderActivity.cleanup();
@@ -90,7 +91,9 @@ public class Render {
     }
 
     public void render(Window window, Scene scene) {
-        if (!globalBuffers.isIndirectRecorded()) {
+        if (entitiesLoadedTimeStamp < scene.getEntitiesLoadedTimeStamp()) {
+            entitiesLoadedTimeStamp = scene.getEntitiesLoadedTimeStamp();
+            device.waitIdle();
             globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue);
             animationComputeActivity.onAnimatedEntitiesLoaded(globalBuffers);
         }

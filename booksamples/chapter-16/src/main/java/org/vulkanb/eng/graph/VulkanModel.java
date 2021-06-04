@@ -35,7 +35,7 @@ public class VulkanModel {
     }
 
     public boolean hasAnimations() {
-        return vulkanAnimationDataList.size() > 0;
+        return !vulkanAnimationDataList.isEmpty();
     }
 
     public static class VulkanAnimationData {

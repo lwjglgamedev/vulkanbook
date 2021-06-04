@@ -31,7 +31,7 @@ public class TextureCache {
     }
 
     public List<Texture> getAsList() {
-        return new ArrayList<Texture>(textureMap.values());
+        return new ArrayList<>(textureMap.values());
     }
 
     public int getPosition(String texturePath) {

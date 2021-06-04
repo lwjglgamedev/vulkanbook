@@ -4,7 +4,7 @@ import java.util.*;
 
 public class IndexedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
 
-    private List<K> al_Index = new ArrayList<K>();
+    private List<K> al_Index = new ArrayList<>();
 
     public int getIndexOf(K key) {
         return al_Index.indexOf(key);

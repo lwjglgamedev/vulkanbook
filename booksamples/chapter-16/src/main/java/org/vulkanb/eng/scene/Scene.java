@@ -11,6 +11,7 @@ public class Scene {
     private Vector4f ambientLight;
     private Camera camera;
     private Light directionalLight;
+    private long entitiesLoadedTimeStamp;
     private Map<String, List<Entity>> entitiesMap;
     private IGuiInstance guiInstance;
     private boolean lightChanged;
@@ -32,6 +33,7 @@ public class Scene {
             entitiesMap.put(entity.getModelId(), entities);
         }
         entities.add(entity);
+        entitiesLoadedTimeStamp = System.currentTimeMillis();
     }
 
     public Vector4f getAmbientLight() {
@@ -48,6 +50,10 @@ public class Scene {
 
     public List<Entity> getEntitiesByModelId(String modelId) {
         return entitiesMap.get(modelId);
+    }
+
+    public long getEntitiesLoadedTimeStamp() {
+        return entitiesLoadedTimeStamp;
     }
 
     public Map<String, List<Entity>> getEntitiesMap() {
@@ -72,6 +78,7 @@ public class Scene {
 
     public void removeAllEntities() {
         entitiesMap.clear();
+        entitiesLoadedTimeStamp = System.currentTimeMillis();
     }
 
     public void removeEntity(Entity entity) {
@@ -79,6 +86,7 @@ public class Scene {
         if (entities != null) {
             entities.removeIf(e -> e.getId().equals(entity.getId()));
         }
+        entitiesLoadedTimeStamp = System.currentTimeMillis();
     }
 
     public void setGuiInstance(IGuiInstance guiInstance) {
