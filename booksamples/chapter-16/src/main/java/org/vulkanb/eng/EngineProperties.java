@@ -8,7 +8,7 @@ import java.util.Properties;
 public class EngineProperties {
     private static final float DEFAULT_FOV = 60.0f;
     private static final int DEFAULT_JOINT_MATRICES_BUF = 2000000;
-    private static final int DEFAULT_MAX_ANIM_WEIGTHS_BUF = 100000;
+    private static final int DEFAULT_MAX_ANIM_WEIGHTS_BUF = 100000;
     private static final int DEFAULT_MAX_INDICES_BUF = 5000000;
     private static final int DEFAULT_MAX_MATERIALS = 500;
     private static final int DEFAULT_MAX_TEXTURES = 100;
@@ -67,7 +67,7 @@ public class EngineProperties {
             maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", DEFAULT_MAX_TEXTURES).toString());
             maxVerticesBuffer = Integer.parseInt(props.getOrDefault("maxVerticesBuffer", DEFAULT_MAX_VERTICES_BUF).toString());
             maxIndicesBuffer = Integer.parseInt(props.getOrDefault("maxIndicesBuffer", DEFAULT_MAX_INDICES_BUF).toString());
-            maxAnimWeightsBuffer = Integer.parseInt(props.getOrDefault("maxAnimWeightsBuffer", DEFAULT_MAX_ANIM_WEIGTHS_BUF).toString());
+            maxAnimWeightsBuffer = Integer.parseInt(props.getOrDefault("maxAnimWeightsBuffer", DEFAULT_MAX_ANIM_WEIGHTS_BUF).toString());
             maxJointMatricesBuffer = Integer.parseInt(props.getOrDefault("maxJointMatricesBuffer", DEFAULT_JOINT_MATRICES_BUF).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);

@@ -18,14 +18,13 @@ public class TextureCache {
     }
 
     public Texture createTexture(Device device, String texturePath, int format) {
-        String path = texturePath;
         if (texturePath == null || texturePath.trim().isEmpty()) {
             return null;
         }
-        Texture texture = textureMap.get(path);
+        Texture texture = textureMap.get(texturePath);
         if (texture == null) {
-            texture = new Texture(device, path, format);
-            textureMap.put(path, texture);
+            texture = new Texture(device, texturePath, format);
+            textureMap.put(texturePath, texture);
         }
         return texture;
     }

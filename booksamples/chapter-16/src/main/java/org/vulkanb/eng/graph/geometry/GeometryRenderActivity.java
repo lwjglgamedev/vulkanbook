@@ -312,5 +312,4 @@ public class GeometryRenderActivity {
                     stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()), currentFence);
         }
     }
-
 }

@@ -229,7 +229,7 @@ public class GlobalBuffers {
 
     public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, boolean staticEntities) {
         if (staticEntities) {
-            Predicate<VulkanModel> excludedEntitiesPredicate = v -> v.hasAnimations();
+            Predicate<VulkanModel> excludedEntitiesPredicate = VulkanModel::hasAnimations;
             loadInstanceData(scene, vulkanModels, instanceDataBuffer, excludedEntitiesPredicate);
         } else {
             Predicate<VulkanModel> excludedEntitiesPredicate = v -> !v.hasAnimations();
@@ -458,7 +458,7 @@ public class GlobalBuffers {
                 ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
                 VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
 
-                indexedIndirectCommandList.forEach(i -> indCommandBuffer.put(i));
+                indexedIndirectCommandList.forEach(indCommandBuffer::put);
 
                 instanceDataBuffer = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);

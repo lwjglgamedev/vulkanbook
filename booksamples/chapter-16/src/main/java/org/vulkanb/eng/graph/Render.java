@@ -56,7 +56,7 @@ public class Render {
         List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
-        animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache, scene);
+        animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache);
         guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
                 lightingRenderActivity.getLightingFrameBuffer());
         entitiesLoadedTimeStamp = 0;
@@ -110,7 +110,7 @@ public class Render {
         globalBuffers.loadInstanceData(scene, vulkanModels, true);
         globalBuffers.loadInstanceData(scene, vulkanModels, false);
 
-        animationComputeActivity.recordCommandBuffer(globalBuffers, vulkanModels);
+        animationComputeActivity.recordCommandBuffer(globalBuffers);
         animationComputeActivity.submit();
 
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();

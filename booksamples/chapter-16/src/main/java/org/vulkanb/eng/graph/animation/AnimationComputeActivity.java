@@ -7,7 +7,7 @@ import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.*;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.scene.Entity;
 
 import java.nio.*;
 import java.util.*;
@@ -22,7 +22,6 @@ public class AnimationComputeActivity {
     private final Queue.ComputeQueue computeQueue;
     private final Device device;
     private final MemoryBarrier memoryBarrier;
-    private final Scene scene;
 
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
@@ -36,8 +35,7 @@ public class AnimationComputeActivity {
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
     private DescriptorSet.StorageDescriptorSet weightsDescriptorSet;
 
-    public AnimationComputeActivity(CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
-        this.scene = scene;
+    public AnimationComputeActivity(CommandPool commandPool, PipelineCache pipelineCache) {
         device = pipelineCache.getDevice();
         computeQueue = new Queue.ComputeQueue(device, 0);
         createDescriptorPool();
@@ -107,7 +105,7 @@ public class AnimationComputeActivity {
                 storageDescriptorSetLayout, globalBuffers.getAnimJointMatricesBuffer(), 0);
     }
 
-    public void recordCommandBuffer(GlobalBuffers globalBuffers, List<VulkanModel> vulkanModelList) {
+    public void recordCommandBuffer(GlobalBuffers globalBuffers) {
         fence.fenceWait();
         fence.reset();
 

@@ -25,7 +25,7 @@ public class Main implements IAppLogic {
 
     public static void main(String[] args) {
         LOGGER.info("Starting application");
-        Engine engine = new Engine("Vulkanbook", new Main());
+        Engine engine = new Engine("Vulkan Book", new Main());
         engine.start();
     }
 
@@ -35,8 +35,8 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec, boolean inputConsumed) {
-        float move = diffTimeMilisec * MOVEMENT_SPEED;
+    public void handleInput(Window window, Scene scene, long diffTimeMills, boolean inputConsumed) {
+        float move = diffTimeMills * MOVEMENT_SPEED;
         Camera camera = scene.getCamera();
         if (window.isKeyPressed(GLFW_KEY_W)) {
             camera.moveForward(move);
