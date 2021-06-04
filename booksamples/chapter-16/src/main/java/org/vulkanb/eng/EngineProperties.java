@@ -7,13 +7,15 @@ import java.util.Properties;
 
 public class EngineProperties {
     private static final float DEFAULT_FOV = 60.0f;
-    private static final int DEFAULT_MAX_JOINTS_MATRICES_LISTS = 100;
+    private static final int DEFAULT_JOINT_MATRICES_BUF = 2000000;
+    private static final int DEFAULT_MAX_ANIM_WEIGTHS_BUF = 100000;
+    private static final int DEFAULT_MAX_INDICES_BUF = 5000000;
     private static final int DEFAULT_MAX_MATERIALS = 500;
-    private static final int DEFAULT_MAX_TEXURES = 100;
+    private static final int DEFAULT_MAX_TEXTURES = 100;
+    private static final int DEFAULT_MAX_VERTICES_BUF = 20000000;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final float DEFAULT_SHADOW_BIAS = 0.00005f;
     private static final int DEFAULT_SHADOW_MAP_SIZE = 2048;
-    private static final int DEFAULT_STORAGES_BUFFERS = 100;
     private static final int DEFAULT_UPS = 30;
     private static final float DEFAULT_Z_FAR = 100.f;
     private static final float DEFAULT_Z_NEAR = 1.0f;
@@ -22,10 +24,12 @@ public class EngineProperties {
     private static EngineProperties instance;
     private String defaultTexturePath;
     private float fov;
-    private int maxJointsMatricesLists;
+    private int maxAnimWeightsBuffer;
+    private int maxIndicesBuffer;
+    private int maxJointMatricesBuffer;
     private int maxMaterials;
-    private int maxStorageBuffers;
     private int maxTextures;
+    private int maxVerticesBuffer;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -60,7 +64,11 @@ public class EngineProperties {
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", DEFAULT_SHADOW_BIAS).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", DEFAULT_SHADOW_MAP_SIZE).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
-            maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", DEFAULT_MAX_TEXURES).toString());
+            maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", DEFAULT_MAX_TEXTURES).toString());
+            maxVerticesBuffer = Integer.parseInt(props.getOrDefault("maxVerticesBuffer", DEFAULT_MAX_VERTICES_BUF).toString());
+            maxIndicesBuffer = Integer.parseInt(props.getOrDefault("maxIndicesBuffer", DEFAULT_MAX_INDICES_BUF).toString());
+            maxAnimWeightsBuffer = Integer.parseInt(props.getOrDefault("maxAnimWeightsBuffer", DEFAULT_MAX_ANIM_WEIGTHS_BUF).toString());
+            maxJointMatricesBuffer = Integer.parseInt(props.getOrDefault("maxJointMatricesBuffer", DEFAULT_JOINT_MATRICES_BUF).toString());
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -81,12 +89,28 @@ public class EngineProperties {
         return fov;
     }
 
+    public int getMaxAnimWeightsBuffer() {
+        return maxAnimWeightsBuffer;
+    }
+
+    public int getMaxIndicesBuffer() {
+        return maxIndicesBuffer;
+    }
+
+    public int getMaxJointMatricesBuffer() {
+        return maxJointMatricesBuffer;
+    }
+
     public int getMaxMaterials() {
         return maxMaterials;
     }
 
     public int getMaxTextures() {
         return maxTextures;
+    }
+
+    public int getMaxVerticesBuffer() {
+        return maxVerticesBuffer;
     }
 
     public String getPhysDeviceName() {
