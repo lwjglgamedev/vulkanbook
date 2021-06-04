@@ -11,6 +11,7 @@ import org.vulkanb.eng.scene.*;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.function.Predicate;
 
 import static org.lwjgl.vulkan.VK11.*;
 
@@ -199,31 +200,6 @@ public class GlobalBuffers {
         }
     }
 
-    public void loadAnimInstanceData(Scene scene, List<VulkanModel> vulkanModels) {
-        if (animInstanceDataBuffer == null) {
-            return;
-        }
-        long mappedMemory = animInstanceDataBuffer.map();
-        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) animInstanceDataBuffer.getRequestedSize());
-        animInstanceDataBuffer.map();
-        int pos = 0;
-        for (VulkanModel vulkanModel : vulkanModels) {
-            List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
-            if (entities.isEmpty() || !vulkanModel.hasAnimations()) {
-                continue;
-            }
-            for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
-                for (Entity entity : entities) {
-                    entity.getModelMatrix().get(pos, dataBuffer);
-                    pos += GraphConstants.MAT4X4_SIZE;
-                    dataBuffer.putInt(pos, vulkanMesh.globalMaterialIdx());
-                    pos += GraphConstants.INT_LENGTH;
-                }
-            }
-        }
-        animInstanceDataBuffer.unMap();
-    }
-
     private void loadAnimationData(ModelData modelData, VulkanModel vulkanModel, StgBuffer animJointMatricesStgBuffer) {
         List<ModelData.Animation> animationsList = modelData.getAnimationsList();
         if (!modelData.hasAnimations()) {
@@ -251,18 +227,28 @@ public class GlobalBuffers {
         loadAnimEntities(vulkanModelList, scene, commandPool, queue);
     }
 
-    // TODO: Merge with loadAnimnstanceData
-    public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels) {
-        if (instanceDataBuffer == null) {
+    public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, boolean staticEntities) {
+        if (staticEntities) {
+            Predicate<VulkanModel> excludedEntitiesPredicate = v -> v.hasAnimations();
+            loadInstanceData(scene, vulkanModels, instanceDataBuffer, excludedEntitiesPredicate);
+        } else {
+            Predicate<VulkanModel> excludedEntitiesPredicate = v -> !v.hasAnimations();
+            loadInstanceData(scene, vulkanModels, animInstanceDataBuffer, excludedEntitiesPredicate);
+        }
+    }
+
+    private void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, VulkanBuffer instanceBuffer,
+                                  Predicate<VulkanModel> excludedEntitiesPredicate) {
+        if (instanceBuffer == null) {
             return;
         }
-        long mappedMemory = instanceDataBuffer.map();
-        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) instanceDataBuffer.getRequestedSize());
-        instanceDataBuffer.map();
+        long mappedMemory = instanceBuffer.map();
+        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) instanceBuffer.getRequestedSize());
+        instanceBuffer.map();
         int pos = 0;
         for (VulkanModel vulkanModel : vulkanModels) {
             List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
-            if (entities.isEmpty() || vulkanModel.hasAnimations()) {
+            if (entities.isEmpty() || excludedEntitiesPredicate.test(vulkanModel)) {
                 continue;
             }
             for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
@@ -274,7 +260,7 @@ public class GlobalBuffers {
                 }
             }
         }
-        instanceDataBuffer.unMap();
+        instanceBuffer.unMap();
     }
 
     private List<VulkanModel.VulkanMaterial> loadMaterials(Device device, TextureCache textureCache, StgBuffer

@@ -107,8 +107,8 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
-        globalBuffers.loadInstanceData(scene, vulkanModels);
-        globalBuffers.loadAnimInstanceData(scene, vulkanModels);
+        globalBuffers.loadInstanceData(scene, vulkanModels, true);
+        globalBuffers.loadInstanceData(scene, vulkanModels, false);
 
         animationComputeActivity.recordCommandBuffer(globalBuffers, vulkanModels);
         animationComputeActivity.submit();
