@@ -135,7 +135,7 @@ public class Render {
         if (entitiesLoadedTimeStamp < scene.getEntitiesLoadedTimeStamp()) {
             entitiesLoadedTimeStamp = scene.getEntitiesLoadedTimeStamp();
             device.waitIdle();
-            globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue);
+            globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue, swapChain.getNumImages());
             animationComputeActivity.onAnimatedEntitiesLoaded(globalBuffers);
             recordCommands();
         }
@@ -149,8 +149,7 @@ public class Render {
             swapChain.acquireNextImage();
         }
 
-        globalBuffers.loadInstanceData(scene, vulkanModels, true);
-        globalBuffers.loadInstanceData(scene, vulkanModels, false);
+        globalBuffers.loadInstanceData(scene, vulkanModels, swapChain.getCurrentFrame());
 
         animationComputeActivity.recordCommandBuffer(globalBuffers);
         animationComputeActivity.submit();

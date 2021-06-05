@@ -181,7 +181,7 @@ public class ShadowRenderActivity {
             // Draw commands for non animated models
             if (globalBuffers.getNumIndirectCommands() > 0) {
                 vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
-                instanceBuffer.put(0, globalBuffers.getInstanceDataBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getInstanceDataBuffers()[idx].getBuffer());
 
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                 vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
@@ -195,7 +195,7 @@ public class ShadowRenderActivity {
             if (globalBuffers.getNumAnimIndirectCommands() > 0) {
                 // Draw commands for  animated models
                 vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
-                instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffers()[idx].getBuffer());
 
                 vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                 vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);

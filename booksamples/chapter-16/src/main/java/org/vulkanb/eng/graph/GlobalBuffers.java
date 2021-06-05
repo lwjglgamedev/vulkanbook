@@ -29,11 +29,10 @@ public class GlobalBuffers {
     private final VulkanBuffer materialsBuffer;
     private final VulkanBuffer verticesBuffer;
     private VulkanBuffer animIndirectBuffer;
-    private VulkanBuffer animInstanceDataBuffer;
+    private VulkanBuffer[] animInstanceDataBuffers;
     private VulkanBuffer animVerticesBuffer;
     private VulkanBuffer indirectBuffer;
-    // TODO: One model for image in the swap chain
-    private VulkanBuffer instanceDataBuffer;
+    private VulkanBuffer[] instanceDataBuffers;
     private int numAnimIndirectCommands;
     private int numIndirectCommands;
     // TODO: Check this
@@ -72,11 +71,11 @@ public class GlobalBuffers {
         materialsBuffer.cleanup();
         animJointMatricesBuffer.cleanup();
         animWeightsBuffer.cleanup();
-        if (instanceDataBuffer != null) {
-            instanceDataBuffer.cleanup();
+        if (instanceDataBuffers != null) {
+            Arrays.stream(instanceDataBuffers).forEach(VulkanBuffer::cleanup);
         }
-        if (animInstanceDataBuffer != null) {
-            animInstanceDataBuffer.cleanup();
+        if (animInstanceDataBuffers != null) {
+            Arrays.stream(animInstanceDataBuffers).forEach(VulkanBuffer::cleanup);
         }
     }
 
@@ -84,8 +83,8 @@ public class GlobalBuffers {
         return animIndirectBuffer;
     }
 
-    public VulkanBuffer getAnimInstanceDataBuffer() {
-        return animInstanceDataBuffer;
+    public VulkanBuffer[] getAnimInstanceDataBuffers() {
+        return animInstanceDataBuffers;
     }
 
     public VulkanBuffer getAnimJointMatricesBuffer() {
@@ -108,8 +107,8 @@ public class GlobalBuffers {
         return indirectBuffer;
     }
 
-    public VulkanBuffer getInstanceDataBuffer() {
-        return instanceDataBuffer;
+    public VulkanBuffer[] getInstanceDataBuffers() {
+        return instanceDataBuffers;
     }
 
     public VulkanBuffer getMaterialsBuffer() {
@@ -132,8 +131,8 @@ public class GlobalBuffers {
         return vulkanAnimEntityList;
     }
 
-    private void loadAnimEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool, Queue
-            queue) {
+    private void loadAnimEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool,
+                                  Queue queue, int numSwapChainImages) {
         vulkanAnimEntityList = new ArrayList<>();
         numAnimIndirectCommands = 0;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -178,6 +177,9 @@ public class GlobalBuffers {
                 cmd.beginRecording();
 
                 StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numAnimIndirectCommands);
+                if (animIndirectBuffer != null) {
+                    animIndirectBuffer.cleanup();
+                }
                 animIndirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgBuffer.getRequestedSize(),
                         VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
@@ -186,8 +188,14 @@ public class GlobalBuffers {
 
                 indexedIndirectCommandList.forEach(indCommandBuffer::put);
 
-                animInstanceDataBuffer = new VulkanBuffer(device, numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
-                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                if (animInstanceDataBuffers != null) {
+                    Arrays.stream(animInstanceDataBuffers).forEach(VulkanBuffer::cleanup);
+                }
+                animInstanceDataBuffers = new VulkanBuffer[numSwapChainImages];
+                for (int i = 0; i < numSwapChainImages; i++) {
+                    animInstanceDataBuffers[i] = new VulkanBuffer(device, numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                }
 
                 indirectStgBuffer.recordTransferCommand(cmd, animIndirectBuffer);
 
@@ -220,20 +228,17 @@ public class GlobalBuffers {
         }
     }
 
-    public void loadEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool, Queue
-            queue) {
-        loadStaticEntities(vulkanModelList, scene, commandPool, queue);
-        loadAnimEntities(vulkanModelList, scene, commandPool, queue);
+    public void loadEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool,
+                             Queue queue, int numSwapChainImages) {
+        loadStaticEntities(vulkanModelList, scene, commandPool, queue, numSwapChainImages);
+        loadAnimEntities(vulkanModelList, scene, commandPool, queue, numSwapChainImages);
     }
 
-    public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, boolean staticEntities) {
-        if (staticEntities) {
-            Predicate<VulkanModel> excludedEntitiesPredicate = VulkanModel::hasAnimations;
-            loadInstanceData(scene, vulkanModels, instanceDataBuffer, excludedEntitiesPredicate);
-        } else {
-            Predicate<VulkanModel> excludedEntitiesPredicate = v -> !v.hasAnimations();
-            loadInstanceData(scene, vulkanModels, animInstanceDataBuffer, excludedEntitiesPredicate);
-        }
+    public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, int currentSwapChainIdx) {
+        Predicate<VulkanModel> excludeAnimatedEntitiesPredicate = VulkanModel::hasAnimations;
+        loadInstanceData(scene, vulkanModels, instanceDataBuffers[currentSwapChainIdx], excludeAnimatedEntitiesPredicate);
+        Predicate<VulkanModel> excludedStaticEntitiesPredicate = v -> !v.hasAnimations();
+        loadInstanceData(scene, vulkanModels, animInstanceDataBuffers[currentSwapChainIdx], excludedStaticEntitiesPredicate);
     }
 
     private void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, VulkanBuffer instanceBuffer,
@@ -352,7 +357,7 @@ public class GlobalBuffers {
                 verticesData.putFloat(textCoords[startTextCoord + 1]);
             }
 
-            Arrays.stream(indices).forEach(i -> indicesData.putInt(i));
+            Arrays.stream(indices).forEach(indicesData::putInt);
 
             loadWeightsBuffer(modelData, animWeightsStgBuffer, meshCount);
             meshCount++;
@@ -418,8 +423,8 @@ public class GlobalBuffers {
         return vulkanModelList;
     }
 
-    private void loadStaticEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool, Queue
-            queue) {
+    private void loadStaticEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool,
+                                    Queue queue, int numSwapChainImages) {
         numIndirectCommands = 0;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             Device device = commandPool.getDevice();
@@ -451,6 +456,9 @@ public class GlobalBuffers {
                 cmd.beginRecording();
 
                 StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
+                if (indirectBuffer != null) {
+                    indirectBuffer.cleanup();
+                }
                 indirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgBuffer.getRequestedSize(),
                         VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
@@ -459,8 +467,14 @@ public class GlobalBuffers {
 
                 indexedIndirectCommandList.forEach(indCommandBuffer::put);
 
-                instanceDataBuffer = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
-                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                if (instanceDataBuffers != null) {
+                    Arrays.stream(instanceDataBuffers).forEach(VulkanBuffer::cleanup);
+                }
+                instanceDataBuffers = new VulkanBuffer[numSwapChainImages];
+                for (int i = 0; i < numSwapChainImages; i++) {
+                    instanceDataBuffers[i] = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                }
 
                 indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
 
