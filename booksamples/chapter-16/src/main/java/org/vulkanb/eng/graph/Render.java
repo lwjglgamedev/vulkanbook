@@ -1,6 +1,7 @@
 package org.vulkanb.eng.graph;
 
 import org.apache.logging.log4j.*;
+import org.lwjgl.system.MemoryStack;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.geometry.GeometryRenderActivity;
@@ -12,6 +13,8 @@ import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
 
 import java.util.*;
+
+import static org.lwjgl.vulkan.VK10.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 public class Render {
 
@@ -33,7 +36,9 @@ public class Render {
     private final Surface surface;
     private final TextureCache textureCache;
     private final List<VulkanModel> vulkanModels;
+    private CommandBuffer[] commandBuffers;
     private long entitiesLoadedTimeStamp;
+    private Fence[] fences;
     private SwapChain swapChain;
 
     public Render(Window window, Scene scene) {
@@ -60,6 +65,19 @@ public class Render {
         guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
                 lightingRenderActivity.getLightingFrameBuffer());
         entitiesLoadedTimeStamp = 0;
+        createCommandBuffers();
+    }
+
+    public CommandBuffer acquireCurrentCommandBuffer() {
+        int idx = swapChain.getCurrentFrame();
+
+        Fence fence = fences[idx];
+        CommandBuffer commandBuffer = commandBuffers[idx];
+
+        fence.fenceWait();
+        fence.reset();
+
+        return commandBuffer;
     }
 
     public void cleanup() {
@@ -73,6 +91,8 @@ public class Render {
         animationComputeActivity.cleanup();
         shadowRenderActivity.cleanup();
         geometryRenderActivity.cleanup();
+        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.stream(fences).forEach(Fence::cleanup);
         commandPool.cleanup();
         swapChain.cleanup();
         surface.cleanup();
@@ -80,6 +100,17 @@ public class Render {
         device.cleanup();
         physicalDevice.cleanup();
         instance.cleanup();
+    }
+
+    private void createCommandBuffers() {
+        int numImages = swapChain.getNumImages();
+        commandBuffers = new CommandBuffer[numImages];
+        fences = new Fence[numImages];
+
+        for (int i = 0; i < numImages; i++) {
+            commandBuffers[i] = new CommandBuffer(commandPool, true, false);
+            fences[i] = new Fence(device, true);
+        }
     }
 
     public void loadModels(List<ModelData> modelDataList) {
@@ -90,12 +121,23 @@ public class Render {
         geometryRenderActivity.loadModels(textureCache);
     }
 
+    private void recordCommands() {
+        for (CommandBuffer commandBuffer : commandBuffers) {
+            commandBuffer.reset();
+            commandBuffer.beginRecording();
+            geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
+            shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
+            commandBuffer.endRecording();
+        }
+    }
+
     public void render(Window window, Scene scene) {
         if (entitiesLoadedTimeStamp < scene.getEntitiesLoadedTimeStamp()) {
             entitiesLoadedTimeStamp = scene.getEntitiesLoadedTimeStamp();
             device.waitIdle();
             globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue);
             animationComputeActivity.onAnimatedEntitiesLoaded(globalBuffers);
+            recordCommands();
         }
         if (window.getWidth() <= 0 && window.getHeight() <= 0) {
             return;
@@ -113,11 +155,9 @@ public class Render {
         animationComputeActivity.recordCommandBuffer(globalBuffers);
         animationComputeActivity.submit();
 
-        CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
-        geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
-        shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
-        geometryRenderActivity.endRecording(commandBuffer);
-        geometryRenderActivity.submit(graphQueue);
+        CommandBuffer commandBuffer = acquireCurrentCommandBuffer();
+        submitSceneCommand(graphQueue, commandBuffer);
+
         commandBuffer = lightingRenderActivity.beginRecording(shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.recordCommandBuffer(commandBuffer);
         guiRenderActivity.recordCommandBuffer(scene, commandBuffer);
@@ -141,9 +181,22 @@ public class Render {
                 engProps.isvSync());
         geometryRenderActivity.resize(swapChain);
         shadowRenderActivity.resize(swapChain);
+        recordCommands();
         List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
         lightingRenderActivity.resize(swapChain, attachments);
         guiRenderActivity.resize(swapChain);
+    }
+
+    public void submitSceneCommand(Queue queue, CommandBuffer commandBuffer) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            int idx = swapChain.getCurrentFrame();
+            Fence currentFence = fences[idx];
+            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
+            queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
+                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
+                    stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()), currentFence);
+        }
     }
 }

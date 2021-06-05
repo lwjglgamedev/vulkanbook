@@ -117,7 +117,6 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
-    // TODO: Check if commands can be pre-recorded
     public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {

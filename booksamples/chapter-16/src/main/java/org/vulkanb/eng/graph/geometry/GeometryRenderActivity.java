@@ -5,7 +5,6 @@ import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.*;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.Scene;
 
@@ -28,9 +27,7 @@ public class GeometryRenderActivity {
     private final PipelineCache pipelineCache;
     private final Scene scene;
 
-    private CommandBuffer[] commandBuffers;
     private DescriptorPool descriptorPool;
-    private Fence[] fences;
     private DescriptorSetLayout[] geometryDescriptorSetLayouts;
     private DescriptorSetLayout.DynUniformDescriptorSetLayout materialDescriptorSetLayout;
     private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
@@ -61,24 +58,8 @@ public class GeometryRenderActivity {
         createDescriptorPool();
         createDescriptorSets(numImages, globalBuffers);
         createPipeline();
-        createCommandBuffers(commandPool, numImages);
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         memoryBarrier = new MemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
-    }
-
-    public CommandBuffer beginRecording() {
-        int idx = swapChain.getCurrentFrame();
-
-        Fence fence = fences[idx];
-        CommandBuffer commandBuffer = commandBuffers[idx];
-
-        fence.fenceWait();
-        fence.reset();
-
-        commandBuffer.reset();
-        commandBuffer.beginRecording();
-
-        return commandBuffer;
     }
 
     public void cleanup() {
@@ -94,18 +75,6 @@ public class GeometryRenderActivity {
         descriptorPool.cleanup();
         shaderProgram.cleanup();
         geometryFrameBuffer.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
-    }
-
-    private void createCommandBuffers(CommandPool commandPool, int numImages) {
-        commandBuffers = new CommandBuffer[numImages];
-        fences = new Fence[numImages];
-
-        for (int i = 0; i < numImages; i++) {
-            commandBuffers[i] = new CommandBuffer(commandPool, true, false);
-            fences[i] = new Fence(device, true);
-        }
     }
 
     private void createDescriptorPool() {
@@ -171,10 +140,6 @@ public class GeometryRenderActivity {
                 });
     }
 
-    public void endRecording(CommandBuffer commandBuffer) {
-        commandBuffer.endRecording();
-    }
-
     public List<Attachment> getAttachments() {
         return geometryFrameBuffer.geometryAttachments().getAttachments();
     }
@@ -195,7 +160,6 @@ public class GeometryRenderActivity {
                 textureSampler, 0);
     }
 
-    // TODO: Check if commands can be pre-recorded
     public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
@@ -298,18 +262,5 @@ public class GeometryRenderActivity {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
         geometryFrameBuffer.resize(swapChain);
-    }
-
-    public void submit(Queue queue) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            int idx = swapChain.getCurrentFrame();
-            CommandBuffer commandBuffer = commandBuffers[idx];
-            Fence currentFence = fences[idx];
-            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
-            queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
-                    stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()), currentFence);
-        }
     }
 }

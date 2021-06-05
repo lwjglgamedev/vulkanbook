@@ -26,7 +26,6 @@ layout(push_constant) uniform pushConstants {
     uint dstOffset;
 } push_constants;
 
-// TODO: Weights for normals
 void main()
 {
     int baseIdx = int(gl_GlobalInvocationID.x) * 14;
