@@ -11,7 +11,7 @@ public class Entity {
     private Vector3f position;
     private Quaternionf rotation;
     private float scale;
-    
+
     public Entity(String id, String modelId, Vector3f position) {
         this.id = id;
         this.modelId = modelId;
