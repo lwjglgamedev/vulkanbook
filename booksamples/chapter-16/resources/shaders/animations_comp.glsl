@@ -20,6 +20,7 @@ layout (local_size_x=32, local_size_y=1, local_size_z=1) in;
 
 layout(push_constant) uniform pushConstants {
     uint srcOffset;
+    uint srcSize;
     uint weightsOffset;
     uint jointMatricesOffset;
     uint dstOffset;
@@ -28,12 +29,17 @@ layout(push_constant) uniform pushConstants {
 // TODO: Weights for normals
 void main()
 {
+    int baseIdx = int(gl_GlobalInvocationID.x) * 14;
     uint baseIdxWeightsBuf  = push_constants.weightsOffset + int(gl_GlobalInvocationID.x) * 8;
+    uint baseIdxSrcBuf = push_constants.srcOffset + baseIdx;
+    uint baseIdxDstBuf = push_constants.dstOffset + baseIdx;
+    if (baseIdx >= push_constants.srcSize) {
+        return;
+    }
+
     vec4 weights = vec4(weightsVector.data[baseIdxWeightsBuf], weightsVector.data[baseIdxWeightsBuf + 1], weightsVector.data[baseIdxWeightsBuf + 2], weightsVector.data[baseIdxWeightsBuf + 3]);
     ivec4 joints = ivec4(weightsVector.data[baseIdxWeightsBuf + 4], weightsVector.data[baseIdxWeightsBuf + 5], weightsVector.data[baseIdxWeightsBuf + 6], weightsVector.data[baseIdxWeightsBuf + 7]);
 
-    uint baseIdxSrcBuf = push_constants.srcOffset + int(gl_GlobalInvocationID.x) * 14;
-    uint baseIdxDstBuf = push_constants.dstOffset + int(gl_GlobalInvocationID.x) * 14;
     vec4 position = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 1);
     position =
     weights.x * jointMatrices.data[push_constants.jointMatricesOffset + joints.x] * position +

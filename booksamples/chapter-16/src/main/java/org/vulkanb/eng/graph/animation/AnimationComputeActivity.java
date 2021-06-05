@@ -19,6 +19,8 @@ public class AnimationComputeActivity {
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
     private static final int LOCAL_SIZE_X = 32;
+    private static final int PUSH_CONSTANTS_SIZE = GraphConstants.INT_LENGTH * 5;
+
     private final Queue.ComputeQueue computeQueue;
     private final Device device;
     private final MemoryBarrier memoryBarrier;
@@ -77,9 +79,8 @@ public class AnimationComputeActivity {
     }
 
     private void createPipeline(PipelineCache pipelineCache) {
-        int pushConstantsSize = GraphConstants.INT_LENGTH * 4;
         ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo = new ComputePipeline.PipeLineCreationInfo(shaderProgram,
-                descriptorSetLayouts, pushConstantsSize);
+                descriptorSetLayouts, PUSH_CONSTANTS_SIZE);
         computePipeline = new ComputePipeline(pipelineCache, pipeLineCreationInfo);
     }
 
@@ -122,10 +123,11 @@ public class AnimationComputeActivity {
 
             LongBuffer descriptorSets = stack.mallocLong(4);
 
-            descriptorSets.put(0, srcVerticesDescriptorSet.getVkDescriptorSet());
-            descriptorSets.put(1, weightsDescriptorSet.getVkDescriptorSet());
-            descriptorSets.put(2, dstVerticesDescriptorSet.getVkDescriptorSet());
-            descriptorSets.put(3, jointMatricesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(srcVerticesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(weightsDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(dstVerticesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(jointMatricesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.flip();
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
                     computePipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 
@@ -148,8 +150,9 @@ public class AnimationComputeActivity {
                     int groupSize = (int) Math.ceil((mesh.verticesSize() / InstancedVertexBufferStructure.SIZE_IN_BYTES) / (float) LOCAL_SIZE_X);
 
                     // Push constants
-                    ByteBuffer pushConstantBuffer = stack.malloc(GraphConstants.INT_LENGTH * 4);
+                    ByteBuffer pushConstantBuffer = stack.malloc(PUSH_CONSTANTS_SIZE);
                     pushConstantBuffer.putInt(mesh.verticesOffset() / GraphConstants.FLOAT_LENGTH);
+                    pushConstantBuffer.putInt(mesh.verticesSize() / GraphConstants.FLOAT_LENGTH);
                     pushConstantBuffer.putInt(mesh.weightsOffset() / GraphConstants.FLOAT_LENGTH);
                     pushConstantBuffer.putInt(jointMatricesOffset / GraphConstants.MAT4X4_SIZE);
                     pushConstantBuffer.putInt(vulkanAnimMesh.meshOffset() / GraphConstants.FLOAT_LENGTH);

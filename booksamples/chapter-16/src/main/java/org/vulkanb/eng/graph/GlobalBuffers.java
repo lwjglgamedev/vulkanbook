@@ -16,7 +16,6 @@ import java.util.function.Predicate;
 import static org.lwjgl.vulkan.VK11.*;
 
 // TODO: Test again with multiple models: Check loadEntitiesModel buffer if it advances with each put operation
-// TODO: Test again with animation models
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
     private static final Logger LOGGER = LogManager.getLogger();
