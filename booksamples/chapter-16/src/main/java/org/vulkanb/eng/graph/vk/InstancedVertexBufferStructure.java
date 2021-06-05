@@ -4,7 +4,6 @@ import org.lwjgl.vulkan.*;
 
 import static org.lwjgl.vulkan.VK10.*;
 
-// TODO: Try to extract common code
 public class InstancedVertexBufferStructure extends VertexInputStateInfo {
 
     public static final int TEXT_COORD_COMPONENTS = 2;

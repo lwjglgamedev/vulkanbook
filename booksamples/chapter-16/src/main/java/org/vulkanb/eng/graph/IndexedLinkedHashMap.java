@@ -4,19 +4,19 @@ import java.util.*;
 
 public class IndexedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
 
-    private final List<K> al_Index = new ArrayList<>();
+    private final List<K> indexList = new ArrayList<>();
 
     public int getIndexOf(K key) {
-        return al_Index.indexOf(key);
+        return indexList.indexOf(key);
     }
 
     public V getValueAtIndex(int i) {
-        return super.get(al_Index.get(i));
+        return super.get(indexList.get(i));
     }
 
     @Override
     public V put(K key, V val) {
-        if (!super.containsKey(key)) al_Index.add(key);
+        if (!super.containsKey(key)) indexList.add(key);
         return super.put(key, val);
     }
 }

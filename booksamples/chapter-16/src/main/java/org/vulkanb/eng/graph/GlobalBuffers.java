@@ -15,7 +15,6 @@ import java.util.function.Predicate;
 
 import static org.lwjgl.vulkan.VK11.*;
 
-// TODO: Test again with multiple models: Check loadEntitiesModel buffer if it advances with each put operation
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
     private static final Logger LOGGER = LogManager.getLogger();
@@ -35,7 +34,6 @@ public class GlobalBuffers {
     private VulkanBuffer[] instanceDataBuffers;
     private int numAnimIndirectCommands;
     private int numIndirectCommands;
-    // TODO: Check this
     private List<VulkanAnimEntity> vulkanAnimEntityList;
 
     public GlobalBuffers(Device device) {
@@ -46,7 +44,7 @@ public class GlobalBuffers {
         indicesBuffer = new VulkanBuffer(device, engProps.getMaxIndicesBuffer(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         int maxMaterials = engProps.getMaxMaterials();
-        materialsBuffer = new VulkanBuffer(device, maxMaterials * GraphConstants.VEC4_SIZE * 9, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        materialsBuffer = new VulkanBuffer(device, (long) maxMaterials * GraphConstants.VEC4_SIZE * 9, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
         animJointMatricesBuffer = new VulkanBuffer(device, engProps.getMaxJointMatricesBuffer(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
@@ -176,11 +174,11 @@ public class GlobalBuffers {
             if (numAnimIndirectCommands > 0) {
                 cmd.beginRecording();
 
-                StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numAnimIndirectCommands);
+                StgBuffer indirectStgBuffer = new StgBuffer(device, (long) IND_COMMAND_STRIDE * numAnimIndirectCommands);
                 if (animIndirectBuffer != null) {
                     animIndirectBuffer.cleanup();
                 }
-                animIndirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgBuffer.getRequestedSize(),
+                animIndirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgVulkanBuffer.getRequestedSize(),
                         VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
                 ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
@@ -193,7 +191,8 @@ public class GlobalBuffers {
                 }
                 animInstanceDataBuffers = new VulkanBuffer[numSwapChainImages];
                 for (int i = 0; i < numSwapChainImages; i++) {
-                    animInstanceDataBuffers[i] = new VulkanBuffer(device, numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                    animInstanceDataBuffers[i] = new VulkanBuffer(device,
+                            (long) numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
                 }
 
@@ -381,7 +380,7 @@ public class GlobalBuffers {
         cmd.beginRecording();
 
         // Load a default material
-        List<ModelData.Material> defaultMaterialList = Arrays.asList(new ModelData.Material());
+        List<ModelData.Material> defaultMaterialList = Collections.singletonList(new ModelData.Material());
         loadMaterials(device, textureCache, materialsStgBuffer, defaultMaterialList, textureList);
 
         for (ModelData modelData : modelDataList) {
@@ -455,11 +454,11 @@ public class GlobalBuffers {
             if (numIndirectCommands > 0) {
                 cmd.beginRecording();
 
-                StgBuffer indirectStgBuffer = new StgBuffer(device, IND_COMMAND_STRIDE * numIndirectCommands);
+                StgBuffer indirectStgBuffer = new StgBuffer(device, (long) IND_COMMAND_STRIDE * numIndirectCommands);
                 if (indirectBuffer != null) {
                     indirectBuffer.cleanup();
                 }
-                indirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgBuffer.getRequestedSize(),
+                indirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgVulkanBuffer.getRequestedSize(),
                         VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
                 ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
@@ -472,7 +471,7 @@ public class GlobalBuffers {
                 }
                 instanceDataBuffers = new VulkanBuffer[numSwapChainImages];
                 for (int i = 0; i < numSwapChainImages; i++) {
-                    instanceDataBuffers[i] = new VulkanBuffer(device, numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                    instanceDataBuffers[i] = new VulkanBuffer(device, (long) numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
                 }
 
@@ -514,17 +513,17 @@ public class GlobalBuffers {
 
     private static class StgBuffer {
         private final ByteBuffer dataBuffer;
-        private final VulkanBuffer stgBuffer;
+        private final VulkanBuffer stgVulkanBuffer;
 
         public StgBuffer(Device device, long size) {
-            stgBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-            long mappedMemory = stgBuffer.map();
-            dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) stgBuffer.getRequestedSize());
+            stgVulkanBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            long mappedMemory = stgVulkanBuffer.map();
+            dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) stgVulkanBuffer.getRequestedSize());
         }
 
         public void cleanup() {
-            stgBuffer.unMap();
-            stgBuffer.cleanup();
+            stgVulkanBuffer.unMap();
+            stgVulkanBuffer.cleanup();
         }
 
         public ByteBuffer getDataBuffer() {
@@ -534,8 +533,8 @@ public class GlobalBuffers {
         private void recordTransferCommand(CommandBuffer cmd, VulkanBuffer dstBuffer) {
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 VkBufferCopy.Buffer copyRegion = VkBufferCopy.callocStack(1, stack)
-                        .srcOffset(0).dstOffset(0).size(stgBuffer.getRequestedSize());
-                vkCmdCopyBuffer(cmd.getVkCommandBuffer(), stgBuffer.getBuffer(), dstBuffer.getBuffer(), copyRegion);
+                        .srcOffset(0).dstOffset(0).size(stgVulkanBuffer.getRequestedSize());
+                vkCmdCopyBuffer(cmd.getVkCommandBuffer(), stgVulkanBuffer.getBuffer(), dstBuffer.getBuffer(), copyRegion);
             }
         }
     }
