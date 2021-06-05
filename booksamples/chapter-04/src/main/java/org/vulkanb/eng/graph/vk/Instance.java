@@ -167,7 +167,7 @@ public class Instance {
 
             // Fallback 1
             if (supportedLayers.contains("VK_LAYER_LUNARG_standard_validation")) {
-                layersToUse.add("VK_LAYER_KHRONOS_validation");
+                layersToUse.add("VK_LAYER_LUNARG_standard_validation");
                 return layersToUse;
             }
 

@@ -53,8 +53,8 @@ public class GuiRenderActivity {
         fontsTextureSampler.cleanup();
         descriptorPool.cleanup();
         fontsTexture.cleanup();
-        Arrays.stream(vertexBuffers).filter(v -> v != null).forEach(VulkanBuffer::cleanup);
-        Arrays.stream(indicesBuffers).filter(v -> v != null).forEach(VulkanBuffer::cleanup);
+        Arrays.stream(vertexBuffers).filter(Objects::nonNull).forEach(VulkanBuffer::cleanup);
+        Arrays.stream(indicesBuffers).filter(Objects::nonNull).forEach(VulkanBuffer::cleanup);
         ImGui.destroyContext();
         pipeline.cleanup();
         shaderProgram.cleanup();

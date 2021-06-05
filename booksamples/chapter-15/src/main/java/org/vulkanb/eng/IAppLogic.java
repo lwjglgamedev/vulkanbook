@@ -7,7 +7,7 @@ public interface IAppLogic {
 
     void cleanup();
 
-    void handleInput(Window window, Scene scene, long diffTimeMilisec, boolean inputConsumed);
+    void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed);
 
     void init(Window window, Scene scene, Render render);
 }

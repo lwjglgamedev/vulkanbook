@@ -779,8 +779,8 @@ public class Main implements IAppLogic {
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float MOVEMENT_SPEED = 10.0f / 1E9f;
     ...
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
-        float move = diffTimeMilisec * MOVEMENT_SPEED;
+    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+        float move = diffTimeMillis * MOVEMENT_SPEED;
         Camera camera = scene.getCamera();
         if (window.isKeyPressed(GLFW_KEY_W)) {
             camera.moveForward(move);

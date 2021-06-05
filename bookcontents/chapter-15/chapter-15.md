@@ -70,8 +70,8 @@ public class GuiRenderActivity {
         fontsTextureSampler.cleanup();
         descriptorPool.cleanup();
         fontsTexture.cleanup();
-        Arrays.stream(vertexBuffers).filter(v -> v != null).forEach(VulkanBuffer::cleanup);
-        Arrays.stream(indicesBuffers).filter(v -> v != null).forEach(VulkanBuffer::cleanup);
+        Arrays.stream(vertexBuffers).filter(Objects::nonNull).forEach(VulkanBuffer::cleanup);
+        Arrays.stream(indicesBuffers).filter(Objects::nonNull).forEach(VulkanBuffer::cleanup);
         ImGui.destroyContext();
         pipeline.cleanup();
         shaderProgram.cleanup();
@@ -722,7 +722,7 @@ This change requires to modify the `IAppLogic` `handleInput` method to receive a
 ```java
 public interface IAppLogic {
     ...
-    void handleInput(Window window, Scene scene, long diffTimeMilisec, boolean inputConsumed);
+    void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed);
     ...
 }
 ```
@@ -748,7 +748,7 @@ The final step is to modify the `Main` class to set different GUIs depending on 
 public class Main implements IAppLogic {
     ...
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec, boolean inputConsumed) {
+    public void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed) {
         ...
         if (window.isKeyPressed(GLFW_KEY_0)) {
             scene.setGuiInstance(null);

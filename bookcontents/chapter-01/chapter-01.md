@@ -40,7 +40,7 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
+    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
         // To be implemented
     }
 

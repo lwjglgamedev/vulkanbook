@@ -1075,7 +1075,7 @@ public class Main implements IAppLogic {
     private Light directionalLight;
     private float lightAngle;
     ...
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
+    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
         ...
         if (window.isKeyPressed(GLFW_KEY_LEFT)) {
             angleInc -= 0.05f;
