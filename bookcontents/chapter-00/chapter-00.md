@@ -56,7 +56,7 @@ You will also need the following:
 
 - The Vulkan [SDK](https://vulkan.lunarg.com/).
 
-Bring your own IDE. However, since it is a multi-module project it is advised to open each chapter independently. If you still want to work with the root project, please be aware that you will net to set the working directory to the root of each of the sub-projects you want to run. The resources (such as 3D models, shaders and textures are loaded using relative paths to the working directory).
+Bring your own IDE. However, since it is a multi-module project it is advised to open each chapter independently. If you still want to work with the root project, please be aware that you will need to set the working directory to the root of each of the sub-projects you want to run. The resources (such as 3D models, shaders and textures are loaded using relative paths to the working directory).
 
 ## Resources used for writing this book
 
@@ -64,7 +64,7 @@ This book is the result of my self learning process. I do not work on this domai
 
 There are multiple materials that I've consulted to write this book. The following list collects the ones that I've found more useful and that I've consulted many times while leaning the Vulkan path:
 
-- [The Vulkan tutorial](https://vulkan-tutorial.com/). This i C based tutorial for Vulkan which describes in great detail the core concepts of the API.
+- [The Vulkan tutorial](https://vulkan-tutorial.com/). This is C based tutorial for Vulkan which describes in great detail the core concepts of the API.
 - [Sascha Willems](https://github.com/SaschaWillems/Vulkan) Vulkan samples. This an awesome collection of C++ samples which cover a huge set of Vulkan features.
 - [Khronos Vulkan samples](https://github.com/KhronosGroup/Vulkan-Samples).
 - LWJGL Vulkan [demos](https://github.com/LWJGL/lwjgl3-demos/tree/master/src/org/lwjgl/demo/vulkan).
