@@ -50,6 +50,10 @@ public class Entity {
         return scale;
     }
 
+    public boolean hasAnimation() {
+        return entityAnimation != null;
+    }
+
     public void setEntityAnimation(EntityAnimation entityAnimation) {
         this.entityAnimation = entityAnimation;
     }

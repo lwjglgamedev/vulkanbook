@@ -30,7 +30,7 @@ public class Main implements IAppLogic {
 
     public static void main(String[] args) {
         LOGGER.info("Starting application");
-        Engine engine = new Engine("Vulkanbook", new Main());
+        Engine engine = new Engine("Vulkan Book", new Main());
         engine.start();
     }
 

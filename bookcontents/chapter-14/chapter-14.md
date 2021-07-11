@@ -30,6 +30,10 @@ public class ModelData {
         return animationsList;
     }
     ...
+    public boolean hasAnimations() {
+        return animationsList != null && !animationsList.isEmpty();
+    }
+    ...
     public void setAnimMeshDataList(List<AnimMeshData> animMeshDataList) {
         this.animMeshDataList = animMeshDataList;
     }
@@ -60,6 +64,10 @@ public class Entity {
     public EntityAnimation getEntityAnimation() {
         return entityAnimation;
     }    
+    ...
+    public boolean hasAnimation() {
+        return entityAnimation != null;
+    }
     ...
     public void setEntityAnimation(EntityAnimation entityAnimation) {
         this.entityAnimation = entityAnimation;

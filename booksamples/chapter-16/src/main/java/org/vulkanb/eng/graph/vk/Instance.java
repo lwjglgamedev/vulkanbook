@@ -181,7 +181,7 @@ public class Instance {
 
             List<String> overlap = requestedLayers.stream().filter(requestedLayers::contains).collect(Collectors.toList());
 
-            if (overlap.size() > 0) {
+            if (!overlap.isEmpty()) {
                 return overlap;
             }
 

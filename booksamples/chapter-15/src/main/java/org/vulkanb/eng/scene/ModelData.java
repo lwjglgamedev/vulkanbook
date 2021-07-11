@@ -37,6 +37,10 @@ public class ModelData {
         return modelId;
     }
 
+    public boolean hasAnimations() {
+        return animationsList != null && !animationsList.isEmpty();
+    }
+
     public void setAnimMeshDataList(List<AnimMeshData> animMeshDataList) {
         this.animMeshDataList = animMeshDataList;
     }

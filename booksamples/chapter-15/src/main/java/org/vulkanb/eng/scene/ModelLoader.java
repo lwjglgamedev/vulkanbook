@@ -223,7 +223,7 @@ public class ModelLoader {
         }
 
         // Assimp may not calculate tangents with models that do not have texture coordinates. Just create empty values
-        if (biTangents.size() == 0) {
+        if (biTangents.isEmpty()) {
             biTangents = new ArrayList<>(Collections.nCopies(normals.size(), 0.0f));
         }
         return biTangents;
@@ -387,7 +387,7 @@ public class ModelLoader {
         }
 
         // Assimp may not calculate tangents with models that do not have texture coordinates. Just create empty values
-        if (tangents.size() == 0) {
+        if (tangents.isEmpty()) {
             tangents = new ArrayList<>(Collections.nCopies(normals.size(), 0.0f));
         }
         return tangents;

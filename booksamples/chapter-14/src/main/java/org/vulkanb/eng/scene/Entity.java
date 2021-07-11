@@ -30,6 +30,10 @@ public class Entity {
         this.entityAnimation = entityAnimation;
     }
 
+    public boolean hasAnimation() {
+        return entityAnimation != null;
+    }
+
     public String getId() {
         return id;
     }
