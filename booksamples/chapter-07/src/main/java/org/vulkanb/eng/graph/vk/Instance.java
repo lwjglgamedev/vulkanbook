@@ -8,7 +8,6 @@ import org.lwjgl.vulkan.*;
 
 import java.nio.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.lwjgl.vulkan.EXTDebugUtils.*;
 import static org.lwjgl.vulkan.VK11.*;
@@ -179,7 +178,7 @@ public class Instance {
             requestedLayers.add("VK_LAYER_LUNARG_core_validation");
             requestedLayers.add("VK_LAYER_GOOGLE_unique_objects");
 
-            List<String> overlap = requestedLayers.stream().filter(requestedLayers::contains).collect(Collectors.toList());
+            List<String> overlap = requestedLayers.stream().filter(requestedLayers::contains).toList();
 
             if (!overlap.isEmpty()) {
                 return overlap;

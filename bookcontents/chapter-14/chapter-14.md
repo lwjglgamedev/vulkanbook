@@ -303,7 +303,7 @@ public class ModelLoader {
         }
         Matrix4f nodeGlobalTransform = new Matrix4f(parentTransformation).mul(nodeTransform);
 
-        List<Bone> affectedBones = boneList.stream().filter(b -> b.boneName().equals(nodeName)).collect(Collectors.toList());
+        List<Bone> affectedBones = boneList.stream().filter(b -> b.boneName().equals(nodeName)).toList();
         for (Bone bone : affectedBones) {
             Matrix4f boneTransform = new Matrix4f(globalInverseTransform).mul(nodeGlobalTransform).
                     mul(bone.offsetMatrix());
