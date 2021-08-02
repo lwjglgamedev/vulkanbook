@@ -22,7 +22,7 @@ public class EngineProperties {
             props.load(stream);
             ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
             validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
-            physDeviceName = props.getProperty("physdeviceName");
+            physDeviceName = props.getProperty("physDeviceName");
         } catch (IOException excp) {
             LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
         }

@@ -11,7 +11,6 @@ public class EngineProperties {
     private static final int DEFAULT_MAX_ANIM_WEIGHTS_BUF = 100000;
     private static final int DEFAULT_MAX_INDICES_BUF = 5000000;
     private static final int DEFAULT_MAX_MATERIALS = 500;
-    private static final int DEFAULT_MAX_TEXTURES = 100;
     private static final int DEFAULT_MAX_VERTICES_BUF = 20000000;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final float DEFAULT_SHADOW_BIAS = 0.00005f;
@@ -51,7 +50,7 @@ public class EngineProperties {
             props.load(stream);
             ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
             validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
-            physDeviceName = props.getProperty("physdeviceName");
+            physDeviceName = props.getProperty("physDeviceName");
             requestedImages = Integer.parseInt(props.getOrDefault("requestedImages", DEFAULT_REQUESTED_IMAGES).toString());
             vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
             shaderRecompilation = Boolean.parseBoolean(props.getOrDefault("shaderRecompilation", false).toString());
@@ -64,7 +63,7 @@ public class EngineProperties {
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", DEFAULT_SHADOW_BIAS).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", DEFAULT_SHADOW_MAP_SIZE).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
-            maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", DEFAULT_MAX_TEXTURES).toString());
+            maxTextures = maxMaterials * 3;
             maxVerticesBuffer = Integer.parseInt(props.getOrDefault("maxVerticesBuffer", DEFAULT_MAX_VERTICES_BUF).toString());
             maxIndicesBuffer = Integer.parseInt(props.getOrDefault("maxIndicesBuffer", DEFAULT_MAX_INDICES_BUF).toString());
             maxAnimWeightsBuffer = Integer.parseInt(props.getOrDefault("maxAnimWeightsBuffer", DEFAULT_MAX_ANIM_WEIGHTS_BUF).toString());

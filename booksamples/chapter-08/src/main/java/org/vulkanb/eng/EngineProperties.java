@@ -33,7 +33,7 @@ public class EngineProperties {
             props.load(stream);
             ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
             validate = Boolean.parseBoolean(props.getOrDefault("vkValidate", false).toString());
-            physDeviceName = props.getProperty("physdeviceName");
+            physDeviceName = props.getProperty("physDeviceName");
             requestedImages = Integer.parseInt(props.getOrDefault("requestedImages", DEFAULT_REQUESTED_IMAGES).toString());
             vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
             shaderRecompilation = Boolean.parseBoolean(props.getOrDefault("shaderRecompilation", false).toString());
