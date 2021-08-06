@@ -1,9 +1,10 @@
-package org.vulkanb.eng.graph.vk;
+package org.vulkanb.eng.graph;
 
 import org.joml.Vector4f;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.VkBufferCopy;
-import org.vulkanb.eng.graph.TextureCache;
+import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.scene.ModelData;
 
 import java.nio.*;

@@ -1,9 +1,9 @@
-package org.vulkanb.eng.graph.vk;
+package org.vulkanb.eng.graph;
 
-import org.joml.Vector4f;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.VkBufferCopy;
-import org.vulkanb.eng.graph.TextureCache;
+import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.scene.ModelData;
 
 import java.nio.*;
@@ -14,11 +14,11 @@ import static org.lwjgl.vulkan.VK11.*;
 public class VulkanModel {
 
     private final String modelId;
-    private final List<VulkanModel.VulkanMaterial> vulkanMaterialList;
+    private final List<VulkanModel.VulkanMesh> vulkanMeshList;
 
     public VulkanModel(String modelId) {
         this.modelId = modelId;
-        vulkanMaterialList = new ArrayList<>();
+        vulkanMeshList = new ArrayList<>();
     }
 
     private static TransferBuffers createIndicesBuffers(Device device, ModelData.MeshData meshData) {
@@ -81,38 +81,17 @@ public class VulkanModel {
         }
     }
 
-    private static VulkanMaterial transformMaterial(ModelData.Material material, Device device, TextureCache textureCache,
-                                                    CommandBuffer cmd, List<Texture> textureList) {
-        Texture texture = textureCache.createTexture(device, material.texturePath(), VK_FORMAT_R8G8B8A8_SRGB);
-        boolean hasTexture = material.texturePath() != null && material.texturePath().trim().length() > 0;
-
-        texture.recordTextureTransition(cmd);
-        textureList.add(texture);
-
-        return new VulkanModel.VulkanMaterial(material.diffuseColor(), texture, hasTexture, new ArrayList<>());
-    }
-
-    public static List<VulkanModel> transformModels(List<ModelData> modelDataList, TextureCache textureCache,
-                                                    CommandPool commandPool, Queue queue) {
-
+    public static List<VulkanModel> transformModels(List<ModelData> modelDataList, CommandPool commandPool, Queue queue) {
         List<VulkanModel> vulkanModelList = new ArrayList<>();
         Device device = commandPool.getDevice();
         CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
         List<VulkanBuffer> stagingBufferList = new ArrayList<>();
-        List<Texture> textureList = new ArrayList<>();
 
         cmd.beginRecording();
 
         for (ModelData modelData : modelDataList) {
             VulkanModel vulkanModel = new VulkanModel(modelData.getModelId());
             vulkanModelList.add(vulkanModel);
-
-            // Create textures defined for the materials
-            VulkanMaterial defaultVulkanMaterial = null;
-            for (ModelData.Material material : modelData.getMaterialList()) {
-                VulkanMaterial vulkanMaterial = transformMaterial(material, device, textureCache, cmd, textureList);
-                vulkanModel.vulkanMaterialList.add(vulkanMaterial);
-            }
 
             // Transform meshes loading their data into GPU buffers
             for (ModelData.MeshData meshData : modelData.getMeshDataList()) {
@@ -126,17 +105,7 @@ public class VulkanModel {
                 VulkanModel.VulkanMesh vulkanMesh = new VulkanModel.VulkanMesh(verticesBuffers.dstBuffer(),
                         indicesBuffers.dstBuffer(), meshData.indices().length);
 
-                VulkanMaterial vulkanMaterial;
-                int materialIdx = meshData.materialIdx();
-                if (materialIdx >= 0 && materialIdx < vulkanModel.vulkanMaterialList.size()) {
-                    vulkanMaterial = vulkanModel.vulkanMaterialList.get(materialIdx);
-                } else {
-                    if (defaultVulkanMaterial == null) {
-                        defaultVulkanMaterial = transformMaterial(new ModelData.Material(), device, textureCache, cmd, textureList);
-                    }
-                    vulkanMaterial = defaultVulkanMaterial;
-                }
-                vulkanMaterial.vulkanMeshList.add(vulkanMesh);
+                vulkanModel.vulkanMeshList.add(vulkanMesh);
             }
         }
 
@@ -151,28 +120,23 @@ public class VulkanModel {
         cmd.cleanup();
 
         stagingBufferList.forEach(VulkanBuffer::cleanup);
-        textureList.forEach(Texture::cleanupStgBuffer);
 
         return vulkanModelList;
     }
 
     public void cleanup() {
-        vulkanMaterialList.forEach(m -> m.vulkanMeshList.forEach((VulkanMesh::cleanup)));
+        vulkanMeshList.forEach(VulkanMesh::cleanup);
     }
 
     public String getModelId() {
         return modelId;
     }
 
-    public List<VulkanModel.VulkanMaterial> getVulkanMaterialList() {
-        return vulkanMaterialList;
+    public List<VulkanModel.VulkanMesh> getVulkanMeshList() {
+        return vulkanMeshList;
     }
 
     private record TransferBuffers(VulkanBuffer srcBuffer, VulkanBuffer dstBuffer) {
-    }
-
-    public record VulkanMaterial(Vector4f diffuseColor, Texture texture, boolean hasTexture,
-                                 List<VulkanMesh> vulkanMeshList) {
     }
 
     public record VulkanMesh(VulkanBuffer verticesBuffer, VulkanBuffer indicesBuffer, int numIndices) {

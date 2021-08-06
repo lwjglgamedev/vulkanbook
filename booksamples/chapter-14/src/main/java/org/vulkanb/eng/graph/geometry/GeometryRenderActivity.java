@@ -4,6 +4,7 @@ import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.VulkanModel;
 import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
@@ -186,7 +187,7 @@ public class GeometryRenderActivity {
     }
 
     public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
-                                     Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
+                                    Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();

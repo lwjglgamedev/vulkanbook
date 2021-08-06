@@ -4,6 +4,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.VulkanModel;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
@@ -18,12 +19,11 @@ public class AnimationComputeActivity {
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
     private static final int LOCAL_SIZE_X = 32;
-
-    private final Device device;
-    private final MemoryBarrier memoryBarrier;
     private final Queue.ComputeQueue computeQueue;
+    private final Device device;
     // Key is the entity id
     private final Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
+    private final MemoryBarrier memoryBarrier;
     // Key is the model id
     private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
     private final Scene scene;

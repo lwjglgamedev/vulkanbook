@@ -1,9 +1,10 @@
-package org.vulkanb.eng.graph.vk;
+package org.vulkanb.eng.graph;
 
 import org.joml.Vector4f;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.VkBufferCopy;
-import org.vulkanb.eng.graph.TextureCache;
+import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.scene.ModelData;
 
 import java.nio.*;
@@ -27,9 +28,9 @@ public class VulkanModel {
         int bufferSize = numIndices * GraphConstants.INT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         long mappedMemory = srcBuffer.map();
         IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
@@ -52,10 +53,9 @@ public class VulkanModel {
         int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         VulkanBuffer dstBuffer = new VulkanBuffer(device, bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         long mappedMemory = srcBuffer.map();
         FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());

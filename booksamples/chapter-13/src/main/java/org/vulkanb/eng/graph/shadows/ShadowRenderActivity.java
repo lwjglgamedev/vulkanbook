@@ -5,6 +5,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.VulkanModel;
 import org.vulkanb.eng.graph.geometry.GeometryAttachments;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;

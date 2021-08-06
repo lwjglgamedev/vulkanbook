@@ -1,7 +1,9 @@
-package org.vulkanb.eng.graph.vk;
+package org.vulkanb.eng.graph;
 
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.VkBufferCopy;
+import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.scene.ModelData;
 
 import java.nio.*;
@@ -12,7 +14,7 @@ import static org.lwjgl.vulkan.VK11.*;
 public class VulkanModel {
 
     private final String modelId;
-    private final List<VulkanModel.VulkanMesh> vulkanMeshList;
+    private final List<VulkanMesh> vulkanMeshList;
 
     public VulkanModel(String modelId) {
         this.modelId = modelId;
@@ -39,12 +41,8 @@ public class VulkanModel {
 
     private static TransferBuffers createVerticesBuffers(Device device, ModelData.MeshData meshData) {
         float[] positions = meshData.positions();
-        float[] textCoords = meshData.textCoords();
-        if (textCoords == null || textCoords.length == 0) {
-            textCoords = new float[(positions.length / 3) * 2];
-        }
-        int numElements = positions.length + textCoords.length;
-        int bufferSize = numElements * GraphConstants.FLOAT_LENGTH;
+        int numPositions = positions.length;
+        int bufferSize = numPositions * GraphConstants.FLOAT_LENGTH;
 
         VulkanBuffer srcBuffer = new VulkanBuffer(device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -53,18 +51,7 @@ public class VulkanModel {
 
         long mappedMemory = srcBuffer.map();
         FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
-
-        int rows = positions.length / 3;
-        for (int row = 0; row < rows; row++) {
-            int startPos = row * 3;
-            int startTextCoord = row * 2;
-            data.put(positions[startPos]);
-            data.put(positions[startPos + 1]);
-            data.put(positions[startPos + 2]);
-            data.put(textCoords[startTextCoord]);
-            data.put(textCoords[startTextCoord + 1]);
-        }
-
+        data.put(positions);
         srcBuffer.unMap();
 
         return new TransferBuffers(srcBuffer, dstBuffer);

@@ -5,6 +5,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.VulkanModel;
 import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.geometry.GeometryAttachments;
 import org.vulkanb.eng.graph.vk.*;
@@ -119,7 +120,7 @@ public class ShadowRenderActivity {
     }
 
     public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
-                                     Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
+                                    Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);

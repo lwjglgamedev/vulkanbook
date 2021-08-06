@@ -6,7 +6,7 @@ public class VulkanModel {
 
     private final String modelId;
     private final List<VulkanAnimationData> vulkanAnimationDataList;
-    private final List<VulkanModel.VulkanMesh> vulkanMeshList;
+    private final List<VulkanMesh> vulkanMeshList;
 
     public VulkanModel(String modelId) {
         this.modelId = modelId;
@@ -18,7 +18,7 @@ public class VulkanModel {
         vulkanAnimationDataList.add(vulkanAnimationData);
     }
 
-    public void addVulkanMesh(VulkanModel.VulkanMesh vulkanMesh) {
+    public void addVulkanMesh(VulkanMesh vulkanMesh) {
         vulkanMeshList.add(vulkanMesh);
     }
 
@@ -30,7 +30,7 @@ public class VulkanModel {
         return vulkanAnimationDataList;
     }
 
-    public List<VulkanModel.VulkanMesh> getVulkanMeshList() {
+    public List<VulkanMesh> getVulkanMeshList() {
         return vulkanMeshList;
     }
 

@@ -4,6 +4,7 @@ import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.VulkanModel;
 import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
