@@ -1,4 +1,4 @@
-* Indirect drawing
+# Indirect drawing
 
 Until this chapter, we render the models by binding their material uniforms, their textures, their vertices and indices buffers and submitting one draw command for each of the meshes it is composed. In this chapter we will start our way to a more efficient wat of rendering, we will begin the implementation of a bind-less render. This types of renders do not receive a bunch of draw commands, instead they relay on indirect drawing commands. Indirect draw commands are, in essence, draw commands that obtain the parameters required to perform the operation from a GPU buffer (instead of relaying on previous binding operations). This is a more efficient way of drawing because:
 
@@ -10,10 +10,10 @@ As you can see, the ultimate goal is to maximize the utilization of the CPU whil
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-16).
 
-** Overview
+## Overview
 TBD:
 
-** Code changes review
+## Global Buffers
 
 The first thing to be done is to check if the device supports multi draw indirect. This is done in the `Device` class when setting up the required features:
 ```java
@@ -767,21 +767,153 @@ public class VulkanAnimEntity {
 }
 ```
 
+In order to complete `GlobalBuffers` class core functionality, we need to provide a function that stores per instance information used for rendering. We use separate buffers for static and animated models. We need also separate buffers per swap chain image to avoid updating the buffer while its being used for rendering. We will achieve this in a method named `loadInstanceData` which is defined like this:
+```java
+public class GlobalBuffers {
+    ...
+    public void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, int currentSwapChainIdx) {
+        Predicate<VulkanModel> excludeAnimatedEntitiesPredicate = VulkanModel::hasAnimations;
+        loadInstanceData(scene, vulkanModels, instanceDataBuffers[currentSwapChainIdx], excludeAnimatedEntitiesPredicate);
+        Predicate<VulkanModel> excludedStaticEntitiesPredicate = v -> !v.hasAnimations();
+        loadInstanceData(scene, vulkanModels, animInstanceDataBuffers[currentSwapChainIdx], excludedStaticEntitiesPredicate);
+    }
+
+    private void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, VulkanBuffer instanceBuffer,
+                                  Predicate<VulkanModel> excludedEntitiesPredicate) {
+        if (instanceBuffer == null) {
+            return;
+        }
+        long mappedMemory = instanceBuffer.map();
+        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) instanceBuffer.getRequestedSize());
+        instanceBuffer.map();
+        int pos = 0;
+        for (VulkanModel vulkanModel : vulkanModels) {
+            List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
+            if (entities.isEmpty() || excludedEntitiesPredicate.test(vulkanModel)) {
+                continue;
+            }
+            for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
+                for (Entity entity : entities) {
+                    entity.getModelMatrix().get(pos, dataBuffer);
+                    pos += GraphConstants.MAT4X4_SIZE;
+                    dataBuffer.putInt(pos, vulkanMesh.globalMaterialIdx());
+                    pos += GraphConstants.INT_LENGTH;
+                }
+            }
+        }
+        instanceBuffer.unMap();
+    }
+    ...
+}
+```
+
+As you can see, the `public` `loadInstanceData` method just receives the scene, and the swap chain image index that should be using when loading the data into the buffer and it delegates the work into a `private` `loadInstanceData` method for loading instance data for static models and for animated models. The `private` `loadInstanceData` method receives a predicate that will exclude the entities thats should be ignored when loading the instance data. That is, when loading data ofr static models, animated entities should be ignores and viceversa. That private method, just iterates over the entities, structuring the layout per model and mesh (as it has been done when storing the draw indirect commands) and dumps de model matrix and the material identifier of reach matrix in the appropriate buffer.
+
+Finally, the `GlobalBuffers` class is completed with some getter methods to access the buffers and other relevant attributes that will be used for rendering.
+```java
+public class GlobalBuffers {
+    ...
+    public VulkanBuffer getAnimIndirectBuffer() {
+        return animIndirectBuffer;
+    }
+
+    public VulkanBuffer[] getAnimInstanceDataBuffers() {
+        return animInstanceDataBuffers;
+    }
+
+    public VulkanBuffer getAnimJointMatricesBuffer() {
+        return animJointMatricesBuffer;
+    }
+
+    public VulkanBuffer getAnimVerticesBuffer() {
+        return animVerticesBuffer;
+    }
+
+    public VulkanBuffer getAnimWeightsBuffer() {
+        return animWeightsBuffer;
+    }
+
+    public VulkanBuffer getIndicesBuffer() {
+        return indicesBuffer;
+    }
+
+    public VulkanBuffer getIndirectBuffer() {
+        return indirectBuffer;
+    }
+
+    public VulkanBuffer[] getInstanceDataBuffers() {
+        return instanceDataBuffers;
+    }
+
+    public VulkanBuffer getMaterialsBuffer() {
+        return materialsBuffer;
+    }
+
+    public int getNumAnimIndirectCommands() {
+        return numAnimIndirectCommands;
+    }
+
+    public int getNumIndirectCommands() {
+        return numIndirectCommands;
+    }
+
+    public VulkanBuffer getVerticesBuffer() {
+        return verticesBuffer;
+    }
+
+    public List<VulkanAnimEntity> getVulkanAnimEntityList() {
+        return vulkanAnimEntityList;
+    }
+    ...
+}
+````
+
+# Render process changes
+
+We will examine now the changes that are required in the render process to support the new features. The first major change is that we will store all the indirect drawing commands in the buffer when loading the entities. We can also pre-record the drawing commands if the window is not resized or no new entities are added or removed. In order to be able to track the last condition we will add a timestamp to the `Scene` class:
+```java
+public class Scene {
+    ...
+    private long entitiesLoadedTimeStamp;
+    ...
+    public void addEntity(Entity entity) {
+        ...
+        entitiesLoadedTimeStamp = System.currentTimeMillis();
+    }
+    ...
+    public long getEntitiesLoadedTimeStamp() {
+        return entitiesLoadedTimeStamp;
+    }
+    ...
+    public void removeAllEntities() {
+        ...
+        entitiesLoadedTimeStamp = System.currentTimeMillis();
+    }    
+
+    public void removeEntity(Entity entity) {
+        ...
+        entitiesLoadedTimeStamp = System.currentTimeMillis();
+    }
+    ...
+}
+```
+
+
 TBD
 
 ** TBD: Changes
 - AnimationComputeActivity
 - GeometryAttachments
 - GeometryRenderActivity
+- GeometrySpeConstants
 - GuiRenderActivity
 - ShadowRenderActivity
 - VertexBufferStructure
 - ComputePipeline
 - DescriptorSetLayout
 - InstancedVertexBufferStructure
-- VulkanAnimEntity
 - Render
 - TextureCache
 - IndexedLinkedHasMap
-- Scene
 - Main
+- IndexedLinkedHasMap   
