@@ -30,8 +30,8 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
-        float move = diffTimeMilisec * MOVEMENT_SPEED;
+    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+        float move = diffTimeMillis * MOVEMENT_SPEED;
         Camera camera = scene.getCamera();
         if (window.isKeyPressed(GLFW_KEY_W)) {
             camera.moveForward(move);

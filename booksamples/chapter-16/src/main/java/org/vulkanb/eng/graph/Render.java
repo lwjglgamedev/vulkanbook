@@ -14,7 +14,7 @@ import org.vulkanb.eng.scene.*;
 
 import java.util.*;
 
-import static org.lwjgl.vulkan.VK10.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+import static org.lwjgl.vulkan.VK11.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 public class Render {
 
@@ -56,7 +56,7 @@ public class Render {
         vulkanModels = new ArrayList<>();
         textureCache = new TextureCache();
         globalBuffers = new GlobalBuffers(device);
-        geometryRenderActivity = new GeometryRenderActivity(swapChain, commandPool, pipelineCache, scene, globalBuffers);
+        geometryRenderActivity = new GeometryRenderActivity(swapChain, pipelineCache, scene, globalBuffers);
         shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache, scene);
         List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());

@@ -44,8 +44,7 @@ public class GeometryRenderActivity {
     private VulkanBuffer[] viewMatricesBuffer;
     private DescriptorSet.UniformDescriptorSet[] viewMatricesDescriptorSets;
 
-    public GeometryRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene,
-                                  GlobalBuffers globalBuffers) {
+    public GeometryRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene, GlobalBuffers globalBuffers) {
         this.swapChain = swapChain;
         this.pipelineCache = pipelineCache;
         this.scene = scene;

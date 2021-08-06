@@ -29,7 +29,7 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMilisec) {
+    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
         angle += 1.0f;
         if (angle >= 360) {
             angle = angle - 360;
