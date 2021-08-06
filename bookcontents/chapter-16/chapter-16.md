@@ -560,6 +560,213 @@ public class GlobalBuffers {
 }
 ```
 
+The process of recording indirect draw command is as follows:
+- For each of the models, we get the entities that are associated to each model.
+- For each model, we get their meshes, and for each mesh we record a draw indirect indexed command.
+- Draw indirect indexed commands are modelled by the `VkDrawIndexedIndirectCommand` structure, which defines the following fields:
+  - `indexCount`: The number of indices in the index buffer for the draw call. That is, the number of indices of the mesh.
+  - `firstIndex`: The offset of the first index in the index buffer for the draw call. Beware, that this is not an offset in bytes but an offset in indices.
+  - `instanceCount`: The number of instances to draw. We can draw several instances that share the same mesh with a single command (instanced rendering).
+  - `vertexOffset`: The offset to the vertex buffer for the draw call. Beware, that this is not an offset in bytes but an offset in vertices structures.
+  - `firstInstance`: The instance identifier of the first instance to draw.
+
+As explained above, we need to record the draw indirect indexed commands in a buffer. We will also use staging buffers to copy the data to a CPU accessible buffer and later on to transfer its contents to a GPU only accessible buffer. In addition to that, we need to create a dedicated buffer to hold instance specific data. In this specific example, we will store he model matrix and the associated material identifier (although t his last element is shared between all the instances, it makes things easier to store that information in this buffer). The process described above is implemented in the `loadStaticEntities` method, which is defined as follows:
+```java
+public class GlobalBuffers {
+    public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
+    ...
+    private int numIndirectCommands;
+    ...
+    private void loadStaticEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool,
+                                    Queue queue, int numSwapChainImages) {
+        numIndirectCommands = 0;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            Device device = commandPool.getDevice();
+            CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
+
+            List<VkDrawIndexedIndirectCommand> indexedIndirectCommandList = new ArrayList<>();
+            int numInstances = 0;
+            int firstInstance = 0;
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
+                if (entities.isEmpty() || vulkanModel.hasAnimations()) {
+                    continue;
+                }
+                for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
+                    VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.callocStack(stack);
+                    indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
+                    indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
+                    indexedIndirectCommand.instanceCount(entities.size());
+                    indexedIndirectCommand.vertexOffset(vulkanMesh.verticesOffset() / VertexBufferStructure.SIZE_IN_BYTES);
+                    indexedIndirectCommand.firstInstance(firstInstance);
+                    indexedIndirectCommandList.add(indexedIndirectCommand);
+
+                    numIndirectCommands++;
+                    firstInstance++;
+                    numInstances = numInstances + entities.size();
+                }
+            }
+            if (numIndirectCommands > 0) {
+                cmd.beginRecording();
+
+                StgBuffer indirectStgBuffer = new StgBuffer(device, (long) IND_COMMAND_STRIDE * numIndirectCommands);
+                if (indirectBuffer != null) {
+                    indirectBuffer.cleanup();
+                }
+                indirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgVulkanBuffer.getRequestedSize(),
+                        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+                ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
+                VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
+
+                indexedIndirectCommandList.forEach(indCommandBuffer::put);
+
+                if (instanceDataBuffers != null) {
+                    Arrays.stream(instanceDataBuffers).forEach(VulkanBuffer::cleanup);
+                }
+                instanceDataBuffers = new VulkanBuffer[numSwapChainImages];
+                for (int i = 0; i < numSwapChainImages; i++) {
+                    instanceDataBuffers[i] = new VulkanBuffer(device, (long) numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                }
+
+                indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
+
+                cmd.endRecording();
+                cmd.submitAndWait(device, queue);
+                cmd.cleanup();
+                indirectStgBuffer.cleanup();
+            }
+        }
+    }
+    ...
+}
+```
+
+As it can be seen above, the `loadStaticEntities` just record the commands for entities that have no animated models. For animated models ,the work is don in the `loadAnimEntities` method. 
+```java
+public class GlobalBuffers {
+    ...
+    private int numAnimIndirectCommands;
+    ...
+    private List<VulkanAnimEntity> vulkanAnimEntityList;
+    ...    
+    private void loadAnimEntities(List<VulkanModel> vulkanModelList, Scene scene, CommandPool commandPool,
+                                  Queue queue, int numSwapChainImages) {
+        vulkanAnimEntityList = new ArrayList<>();
+        numAnimIndirectCommands = 0;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            Device device = commandPool.getDevice();
+            CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
+
+            int bufferOffset = 0;
+            int firstInstance = 0;
+            List<VkDrawIndexedIndirectCommand> indexedIndirectCommandList = new ArrayList<>();
+            for (VulkanModel vulkanModel : vulkanModelList) {
+                List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
+                if (entities.isEmpty()) {
+                    continue;
+                }
+                for (Entity entity : entities) {
+                    if (!entity.hasAnimation()) {
+                        continue;
+                    }
+                    VulkanAnimEntity vulkanAnimEntity = new VulkanAnimEntity(entity, vulkanModel);
+                    vulkanAnimEntityList.add(vulkanAnimEntity);
+                    List<VulkanAnimEntity.VulkanAnimMesh> vulkanAnimMeshList = vulkanAnimEntity.getVulkanAnimMeshList();
+                    for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
+                        VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.callocStack(stack);
+                        indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
+                        indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
+                        indexedIndirectCommand.instanceCount(1);
+                        indexedIndirectCommand.vertexOffset(bufferOffset / VertexBufferStructure.SIZE_IN_BYTES);
+                        indexedIndirectCommand.firstInstance(firstInstance);
+                        indexedIndirectCommandList.add(indexedIndirectCommand);
+
+                        vulkanAnimMeshList.add(new VulkanAnimEntity.VulkanAnimMesh(bufferOffset, vulkanMesh));
+                        bufferOffset += vulkanMesh.verticesSize();
+                        firstInstance++;
+                    }
+                }
+            }
+            animVerticesBuffer = new VulkanBuffer(device, bufferOffset, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+
+            numAnimIndirectCommands = indexedIndirectCommandList.size();
+            if (numAnimIndirectCommands > 0) {
+                cmd.beginRecording();
+
+                StgBuffer indirectStgBuffer = new StgBuffer(device, (long) IND_COMMAND_STRIDE * numAnimIndirectCommands);
+                if (animIndirectBuffer != null) {
+                    animIndirectBuffer.cleanup();
+                }
+                animIndirectBuffer = new VulkanBuffer(device, indirectStgBuffer.stgVulkanBuffer.getRequestedSize(),
+                        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+                ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
+                VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
+
+                indexedIndirectCommandList.forEach(indCommandBuffer::put);
+
+                if (animInstanceDataBuffers != null) {
+                    Arrays.stream(animInstanceDataBuffers).forEach(VulkanBuffer::cleanup);
+                }
+                animInstanceDataBuffers = new VulkanBuffer[numSwapChainImages];
+                for (int i = 0; i < numSwapChainImages; i++) {
+                    animInstanceDataBuffers[i] = new VulkanBuffer(device,
+                            (long) numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                }
+
+                indirectStgBuffer.recordTransferCommand(cmd, animIndirectBuffer);
+
+                cmd.endRecording();
+                cmd.submitAndWait(device, queue);
+                cmd.cleanup();
+                indirectStgBuffer.cleanup();
+            }
+        }
+    }
+    ...
+}
+````
+
+For animated models we cannot use instance rendering, since each entity may be in a different state of the animation. Therefore, we need to record the indirect drawing commands for each specific mesh for each entity. The relevant information is store in a new class named `VulkanAnimEntity` which stores the relevant information that will be used when calculating the animations. If you recall, when animating we use the static binding pose information and apply a set of transformations over the vertices to update the data according to a specific frame. This is done in a compute shader. The `VulkanAnimEntity` will store the information required to perform that process later on and is defined like this:
+```java
+package org.vulkanb.eng.graph;
+
+import org.vulkanb.eng.scene.Entity;
+
+import java.util.*;
+
+public class VulkanAnimEntity {
+    private Entity entity;
+    private List<VulkanAnimMesh> vulkanAnimMeshList;
+    private VulkanModel vulkanModel;
+
+    public VulkanAnimEntity(Entity entity, VulkanModel vulkanModel) {
+        this.entity = entity;
+        this.vulkanModel = vulkanModel;
+        vulkanAnimMeshList = new ArrayList<>();
+    }
+
+    public Entity getEntity() {
+        return entity;
+    }
+
+    public List<VulkanAnimMesh> getVulkanAnimMeshList() {
+        return vulkanAnimMeshList;
+    }
+
+    public VulkanModel getVulkanModel() {
+        return vulkanModel;
+    }
+
+    public record VulkanAnimMesh(int meshOffset, VulkanModel.VulkanMesh vulkanMesh) {
+    }
+}
+```
+
 TBD
 
 ** TBD: Changes
