@@ -898,19 +898,185 @@ public class Scene {
 }
 ```
 
+It is turn now to start reviewing the changes that need to be made at the `Render` class. Let's start with the new attributes and the constructor:
+```java
+public class Render {
+    ...
+    private final GlobalBuffers globalBuffers;
+    ...
+    private CommandBuffer[] commandBuffers;
+    private long entitiesLoadedTimeStamp;
+    private Fence[] fences;
+    ...
+    public Render(Window window, Scene scene) {
+        ...
+        globalBuffers = new GlobalBuffers(device);
+        geometryRenderActivity = new GeometryRenderActivity(swapChain, pipelineCache, scene, globalBuffers);
+        ...
+        animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache);
+        ...
+        entitiesLoadedTimeStamp = 0;
+        createCommandBuffers();
+    }
+    ...
+}
+```
+
+The `Render` class will have an instance of the `GlobalBuffers` and will also have the command buffers and the fences used to record the render commands for the geometry and shadows passes. Drawing commands will be pre-record, by having them in the `Render` class it will be easier to update them. They will be created in the `createCommandBuffers` method:
+```java
+public class Render {
+    ...
+    private void createCommandBuffers() {
+        int numImages = swapChain.getNumImages();
+        commandBuffers = new CommandBuffer[numImages];
+        fences = new Fence[numImages];
+
+        for (int i = 0; i < numImages; i++) {
+            commandBuffers[i] = new CommandBuffer(commandPool, true, false);
+            fences[i] = new Fence(device, true);
+        }
+    }
+    ...
+}
+```
+
+The `cleanup` method needs a small change to be able to free the new resources:
+```java
+public class Render {
+    ...
+    public void cleanup() {
+        ...
+        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.stream(fences).forEach(Fence::cleanup);
+        ...
+        globalBuffers.cleanup();
+        ...
+    }
+    ...
+}
+```
+
+If you recall the `GlobalBuffers` class, it is responsible of loading the models data into the appropriate buffers, therefore the `loadModels` method in the `Render` class will need to be updated:
+```java
+public class Render {
+    ...
+    public void loadModels(List<ModelData> modelDataList) {
+        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        vulkanModels.addAll(globalBuffers.loadModels(modelDataList, textureCache, commandPool, graphQueue));
+        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
+
+        geometryRenderActivity.loadModels(textureCache);
+    }
+    ...
+}
+```
+
+The biggest changes are in the `render` method:
+```java
+public class Render {
+    ...
+    public void render(Window window, Scene scene) {
+        if (entitiesLoadedTimeStamp < scene.getEntitiesLoadedTimeStamp()) {
+            entitiesLoadedTimeStamp = scene.getEntitiesLoadedTimeStamp();
+            device.waitIdle();
+            globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue, swapChain.getNumImages());
+            animationComputeActivity.onAnimatedEntitiesLoaded(globalBuffers);
+            recordCommands();
+        }
+        ...
+        globalBuffers.loadInstanceData(scene, vulkanModels, swapChain.getCurrentFrame());
+
+        animationComputeActivity.recordCommandBuffer(globalBuffers);
+        animationComputeActivity.submit();
+
+        CommandBuffer commandBuffer = acquireCurrentCommandBuffer();
+        submitSceneCommand(graphQueue, commandBuffer);
+        ...
+    }
+    ...
+}
+```
+As you can see, the first thing we do is check if the entities have changed. If they have, we will need to update the buffers associated with the entities (and their animations) and record the commands. Now,  commands will be pre-recorded, since all the drawing commands are already pre-recorded in a buffer through indirect drawing commands. Also, per instance data, such as model matrices, is no longer passed using push constants, but instead they are stored in a dedicated buffer which needs to be updated for each frame by calling `globalBuffers.loadInstanceData`. Since command buffers for geometry and shadow passes are already pre-recorded we just need to submit them in each frame by calling the `submitSceneCommand` method.
+
+The `recordCommands` method just iterates over all the command buffers (one per swap chain image), and delegates the recording of the different draw commands to the `GeometryRenderActivity` and `AnimationComputeActivity` instances. We will view what is done in each of these classes in a moment.
+```java
+public class Render {
+    ...
+    private void recordCommands() {
+        for (CommandBuffer commandBuffer : commandBuffers) {
+            commandBuffer.reset();
+            commandBuffer.beginRecording();
+            geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
+            shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
+            commandBuffer.endRecording();
+        }
+    }
+    ...
+}
+```
+
+The `acquireCurrentCommandBuffer` method will be used to get the current command buffer for the swap chain image:
+```java
+public class Render {
+    ...
+    private CommandBuffer acquireCurrentCommandBuffer() {
+        int idx = swapChain.getCurrentFrame();
+
+        Fence fence = fences[idx];
+        CommandBuffer commandBuffer = commandBuffers[idx];
+
+        fence.fenceWait();
+        fence.reset();
+
+        return commandBuffer;
+    }
+    ...
+}
+```
+
+The `submitSceneCommand` method will be used to submit the commands to the graphics queue. It is the same as the one used previously in the `GeometryRenderActivity` class.
+```java
+public class Render {
+    ...
+    public void submitSceneCommand(Queue queue, CommandBuffer commandBuffer) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            int idx = swapChain.getCurrentFrame();
+            Fence currentFence = fences[idx];
+            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
+            queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
+                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
+                    stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()), currentFence);
+        }
+    }
+    ...
+}
+```
+
+Finally, we need to update `resize` method to call the `recordCommands` method when the window is resized:
+```java
+public class Render {
+    ...
+    private void resize(Window window) {
+        ...
+        recordCommands();
+        ...
+    }
+    ...
+}
+```
 
 TBD
 
 ** TBD: Changes
-- Render
-- AnimationComputeActivity
 - GeometryRenderActivity
 - GeometryAttachments
 - GeometrySpeConstants
 - GuiRenderActivity
 - ShadowRenderActivity
-- VertexBufferStructure
+- AnimationComputeActivity
 - ComputePipeline
+- VertexBufferStructure
 - DescriptorSetLayout
 - InstancedVertexBufferStructure
 - TextureCache

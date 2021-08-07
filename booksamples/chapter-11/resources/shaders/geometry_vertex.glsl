@@ -29,5 +29,5 @@ void main()
     outTangent    = normalize(modelViewMatrix * vec4(entityTangent, 0)).xyz;
     outBitangent  = normalize(modelViewMatrix * vec4(entityBitangent, 0)).xyz;
     outTextCoords = entityTextCoords;
-    gl_Position   =  projUniform.projectionMatrix * modelViewMatrix * vec4(entityPos, 1);
+    gl_Position   = projUniform.projectionMatrix * modelViewMatrix * vec4(entityPos, 1);
 }

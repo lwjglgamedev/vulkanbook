@@ -68,7 +68,7 @@ public class Render {
         createCommandBuffers();
     }
 
-    public CommandBuffer acquireCurrentCommandBuffer() {
+    private CommandBuffer acquireCurrentCommandBuffer() {
         int idx = swapChain.getCurrentFrame();
 
         Fence fence = fences[idx];
