@@ -520,30 +520,28 @@ Now that the `Texture` class is complete, we are ready to to use it. In 3D model
 ```java
 public class TextureCache {
 
-    private final Map<String, Texture> textureMap;
+    private final IndexedLinkedHashMap<String, Texture> textureMap;
 
     public TextureCache() {
-        textureMap = new HashMap<>();
+        textureMap = new IndexedLinkedHashMap<>();
     }
     ...
 }
 ```
 
-This class will store in a `Map` the textures indexed by the path to the file use to load them. It defines a method to create a `Texture` named `createTexture`. That method will check if the texture has been already created, to avoid creating multiple textures for the same file. If the texture path passed as a parameter is null or empty, it will return a default texture:
+This class will store in a `IndexedLinkedHashMap` the textures indexed by the path to the file use to load them. The reason for this structure is to be able to recover the texture by its path (like in a `Map`) while maintaining the insertion order. Although by now, we will be accessing by path, later on we will need to get the textures by the position they were loaded. The `TextureCache` class defines a method to create a `Texture` named `createTexture`. That method will check if the texture has been already created, to avoid creating multiple textures for the same file. If the texture path passed as a parameter is null or empty, it will return a default texture:
 
 ```java
 public class TextureCache {
     ...
     public Texture createTexture(Device device, String texturePath, int format) {
-        String path = texturePath;
         if (texturePath == null || texturePath.trim().isEmpty()) {
-            EngineProperties engProperties = EngineProperties.getInstance();
-            path = engProperties.getDefaultTexturePath();
+            return null;
         }
-        Texture texture = textureMap.get(path);
+        Texture texture = textureMap.get(texturePath);
         if (texture == null) {
-            texture = new Texture(device, path, format);
-            textureMap.put(path, texture);
+            texture = new Texture(device, texturePath, format);
+            textureMap.put(texturePath, texture);
         }
         return texture;
     }
@@ -571,20 +569,56 @@ public class EngineProperties {
 }
 ```
 
-Back to the `TextureCache`  class, the rest of the methods are the classical `cleanup` method to free the images and the `getTexture` method to be able to retrieve one already created `Texture` using is file path.
+Back to the `TextureCache`  class, the rest of the methods are the classical `cleanup` method to free the images and the `getTexture` method to be able to retrieve one already created `Texture` using is file path and through their position.
 
 ```java
 public class TextureCache {
     ...
     public void cleanup() {
-        for (Map.Entry<String, Texture> entry : textureMap.entrySet()) {
-            entry.getValue().cleanup();
-        }
+        textureMap.forEach((k, v) -> v.cleanup());
         textureMap.clear();
     }
     ...
+    public List<Texture> getAsList() {
+        return new ArrayList<>(textureMap.values());
+    }
+
+    public int getPosition(String texturePath) {
+        int result = -1;
+        if (texturePath != null) {
+            result = textureMap.getIndexOf(texturePath);
+        }
+        return result;
+    }
+
     public Texture getTexture(String texturePath) {
         return textureMap.get(texturePath.trim());
+    }
+}
+```
+
+The `IndexedLinkedHashMap` is defined like this:
+```java
+package org.vulkanb.eng.graph;
+
+import java.util.*;
+
+public class IndexedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
+
+    private final List<K> indexList = new ArrayList<>();
+
+    public int getIndexOf(K key) {
+        return indexList.indexOf(key);
+    }
+
+    public V getValueAtIndex(int i) {
+        return super.get(indexList.get(i));
+    }
+
+    @Override
+    public V put(K key, V val) {
+        if (!super.containsKey(key)) indexList.add(key);
+        return super.put(key, val);
     }
 }
 ```

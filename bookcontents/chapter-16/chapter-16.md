@@ -1066,8 +1066,6 @@ public class Render {
 }
 ```
 
-TBD
-
 ** TBD: Changes
 - GeometryRenderActivity
 - GeometryAttachments
@@ -1079,6 +1077,4 @@ TBD
 - VertexBufferStructure
 - DescriptorSetLayout
 - InstancedVertexBufferStructure
-- TextureCache
-- IndexedLinkedHasMap
 - Main
