@@ -227,7 +227,7 @@ public class GeometryRenderActivity {
             LongBuffer instanceBuffer = stack.mallocLong(1);
             LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
 
-            // Draw commands for non animated models
+            // Draw commands for non animated entities
             if (globalBuffers.getNumIndirectCommands() > 0) {
                 vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
                 instanceBuffer.put(0, globalBuffers.getInstanceDataBuffers()[idx].getBuffer());
@@ -240,7 +240,7 @@ public class GeometryRenderActivity {
                         GlobalBuffers.IND_COMMAND_STRIDE);
             }
 
-            // Draw commands for  animated models
+            // Draw commands for animated entities
             if (globalBuffers.getNumAnimIndirectCommands() > 0) {
                 vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
                 instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffers()[idx].getBuffer());

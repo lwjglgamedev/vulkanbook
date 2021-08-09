@@ -43,7 +43,7 @@ public class GeometryAttachments {
     }
 
     public void cleanup() {
-        attachments.stream().forEach(Attachment::cleanup);
+        attachments.forEach(Attachment::cleanup);
     }
 
     public List<Attachment> getAttachments() {

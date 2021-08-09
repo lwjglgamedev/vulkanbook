@@ -39,5 +39,4 @@ public class GeometrySpecConstants {
     public VkSpecializationInfo getSpecInfo() {
         return specInfo;
     }
-
 }

@@ -1066,15 +1066,554 @@ public class Render {
 }
 ```
 
+With all the changes above, the `GeometryRenderActivity` class has been simplified a lot. Let's start with the first block:
+```java
+public class GeometryRenderActivity {
+    ...
+    private final GeometrySpecConstants geometrySpecConstants;
+    ...
+    private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
+    ...
+    private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
+    ...
+    private TextureDescriptorSet textureDescriptorSet;
+    ...
+    public GeometryRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene, GlobalBuffers globalBuffers) {
+        ...
+        geometrySpecConstants = new GeometrySpecConstants(scene);
+        ...
+        createDescriptorSets(numImages, globalBuffers);
+        ...
+    }
+
+    public void cleanup() {
+        ...
+        geometrySpecConstants.cleanup();
+        ...
+        storageDescriptorSetLayout.cleanup();
+        ...
+    }
+    ...
+}
+```
+
+The `GeometryRenderActivity` class does not longer have reference to command buffer and fences, therefore the `createCommandBuffers` method has been removed. We will not be accessing material information through uniforms but using an storage buffer. Hence, the `calcMaterialsUniformSize` method has also been removed. In addition, we will be accessing the textures through and array of textures, so we do not need a texture sampler. Without extensions, array will need to have a static size in the shaders. In order to be able to control the maximum number of textures, we will use a specialization constant, which is modelled in the `GeometrySpecConstants` class.
+```java
+package org.vulkanb.eng.graph.geometry;
+
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.vulkan.*;
+import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.vk.GraphConstants;
+
+import java.nio.ByteBuffer;
+
+public class GeometrySpecConstants {
+
+    private final ByteBuffer data;
+    private final VkSpecializationMapEntry.Buffer specEntryMap;
+    private final VkSpecializationInfo specInfo;
+
+    public GeometrySpecConstants() {
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);
+        data.putInt(engineProperties.getMaxTextures());
+        data.flip();
+
+        specEntryMap = VkSpecializationMapEntry.calloc(1);
+        specEntryMap.get(0)
+                .constantID(0)
+                .size(GraphConstants.INT_LENGTH)
+                .offset(0);
+
+        specInfo = VkSpecializationInfo.calloc();
+        specInfo.pData(data)
+                .pMapEntries(specEntryMap);
+    }
+
+    public void cleanup() {
+        MemoryUtil.memFree(specEntryMap);
+        specInfo.free();
+        MemoryUtil.memFree(data);
+    }
+
+    public VkSpecializationInfo getSpecInfo() {
+        return specInfo;
+    }
+}
+```
+
+Back to the `GeometryRenderActivity` class, this specialization constant needs to be used when creating the shaders.
+```java
+public class GeometryRenderActivity {
+    ...
+    private void createShaders() {
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        if (engineProperties.isShaderRecompilation()) {
+            ShaderCompiler.compileShaderIfChanged(GEOMETRY_VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
+            ShaderCompiler.compileShaderIfChanged(GEOMETRY_FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
+        }
+        shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
+                {
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, GEOMETRY_VERTEX_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, GEOMETRY_FRAGMENT_SHADER_FILE_SPV,
+                                geometrySpecConstants.getSpecInfo()),
+                });
+    }    ...
+}
+```
+
+The methods that create the descriptor sets need also to be modified.
+```java
+public class GeometryRenderActivity {
+    ...
+    private void createDescriptorPool() {
+        ...
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+        ...
+    }
+
+    private void createDescriptorSets(int numImages, GlobalBuffers globalBuffers) {
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        ...
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, engineProperties.getMaxTextures(), 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        ...
+        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
+                uniformDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+                storageDescriptorSetLayout,
+                textureDescriptorSetLayout,
+        };
+        ...
+        materialsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
+                globalBuffers.getMaterialsBuffer(), 0);
+        ...
+    }
+    ...
+}
+```
+
+As we will see when describing the changes in the geometry shaders, we will be using as vertex input per instance data, that is, dat that only changes between instances, not between vertices. In order to support that, we need to change the vertex structure definition, by creating a new class, named `InstancedVertexBufferStructure`, which is very similar to the `VertexBufferStructure`, but adds definition for instance data.
+```java
+package org.vulkanb.eng.graph.vk;
+
+import org.lwjgl.vulkan.*;
+
+import static org.lwjgl.vulkan.VK10.*;
+
+public class InstancedVertexBufferStructure extends VertexInputStateInfo {
+
+    public static final int TEXT_COORD_COMPONENTS = 2;
+    private static final int NORMAL_COMPONENTS = 3;
+    private static final int NUMBER_OF_ATTRIBUTES = 10;
+    private static final int POSITION_COMPONENTS = 3;
+    public static final int SIZE_IN_BYTES = (POSITION_COMPONENTS + NORMAL_COMPONENTS * 3 + TEXT_COORD_COMPONENTS) * GraphConstants.FLOAT_LENGTH;
+
+    private final VkVertexInputAttributeDescription.Buffer viAttrs;
+    private final VkVertexInputBindingDescription.Buffer viBindings;
+
+    public InstancedVertexBufferStructure() {
+        viAttrs = VkVertexInputAttributeDescription.calloc(NUMBER_OF_ATTRIBUTES);
+        viBindings = VkVertexInputBindingDescription.calloc(2);
+        vi = VkPipelineVertexInputStateCreateInfo.calloc();
+
+        int i = 0;
+        // Position
+        viAttrs.get(i)
+                .binding(0)
+                .location(i)
+                .format(VK_FORMAT_R32G32B32_SFLOAT)
+                .offset(0);
+
+        // Normal
+        i++;
+        viAttrs.get(i)
+                .binding(0)
+                .location(i)
+                .format(VK_FORMAT_R32G32B32_SFLOAT)
+                .offset(POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
+
+        // Tangent
+        i++;
+        viAttrs.get(i)
+                .binding(0)
+                .location(i)
+                .format(VK_FORMAT_R32G32B32_SFLOAT)
+                .offset(NORMAL_COMPONENTS * GraphConstants.FLOAT_LENGTH + POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
+
+        // BiTangent
+        i++;
+        viAttrs.get(i)
+                .binding(0)
+                .location(i)
+                .format(VK_FORMAT_R32G32B32_SFLOAT)
+                .offset(NORMAL_COMPONENTS * GraphConstants.FLOAT_LENGTH * 2 + POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
+
+        // Texture coordinates
+        i++;
+        viAttrs.get(i)
+                .binding(0)
+                .location(i)
+                .format(VK_FORMAT_R32G32_SFLOAT)
+                .offset(NORMAL_COMPONENTS * GraphConstants.FLOAT_LENGTH * 3 + POSITION_COMPONENTS * GraphConstants.FLOAT_LENGTH);
+
+        // Model Matrix as a set of 4 Vectors
+        i++;
+        for (int j = 0; j < 4; j++) {
+            viAttrs.get(i)
+                    .binding(1)
+                    .location(i)
+                    .format(VK_FORMAT_R32G32B32A32_SFLOAT)
+                    .offset(j * GraphConstants.VEC4_SIZE);
+            i++;
+        }
+        viAttrs.get(i)
+                .binding(1)
+                .location(i)
+                .format(VK_FORMAT_R8_UINT)
+                .offset(GraphConstants.VEC4_SIZE * 4);
+
+        // Non instanced data
+        viBindings.get(0)
+                .binding(0)
+                .stride(SIZE_IN_BYTES)
+                .inputRate(VK_VERTEX_INPUT_RATE_VERTEX);
+
+        // Instanced data
+        viBindings.get(1)
+                .binding(1)
+                .stride(GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH)
+                .inputRate(VK_VERTEX_INPUT_RATE_INSTANCE);
+
+        vi
+                .sType(VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
+                .pVertexBindingDescriptions(viBindings)
+                .pVertexAttributeDescriptions(viAttrs);
+    }
+
+    @Override
+    public void cleanup() {
+        super.cleanup();
+        viBindings.free();
+        viAttrs.free();
+    }
+}
+```
+
+As you can see, we create an additional `VkVertexInputBindingDescription`. The input rate for this description is not `VK_VERTEX_INPUT_RATE_VERTEX` but `VK_VERTEX_INPUT_RATE_INSTANCE`, which means that this description describes an instance data. This vertex structure definition needs to be used when creating the pipeline in the `GeometryRenderActivity` class.
+```java
+public class GeometryRenderActivity {
+    ...
+    private void createPipeline() {
+        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
+                geometryFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram, GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
+                true, true, 0,
+                new InstancedVertexBufferStructure(), geometryDescriptorSetLayouts);
+        pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
+        pipeLineCreationInfo.cleanup();
+    }
+    ...
+}
+```
+In this case, we will not be using push constants to pass model matrices to the shader, but we will accessing that through a buffer by using per-instance data.
+
+The `GeometryRenderActivity` class needs also to define a new method `loadModels` which will be invoked by the `Render` instance, when the models are loaded. This class needs to properly create a texture descriptor set which size will be equal to the total number of textures loaded.
+```java
+public class GeometryRenderActivity {
+    ...
+    public void loadModels(TextureCache textureCache) {
+        device.waitIdle();
+        // Size of the descriptor is setup in the layout, we need to fill up the texture list
+        // up to the number defined in the layout (reusing last texture)
+        List<Texture> textureCacheList = textureCache.getAsList();
+        int textureCacheSize = textureCacheList.size();
+        List<Texture> textureList = new ArrayList<>(textureCacheList);
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        int maxTextures = engineProperties.getMaxTextures();
+        for (int i = 0; i < maxTextures - textureCacheSize; i++) {
+            textureList.add(textureCacheList.get(textureCacheSize - 1));
+        }
+        textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout, textureList,
+                textureSampler, 0);
+    }
+    ...
+}
+```
+In this case, we need to add support for array of textures to the `TextureDescriptorSet` class. We will add a new constructor that accepts a list of textures, and when creating the descriptor set, we will properly set up the `descriptorCount` attribute to the number of images (backed by a `VkDescriptorImageInfo element`).
+```java
+public class TextureDescriptorSet extends DescriptorSet {
+    ...
+    public TextureDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
+                                Texture texture, TextureSampler textureSampler, int binding) {
+        this(descriptorPool, descriptorSetLayout, Arrays.asList(texture), textureSampler, binding);
+    }
+
+    public TextureDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
+                                List<Texture> textureList, TextureSampler textureSampler, int binding) {
+        ...
+            int numImages = textureList.size();
+            VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(numImages, stack);
+            for (int i = 0; i < numImages; i++) {
+                Texture texture = textureList.get(i);
+                imageInfo.get(i)
+                        .imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+                        .imageView(texture.getImageView().getVkImageView())
+                        .sampler(textureSampler.getVkSampler());
+            }
+
+            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
+            descrBuffer.get(0)
+                    .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
+                    .dstSet(vkDescriptorSet)
+                    .dstBinding(binding)
+                    .dstArrayElement(0)
+                    .descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                    .descriptorCount(numImages)
+                    .pImageInfo(imageInfo);
+        ...
+    }
+    ...
+}
+```
+
+Back to the `GeometryRenderActivity` class, the most interesting changes are in the `recordCommandBuffer` method. The first commands that we will record, will be exactly the same, we will setup the render pass information, the view port size, etc. The interesting part comes at the end of the method:
+```java
+public class GeometryRenderActivity {
+    ...
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
+        ...
+            LongBuffer descriptorSets = stack.mallocLong(4)
+                    .put(0, projMatrixDescriptorSet.getVkDescriptorSet())
+                    .put(1, viewMatricesDescriptorSets[idx].getVkDescriptorSet())
+                    .put(2, materialsDescriptorSet.getVkDescriptorSet())
+                    .put(3, textureDescriptorSet.getVkDescriptorSet());
+
+            VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+
+            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+
+            LongBuffer vertexBuffer = stack.mallocLong(1);
+            LongBuffer instanceBuffer = stack.mallocLong(1);
+            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
+
+            // Draw commands for non animated entities
+            if (globalBuffers.getNumIndirectCommands() > 0) {
+                vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getInstanceDataBuffers()[idx].getBuffer());
+
+                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
+                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+                VulkanBuffer staticIndirectBuffer = globalBuffers.getIndirectBuffer();
+                vkCmdDrawIndexedIndirect(cmdHandle, staticIndirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
+                        GlobalBuffers.IND_COMMAND_STRIDE);
+            }
+
+            // Draw commands for animated entities
+            if (globalBuffers.getNumAnimIndirectCommands() > 0) {
+                vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffers()[idx].getBuffer());
+
+                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
+                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+                VulkanBuffer animIndirectBuffer = globalBuffers.getAnimIndirectBuffer();
+                vkCmdDrawIndexedIndirect(cmdHandle, animIndirectBuffer.getBuffer(), 0, globalBuffers.getNumAnimIndirectCommands(),
+                        GlobalBuffers.IND_COMMAND_STRIDE);
+            }
+
+            vkCmdEndRenderPass(cmdHandle);
+        }
+    }
+    ...
+}
+```
+
+First of all, the number and types of descriptor sets have changed, so we need to update that. After that, we copy the view matrix to the uniform buffer. Finally, for non animated models, we just need to submit a single drawing command by invoking the `vkCmdDrawIndexedIndirect`. This function receives the buffer where we recorded in t draw indirect commands, the starting position, the number of commands to be used and the size devoted to each command. Although the `VkDrawIndexedIndirectCommand` has a fixed side, we can add additional data after each command to use additional information. The total size of each command is controlled by that last parameters, which in our case, is equal to  `VkDrawIndexedIndirectCommand.SIZEOF`. Prior to invoking the `vkCmdDrawIndexedIndirect`, we need to bind the buffers that will hold per-vertex and per-instance data, and the index buffer. The process for animated models is similar, but we need to bind a different set of buffers. As you can see, we are just binding three buffers and recording a single draw command for non-animated entities, and the same ofr animated ones. The number of binding operations and the number of drawing commands have been reduced dramatically.
+
+The `recordEntities`, `registerModels`, `submit`, `updateMaterialsBuffer` and `updateTextureDescriptorSet` methods have been removed.
+
+The changes in the geometry phase vertex shade (`geometry_vertex.gls`) are:
+```glsl
+...
+// Instanced attributes
+layout (location = 5) in mat4 entityModelMatrix;
+layout (location = 9) in uint entityMatIdx;
+...
+layout(location = 4) flat out uint outMatIdx;
+...
+void main()
+{
+    mat4 modelViewMatrix = viewUniform.viewMatrix * entityModelMatrix;
+    ...
+    outMatIdx     = entityMatIdx;
+    ...
+}
+```
+First we see new input attributes under locations `5` and `9` that hold per instance data: the model matrix, and the material index. That material index (that is, the position of the material associated to the instance in the materials buffer) is passwd to the fragment shader. Note that we use the `flat` qualifier for the `outMatIdx` attribute to indicate that this value should not be interpolated.
+
+The `geometry_fragment.gls` has been updated like this:
+```glsl
+#version 450
+
+layout (constant_id = 0) const int MAX_TEXTURES = 100;
+
+layout(location = 0) in vec3 inNormal;
+layout(location = 1) in vec3 inTangent;
+layout(location = 2) in vec3 inBitangent;
+layout(location = 3) in vec2 inTextCoords;
+layout(location = 4) flat in uint inMatIdx;
+
+layout(location = 0) out vec4 outAlbedo;
+layout(location = 1) out vec4 outNormal;
+layout(location = 2) out vec4 outPBR;
+
+struct Material {
+    vec4 diffuseColor;
+    int textureIdx;
+    int normalMapIdx;
+    int metalRoughMapIdx;
+    float roughnessFactor;
+    float metallicFactor;
+};
+
+layout (std430, set=2, binding=0) readonly buffer srcBuf {
+    Material data[];
+} materialsBuf;
+layout(set = 3, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
+
+vec4 calcAlbedo(Material material) {
+    outAlbedo = material.diffuseColor;
+    if (material.textureIdx >= 0) {
+        outAlbedo = texture(textSampler[material.textureIdx], inTextCoords);
+    }
+    return outAlbedo;
+}
+
+vec3 calcNormal(Material material, vec3 normal, vec2 textCoords, mat3 TBN) {
+    vec3 newNormal = normal;
+    if (material.normalMapIdx >= 0) {
+        newNormal = texture(textSampler[material.normalMapIdx], textCoords).rgb;
+        newNormal = normalize(newNormal * 2.0 - 1.0);
+        newNormal = normalize(TBN * newNormal);
+    }
+    return newNormal;
+}
+
+vec2 calcRoughnessMetallicFactor(Material material, vec2 textCoords) {
+    float roughnessFactor = 0.0f;
+    float metallicFactor = 0.0f;
+    if (material.metalRoughMapIdx >= 0) {
+        vec4 metRoughValue = texture(textSampler[material.metalRoughMapIdx], textCoords);
+        roughnessFactor = metRoughValue.g;
+        metallicFactor = metRoughValue.b;
+    } else {
+        roughnessFactor = material.roughnessFactor;
+        metallicFactor = material.metallicFactor;
+    }
+
+    return vec2(roughnessFactor, metallicFactor);
+}
+
+void main()
+{
+    Material material = materialsBuf.data[inMatIdx];
+    outAlbedo = calcAlbedo(material);
+
+    // Hack to avoid transparent PBR artifacts
+    if (outAlbedo.a < 0.5) {
+        discard;
+    }
+
+    mat3 TBN = mat3(inTangent, inBitangent, inNormal);
+    vec3 newNormal = calcNormal(material, inNormal, inTextCoords, TBN);
+    // Transform normals from [-1, 1] to [0, 1]
+    outNormal = vec4(0.5 * newNormal + 0.5, 1.0);
+
+    float ao = 0.5f;
+    vec2 roughmetfactor = calcRoughnessMetallicFactor(material, inTextCoords);
+
+    outPBR = vec4(ao, roughmetfactor.x, roughmetfactor.y, 1.0f);
+}
+```
+
+Besides, extracting some of the code previously in the `main` function, we now access a single buffer that has the material information using the material index. We also access an array of textures, using a texture index that is stored in the material information.
+
+`ShadowRenderActivity` class has been simplified even more. We just need to update the pipeline creation to take into consideration the new vertex structure with per-instance attributes and change the drawing commands to submit a draw indirect command for animated and non-animated entities.
+```java
+public class ShadowRenderActivity {
+    ...
+    private void createPipeline(PipelineCache pipelineCache) {
+        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
+                shadowsFrameBuffer.getRenderPass().getVkRenderPass(), shaderProgram,
+                GeometryAttachments.NUMBER_COLOR_ATTACHMENTS, true, true, 0,
+                new InstancedVertexBufferStructure(), descriptorSetLayouts);
+        pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
+    }
+    ...
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
+        ...
+            LongBuffer vertexBuffer = stack.mallocLong(1);
+            LongBuffer instanceBuffer = stack.mallocLong(1);
+            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
+
+            // Draw commands for non animated models
+            if (globalBuffers.getNumIndirectCommands() > 0) {
+                vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getInstanceDataBuffers()[idx].getBuffer());
+
+                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
+                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+                VulkanBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
+                vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
+                        GlobalBuffers.IND_COMMAND_STRIDE);
+            }
+
+            if (globalBuffers.getNumAnimIndirectCommands() > 0) {
+                // Draw commands for  animated models
+                vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
+                instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffers()[idx].getBuffer());
+
+                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
+                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
+                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+                VulkanBuffer animIndirectBuffer = globalBuffers.getAnimIndirectBuffer();
+                vkCmdDrawIndexedIndirect(cmdHandle, animIndirectBuffer.getBuffer(), 0, globalBuffers.getNumAnimIndirectCommands(),
+                        GlobalBuffers.IND_COMMAND_STRIDE);
+            }
+
+            vkCmdEndRenderPass(cmdHandle);
+        }
+    }
+}
+```
+
+The shadow vertex shader, `shadow_vertex.glsl`, just needs to be update to se the per-instance data:
+```glsl
+...
+// Instanced attributes
+layout (location = 5) in mat4 entityModelMatrix;
+layout (location = 9) in uint entityMatIdx;
+
+void main()
+{
+    gl_Position = entityModelMatrix * vec4(entityPos, 1.0f);
+}
+```
+
+Since most of the work for animations has already been done in the `GlobalBuffers` class, the `AnimationComputeActivity` class has also been simplified a lot.
+```java
+```
+
 ** TBD: Changes
-- GeometryRenderActivity
-- GeometryAttachments
-- GeometrySpeConstants
-- GuiRenderActivity
-- ShadowRenderActivity
 - AnimationComputeActivity
 - ComputePipeline
+- GuiRenderActivity
 - VertexBufferStructure
-- DescriptorSetLayout
-- InstancedVertexBufferStructure
 - Main
+
+TODO: Check VertexBufferStructure.SIZE_IN_BYTES
