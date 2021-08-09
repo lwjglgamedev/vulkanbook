@@ -11,7 +11,10 @@ As you can see, the ultimate goal is to maximize the utilization of the CPU whil
 You can find the complete source code for this chapter [here](../../booksamples/chapter-16).
 
 ## Overview
-TBD:
+
+In this chapter we will construct a bindless render pipeline that will use a buffer which will store indirect drawing commands to render a scene with a single draw call. Basically, we will store in a buffer `VkDrawIndexedIndirectCommand` structures, which will contain offsets to the buffers that will hold vertex information, the indices, materials and per instance data, such as model matrices, etc. This will avoid to constantly record binding operators to per-model buffer, send data through push constants and record per mesh draw commands. Regarding textures, we will use a texture array, that will hold all the textures loaded. Our materials will just simply pass the index to that array inp order to apply textures to models. 
+
+![Overview](indirect-drawing.svg)
 
 ## Global Buffers
 
