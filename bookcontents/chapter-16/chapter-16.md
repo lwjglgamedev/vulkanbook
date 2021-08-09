@@ -1,18 +1,18 @@
 # Indirect drawing
 
-Until this chapter, we render the models by binding their material uniforms, their textures, their vertices and indices buffers and submitting one draw command for each of the meshes it is composed. In this chapter we will start our way to a more efficient wat of rendering, we will begin the implementation of a bind-less render. This types of renders do not receive a bunch of draw commands, instead they relay on indirect drawing commands. Indirect draw commands are, in essence, draw commands that obtain the parameters required to perform the operation from a GPU buffer (instead of relaying on previous binding operations). This is a more efficient way of drawing because:
+Until this chapter, we have rendered the models by binding their material uniforms, their textures, their vertices and indices buffers and submitting one draw command for each of the meshes they are composed. In this chapter, we will start our way to a more efficient wat of rendering, we will begin the implementation of a bind-less render. This type of rendering does not receive a bunch of draw commands to draw the scene, instead they relay on indirect drawing commands. Indirect draw commands are, in essence, draw commands stored in a buffer that obtain the parameters required to perform the operation from a set of global buffers. This is a more efficient way of drawing because:
 
 - We remove the need to perform several bind operations before drawing each mesh.
 - We need just to record a single draw call.
-- We can perform in-GPU operations, such as culling, that will operate over the buffer that stores the drawing parameters through compute shaders.
+- We can perform in-GPU operations, such as culling, that will operate over the buffer that stores the drawing parameters through compute shaders, reducing the load on the CPU side.
 
-As you can see, the ultimate goal is to maximize the utilization of the CPU while removing potential bottlenecks that may occur at the CPU side and latencies due to CPU to GPU communications.
+As you can see, the ultimate goal is to maximize the utilization of the GPU while removing potential bottlenecks that may occur at the CPU side and latencies due to CPU to GPU communications.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-16).
 
 ## Overview
 
-In this chapter we will construct a bindless render pipeline that will use a buffer which will store indirect drawing commands to render a scene with a single draw call. Basically, we will store in a buffer `VkDrawIndexedIndirectCommand` structures, which will contain offsets to the buffers that will hold vertex information, the indices, materials and per instance data, such as model matrices, etc. This will avoid to constantly record binding operators to per-model buffer, send data through push constants and record per mesh draw commands. Regarding textures, we will use a texture array, that will hold all the textures loaded. Our materials will just simply pass the index to that array inp order to apply textures to models. 
+As it has been introduced, we will construct a bind-less render pipeline that will use a buffer to store indirect drawing commands to render a scene with a single draw call. Basically, we will store in a buffer `VkDrawIndexedIndirectCommand` structures, which will contain offsets to the buffers that will hold vertex information, the indices, materials and per instance data (such as model matrices, etc.). This will avoid to constantly record binding operators to per-model buffers, send data through push constants and record per-mesh drawing commands. In order to be able to handle textures, we will use a texture array, that will hold all the textures loaded. Our materials will just simply have an attribute for the index to that array so we can apply textures to models. 
 
 ![Overview](indirect-drawing.svg)
 
@@ -53,14 +53,14 @@ public class GlobalBuffers {
 ```
 
 Although we will view how these buffers are used during data loading and rendering, here is a brief summary of the purpose of the different buffers:
-- `animJointMatricesBuffer`: This buffer will hold the matrices of the joints transformations of all the animated models.
-- `animWeightsBuffer`: This buffer will hold the weights of the joints transformations of all the animated models.
-- `indicesBuffer`: This buffer will hold the indices of all the models to be rendered.
-- `verticesBuffer`: This buffer will hold the vertex information (position, normals, etc) of all the models to be rendered. For the animated models it will contain the data of the binding pose.
-- `animIndirectBuffer`: This buffer will hold the indirect drawing commands for the animated models.
-- `animInstanceDataBuffers`: This array of buffers will hold instance data for each entity associated to an animated model when rendering. That is, it wil hold the model transformation matrix and and index to to the buffer that holds material data. It is an array because we will need to update them while rendering, therefore we will need separate buffers for each swap chain image.
-- `animVerticesBuffer`: This buffer will hold the vertex information for animated models after animation has been applied (This is the one that will be used for rendering).
-- `indirectBuffer`:This buffer will hold the indirect drawing commands for the static models.
+- `animJointMatricesBuffer`: It will hold the matrices of the joints transformations of all the animated models.
+- `animWeightsBuffer`: It will hold the weights of the joints transformations of all the animated models.
+- `indicesBuffer`: It will hold the indices of all the models to be rendered.
+- `verticesBuffer`: It will hold the vertex information (position, normals, etc) of all the models to be rendered. For the animated models it will contain the data of the binding pose.
+- `animIndirectBuffer`: It will hold the indirect drawing commands for the animated models.
+- `animInstanceDataBuffers`: This array of buffers will hold instance data for each entity associated to an animated model when rendering. That is, it will hold the model transformation matrix and and index to to the buffer that holds the materials data. It is an array because we will need to update them while rendering, therefore we will need separate buffers for each swap chain image.
+- `animVerticesBuffer`: It will hold the vertex information for animated models after animation has been applied (This is the one that will be used for rendering).
+- `indirectBuffer`: It will hold the indirect drawing commands for the static models.
 - `instanceDataBuffers`: This array is equivalent to the `animInstanceDataBuffers` array for static models.
 
 In the `GlobalBuffers` we initialize some of those buffers along with some other attributes:
@@ -141,7 +141,6 @@ public class EngineProperties {
 ```
 
 Back to the `GlobalBuffers` class, the next method is the `cleanup()` method, which frees all the resources that were allocated during the initialization.
-
 ```java
 public class GlobalBuffers {
     ...
@@ -201,7 +200,7 @@ public class GlobalBuffers {
 }
 ```
 
-The `loadModels` method starts by creating several `StgBuffer` instances fpr the vertex data, indices, materials, etc. along with a command buffer to record the transitions. It also creates a default material which will be used for models which do not define any. One important thing to remark is that we are using a single staging buffer type for all the models (a single one for the vertices, for the indices, etc.). The `loadModels` method continues as follows:
+The `loadModels` method starts by creating several `StgBuffer` instances for the vertex data, indices, materials, etc. along with a command buffer to record the transitions. The `StgBuffer` class will manage the creation of a staging buffer, which is accessible by the CPU which contents will later be copied to a GPU only buffer. It also creates a default material which will be used for models which do not define any. One important thing to remark is that we are using a single staging buffer type for all the models (a single one for the vertices, for the indices, etc.). The `loadModels` method continues as follows:
 ```java
 public class GlobalBuffers {
     ...
@@ -250,9 +249,9 @@ public class GlobalBuffers {
 }
 ```
 
-As it can be seen, we iterate over the meshes that are defined for each model, invoking the `loadMeshes` to properly upload the data to the staging buffers. We also call the `loadAnimationData` method to load the animation data for each model (if present). After that, we check if there are mp textures loaded to load a default one (which is required for simplifying the render). Finally, we record the transfer commands from CPU accessible buffers to GPU only buffers and cleanup the staging buffers.
+As it can be seen, we iterate over the meshes that are defined for each model, invoking the `loadMeshes` to properly upload the data into the staging buffers. We also call the `loadAnimationData` method to load the animation data for each model (if present). After that, we check if there are mp textures loaded to load a default one (which is required for simplifying the render). Finally, we record the transfer commands from CPU accessible buffers to GPU only buffers and cleanup the staging buffers.
 
-The `StgBuffer` class, a `GlobalBuffers` inner class, allows us to use a temporary CPU accessible to a GPU only buffer:
+As it has been commented before, the `StgBuffer` class, a `GlobalBuffers` inner class, allows us to use a temporary CPU accessible to a GPU only buffer:
 ```java
 public class GlobalBuffers {
     ...
@@ -342,7 +341,7 @@ public class VulkanModel {
 }
 ```
 
-After loading the mesh data into the global buffer we need to record the size of the data for the vertices, the number indices, the offset of the vertices data and  indices data in their respective global buffers. We meed also to store a reference to the material which this mesh refers to and and offset to the wights buffer (for animated models).
+After loading the mesh data into the global buffer we need to record the size of the data for the vertices, the number indices, the offset of the vertices data and indices data in those global buffers. We meed also to store a reference to the material which this mesh refers to and and offset to the weights buffer (for animated models). This is what is stored in the `VulkanModel.VulkanMesh` class.
 
 The `VulkanAnimationData`. basically contains a list of offsets to a buffer which stores the joint matrices offset to be used for each frame of an animation. It is defined like this:
 ```java
@@ -424,7 +423,7 @@ public class GlobalBuffers {
     ...
 }
 ```
-The `loadMaterials` will look familiar to you, the only difference is that we will be storing all that information into a single buffer In order to properly access the data for each material in t he shaders we will assign to each material an unique identifier, which in essence will be used as way to calculate the offset required in that global materials buffer. One important thing to highlight is that we are applying a padding at the end of each block of material data. The reason for that is that we will using `std430` layout when accessing the material data in the shaders. This means that the data will be aligned to the nearest 4 bytes.
+The `loadMaterials` will look familiar to you, the only difference is that we will be storing all that information into a single buffer instead of having separate buffers per material. In order to properly access the data for each material in the shaders, we will assign to each material a unique identifier, which in essence will be used as way to calculate the offset to abe applied to the global global materials buffer to access each specific material. One important thing to highlight is that we are applying a padding at the end of each block of material data. The reason for that is that we will using `std430` layout when accessing the material data in the shaders. This means that the data will be aligned to the nearest 4 bytes.
 
 The `loadMeshes` is defined like this:
 ```java
@@ -487,7 +486,7 @@ public class GlobalBuffers {
     ...
 }
 ```
-This method is quite similar to the one we saw in previous chapters. The difference is that we are now copying the date to a single vertices buffer, a single indices buffer and another one for the vertex weights for all the models. As you can see, we store that information of each of the meshes in an instance of the `VulkanMesh` class.
+This method is quite similar to the one we saw in previous chapters. The difference is that we are now copying the data to a single vertices buffer, a single indices buffer and another one for the vertex weights for all the models. As you can see, we store those offsets for each of the meshes in an instance of the `VulkanMesh` class.
 
 While we are copying the vertex data to the buffer, we also check if the model has animations an copy the weights used for the animation to a common weights buffer. This is done in the `loadWeightsBuffer` method.
 ```java
@@ -550,7 +549,7 @@ public class GlobalBuffers {
 }
 ```
 
-With all the code presented above we have now all the meshes data in GPU accessible buffers, ready to be used by our shaders. Now it comes the most important part of indirect drawing, we need to create a buffer that will contain the indirect drawing commands that will allow us to render scene. The `GlobalBuffers` class has a method that performs all the necessary steps to create the indirect drawing commands buffer upon a list of entities:
+With all the code presented above, we have now all the meshes data in GPU accessible buffers, ready to be used by our shaders. Now it comes the most important part of indirect drawing, we need to create a buffer that will contain the indirect drawing commands that will allow us to render scene. The `GlobalBuffers` class has a method that performs all the necessary steps to create the indirect drawing commands buffer upon a list of entities:
 ```java
 public class GlobalBuffers {
     ...
@@ -573,7 +572,7 @@ The process of recording indirect draw command is as follows:
   - `vertexOffset`: The offset to the vertex buffer for the draw call. Beware, that this is not an offset in bytes but an offset in vertices structures.
   - `firstInstance`: The instance identifier of the first instance to draw.
 
-As explained above, we need to record the draw indirect indexed commands in a buffer. We will also use staging buffers to copy the data to a CPU accessible buffer and later on to transfer its contents to a GPU only accessible buffer. In addition to that, we need to create a dedicated buffer to hold instance specific data. In this specific example, we will store he model matrix and the associated material identifier (although t his last element is shared between all the instances, it makes things easier to store that information in this buffer). The process described above is implemented in the `loadStaticEntities` method, which is defined as follows:
+As explained above, we need to record the draw indirect indexed commands in a buffer. We will also use staging buffers to copy the data to a CPU accessible buffer and later on to transfer its contents to a GPU only accessible buffer. In addition to that, we need to create a dedicated buffer to hold instance specific data. In this specific example, we will store he model matrix and the associated material identifier (although this last element is shared between all the instances, it makes things easier to store that information in this buffer). The process described above is implemented in the `loadStaticEntities` method, which is defined as follows:
 ```java
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
@@ -646,7 +645,7 @@ public class GlobalBuffers {
 }
 ```
 
-As it can be seen above, the `loadStaticEntities` just record the commands for entities that have no animated models. For animated models ,the work is don in the `loadAnimEntities` method. 
+As it can be seen above, the `loadStaticEntities` just record the commands for entities that have no animated models. For animated models, the work is don in the `loadAnimEntities` method. 
 ```java
 public class GlobalBuffers {
     ...
@@ -732,9 +731,9 @@ public class GlobalBuffers {
     }
     ...
 }
-````
+```
 
-For animated models we cannot use instance rendering, since each entity may be in a different state of the animation. Therefore, we need to record the indirect drawing commands for each specific mesh for each entity. The relevant information is store in a new class named `VulkanAnimEntity` which stores the relevant information that will be used when calculating the animations. If you recall, when animating we use the static binding pose information and apply a set of transformations over the vertices to update the data according to a specific frame. This is done in a compute shader. The `VulkanAnimEntity` will store the information required to perform that process later on and is defined like this:
+For animated models we cannot use instance rendering, since each entity may be in a different state of the animation. Therefore, we need to record the indirect drawing commands for each specific mesh for each entity. The relevant information is stored in a new class named `VulkanAnimEntity` which stores the relevant information that will be used when calculating the animations. If you recall, when animating we use the static binding pose information and apply a set of transformations over the vertices to update the data according to a specific frame. This is done in a compute shader. The `VulkanAnimEntity` will store the information required to perform that process later on and is defined like this:
 ```java
 package org.vulkanb.eng.graph;
 
@@ -770,7 +769,7 @@ public class VulkanAnimEntity {
 }
 ```
 
-In order to complete `GlobalBuffers` class core functionality, we need to provide a function that stores per instance information used for rendering. We use separate buffers for static and animated models. We need also separate buffers per swap chain image to avoid updating the buffer while its being used for rendering. We will achieve this in a method named `loadInstanceData` which is defined like this:
+In order to complete `GlobalBuffers` class core functionality, we need to provide a function that stores per instance information used for rendering. To store that information, we use separate buffers for static and animated models. We need also separate buffers per swap chain image to avoid updating the buffer while its being used for rendering. We will achieve this in a method named `loadInstanceData` which is defined like this:
 ```java
 public class GlobalBuffers {
     ...
@@ -810,7 +809,7 @@ public class GlobalBuffers {
 }
 ```
 
-As you can see, the `public` `loadInstanceData` method just receives the scene, and the swap chain image index that should be using when loading the data into the buffer and it delegates the work into a `private` `loadInstanceData` method for loading instance data for static models and for animated models. The `private` `loadInstanceData` method receives a predicate that will exclude the entities thats should be ignored when loading the instance data. That is, when loading data ofr static models, animated entities should be ignores and viceversa. That private method, just iterates over the entities, structuring the layout per model and mesh (as it has been done when storing the draw indirect commands) and dumps de model matrix and the material identifier of reach matrix in the appropriate buffer.
+As you can see, the `public` `loadInstanceData` method just receives the scene, and the swap chain image index that should be using when loading the data into the buffer and it delegates the work into a `private` `loadInstanceData` method for loading instance data for static models and for animated models. The `private` `loadInstanceData` method receives a predicate that will exclude the entities thats should be ignored when loading the instance data. That is, when loading data for static models, animated entities should be ignored and viceversa. That private method, just iterates over the entities, structuring the layout per model and mesh (as it has been done when storing the draw indirect commands) and dumps the model matrix and the material identifier of reach matrix in the appropriate buffer.
 
 Finally, the `GlobalBuffers` class is completed with some getter methods to access the buffers and other relevant attributes that will be used for rendering.
 ```java
@@ -869,9 +868,9 @@ public class GlobalBuffers {
     }
     ...
 }
-````
+```
 
-Finally, we will need to add support for texture arrays, therefore we need to update the descriptor set layout creating to add support mor multiple descriptor sets. The changes are shown below:
+Finally, we will need to add support for texture arrays, therefore, we need to update the descriptor set layout creating to add support mor multiple descriptor sets. The changes are shown below:
 ```java
 public abstract class DescriptorSetLayout {
     ...
@@ -917,7 +916,7 @@ public abstract class DescriptorSetLayout {
 
 # Render process changes
 
-We will examine now the changes that are required in the render process to support the new features. The first major change is that we will store all the indirect drawing commands in the buffer when loading the entities. We can also pre-record the drawing commands if the window is not resized or no new entities are added or removed. In order to be able to track the last condition we will add a timestamp to the `Scene` class:
+We will examine now the changes that are required in the render process to support the new features. The first major change is that we will store all the indirect drawing commands in the buffer when loading the entities. In addition to that, We can also pre-record the rest of the drawing commands if the window is not resized or no new entities are added or removed. In order to be able to track the last condition we will add a timestamp to the `Scene` class:
 ```java
 public class Scene {
     ...
@@ -969,7 +968,7 @@ public class Render {
 }
 ```
 
-The `Render` class will have an instance of the `GlobalBuffers` and will also have the command buffers and the fences used to record the render commands for the geometry and shadows passes. Drawing commands will be pre-record, by having them in the `Render` class it will be easier to update them. They will be created in the `createCommandBuffers` method:
+The `Render` class will have an instance of the `GlobalBuffers` and will also have the command buffers and the fences used to record the render commands for the geometry and shadows passes. Drawing commands will be pre-recorded, by having them in the `Render` class it will be easier to update them. They will be created in the `createCommandBuffers` method:
 ```java
 public class Render {
     ...
@@ -1003,7 +1002,7 @@ public class Render {
 }
 ```
 
-If you recall the `GlobalBuffers` class, it is responsible of loading the models data into the appropriate buffers, therefore the `loadModels` method in the `Render` class will need to be updated:
+If you recall the `GlobalBuffers` class, it is responsible of loading the models data into the appropriate buffers, therefore the `loadModels` method in the `Render` class will need to be updated, since that work is already been done. We will review later on what needs to be done now in the `GeometryRenderActivity` class.
 ```java
 public class Render {
     ...
@@ -1043,7 +1042,7 @@ public class Render {
     ...
 }
 ```
-As you can see, the first thing we do is check if the entities have changed. If they have, we will need to update the buffers associated with the entities (and their animations) and record the commands. Now,  commands will be pre-recorded, since all the drawing commands are already pre-recorded in a buffer through indirect drawing commands. Also, per instance data, such as model matrices, is no longer passed using push constants, but instead they are stored in a dedicated buffer which needs to be updated for each frame by calling `globalBuffers.loadInstanceData`. Since command buffers for geometry and shadow passes are already pre-recorded we just need to submit them in each frame by calling the `submitSceneCommand` method.
+As you can see, the first thing we do is check if the entities have changed. If they have, we will need to update the buffers associated with the entities (and their animations) and record the commands. Remember that Now, commands will be pre-recorded. Also, per instance data, such as model matrices, is no longer passed using push constants, but instead they are stored in a dedicated buffer which needs to be updated for each frame by calling `globalBuffers.loadInstanceData`. Since command buffers for geometry and shadow passes are already pre-recorded we just need to submit them in each frame by calling the `submitSceneCommand` method.
 
 The `recordCommands` method just iterates over all the command buffers (one per swap chain image), and delegates the recording of the different draw commands to the `GeometryRenderActivity` and `AnimationComputeActivity` instances. We will view what is done in each of these classes in a moment.
 ```java
@@ -1144,7 +1143,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-The `GeometryRenderActivity` class does not longer have reference to command buffer and fences, therefore the `createCommandBuffers` method has been removed. We will not be accessing material information through uniforms but using an storage buffer. Hence, the `calcMaterialsUniformSize` method has also been removed. In addition, we will be accessing the textures through and array of textures, so we do not need a texture sampler. Without extensions, array will need to have a static size in the shaders. In order to be able to control the maximum number of textures, we will use a specialization constant, which is modelled in the `GeometrySpecConstants` class.
+The `GeometryRenderActivity` class does not longer have references to command buffer and fences, therefore the `createCommandBuffers` method has been removed. We will not be accessing material information through uniforms but using an storage buffer. Hence, the `calcMaterialsUniformSize` method has also been removed. In addition to that, we will be accessing the textures through and array of textures. Without extensions, the array of textures will need to have a static size in the shaders. Therefore, in order to be able to control the maximum number of textures, we will use a specialization constant, which is modelled in the `GeometrySpecConstants` class.
 ```java
 package org.vulkanb.eng.graph.geometry;
 
@@ -1241,7 +1240,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-As we will see when describing the changes in the geometry shaders, we will be using as vertex input per instance data, that is, dat that only changes between instances, not between vertices. In order to support that, we need to change the vertex structure definition, by creating a new class, named `InstancedVertexBufferStructure`, which is very similar to the `VertexBufferStructure`, but adds definition for instance data.
+As we will see when describing the changes in the geometry shaders, we will be using as vertex input per instance data, that is, data that only changes between instances, not between vertices. In order to support that, we need to change the vertex structure definition, by creating a new class, named `InstancedVertexBufferStructure`, which is very similar to the `VertexBufferStructure`, but adds definition for per-instance data.
 ```java
 package org.vulkanb.eng.graph.vk;
 
@@ -1478,7 +1477,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-First of all, the number and types of descriptor sets have changed, so we need to update that. After that, we copy the view matrix to the uniform buffer. Finally, for non animated models, we just need to submit a single drawing command by invoking the `vkCmdDrawIndexedIndirect`. This function receives the buffer where we recorded in t draw indirect commands, the starting position, the number of commands to be used and the size devoted to each command. Although the `VkDrawIndexedIndirectCommand` has a fixed side, we can add additional data after each command to use additional information. The total size of each command is controlled by that last parameters, which in our case, is equal to  `VkDrawIndexedIndirectCommand.SIZEOF`. Prior to invoking the `vkCmdDrawIndexedIndirect`, we need to bind the buffers that will hold per-vertex and per-instance data, and the index buffer. The process for animated models is similar, but we need to bind a different set of buffers. As you can see, we are just binding three buffers and recording a single draw command for non-animated entities, and the same ofr animated ones. The number of binding operations and the number of drawing commands have been reduced dramatically.
+First of all, the number and types of descriptor sets have changed, so we need to update that. After that, we copy the view matrix to the uniform buffer. Finally, for non animated models, we just need to submit a single drawing command by invoking the `vkCmdDrawIndexedIndirect`. This function receives the buffer where we recorded draw indirect commands, the starting position, the number of commands to be used and the size devoted to each command. Although the `VkDrawIndexedIndirectCommand` has a fixed side, we can add additional data after each command to use additional information. The total size of each command is controlled by that last parameter, which in our case, is equal to  `VkDrawIndexedIndirectCommand.SIZEOF`. Prior to invoking the `vkCmdDrawIndexedIndirect`, we need to bind the buffers that will hold per-vertex and per-instance data, and the index buffer. The process for animated models is similar, but we need to bind a different set of buffers. As you can see, we are just binding three buffers and recording a single draw command for non-animated entities, and the same for animated ones. The number of binding operations and the number of drawing commands have been reduced dramatically.
 
 The `recordEntities`, `registerModels`, `submit`, `updateMaterialsBuffer` and `updateTextureDescriptorSet` methods have been removed.
 
@@ -1586,7 +1585,7 @@ void main()
 }
 ```
 
-Besides, extracting some of the code previously in the `main` function, we now access a single buffer that has the material information using the material index. We also access an array of textures, using a texture index that is stored in the material information.
+Besides extracting some of the code previously in the `main` function, we now access a single buffer that has the material information using the material index. We also access an array of textures, using a texture index that is stored in the material information.
 
 `ShadowRenderActivity` class has been simplified even more. We just need to update the pipeline creation to take into consideration the new vertex structure with per-instance attributes and change the drawing commands to submit a draw indirect command for animated and non-animated entities.
 ```java
@@ -1639,7 +1638,7 @@ public class ShadowRenderActivity {
 }
 ```
 
-The shadow vertex shader, `shadow_vertex.glsl`, just needs to be update to se the per-instance data:
+The shadow vertex shader, `shadow_vertex.glsl`, just needs to be updated to use the per-instance data:
 ```glsl
 ...
 // Instanced attributes
@@ -1704,7 +1703,7 @@ public class AnimationComputeActivity {
     ...
 }
 ```
-Instead of having multiple descriptor sets and buffer per model, we will have all that tha in combined storage buffers. Therefore, we need to create the new descriptor sets for them, as storage descriptor sets. Those descriptor sets are created when the animated entities are loaded. This will be done in the `onAnimatedEntitiesLoaded` which will be called from the `Render` instance.
+Instead of having multiple descriptor sets and buffers per model, we will have all that data in combined storage buffers. Therefore, we need to create the new descriptor sets for them, as storage descriptor sets. Those descriptor sets are created when the animated entities are loaded. This will be done in the `onAnimatedEntitiesLoaded` which will be called from the `Render` instance.
 ```java
 public class AnimationComputeActivity {
     ...
@@ -1930,6 +1929,6 @@ public class Main implements IAppLogic {
     }
 ```
 
-The results will be exactly the same as in chapter 14, but now we have the basis of a bindless pipeline.
+The results will be exactly the same as in chapter 14, but now we have the basis of a bind-less pipeline.
 
 <img src="../chapter-14/screen-shot.gif" title="" alt="Screen Shot" data-align="center">
