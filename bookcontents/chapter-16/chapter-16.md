@@ -868,6 +868,50 @@ public class GlobalBuffers {
 }
 ````
 
+Finally, we will need to add support for texture arrays, therefore we need to update the descriptor set layout creating to add support mor multiple descriptor sets. The changes are shown below:
+```java
+public abstract class DescriptorSetLayout {
+    ...
+    public static class DynUniformDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public DynUniformDescriptorSetLayout(Device device, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, binding, stage);
+        }
+    }
+
+    public static class SamplerDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public SamplerDescriptorSetLayout(Device device, int descriptorCount, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorCount, binding, stage);
+        }
+    }
+    ...
+    public static class SimpleDescriptorSetLayout extends DescriptorSetLayout {
+
+        public SimpleDescriptorSetLayout(Device device, int descriptorType, int descriptorCount, int binding, int stage) {
+            super(device);
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
+                layoutBindings.get(0)
+                ...
+                        .descriptorCount(descriptorCount)
+                ..
+            }
+        }
+    }
+
+    public static class StorageDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public StorageDescriptorSetLayout(Device device, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, binding, stage);
+        }
+    }
+
+    public static class UniformDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public UniformDescriptorSetLayout(Device device, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, binding, stage);
+        }
+    }
+}
+```
+
 # Render process changes
 
 We will examine now the changes that are required in the render process to support the new features. The first major change is that we will store all the indirect drawing commands in the buffer when loading the entities. We can also pre-record the drawing commands if the window is not resized or no new entities are added or removed. In order to be able to track the last condition we will add a timestamp to the `Scene` class:
@@ -1607,13 +1651,282 @@ void main()
 
 Since most of the work for animations has already been done in the `GlobalBuffers` class, the `AnimationComputeActivity` class has also been simplified a lot.
 ```java
+public class AnimationComputeActivity {
+    ...
+    private static final int PUSH_CONSTANTS_SIZE = GraphConstants.INT_LENGTH * 5;
+    ...
+    private DescriptorSet.StorageDescriptorSet dstVerticesDescriptorSet;
+    ...
+    private DescriptorSet.StorageDescriptorSet jointMatricesDescriptorSet;
+    ...
+    private DescriptorSet.StorageDescriptorSet srcVerticesDescriptorSet;
+    ...
+    private DescriptorSet.StorageDescriptorSet weightsDescriptorSet;
+    ...
+    public AnimationComputeActivity(CommandPool commandPool, PipelineCache pipelineCache) {
+        device = pipelineCache.getDevice();
+        computeQueue = new Queue.ComputeQueue(device, 0);
+        createDescriptorPool();
+        createDescriptorSets();
+        createShaders();
+        createPipeline(pipelineCache);
+        createCommandBuffers(commandPool);
+        memoryBarrier = new MemoryBarrier(0, VK_ACCESS_SHADER_WRITE_BIT);
+    }
+
+    public void cleanup() {
+        computePipeline.cleanup();
+        shaderProgram.cleanup();
+        commandBuffer.cleanup();
+        descriptorPool.cleanup();
+        storageDescriptorSetLayout.cleanup();
+        fence.cleanup();
+    }
+    ...
+    private void createDescriptorPool() {
+        List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+        descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
+    }
+
+    private void createDescriptorSets() {
+        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
+        descriptorSetLayouts = new DescriptorSetLayout[]{
+                storageDescriptorSetLayout,
+                storageDescriptorSetLayout,
+                storageDescriptorSetLayout,
+                storageDescriptorSetLayout,
+        };
+    }
+    ...
+}
+```
+Instead of having multiple descriptor sets and buffer per model, we will have all that tha in combined storage buffers. Therefore, we need to create the new descriptor sets for them, as storage descriptor sets. Those descriptor sets are created when the animated entities are loaded. This will be done in the `onAnimatedEntitiesLoaded` which will be called from the `Render` instance.
+```java
+public class AnimationComputeActivity {
+    ...
+    public void onAnimatedEntitiesLoaded(GlobalBuffers globalBuffers) {
+        srcVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getVerticesBuffer(), 0);
+        weightsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getAnimWeightsBuffer(), 0);
+        dstVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getAnimVerticesBuffer(), 0);
+        jointMatricesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
+                storageDescriptorSetLayout, globalBuffers.getAnimJointMatricesBuffer(), 0);
+    }
+    ...
+}
 ```
 
-** TBD: Changes
-- AnimationComputeActivity
-- ComputePipeline
-- GuiRenderActivity
-- VertexBufferStructure
-- Main
+Finally, since the structures have changed, the `recordCommandBuffer` method needs to be updated:
+```java
+public class AnimationComputeActivity {
+    ...
+            descriptorSets.put(srcVerticesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(weightsDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(dstVerticesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.put(jointMatricesDescriptorSet.getVkDescriptorSet());
+            descriptorSets.flip();
+            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    computePipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 
-TODO: Check VertexBufferStructure.SIZE_IN_BYTES
+            List<VulkanAnimEntity> vulkanAnimEntityList = globalBuffers.getVulkanAnimEntityList();
+            for (VulkanAnimEntity vulkanAnimEntity : vulkanAnimEntityList) {
+                Entity entity = vulkanAnimEntity.getEntity();
+                Entity.EntityAnimation entityAnimation = entity.getEntityAnimation();
+                if (!entityAnimation.isStarted()) {
+                    continue;
+                }
+
+                VulkanModel vulkanModel = vulkanAnimEntity.getVulkanModel();
+                int animationIdx = entity.getEntityAnimation().getAnimationIdx();
+                int currentFrame = entity.getEntityAnimation().getCurrentFrame();
+                int jointMatricesOffset = vulkanModel.getVulkanAnimationDataList().get(animationIdx).getVulkanAnimationFrameList().get(currentFrame).jointMatricesOffset();
+
+                for (VulkanAnimEntity.VulkanAnimMesh vulkanAnimMesh : vulkanAnimEntity.getVulkanAnimMeshList()) {
+                    VulkanModel.VulkanMesh mesh = vulkanAnimMesh.vulkanMesh();
+
+                    int groupSize = (int) Math.ceil((mesh.verticesSize() / InstancedVertexBufferStructure.SIZE_IN_BYTES) / (float) LOCAL_SIZE_X);
+
+                    // Push constants
+                    ByteBuffer pushConstantBuffer = stack.malloc(PUSH_CONSTANTS_SIZE);
+                    pushConstantBuffer.putInt(mesh.verticesOffset() / GraphConstants.FLOAT_LENGTH);
+                    pushConstantBuffer.putInt(mesh.verticesSize() / GraphConstants.FLOAT_LENGTH);
+                    pushConstantBuffer.putInt(mesh.weightsOffset() / GraphConstants.FLOAT_LENGTH);
+                    pushConstantBuffer.putInt(jointMatricesOffset / GraphConstants.MAT4X4_SIZE);
+                    pushConstantBuffer.putInt(vulkanAnimMesh.meshOffset() / GraphConstants.FLOAT_LENGTH);
+                    pushConstantBuffer.flip();
+                    vkCmdPushConstants(cmdHandle, computePipeline.getVkPipelineLayout(),
+                            VK_SHADER_STAGE_COMPUTE_BIT, 0, pushConstantBuffer);
+
+                    vkCmdDispatch(cmdHandle, groupSize, 1, 1);
+                }
+            }
+        }
+        commandBuffer.endRecording();
+    }
+    ...
+}
+```
+In order to access the proper offset in the global buffers, we pass all that information through a push constant structure. This is used in the compute shader which calculates the animations and dumps the results into a buffer.
+```glsl
+...
+layout (std430, set=3, binding=0) readonly buffer jointBuf {
+    mat4 data[];
+} jointMatrices;
+...
+layout(push_constant) uniform pushConstants {
+    uint srcOffset;
+    uint srcSize;
+    uint weightsOffset;
+    uint jointMatricesOffset;
+    uint dstOffset;
+} push_constants;
+
+void main()
+{
+    int baseIdx = int(gl_GlobalInvocationID.x) * 14;
+    uint baseIdxWeightsBuf  = push_constants.weightsOffset + int(gl_GlobalInvocationID.x) * 8;
+    uint baseIdxSrcBuf = push_constants.srcOffset + baseIdx;
+    uint baseIdxDstBuf = push_constants.dstOffset + baseIdx;
+    if (baseIdx >= push_constants.srcSize) {
+        return;
+    }
+
+    vec4 weights = vec4(weightsVector.data[baseIdxWeightsBuf], weightsVector.data[baseIdxWeightsBuf + 1], weightsVector.data[baseIdxWeightsBuf + 2], weightsVector.data[baseIdxWeightsBuf + 3]);
+    ivec4 joints = ivec4(weightsVector.data[baseIdxWeightsBuf + 4], weightsVector.data[baseIdxWeightsBuf + 5], weightsVector.data[baseIdxWeightsBuf + 6], weightsVector.data[baseIdxWeightsBuf + 7]);
+
+    vec4 position = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 1);
+    position =
+    weights.x * jointMatrices.data[push_constants.jointMatricesOffset + joints.x] * position +
+    weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * position +
+    weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * position +
+    weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * position;
+    dstVector.data[baseIdxDstBuf] = position.x / position.w;
+    dstVector.data[baseIdxDstBuf + 1] = position.y / position.w;
+    dstVector.data[baseIdxDstBuf + 2] = position.z / position.w;
+
+    baseIdxSrcBuf += 3;
+    baseIdxDstBuf += 3;
+    vec4 normal = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
+    normal =
+    weights.x * jointMatrices.data[push_constants.jointMatricesOffset + joints.x] * normal +
+    weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * normal +
+    weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * normal +
+    weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * normal;
+    dstVector.data[baseIdxDstBuf] = normal.x;
+    dstVector.data[baseIdxDstBuf + 1] = normal.y;
+    dstVector.data[baseIdxDstBuf + 2] = normal.z;
+
+    baseIdxSrcBuf += 3;
+    baseIdxDstBuf += 3;
+    vec4 tangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
+    tangent =
+    weights.x * jointMatrices.data[push_constants.jointMatricesOffset + joints.x] * tangent +
+    weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * tangent +
+    weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * tangent +
+    weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * tangent;
+    dstVector.data[baseIdxDstBuf] = tangent.x;
+    dstVector.data[baseIdxDstBuf + 1] = tangent.y;
+    dstVector.data[baseIdxDstBuf + 2] = tangent.z;
+
+    baseIdxSrcBuf += 3;
+    baseIdxDstBuf += 3;
+    vec4 bitangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
+    bitangent =
+    weights.x * jointMatrices.data[push_constants.jointMatricesOffset + joints.x] * bitangent +
+    weights.y * jointMatrices.data[push_constants.jointMatricesOffset + joints.y] * bitangent +
+    weights.z * jointMatrices.data[push_constants.jointMatricesOffset + joints.z] * bitangent +
+    weights.w * jointMatrices.data[push_constants.jointMatricesOffset + joints.w] * bitangent;
+    dstVector.data[baseIdxDstBuf] = bitangent.x;
+    dstVector.data[baseIdxDstBuf + 1] = bitangent.y;
+    dstVector.data[baseIdxDstBuf + 2] = bitangent.z;
+
+    baseIdxSrcBuf += 3;
+    baseIdxDstBuf += 3;
+    vec2 textCoords = vec2(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1]);
+    dstVector.data[baseIdxDstBuf] = textCoords.x;
+    dstVector.data[baseIdxDstBuf + 1] = textCoords.y;
+}
+```
+If you compare that code with the one in previous chapters, you wil notice that we need to apply an offset for each mesh, since the data is now stored in a common buffer. In order to support push constants in the compute shader, we need also to update the `ComputePipeline` class:
+```java
+public class ComputePipeline {
+    ...
+    public ComputePipeline(PipelineCache pipelineCache, ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo) {
+        ...
+            VkPushConstantRange.Buffer vpcr = null;
+            if (pipeLineCreationInfo.pushConstantsSize() > 0) {
+                vpcr = VkPushConstantRange.callocStack(1, stack)
+                        .stageFlags(VK_SHADER_STAGE_COMPUTE_BIT)
+                        .offset(0)
+                        .size(pipeLineCreationInfo.pushConstantsSize());
+            }
+        ...
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+                    .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
+                    .pSetLayouts(ppLayout)
+                    .pPushConstantRanges(vpcr);
+        ...
+    }
+    ...
+    public record PipeLineCreationInfo(ShaderProgram shaderProgram, DescriptorSetLayout[] descriptorSetLayouts,
+                                       int pushConstantsSize) {
+    }
+}
+```
+
+Finally, the `GuiRenderActivity` class, just needs a minor update to reflect the changes in the `DescriptorSetLayout.SamplerDescriptorSetLayout` class.
+```java
+public class GuiRenderActivity {
+    ...
+    private void createDescriptorSets() {
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 1, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        ...
+    }
+    ...
+}
+```
+
+In the `Main` class, we just need to add again animated models to test all the features.
+```java
+public class Main implements IAppLogic {
+    ...
+    private Entity bobEntity;
+    ...
+    private int maxFrames = 0;
+    ...
+    public void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed) {
+        ...
+        if (window.isKeyPressed(GLFW_KEY_SPACE)) {
+            bobEntity.getEntityAnimation().setStarted(!bobEntity.getEntityAnimation().isStarted());
+        }
+        ...
+        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
+        if (entityAnimation != null && entityAnimation.isStarted()) {
+            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
+            entityAnimation.setCurrentFrame(currentFrame);
+        }
+    }
+    ...
+    public void init(Window window, Scene scene, Render render) {
+        ...
+        String bobModelId = "bob-model";
+        ModelData bobModelData = ModelLoader.loadModel(bobModelId, "resources/models/bob/boblamp.md5mesh",
+                "resources/models/bob", true);
+        maxFrames = bobModelData.getAnimationsList().get(0).frames().size();
+        modelDataList.add(bobModelData);
+        bobEntity = new Entity("BobEntity", bobModelId, new Vector3f(0.0f, 0.0f, 0.0f));
+        bobEntity.setScale(0.04f);
+        bobEntity.getRotation().rotateY((float) Math.toRadians(-90.0f));
+        bobEntity.updateModelMatrix();
+        bobEntity.setEntityAnimation(new Entity.EntityAnimation(true, 0, 0));
+        scene.addEntity(bobEntity);
+        ...
+    }
+```
+
+The results will be exactly the same as in chapter 14, but now we have the basis of a bindless pipeline.
+
+<img src="../chapter-14/screen-shot.gif" title="" alt="Screen Shot" data-align="center">
