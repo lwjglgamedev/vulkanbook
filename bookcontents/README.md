@@ -18,4 +18,4 @@ The book is structured in the following chapters:
 - [Chapter 13](chapter-13/chapter-13.md): Cascade shadows.
 - [Chapter 14](chapter-14/chapter-14.md): Animation.
 - [Chapter 15](chapter-15/chapter-15.md): Render of GUI elements through ImGui.
-- [Chapter 15](chapter-16/chapter-16.md): This chapter starts the way to a bind-less render through indirect drawing.
+- [Chapter 16](chapter-16/chapter-16.md): This chapter starts the way to a bind-less render through indirect drawing.
