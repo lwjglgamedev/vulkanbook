@@ -178,20 +178,7 @@ public class Instance {
             requestedLayers.add("VK_LAYER_LUNARG_core_validation");
             requestedLayers.add("VK_LAYER_GOOGLE_unique_objects");
 
-            List<String> overlap = requestedLayers.stream().filter(requestedLayers::contains).toList();
-
-            if (!overlap.isEmpty()) {
-                return overlap;
-            }
-
-            // Fallback 3
-            if (supportedLayers.contains("VK_LAYER_LUNARG_core_validation")) {
-                layersToUse.add("VK_LAYER_LUNARG_core_validation");
-                return layersToUse;
-            }
-
-            // Returns empty list
-            return layersToUse;
+            return requestedLayers.stream().filter(supportedLayers::contains).toList();
         }
     }
 
