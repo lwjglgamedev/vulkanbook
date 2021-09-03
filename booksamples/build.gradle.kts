@@ -23,7 +23,7 @@ subprojects {
 		maven(url="https://oss.sonatype.org/content/repositories/snapshots/")
     }
 
-    val jomlVersion = "1.10.1"
+    val jomlVersion = "1.10.2"
     val log4jVersion = "2.14.1"
     val lwjglVersion = "3.3.0-SNAPSHOT"
 	var imguiVersion = "1.82.1"
