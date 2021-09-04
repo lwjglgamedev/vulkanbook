@@ -325,13 +325,13 @@ public class ModelLoader {
 
             float[] metallicArr = new float[]{0.0f};
             int[] pMax = new int[]{1};
-            result = aiGetMaterialFloatArray(aiMaterial, aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, aiTextureType_NONE, 0, metallicArr, pMax);
+            result = aiGetMaterialFloatArray(aiMaterial, AI_MATKEY_METALLIC_FACTOR, aiTextureType_NONE, 0, metallicArr, pMax);
             if (result != aiReturn_SUCCESS) {
                 metallicArr[0] = 1.0f;
             }
 
             float[] roughnessArr = new float[]{0.0f};
-            result = aiGetMaterialFloatArray(aiMaterial, aiAI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, aiTextureType_NONE, 0, roughnessArr, pMax);
+            result = aiGetMaterialFloatArray(aiMaterial, AI_MATKEY_ROUGHNESS_FACTOR, aiTextureType_NONE, 0, roughnessArr, pMax);
             if (result != aiReturn_SUCCESS) {
                 roughnessArr[0] = 1.0f;
             }
