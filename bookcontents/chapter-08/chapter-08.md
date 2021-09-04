@@ -535,13 +535,15 @@ This class will store in a `IndexedLinkedHashMap` the textures indexed by the pa
 public class TextureCache {
     ...
     public Texture createTexture(Device device, String texturePath, int format) {
+        String path = texturePath;
         if (texturePath == null || texturePath.trim().isEmpty()) {
-            return null;
+            EngineProperties engProperties = EngineProperties.getInstance();
+            path = engProperties.getDefaultTexturePath();
         }
-        Texture texture = textureMap.get(texturePath);
+        Texture texture = textureMap.get(path);
         if (texture == null) {
-            texture = new Texture(device, texturePath, format);
-            textureMap.put(texturePath, texture);
+            texture = new Texture(device, path, format);
+            textureMap.put(path, texture);
         }
         return texture;
     }
@@ -647,6 +649,19 @@ We need to change also the `transformModels` method to load the textures:
 ```java
 public class VulkanModel {
     ...
+    private static VulkanMaterial transformMaterial(ModelData.Material material, Device device, TextureCache textureCache,
+                                                    CommandBuffer cmd, List<Texture> textureList) {
+        Texture texture = textureCache.createTexture(device, material.texturePath(), VK_FORMAT_R8G8B8A8_SRGB);
+        boolean hasTexture = material.texturePath() != null && material.texturePath().trim().length() > 0;
+
+        if (hasTexture) {
+            texture.recordTextureTransition(cmd);
+            textureList.add(texture);
+        }
+
+        return new VulkanModel.VulkanMaterial(material.diffuseColor(), texture, hasTexture, new ArrayList<>());
+    }
+    
     public static List<VulkanModel> transformModels(List<ModelData> modelDataList, TextureCache textureCache,
                                                     CommandPool commandPool, Queue queue) {
         ...
@@ -706,7 +721,7 @@ public class VulkanModel {
 }
 ```
 
-As you can see, when processing the materials, we get the path to the texture. We request that texture to the `TextureCache` instance and record the transition and copy commands in the same command buffer that we are using to record the transfer operations for the vertices and the indices. At the end, we can free the staging buffer created in the `Texture` constructor at the same place where we were also releasing the other staging buffer for the vertices and indices. The `cleanup` method needs also to be modified since the meshes, hang now under the material instances:
+As you can see, when processing the models, we iterate over the materials of the model. Each material is processed in the `transformMaterial` method in which, we get the path to the texture. We request that texture to the `TextureCache` instance and record the transition and copy commands in the same command buffer that we are using to record the transfer operations for the vertices and the indices (if the texture exists). Back in the `transformModels`, at the end, we can free the staging buffer created in the `Texture` constructor at the same place where we were also releasing the other staging buffer for the vertices and indices. The `cleanup` method needs also to be modified since the meshes, hang now under the material instances:
 ```java
 public class VulkanModel {
     ...
@@ -1432,6 +1447,34 @@ public class Render {
 }
 ```
 
+Back to the `ForwardRenderActivity` class, you can see that we need to call the `registerModels` method when loading the models. We need to cerate the descriptor sets for each texture, and associate them to the texture path so we can use them later on for rendering.
+```java
+public class ForwardRenderActivity {
+    ...
+    public void registerModels(List<VulkanModel> vulkanModelList) {
+        device.waitIdle();
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                if (vulkanMaterial.vulkanMeshList().isEmpty()) {
+                    continue;
+                }
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+            }
+        }
+    }
+    ...
+    private void updateTextureDescriptorSet(Texture texture) {
+        String textureFileName = texture.getFileName();
+        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
+        if (textureDescriptorSet == null) {
+            textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
+                    texture, textureSampler, 0);
+            descriptorSetMap.put(textureFileName, textureDescriptorSet);
+        }
+    }
+    ...
+}
+```
 Finally, we need to change we load the models in the `Main` class. Instead of defining the data in the `init` method we just use the `ModelLoader.loadMeshes` method to load the data:
 
 ```java
@@ -1441,7 +1484,7 @@ public class Main implements IAppLogic {
     public void init(Window window, Scene scene, Render render) {
         List<ModelData> modelDataList = new ArrayList<>();
 
-        String modelId = "CubbeModel";
+        String modelId = "CubeModel";
         ModelData modelData = ModelLoader.loadModel(modelId, "resources/models/cube/cube.obj",
                 "resources/models/cube");
         modelDataList.add(modelData);

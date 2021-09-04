@@ -42,7 +42,7 @@ public class Main implements IAppLogic {
     public void init(Window window, Scene scene, Render render) {
         List<ModelData> modelDataList = new ArrayList<>();
 
-        String modelId = "CubbeModel";
+        String modelId = "CubeModel";
         ModelData modelData = ModelLoader.loadModel(modelId, "resources/models/cube/cube.obj",
                 "resources/models/cube");
         modelDataList.add(modelData);

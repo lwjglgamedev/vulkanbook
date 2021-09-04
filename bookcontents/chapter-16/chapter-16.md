@@ -139,6 +139,7 @@ public class EngineProperties {
     ...
 }
 ```
+Also note that we have removed also the configuration parameter for a default texture. We will not need this anymore.
 
 Back to the `GlobalBuffers` class, the next method is the `cleanup()` method, which frees all the resources that were allocated during the initialization.
 ```java
@@ -1886,6 +1887,25 @@ public class GuiRenderActivity {
     private void createDescriptorSets() {
         textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 1, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         ...
+    }
+    ...
+}
+```
+
+The `TextureCache` class needs also to be modified since we do not need a default texture any more:
+```java
+public class TextureCache {
+    ...
+    public Texture createTexture(Device device, String texturePath, int format) {
+        if (texturePath == null || texturePath.trim().isEmpty()) {
+            return null;
+        }
+        Texture texture = textureMap.get(texturePath);
+        if (texture == null) {
+            texture = new Texture(device, texturePath, format);
+            textureMap.put(texturePath, texture);
+        }
+        return texture;
     }
     ...
 }
