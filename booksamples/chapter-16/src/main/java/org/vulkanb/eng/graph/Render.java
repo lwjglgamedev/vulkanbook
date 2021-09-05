@@ -122,12 +122,14 @@ public class Render {
     }
 
     private void recordCommands() {
+        int idx = 0;
         for (CommandBuffer commandBuffer : commandBuffers) {
             commandBuffer.reset();
             commandBuffer.beginRecording();
-            geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
-            shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
+            geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, idx);
+            shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, idx);
             commandBuffer.endRecording();
+            idx++;
         }
     }
 
@@ -155,6 +157,8 @@ public class Render {
         animationComputeActivity.submit();
 
         CommandBuffer commandBuffer = acquireCurrentCommandBuffer();
+        geometryRenderActivity.render();
+        shadowRenderActivity.render();
         submitSceneCommand(graphQueue, commandBuffer);
 
         commandBuffer = lightingRenderActivity.beginRecording(shadowRenderActivity.getShadowCascades());

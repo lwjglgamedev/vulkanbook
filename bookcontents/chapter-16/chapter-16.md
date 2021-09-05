@@ -1037,25 +1037,29 @@ public class Render {
         animationComputeActivity.submit();
 
         CommandBuffer commandBuffer = acquireCurrentCommandBuffer();
+        geometryRenderActivity.render();
+        shadowRenderActivity.render();
         submitSceneCommand(graphQueue, commandBuffer);
         ...
     }
     ...
 }
 ```
-As you can see, the first thing we do is check if the entities have changed. If they have, we will need to update the buffers associated with the entities (and their animations) and record the commands. Remember that Now, commands will be pre-recorded. Also, per instance data, such as model matrices, is no longer passed using push constants, but instead they are stored in a dedicated buffer which needs to be updated for each frame by calling `globalBuffers.loadInstanceData`. Since command buffers for geometry and shadow passes are already pre-recorded we just need to submit them in each frame by calling the `submitSceneCommand` method.
+As you can see, the first thing we do is check if the entities have changed. If they have, we will need to update the buffers associated with the entities (and their animations) and record the commands. Remember that Now, commands will be pre-recorded. Also, per instance data, such as model matrices, is no longer passed using push constants, but instead they are stored in a dedicated buffer which needs to be updated for each frame by calling `globalBuffers.loadInstanceData`. Since command buffers for geometry and shadow passes are already pre-recorded we just need to updated data that may change each frame (such as view matrices) in the respective `render` method and submit them in each frame by calling the `submitSceneCommand` method.
 
 The `recordCommands` method just iterates over all the command buffers (one per swap chain image), and delegates the recording of the different draw commands to the `GeometryRenderActivity` and `AnimationComputeActivity` instances. We will view what is done in each of these classes in a moment.
 ```java
 public class Render {
     ...
     private void recordCommands() {
+        int idx = 0;
         for (CommandBuffer commandBuffer : commandBuffers) {
             commandBuffer.reset();
             commandBuffer.beginRecording();
-            geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
-            shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers);
+            geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, idx);
+            shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, idx);
             commandBuffer.endRecording();
+            idx++;
         }
     }
     ...
@@ -1424,7 +1428,7 @@ public class TextureDescriptorSet extends DescriptorSet {
 }
 ```
 
-Back to the `GeometryRenderActivity` class, the most interesting changes are in the `recordCommandBuffer` method. The first commands that we will record, will be exactly the same, we will setup the render pass information, the view port size, etc. The interesting part comes at the end of the method:
+Back to the `GeometryRenderActivity` class, the most interesting changes are in the `recordCommandBuffer` method. Since the commands are pre-recorded, the `recordCommandBuffer` method needs to receive a new parameter `idx`, to refer to the appropriate structures for each swap chain image. We no longer have to call `swapChain.getCurrentFrame()` to get the current swap chain index. The first commands that we will record, will be exactly the same, we will setup the render pass information, the view port size, etc. The interesting part comes at the end of the method:
 ```java
 public class GeometryRenderActivity {
     ...
@@ -1479,6 +1483,18 @@ public class GeometryRenderActivity {
 ```
 
 First of all, the number and types of descriptor sets have changed, so we need to update that. After that, we copy the view matrix to the uniform buffer. Finally, for non animated models, we just need to submit a single drawing command by invoking the `vkCmdDrawIndexedIndirect`. This function receives the buffer where we recorded draw indirect commands, the starting position, the number of commands to be used and the size devoted to each command. Although the `VkDrawIndexedIndirectCommand` has a fixed side, we can add additional data after each command to use additional information. The total size of each command is controlled by that last parameter, which in our case, is equal to  `VkDrawIndexedIndirectCommand.SIZEOF`. Prior to invoking the `vkCmdDrawIndexedIndirect`, we need to bind the buffers that will hold per-vertex and per-instance data, and the index buffer. The process for animated models is similar, but we need to bind a different set of buffers. As you can see, we are just binding three buffers and recording a single draw command for non-animated entities, and the same for animated ones. The number of binding operations and the number of drawing commands have been reduced dramatically.
+
+Updating the view matrix is no longer done in the `recordCommandBuffer`, this will be done in the `record` method, one:
+```java
+public class GeometryRenderActivity {
+    ...
+    public void render() {
+        int idx = swapChain.getCurrentFrame();
+        VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
+    }
+    ...
+}
+```
 
 The `recordEntities`, `registerModels`, `submit`, `updateMaterialsBuffer` and `updateTextureDescriptorSet` methods have been removed.
 
@@ -1588,7 +1604,7 @@ void main()
 
 Besides extracting some of the code previously in the `main` function, we now access a single buffer that has the material information using the material index. We also access an array of textures, using a texture index that is stored in the material information.
 
-`ShadowRenderActivity` class has been simplified even more. We just need to update the pipeline creation to take into consideration the new vertex structure with per-instance attributes and change the drawing commands to submit a draw indirect command for animated and non-animated entities.
+`ShadowRenderActivity` class has been simplified even more. We just need to update the pipeline creation to take into consideration the new vertex structure with per-instance attributes and change the drawing commands to submit a draw indirect command for animated and non-animated entities. As in the case of the `GeometryRenderActivity`, the `recordCommandBuffer` receives the index of the current frame in the swap chain. We will no longer be updating the cascade shadow maps and the projection matrices in this method.
 ```java
 public class ShadowRenderActivity {
     ...
@@ -1600,7 +1616,7 @@ public class ShadowRenderActivity {
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
     }
     ...
-    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers, int idx) {
         ...
             LongBuffer vertexBuffer = stack.mallocLong(1);
             LongBuffer instanceBuffer = stack.mallocLong(1);
@@ -1636,6 +1652,26 @@ public class ShadowRenderActivity {
             vkCmdEndRenderPass(cmdHandle);
         }
     }
+}
+```
+
+The new `render` method will contain the code, previously in the `render` method, that will update the shadow maps and the projection matrices:
+```java
+public class ShadowRenderActivity {
+    ...
+    public void render() {
+        if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
+            CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+        }
+
+        int idx = swapChain.getCurrentFrame();
+        int offset = 0;
+        for (CascadeShadow cascadeShadow : cascadeShadows) {
+            VulkanUtils.copyMatrixToBuffer(shadowsUniforms[idx], cascadeShadow.getProjViewMatrix(), offset);
+            offset += GraphConstants.MAT4X4_SIZE;
+        }
+    }
+    ...
 }
 ```
 

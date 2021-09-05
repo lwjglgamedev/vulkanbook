@@ -117,16 +117,8 @@ public class ShadowRenderActivity {
         return cascadeShadows;
     }
 
-    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers, int idx) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
-                CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
-            }
-
-            int idx = swapChain.getCurrentFrame();
-
-            updateProjViewBuffers(idx);
-
             VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
             clearValues.apply(0, v -> v.depthStencil().depth(1.0f));
 
@@ -209,16 +201,21 @@ public class ShadowRenderActivity {
         }
     }
 
-    public void resize(SwapChain swapChain) {
-        this.swapChain = swapChain;
-        CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
-    }
+    public void render() {
+        if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
+            CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+        }
 
-    private void updateProjViewBuffers(int idx) {
+        int idx = swapChain.getCurrentFrame();
         int offset = 0;
         for (CascadeShadow cascadeShadow : cascadeShadows) {
             VulkanUtils.copyMatrixToBuffer(shadowsUniforms[idx], cascadeShadow.getProjViewMatrix(), offset);
             offset += GraphConstants.MAT4X4_SIZE;
         }
+    }
+
+    public void resize(SwapChain swapChain) {
+        this.swapChain = swapChain;
+        CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
     }
 }

@@ -159,12 +159,11 @@ public class GeometryRenderActivity {
                 textureSampler, 0);
     }
 
-    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers) {
+    public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers, int idx) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkExtent2D swapChainExtent = swapChain.getSwapChainExtent();
             int width = swapChainExtent.width();
             int height = swapChainExtent.height();
-            int idx = swapChain.getCurrentFrame();
 
             FrameBuffer frameBuffer = geometryFrameBuffer.getFrameBuffer();
             List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
@@ -218,8 +217,6 @@ public class GeometryRenderActivity {
                     .put(2, materialsDescriptorSet.getVkDescriptorSet())
                     .put(3, textureDescriptorSet.getVkDescriptorSet());
 
-            VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
-
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
@@ -255,6 +252,11 @@ public class GeometryRenderActivity {
 
             vkCmdEndRenderPass(cmdHandle);
         }
+    }
+
+    public void render() {
+        int idx = swapChain.getCurrentFrame();
+        VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
     }
 
     public void resize(SwapChain swapChain) {
