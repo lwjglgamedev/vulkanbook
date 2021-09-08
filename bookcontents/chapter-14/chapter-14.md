@@ -612,7 +612,7 @@ public class ComputePipeline {
                 throw new RuntimeException("Compute pipelines can have only one shader");
             }
             ShaderProgram.ShaderModule shaderModule = shaderModules[0];
-            VkPipelineShaderStageCreateInfo shaderStage = VkPipelineShaderStageCreateInfo.callocStack(stack)
+            VkPipelineShaderStageCreateInfo shaderStage = VkPipelineShaderStageCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
                     .stage(shaderModule.shaderStage())
                     .module(shaderModule.handle())
@@ -637,7 +637,7 @@ public class ComputePipeline {
             for (int i = 0; i < numLayouts; i++) {
                 ppLayout.put(i, descriptorSetLayouts[i].getVkDescriptorLayout());
             }
-            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
                     .pSetLayouts(ppLayout);
             vkCheck(vkCreatePipelineLayout(device.getVkDevice(), pPipelineLayoutCreateInfo, null, lp),
@@ -655,7 +655,7 @@ public class ComputePipeline {
     ...
     public ComputePipeline(PipelineCache pipelineCache, ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
-            VkComputePipelineCreateInfo.Buffer computePipelineCreateInfo = VkComputePipelineCreateInfo.callocStack(1, stack)
+            VkComputePipelineCreateInfo.Buffer computePipelineCreateInfo = VkComputePipelineCreateInfo.calloc(1, stack)
                     .sType(VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
                     .stage(shaderStage)
                     .layout(vkPipelineLayout);

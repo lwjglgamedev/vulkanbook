@@ -8,7 +8,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 So let's start by defining what is a render pass. A render pass is the way used by Vulkan to precisely define how rendering should be done. In order to render anything, we need a to know in advance a set of things such as where we will be rendering to (that is, the target which can be an image, a depth buffer, etc.), the inputs we are going to use and what we will do with the outputs after rendering is complete. This is all specified in a render pass. A render pass can also have subpasses and we can establish definition between them. A render pass shall always contain at least one subpass. 
 
-We will first review the structures required to create a render pass, so we can get a more precise knowledge about what is this all about. As you can imagine at this stage, in order to create a render pass, we need to fill up a structure with the creation information. This structure is named `VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)`. This structure requires us to fill up three main attributes:
+We will first review the structures required to create a render pass, so we can get a more precise knowledge about what is this all about. As you can imagine at this stage, in order to create a render pass, we need to fill up a structure with the creation information. This structure is named `VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)`. This structure requires us to fill up three main attributes:
 
 - A list of attachments.
 - A list of subpasses.
@@ -29,7 +29,7 @@ public class SwapChainRenderPass {
         this.swapChain = swapChain;
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(1, stack);
+            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.calloc(1, stack);
 
             // Color attachment
             attachments.get(0)
@@ -64,11 +64,11 @@ public class SwapChainRenderPass {
     ...
     public SwapChainRenderPass(SwapChain swapChain) {
         ...
-            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.callocStack(1, stack)
+            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.calloc(1, stack)
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-            VkSubpassDescription.Buffer subPass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .colorAttachmentCount(colorReference.remaining())
                     .pColorAttachments(colorReference);
@@ -91,7 +91,7 @@ public class SwapChainRenderPass {
     
     public SwapChainRenderPass(SwapChain swapChain) {
         ...
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).calloc()
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc()
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachments)
                     .pSubpasses(subPass)
@@ -107,7 +107,7 @@ public class SwapChainRenderPass {
 }
 ```
 
-As in most of other cases, we need to setup a creation information structure, named `VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)` in this case where we reference the whole set of attachments (color, depth, etc.) and the subpasses. With that structure we create the render pass by invoking the `vkCreateRenderPass` function and store the handle. Finally, we add a `cleanup` method to release resources and another one to get the render pass handle:
+As in most of other cases, we need to setup a creation information structure, named `VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)` in this case where we reference the whole set of attachments (color, depth, etc.) and the subpasses. With that structure we create the render pass by invoking the `vkCreateRenderPass` function and store the handle. Finally, we add a `cleanup` method to release resources and another one to get the render pass handle:
 
 ```java
 public class SwapChainRenderPass {
@@ -147,7 +147,7 @@ public class FrameBuffer {
     public FrameBuffer(Device device, int width, int height, LongBuffer pAttachments, long renderPass) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.callocStack(stack)
+            VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO)
                     .pAttachments(pAttachments)
                     .width(width)
@@ -205,7 +205,7 @@ public class CommandPool {
 
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkCommandPoolCreateInfo cmdPoolInfo = VkCommandPoolCreateInfo.callocStack(stack)
+            VkCommandPoolCreateInfo cmdPoolInfo = VkCommandPoolCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
                     .flags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
                     .queueFamilyIndex(queueFamilyIndex);
@@ -257,7 +257,7 @@ public class CommandBuffer {
         VkDevice vkDevice = commandPool.getDevice().getVkDevice();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.callocStack(stack)
+            VkCommandBufferAllocateInfo cmdBufAllocateInfo = VkCommandBufferAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
                     .commandPool(commandPool.getVkCommandPool())
                     .level(primary ? VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY)
@@ -287,7 +287,7 @@ public class CommandBuffer {
     ...
     public void beginRecording() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.callocStack(stack)
+            VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO);
             if (oneTimeSubmit) {
                 cmdBufInfo.flags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -364,7 +364,7 @@ public class Semaphore {
     public Semaphore(Device device) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSemaphoreCreateInfo semaphoreCreateInfo = VkSemaphoreCreateInfo.callocStack(stack)
+            VkSemaphoreCreateInfo semaphoreCreateInfo = VkSemaphoreCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO);
 
             LongBuffer lp = stack.mallocLong(1);
@@ -407,7 +407,7 @@ public class Fence {
     public Fence(Device device, boolean signaled) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkFenceCreateInfo fenceCreateInfo = VkFenceCreateInfo.callocStack(stack)
+            VkFenceCreateInfo fenceCreateInfo = VkFenceCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
                     .flags(signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0);
 
@@ -627,7 +627,7 @@ public class SwapChain {
     public boolean presentImage(Queue queue) {
         boolean resize = false;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkPresentInfoKHR present = VkPresentInfoKHR.callocStack(stack)
+            VkPresentInfoKHR present = VkPresentInfoKHR.calloc(stack)
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR)
                     .pWaitSemaphores(stack.longs(
                             syncSemaphoresList[currentFrame].renderCompleteSemaphore().getVkSemaphore()))
@@ -725,9 +725,9 @@ public class ForwardRenderActivity {
     ...
     private void recordCommandBuffer(CommandBuffer commandBuffer, FrameBuffer frameBuffer, int width, int height) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(1, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(renderPass.getVkRenderPass())
                     .pClearValues(clearValues)
@@ -784,7 +784,7 @@ public class Queue {
     public void submit(PointerBuffer commandBuffers, LongBuffer waitSemaphores, IntBuffer dstStageMasks,
                        LongBuffer signalSemaphores, Fence fence) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSubmitInfo submitInfo = VkSubmitInfo.callocStack(stack)
+            VkSubmitInfo submitInfo = VkSubmitInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
                     .pCommandBuffers(commandBuffers)
                     .pSignalSemaphores(signalSemaphores);
@@ -849,7 +849,7 @@ public SwapChainRenderPass(SwapChain swapChain) {
 
     try (MemoryStack stack = MemoryStack.stackPush()) {
     ...
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(1, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -858,7 +858,7 @@ public SwapChainRenderPass(SwapChain swapChain) {
                     .srcAccessMask(0)
                     .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).calloc()
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc()
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachments)
                     .pSubpasses(subPass)
@@ -867,7 +867,7 @@ public SwapChainRenderPass(SwapChain swapChain) {
 }
 ```
 
-We need to create a buffer of `VkSubpassDependency` structures. In this case, we will only create one and include them in the `VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)` creation structure using the `pDependencies` parameter. The `VkSubpassDependency` structure can bee seen as a barrier, it separates the execution of two blocks, the conditions defined by the combination of the `srcXX` parameters must be met before the part controlled by  the `dstXX` conditions can execute. The parameters are:
+We need to create a buffer of `VkSubpassDependency` structures. In this case, we will only create one and include them in the `VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)` creation structure using the `pDependencies` parameter. The `VkSubpassDependency` structure can bee seen as a barrier, it separates the execution of two blocks, the conditions defined by the combination of the `srcXX` parameters must be met before the part controlled by  the `dstXX` conditions can execute. The parameters are:
 
 - `srcSubpass`: This controls to which this subpass should depend on. In this case, this is an external dependency: `VK_SUBPASS_EXTERNAL`.
 - `dstSubpass`: This controls the index of the subpass that this dependency applies to. In our case, we have only on subpass, so it is set to `0` (first position).

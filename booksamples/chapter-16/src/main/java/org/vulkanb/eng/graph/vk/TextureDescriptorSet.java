@@ -22,7 +22,7 @@ public class TextureDescriptorSet extends DescriptorSet {
             Device device = descriptorPool.getDevice();
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
             pDescriptorSetLayout.put(0, descriptorSetLayout.getVkDescriptorLayout());
-            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
+            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
                     .descriptorPool(descriptorPool.getVkDescriptorPool())
                     .pSetLayouts(pDescriptorSetLayout);
@@ -33,7 +33,7 @@ public class TextureDescriptorSet extends DescriptorSet {
             vkDescriptorSet = pDescriptorSet.get(0);
 
             int numImages = textureList.size();
-            VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(numImages, stack);
+            VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.calloc(numImages, stack);
             for (int i = 0; i < numImages; i++) {
                 Texture texture = textureList.get(i);
                 imageInfo.get(i)
@@ -42,7 +42,7 @@ public class TextureDescriptorSet extends DescriptorSet {
                         .sampler(textureSampler.getVkSampler());
             }
 
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
+            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.calloc(1, stack);
             descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
                     .dstSet(vkDescriptorSet)

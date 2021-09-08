@@ -30,7 +30,7 @@ public class ComputePipeline {
                 throw new RuntimeException("Compute pipelines can have only one shader");
             }
             ShaderProgram.ShaderModule shaderModule = shaderModules[0];
-            VkPipelineShaderStageCreateInfo shaderStage = VkPipelineShaderStageCreateInfo.callocStack(stack)
+            VkPipelineShaderStageCreateInfo shaderStage = VkPipelineShaderStageCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
                     .stage(shaderModule.shaderStage())
                     .module(shaderModule.handle())
@@ -38,7 +38,7 @@ public class ComputePipeline {
 
             VkPushConstantRange.Buffer vpcr = null;
             if (pipeLineCreationInfo.pushConstantsSize() > 0) {
-                vpcr = VkPushConstantRange.callocStack(1, stack)
+                vpcr = VkPushConstantRange.calloc(1, stack)
                         .stageFlags(VK_SHADER_STAGE_COMPUTE_BIT)
                         .offset(0)
                         .size(pipeLineCreationInfo.pushConstantsSize());
@@ -50,7 +50,7 @@ public class ComputePipeline {
             for (int i = 0; i < numLayouts; i++) {
                 ppLayout.put(i, descriptorSetLayouts[i].getVkDescriptorLayout());
             }
-            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
                     .pSetLayouts(ppLayout)
                     .pPushConstantRanges(vpcr);
@@ -58,7 +58,7 @@ public class ComputePipeline {
                     "Failed to create pipeline layout");
             vkPipelineLayout = lp.get(0);
 
-            VkComputePipelineCreateInfo.Buffer computePipelineCreateInfo = VkComputePipelineCreateInfo.callocStack(1, stack)
+            VkComputePipelineCreateInfo.Buffer computePipelineCreateInfo = VkComputePipelineCreateInfo.calloc(1, stack)
                     .sType(VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
                     .stage(shaderStage)
                     .layout(vkPipelineLayout);

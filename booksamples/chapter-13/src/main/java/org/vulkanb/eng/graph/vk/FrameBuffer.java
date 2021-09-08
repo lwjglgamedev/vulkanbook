@@ -16,7 +16,7 @@ public class FrameBuffer {
     public FrameBuffer(Device device, int width, int height, LongBuffer pAttachments, long renderPass, int layers) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.callocStack(stack)
+            VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO)
                     .pAttachments(pAttachments)
                     .width(width)

@@ -47,14 +47,14 @@ public abstract class DescriptorSetLayout {
         public SimpleDescriptorSetLayout(Device device, int descriptorType, int binding, int stage) {
             super(device);
             try (MemoryStack stack = MemoryStack.stackPush()) {
-                VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
+                VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.calloc(1, stack);
                 layoutBindings.get(0)
                         .binding(binding)
                         .descriptorType(descriptorType)
                         .descriptorCount(1)
                         .stageFlags(stage);
 
-                VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
+                VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.calloc(stack)
                         .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
                         .pBindings(layoutBindings);
 

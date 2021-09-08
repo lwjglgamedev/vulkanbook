@@ -19,7 +19,7 @@ public class ShadowsRenderPass {
     public ShadowsRenderPass(Device device, Attachment depthAttachment) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(1, stack);
+            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.calloc(1, stack);
             attachmentsDesc.get(0)
                     .format(depthAttachment.getImage().getFormat())
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
@@ -30,17 +30,17 @@ public class ShadowsRenderPass {
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
-            VkAttachmentReference depthReference = VkAttachmentReference.callocStack(stack)
+            VkAttachmentReference depthReference = VkAttachmentReference.calloc(stack)
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
             // Render subpass
-            VkSubpassDescription.Buffer subpass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subpass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .pDepthStencilAttachment(depthReference);
 
             // Subpass dependencies
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(2, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(2, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -60,7 +60,7 @@ public class ShadowsRenderPass {
                     .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
 
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)

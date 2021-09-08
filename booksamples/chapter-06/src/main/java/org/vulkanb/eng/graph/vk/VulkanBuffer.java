@@ -26,7 +26,7 @@ public class VulkanBuffer {
         requestedSize = size;
         mappedMemory = NULL;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.callocStack(stack)
+            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
                     .size(size)
                     .usage(usage)
@@ -35,10 +35,10 @@ public class VulkanBuffer {
             vkCheck(vkCreateBuffer(device.getVkDevice(), bufferCreateInfo, null, lp), "Failed to create buffer");
             buffer = lp.get(0);
 
-            VkMemoryRequirements memReqs = VkMemoryRequirements.mallocStack(stack);
+            VkMemoryRequirements memReqs = VkMemoryRequirements.malloc(stack);
             vkGetBufferMemoryRequirements(device.getVkDevice(), buffer, memReqs);
 
-            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
+            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
                     .allocationSize(memReqs.size())
                     .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),

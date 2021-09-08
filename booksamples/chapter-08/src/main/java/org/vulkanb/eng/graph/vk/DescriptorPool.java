@@ -23,7 +23,7 @@ public class DescriptorPool {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int maxSets = 0;
             int numTypes = descriptorTypeCounts.size();
-            VkDescriptorPoolSize.Buffer typeCounts = VkDescriptorPoolSize.callocStack(numTypes, stack);
+            VkDescriptorPoolSize.Buffer typeCounts = VkDescriptorPoolSize.calloc(numTypes, stack);
             for (int i = 0; i < numTypes; i++) {
                 maxSets += descriptorTypeCounts.get(i).count();
                 typeCounts.get(i)
@@ -31,7 +31,7 @@ public class DescriptorPool {
                         .descriptorCount(descriptorTypeCounts.get(i).count());
             }
 
-            VkDescriptorPoolCreateInfo descriptorPoolInfo = VkDescriptorPoolCreateInfo.callocStack(stack)
+            VkDescriptorPoolCreateInfo descriptorPoolInfo = VkDescriptorPoolCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
                     .flags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
                     .pPoolSizes(typeCounts)

@@ -60,10 +60,10 @@ public class MemoryAllocator {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pAllocator = stack.mallocPointer(1);
 
-            VmaVulkanFunctions vmaVulkanFunctions = VmaVulkanFunctions.callocStack(stack)
+            VmaVulkanFunctions vmaVulkanFunctions = VmaVulkanFunctions.calloc(stack)
                     .set(instance.getVkInstance(), vkDevice);
 
-            VmaAllocatorCreateInfo createInfo = VmaAllocatorCreateInfo.callocStack(stack)
+            VmaAllocatorCreateInfo createInfo = VmaAllocatorCreateInfo.calloc(stack)
                     .instance(instance.getVkInstance())
                     .device(vkDevice)
                     .physicalDevice(physicalDevice.getVkPhysicalDevice())
@@ -148,13 +148,13 @@ public class VulkanBuffer {
         this.device = device;
         requestedSize = size;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.callocStack(stack)
+            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
                     .size(size)
                     .usage(bufferUsage)
                     .sharingMode(VK_SHARING_MODE_EXCLUSIVE);
 
-            VmaAllocationCreateInfo allocInfo = VmaAllocationCreateInfo.callocStack(stack)
+            VmaAllocationCreateInfo allocInfo = VmaAllocationCreateInfo.calloc(stack)
                     .requiredFlags(requiredFlags)
                     .usage(memoryUsage);
 
@@ -393,7 +393,7 @@ public class Pipeline {
         ...
             ShaderProgram.ShaderModule[] shaderModules = pipeLineCreationInfo.shaderProgram.getShaderModules();
             int numModules = shaderModules.length;
-            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.callocStack(numModules, stack);
+            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.calloc(numModules, stack);
             for (int i = 0; i < numModules; i++) {
                 ShaderProgram.ShaderModule shaderModule = shaderModules[i];
                 shaderStages.get(i)

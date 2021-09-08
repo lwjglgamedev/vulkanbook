@@ -44,7 +44,7 @@ public class ShaderProgram {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ByteBuffer pCode = stack.malloc(code.length).put(0, code);
 
-            VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.callocStack(stack)
+            VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
                     .pCode(pCode);
 

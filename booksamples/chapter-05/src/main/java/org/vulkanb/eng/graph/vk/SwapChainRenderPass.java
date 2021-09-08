@@ -17,7 +17,7 @@ public class SwapChainRenderPass {
         this.swapChain = swapChain;
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(1, stack);
+            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.calloc(1, stack);
 
             // Color attachment
             attachments.get(0)
@@ -28,16 +28,16 @@ public class SwapChainRenderPass {
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .finalLayout(KHRSwapchain.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.callocStack(1, stack)
+            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.calloc(1, stack)
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-            VkSubpassDescription.Buffer subPass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .colorAttachmentCount(colorReference.remaining())
                     .pColorAttachments(colorReference);
 
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(1, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -46,7 +46,7 @@ public class SwapChainRenderPass {
                     .srcAccessMask(0)
                     .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachments)
                     .pSubpasses(subPass)

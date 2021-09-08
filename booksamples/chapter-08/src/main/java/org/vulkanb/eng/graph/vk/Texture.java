@@ -86,7 +86,7 @@ public class Texture {
 
     private void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
-        VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
+        VkBufferImageCopy.Buffer region = VkBufferImageCopy.calloc(1, stack)
                 .bufferOffset(0)
                 .bufferRowLength(0)
                 .bufferImageHeight(0)
@@ -105,7 +105,7 @@ public class Texture {
 
     private void recordImageTransition(MemoryStack stack, CommandBuffer cmd, int oldLayout, int newLayout) {
 
-        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.callocStack(1, stack)
+        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.calloc(1, stack)
                 .sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                 .oldLayout(oldLayout)
                 .newLayout(newLayout)

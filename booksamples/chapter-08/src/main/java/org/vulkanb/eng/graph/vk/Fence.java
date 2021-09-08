@@ -16,7 +16,7 @@ public class Fence {
     public Fence(Device device, boolean signaled) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkFenceCreateInfo fenceCreateInfo = VkFenceCreateInfo.callocStack(stack)
+            VkFenceCreateInfo fenceCreateInfo = VkFenceCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
                     .flags(signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0);
 

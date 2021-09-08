@@ -17,7 +17,7 @@ public class ModelLoader {
     ...
     private static ModelData.Material processMaterial(AIMaterial aiMaterial, String texturesDir) {
         ...
-            AIString aiNormalMapPath = AIString.callocStack(stack);
+            AIString aiNormalMapPath = AIString.calloc(stack);
             Assimp.aiGetMaterialTexture(aiMaterial, aiTextureType_NORMALS, 0, aiNormalMapPath, (IntBuffer) null,
                     null, null, null, null, null);
             String normalMapPath = aiNormalMapPath.dataString();
@@ -25,7 +25,7 @@ public class ModelLoader {
                 normalMapPath = texturesDir + File.separator + new File(normalMapPath).getName();
             }
 
-            AIString aiMetallicRoughnessPath = AIString.callocStack(stack);
+            AIString aiMetallicRoughnessPath = AIString.calloc(stack);
             Assimp.aiGetMaterialTexture(aiMaterial, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, 0, aiMetallicRoughnessPath, (IntBuffer) null,
                     null, null, null, null, null);
             String metallicRoughnessPath = aiMetallicRoughnessPath.dataString();

@@ -18,7 +18,7 @@ public class TextureSampler {
     public TextureSampler(Device device, int mipLevels) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.callocStack(stack)
+            VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO)
                     .magFilter(VK_FILTER_LINEAR)
                     .minFilter(VK_FILTER_LINEAR)

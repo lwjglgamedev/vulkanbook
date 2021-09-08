@@ -27,7 +27,7 @@ public class ImageView {
         this.mipLevels = mipLevels;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
-            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.callocStack(stack)
+            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
                     .image(vkImage)
                     .viewType(viewType)

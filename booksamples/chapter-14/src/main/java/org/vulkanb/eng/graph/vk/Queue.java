@@ -40,7 +40,7 @@ public class Queue {
     public void submit(PointerBuffer commandBuffers, LongBuffer waitSemaphores, IntBuffer dstStageMasks,
                        LongBuffer signalSemaphores, Fence fence) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSubmitInfo submitInfo = VkSubmitInfo.callocStack(stack)
+            VkSubmitInfo submitInfo = VkSubmitInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
                     .pCommandBuffers(commandBuffers)
                     .pSignalSemaphores(signalSemaphores);

@@ -31,7 +31,7 @@ public abstract class DescriptorSet {
                 Device device = descriptorPool.getDevice();
                 LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
                 pDescriptorSetLayout.put(0, descriptorSetLayout.getVkDescriptorLayout());
-                VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
+                VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.calloc(stack)
                         .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
                         .descriptorPool(descriptorPool.getVkDescriptorPool())
                         .pSetLayouts(pDescriptorSetLayout);
@@ -42,12 +42,12 @@ public abstract class DescriptorSet {
 
                 vkDescriptorSet = pDescriptorSet.get(0);
 
-                VkDescriptorBufferInfo.Buffer bufferInfo = VkDescriptorBufferInfo.callocStack(1, stack)
+                VkDescriptorBufferInfo.Buffer bufferInfo = VkDescriptorBufferInfo.calloc(1, stack)
                         .buffer(buffer.getBuffer())
                         .offset(0)
                         .range(size);
 
-                VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
+                VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.calloc(1, stack);
 
                 descrBuffer.get(0)
                         .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)

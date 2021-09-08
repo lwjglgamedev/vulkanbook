@@ -20,7 +20,7 @@ public class PipelineCache {
         LOGGER.debug("Creating pipeline cache");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkPipelineCacheCreateInfo createInfo = VkPipelineCacheCreateInfo.callocStack(stack)
+            VkPipelineCacheCreateInfo createInfo = VkPipelineCacheCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
 
             LongBuffer lp = stack.mallocLong(1);

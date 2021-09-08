@@ -19,7 +19,7 @@ public class AttachmentsLayout extends DescriptorSetLayout {
 
         LOGGER.debug("Creating Attachments Layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(numAttachments, stack);
+            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.calloc(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {
                 layoutBindings.get(i)
                         .binding(i)
@@ -27,7 +27,7 @@ public class AttachmentsLayout extends DescriptorSetLayout {
                         .descriptorCount(1)
                         .stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
             }
-            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
+            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
                     .pBindings(layoutBindings);
 

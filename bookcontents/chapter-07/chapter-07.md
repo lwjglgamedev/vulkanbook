@@ -16,7 +16,7 @@ public class Image {
             this.format = format;
             this.mipLevels = mipLevels;
 
-            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.callocStack(stack)
+            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
                     .imageType(VK_IMAGE_TYPE_2D)
                     .format(format)
@@ -88,7 +88,7 @@ public class Image {
     public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
             ...
             // Get memory requirements for this object
-            VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
+            VkMemoryRequirements memReqs = VkMemoryRequirements.calloc(stack);
             vkGetImageMemoryRequirements(device.getVkDevice(), vkImage, memReqs);
             ...
         }
@@ -106,7 +106,7 @@ public class Image {
     public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
             ...
             // Select memory size and type
-            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
+            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
                     .allocationSize(memReqs.size())
                     .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),
@@ -330,7 +330,7 @@ public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
     this.swapChain = swapChain;
 
     try (MemoryStack stack = MemoryStack.stackPush()) {
-        VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(2, stack);
+        VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.calloc(2, stack);
 
         // Color attachment
         ...
@@ -344,11 +344,11 @@ public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
                 .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                 .finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
         ...
-        VkAttachmentReference depthReference = VkAttachmentReference.mallocStack(stack)
+        VkAttachmentReference depthReference = VkAttachmentReference.malloc(stack)
                 .attachment(1)
                 .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-        VkSubpassDescription.Buffer subPass = VkSubpassDescription.callocStack(1, stack)
+        VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1, stack)
                 .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                 .colorAttachmentCount(colorReference.remaining())
                 .pColorAttachments(colorReference)
@@ -592,7 +592,7 @@ public class Pipeline {
         ...
             VkPipelineDepthStencilStateCreateInfo ds = null;
             if (pipeLineCreationInfo.hasDepthAttachment()) {
-                ds = VkPipelineDepthStencilStateCreateInfo.callocStack(stack)
+                ds = VkPipelineDepthStencilStateCreateInfo.calloc(stack)
                         .sType(VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)
                         .depthTestEnable(true)
                         .depthWriteEnable(true)
@@ -622,7 +622,7 @@ public class Pipeline {
     ...
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
-            VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
+            VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.calloc(1, stack)
                     .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
             ...
             if (ds != null) {
@@ -654,13 +654,13 @@ public class Pipeline {
         ...
             VkPushConstantRange.Buffer vpcr = null;
             if (pipeLineCreationInfo.pushConstantsSize() > 0) {
-                vpcr = VkPushConstantRange.callocStack(1, stack)
+                vpcr = VkPushConstantRange.calloc(1, stack)
                         .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
                         .offset(0)
                         .size(pipeLineCreationInfo.pushConstantsSize());
             }
 
-            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
                     .pPushConstantRanges(vpcr);
         ...
@@ -818,7 +818,7 @@ public class ForwardRenderActivity {
     ...
     public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
     ...
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(2, stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(2, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
             clearValues.apply(1, v -> v.depthStencil().depth(1.0f));
     ...

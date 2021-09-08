@@ -44,7 +44,7 @@ public class SwapChain {
             PhysicalDevice physicalDevice = device.getPhysicalDevice();
 
             // Get surface capabilities
-            VkSurfaceCapabilitiesKHR surfCapabilities = VkSurfaceCapabilitiesKHR.callocStack(stack);
+            VkSurfaceCapabilitiesKHR surfCapabilities = VkSurfaceCapabilitiesKHR.calloc(stack);
             vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.getPhysicalDevice().getVkPhysicalDevice(),
                     surface.getVkSurface(), surfCapabilities), "Failed to get surface capabilities");
 
@@ -121,7 +121,7 @@ public class SwapChain {
                 throw new RuntimeException("No surface formats retrieved");
             }
 
-            VkSurfaceFormatKHR.Buffer surfaceFormats = VkSurfaceFormatKHR.callocStack(numFormats, stack);
+            VkSurfaceFormatKHR.Buffer surfaceFormats = VkSurfaceFormatKHR.calloc(numFormats, stack);
             vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.getVkPhysicalDevice(),
                     surface.getVkSurface(), ip, surfaceFormats), "Failed to get surface formats");
 
@@ -228,7 +228,7 @@ public class SwapChain {
     ...
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
         ...
-            VkSwapchainCreateInfoKHR vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.callocStack(stack)
+            VkSwapchainCreateInfoKHR vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.calloc(stack)
                     .sType(KHRSwapchain.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)
                     .surface(surface.getVkSurface())
                     .minImageCount(numImages)
@@ -322,7 +322,7 @@ public class ImageView {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
-            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.callocStack(stack)
+            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
                     .image(vkImage)
                     .viewType(VK_IMAGE_VIEW_TYPE_2D)

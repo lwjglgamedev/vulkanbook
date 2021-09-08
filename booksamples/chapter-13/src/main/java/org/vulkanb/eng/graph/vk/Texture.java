@@ -99,7 +99,7 @@ public class Texture {
 
     private void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
-        VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
+        VkBufferImageCopy.Buffer region = VkBufferImageCopy.calloc(1, stack)
                 .bufferOffset(0)
                 .bufferRowLength(0)
                 .bufferImageHeight(0)
@@ -117,13 +117,13 @@ public class Texture {
     }
 
     private void recordGenerateMipMaps(MemoryStack stack, CommandBuffer cmd) {
-        VkImageSubresourceRange subResourceRange = VkImageSubresourceRange.callocStack(stack)
+        VkImageSubresourceRange subResourceRange = VkImageSubresourceRange.calloc(stack)
                 .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
                 .baseArrayLayer(0)
                 .levelCount(1)
                 .layerCount(1);
 
-        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.callocStack(1, stack)
+        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.calloc(1, stack)
                 .sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                 .image(image.getVkImage())
                 .srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
@@ -146,12 +146,12 @@ public class Texture {
                     null, null, barrier);
 
             int auxi = i;
-            VkOffset3D srcOffset0 = VkOffset3D.callocStack(stack).x(0).y(0).z(0);
-            VkOffset3D srcOffset1 = VkOffset3D.callocStack(stack).x(mipWidth).y(mipHeight).z(1);
-            VkOffset3D dstOffset0 = VkOffset3D.callocStack(stack).x(0).y(0).z(0);
-            VkOffset3D dstOffset1 = VkOffset3D.callocStack(stack)
+            VkOffset3D srcOffset0 = VkOffset3D.calloc(stack).x(0).y(0).z(0);
+            VkOffset3D srcOffset1 = VkOffset3D.calloc(stack).x(mipWidth).y(mipHeight).z(1);
+            VkOffset3D dstOffset0 = VkOffset3D.calloc(stack).x(0).y(0).z(0);
+            VkOffset3D dstOffset1 = VkOffset3D.calloc(stack)
                     .x(mipWidth > 1 ? mipWidth / 2 : 1).y(mipHeight > 1 ? mipHeight / 2 : 1).z(1);
-            VkImageBlit.Buffer blit = VkImageBlit.callocStack(1, stack)
+            VkImageBlit.Buffer blit = VkImageBlit.calloc(1, stack)
                     .srcOffsets(0, srcOffset0)
                     .srcOffsets(1, srcOffset1)
                     .srcSubresource(it -> it
@@ -199,7 +199,7 @@ public class Texture {
 
     private void recordImageTransition(MemoryStack stack, CommandBuffer cmd, int oldLayout, int newLayout) {
 
-        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.callocStack(1, stack)
+        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.calloc(1, stack)
                 .sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                 .oldLayout(oldLayout)
                 .newLayout(newLayout)

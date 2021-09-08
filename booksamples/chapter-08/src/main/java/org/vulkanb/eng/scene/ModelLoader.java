@@ -89,7 +89,7 @@ public class ModelLoader {
             if (result == aiReturn_SUCCESS) {
                 diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
             }
-            AIString aiTexturePath = AIString.callocStack(stack);
+            AIString aiTexturePath = AIString.calloc(stack);
             aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
                     null, null, null, null, null);
             String texturePath = aiTexturePath.dataString();

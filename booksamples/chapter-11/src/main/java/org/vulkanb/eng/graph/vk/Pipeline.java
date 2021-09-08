@@ -27,7 +27,7 @@ public class Pipeline {
 
             ShaderProgram.ShaderModule[] shaderModules = pipeLineCreationInfo.shaderProgram.getShaderModules();
             int numModules = shaderModules.length;
-            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.callocStack(numModules, stack);
+            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.calloc(numModules, stack);
             for (int i = 0; i < numModules; i++) {
                 ShaderProgram.ShaderModule shaderModule = shaderModules[i];
                 shaderStages.get(i)
@@ -38,18 +38,18 @@ public class Pipeline {
             }
 
             VkPipelineInputAssemblyStateCreateInfo vkPipelineInputAssemblyStateCreateInfo =
-                    VkPipelineInputAssemblyStateCreateInfo.callocStack(stack)
+                    VkPipelineInputAssemblyStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO)
                             .topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
             VkPipelineViewportStateCreateInfo vkPipelineViewportStateCreateInfo =
-                    VkPipelineViewportStateCreateInfo.callocStack(stack)
+                    VkPipelineViewportStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO)
                             .viewportCount(1)
                             .scissorCount(1);
 
             VkPipelineRasterizationStateCreateInfo vkPipelineRasterizationStateCreateInfo =
-                    VkPipelineRasterizationStateCreateInfo.callocStack(stack)
+                    VkPipelineRasterizationStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO)
                             .polygonMode(VK_POLYGON_MODE_FILL)
                             .cullMode(VK_CULL_MODE_NONE)
@@ -57,13 +57,13 @@ public class Pipeline {
                             .lineWidth(1.0f);
 
             VkPipelineMultisampleStateCreateInfo vkPipelineMultisampleStateCreateInfo =
-                    VkPipelineMultisampleStateCreateInfo.callocStack(stack)
+                    VkPipelineMultisampleStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO)
                             .rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
 
             VkPipelineDepthStencilStateCreateInfo ds = null;
             if (pipeLineCreationInfo.hasDepthAttachment()) {
-                ds = VkPipelineDepthStencilStateCreateInfo.callocStack(stack)
+                ds = VkPipelineDepthStencilStateCreateInfo.calloc(stack)
                         .sType(VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)
                         .depthTestEnable(true)
                         .depthWriteEnable(true)
@@ -72,7 +72,7 @@ public class Pipeline {
                         .stencilTestEnable(false);
             }
 
-            VkPipelineColorBlendAttachmentState.Buffer blendAttState = VkPipelineColorBlendAttachmentState.callocStack(
+            VkPipelineColorBlendAttachmentState.Buffer blendAttState = VkPipelineColorBlendAttachmentState.calloc(
                     pipeLineCreationInfo.numColorAttachments(), stack);
             for (int i = 0; i < pipeLineCreationInfo.numColorAttachments(); i++) {
                 blendAttState.get(i)
@@ -88,12 +88,12 @@ public class Pipeline {
                 }
             }
             VkPipelineColorBlendStateCreateInfo colorBlendState =
-                    VkPipelineColorBlendStateCreateInfo.callocStack(stack)
+                    VkPipelineColorBlendStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO)
                             .pAttachments(blendAttState);
 
             VkPipelineDynamicStateCreateInfo vkPipelineDynamicStateCreateInfo =
-                    VkPipelineDynamicStateCreateInfo.callocStack(stack)
+                    VkPipelineDynamicStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO)
                             .pDynamicStates(stack.ints(
                                     VK_DYNAMIC_STATE_VIEWPORT,
@@ -102,7 +102,7 @@ public class Pipeline {
 
             VkPushConstantRange.Buffer vpcr = null;
             if (pipeLineCreationInfo.pushConstantsSize() > 0) {
-                vpcr = VkPushConstantRange.callocStack(1, stack)
+                vpcr = VkPushConstantRange.calloc(1, stack)
                         .stageFlags(VK_SHADER_STAGE_VERTEX_BIT)
                         .offset(0)
                         .size(pipeLineCreationInfo.pushConstantsSize());
@@ -115,7 +115,7 @@ public class Pipeline {
                 ppLayout.put(i, descriptorSetLayouts[i].getVkDescriptorLayout());
             }
 
-            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
                     .pSetLayouts(ppLayout)
                     .pPushConstantRanges(vpcr);
@@ -124,7 +124,7 @@ public class Pipeline {
                     "Failed to create pipeline layout");
             vkPipelineLayout = lp.get(0);
 
-            VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
+            VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.calloc(1, stack)
                     .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
                     .pStages(shaderStages)
                     .pVertexInputState(pipeLineCreationInfo.viInputStateInfo().getVi())

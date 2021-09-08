@@ -27,7 +27,7 @@ public class Image {
             this.format = format;
             this.mipLevels = mipLevels;
 
-            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.callocStack(stack)
+            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
                     .imageType(VK_IMAGE_TYPE_2D)
                     .format(format)
@@ -49,11 +49,11 @@ public class Image {
             vkImage = lp.get(0);
 
             // Get memory requirements for this object
-            VkMemoryRequirements memReqs = VkMemoryRequirements.callocStack(stack);
+            VkMemoryRequirements memReqs = VkMemoryRequirements.calloc(stack);
             vkGetImageMemoryRequirements(device.getVkDevice(), vkImage, memReqs);
 
             // Select memory size and type
-            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
+            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
                     .allocationSize(memReqs.size())
                     .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),

@@ -102,7 +102,7 @@ public class GeometryRenderPass {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int numAttachments = attachments.length;
-            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(numAttachments, stack);
+            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.calloc(numAttachments, stack);
             int depthAttachmentPos = 0;
             for (int i = 0; i < numAttachments; i++) {
                 Attachment attachment = attachments.get(i);
@@ -139,7 +139,7 @@ public class GeometryRenderPass {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
-            VkAttachmentReference.Buffer colorReferences = VkAttachmentReference.callocStack(GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
+            VkAttachmentReference.Buffer colorReferences = VkAttachmentReference.calloc(GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
                     stack);
             for (int i = 0; i < GeometryAttachments.NUMBER_COLOR_ATTACHMENTS; i++) {
                 colorReferences.get(i)
@@ -147,12 +147,12 @@ public class GeometryRenderPass {
                         .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             }
 
-            VkAttachmentReference depthReference = VkAttachmentReference.callocStack(stack)
+            VkAttachmentReference depthReference = VkAttachmentReference.calloc(stack)
                     .attachment(depthAttachmentPos)
                     .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
             // Render subpass
-            VkSubpassDescription.Buffer subpass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subpass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .pColorAttachments(colorReferences)
                     .colorAttachmentCount(colorReferences.capacity())
@@ -176,7 +176,7 @@ public class GeometryRenderPass {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
             // Subpass dependencies
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(2, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(2, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -215,7 +215,7 @@ public class GeometryRenderPass {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)
@@ -549,7 +549,7 @@ public class GeometryRenderActivity {
 
             commandBuffer.reset();
             List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(attachments.size(), stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(attachments.size(), stack);
             for (Attachment attachment : attachments) {
                 if (attachment.isDepthAttachment()) {
                     clearValues.apply(v -> v.depthStencil().depth(1.0f));
@@ -559,7 +559,7 @@ public class GeometryRenderActivity {
             }
             clearValues.flip();
 
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(geometryFrameBuffer.getRenderPass().getVkRenderPass())
                     .pClearValues(clearValues)
@@ -572,7 +572,7 @@ public class GeometryRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -581,7 +581,7 @@ public class GeometryRenderActivity {
                     .maxDepth(1.0f);
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
-            VkRect2D.Buffer scissor = VkRect2D.callocStack(1, stack)
+            VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack)
                     .extent(it -> it
                             .width(width)
                             .height(height))
@@ -771,7 +771,7 @@ public class LightingRenderPass {
     public LightingRenderPass(SwapChain swapChain) {
         device = swapChain.getDevice();
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(1, stack);
+            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.calloc(1, stack);
 
             // Color attachment
             attachments.get(0)
@@ -784,16 +784,16 @@ public class LightingRenderPass {
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .finalLayout(KHRSwapchain.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.callocStack(1, stack)
+            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.calloc(1, stack)
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-            VkSubpassDescription.Buffer subPass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .colorAttachmentCount(colorReference.remaining())
                     .pColorAttachments(colorReference);
 
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(1, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -802,7 +802,7 @@ public class LightingRenderPass {
                     .srcAccessMask(0)
                     .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).calloc()
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc()
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachments)
                     .pSubpasses(subPass)
@@ -1015,7 +1015,7 @@ public class AttachmentsLayout extends DescriptorSetLayout {
 
         LOGGER.debug("Creating Attachments Layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(numAttachments, stack);
+            VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.calloc(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {
                 layoutBindings.get(i)
                         .binding(i)
@@ -1023,7 +1023,7 @@ public class AttachmentsLayout extends DescriptorSetLayout {
                         .descriptorCount(1)
                         .stageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
             }
-            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
+            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
                     .pBindings(layoutBindings);
 
@@ -1065,7 +1065,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
             this.binding = binding;
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
             pDescriptorSetLayout.put(0, descriptorSetLayout.getVkDescriptorLayout());
-            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
+            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
                     .descriptorPool(descriptorPool.getVkDescriptorPool())
                     .pSetLayouts(pDescriptorSetLayout);
@@ -1094,10 +1094,10 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
     public void update(List<Attachment> attachments) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int numAttachments = attachments.size();
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(numAttachments, stack);
+            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.calloc(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {
                 Attachment attachment = attachments.get(i);
-                VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
+                VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.calloc(1, stack)
                         .sampler(textureSampler.getVkSampler())
                         .imageView(attachment.getImageView().getVkImageView());
                 if (attachment.isDepthAttachment()) {
@@ -1182,14 +1182,14 @@ public class LightingRenderActivity {
             CommandBuffer commandBuffer = commandBuffers[idx];
 
             commandBuffer.reset();
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(1, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 1));
 
-            VkRect2D renderArea = VkRect2D.callocStack(stack);
+            VkRect2D renderArea = VkRect2D.calloc(stack);
             renderArea.offset().set(0, 0);
             renderArea.extent().set(width, height);
 
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(lightingFrameBuffer.getLightingRenderPass().getVkRenderPass())
                     .pClearValues(clearValues)
@@ -1203,7 +1203,7 @@ public class LightingRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.getVkPipeline());
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -1212,7 +1212,7 @@ public class LightingRenderActivity {
                     .maxDepth(1.0f);
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
-            VkRect2D.Buffer scissor = VkRect2D.callocStack(1, stack)
+            VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack)
                     .extent(it -> it
                             .width(width)
                             .height(height))

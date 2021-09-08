@@ -17,7 +17,7 @@ public class SwapChainRenderPass {
         this.swapChain = swapChain;
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.callocStack(2, stack);
+            VkAttachmentDescription.Buffer attachments = VkAttachmentDescription.calloc(2, stack);
 
             // Color attachment
             attachments.get(0)
@@ -37,21 +37,21 @@ public class SwapChainRenderPass {
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.callocStack(1, stack)
+            VkAttachmentReference.Buffer colorReference = VkAttachmentReference.calloc(1, stack)
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-            VkAttachmentReference depthReference = VkAttachmentReference.mallocStack(stack)
+            VkAttachmentReference depthReference = VkAttachmentReference.malloc(stack)
                     .attachment(1)
                     .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-            VkSubpassDescription.Buffer subPass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subPass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .colorAttachmentCount(colorReference.remaining())
                     .pColorAttachments(colorReference)
                     .pDepthStencilAttachment(depthReference);
 
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(1, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -60,7 +60,7 @@ public class SwapChainRenderPass {
                     .srcAccessMask(0)
                     .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachments)
                     .pSubpasses(subPass)

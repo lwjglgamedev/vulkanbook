@@ -21,7 +21,7 @@ public class GeometryRenderPass {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int numAttachments = attachments.size();
-            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(numAttachments, stack);
+            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.calloc(numAttachments, stack);
             int depthAttachmentPos = 0;
             for (int i = 0; i < numAttachments; i++) {
                 Attachment attachment = attachments.get(i);
@@ -41,7 +41,7 @@ public class GeometryRenderPass {
                 }
             }
 
-            VkAttachmentReference.Buffer colorReferences = VkAttachmentReference.callocStack(GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
+            VkAttachmentReference.Buffer colorReferences = VkAttachmentReference.calloc(GeometryAttachments.NUMBER_COLOR_ATTACHMENTS,
                     stack);
             for (int i = 0; i < GeometryAttachments.NUMBER_COLOR_ATTACHMENTS; i++) {
                 colorReferences.get(i)
@@ -49,19 +49,19 @@ public class GeometryRenderPass {
                         .layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             }
 
-            VkAttachmentReference depthReference = VkAttachmentReference.callocStack(stack)
+            VkAttachmentReference depthReference = VkAttachmentReference.calloc(stack)
                     .attachment(depthAttachmentPos)
                     .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
             // Render subpass
-            VkSubpassDescription.Buffer subpass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subpass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .pColorAttachments(colorReferences)
                     .colorAttachmentCount(colorReferences.capacity())
                     .pDepthStencilAttachment(depthReference);
 
             // Subpass dependencies
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(2, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(2, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -81,7 +81,7 @@ public class GeometryRenderPass {
                     .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
 
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)

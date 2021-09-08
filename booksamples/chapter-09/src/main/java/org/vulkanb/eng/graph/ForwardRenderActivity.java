@@ -193,11 +193,11 @@ public class ForwardRenderActivity {
             fence.reset();
 
             commandBuffer.reset();
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(2, stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(2, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
             clearValues.apply(1, v -> v.depthStencil().depth(1.0f));
 
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(renderPass.getVkRenderPass())
                     .pClearValues(clearValues)
@@ -210,7 +210,7 @@ public class ForwardRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -219,7 +219,7 @@ public class ForwardRenderActivity {
                     .maxDepth(1.0f);
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
-            VkRect2D.Buffer scissor = VkRect2D.callocStack(1, stack)
+            VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack)
                     .extent(it -> it
                             .width(width)
                             .height(height))

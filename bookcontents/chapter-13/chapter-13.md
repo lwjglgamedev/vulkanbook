@@ -245,7 +245,7 @@ public class ShadowsRenderPass {
     public ShadowsRenderPass(Device device, Attachment depthAttachment) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.callocStack(1, stack);
+            VkAttachmentDescription.Buffer attachmentsDesc = VkAttachmentDescription.calloc(1, stack);
             attachmentsDesc.get(0)
                     .format(depthAttachment.getImage().getFormat())
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
@@ -256,17 +256,17 @@ public class ShadowsRenderPass {
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .finalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
-            VkAttachmentReference depthReference = VkAttachmentReference.callocStack(stack)
+            VkAttachmentReference depthReference = VkAttachmentReference.calloc(stack)
                     .attachment(0)
                     .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
             // Render subpass
-            VkSubpassDescription.Buffer subpass = VkSubpassDescription.callocStack(1, stack)
+            VkSubpassDescription.Buffer subpass = VkSubpassDescription.calloc(1, stack)
                     .pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
                     .pDepthStencilAttachment(depthReference);
 
             // Subpass dependencies
-            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.callocStack(2, stack);
+            VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(2, stack);
             subpassDependencies.get(0)
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
@@ -286,7 +286,7 @@ public class ShadowsRenderPass {
                     .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
 
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.callocStack(stack).callocStack(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)
@@ -360,7 +360,7 @@ public class Image {
             this.format = format;
             this.mipLevels = mipLevels;
 
-            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.callocStack(stack)
+            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.calloc(stack)
                 ...
                     .arrayLayers(arrayLayers)
                 ...
@@ -384,7 +384,7 @@ public class ImageView {
     public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels, int viewType,
                      int baseArrayLayer, int layerCount) {
         ...
-            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.callocStack(stack)
+            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
                     .image(vkImage)
                     .viewType(viewType)
@@ -442,7 +442,7 @@ public class FrameBuffer {
     ...
     public FrameBuffer(Device device, int width, int height, LongBuffer pAttachments, long renderPass, int layers) {
         ...
-            VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.callocStack(stack)
+            VkFramebufferCreateInfo fci = VkFramebufferCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO)
                     .pAttachments(pAttachments)
                     .width(width)
@@ -654,7 +654,7 @@ public class ShadowRenderActivity {
 
             updateProjViewBuffers(idx);
 
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(1, stack);
             clearValues.apply(0, v -> v.depthStencil().depth(1.0f));
 
             EngineProperties engineProperties = EngineProperties.getInstance();
@@ -664,7 +664,7 @@ public class ShadowRenderActivity {
 
             VkCommandBuffer cmdHandle = commandBuffer.getVkCommandBuffer();
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -673,7 +673,7 @@ public class ShadowRenderActivity {
                     .maxDepth(1.0f);
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
-            VkRect2D.Buffer scissor = VkRect2D.callocStack(1, stack)
+            VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack)
                     .extent(it -> it
                             .width(width)
                             .height(height))
@@ -684,7 +684,7 @@ public class ShadowRenderActivity {
 
             FrameBuffer frameBuffer = shadowsFrameBuffer.getFrameBuffer();
 
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(shadowsFrameBuffer.getRenderPass().getVkRenderPass())
                     .pClearValues(clearValues)
@@ -889,7 +889,7 @@ public class GeometryRenderActivity {
 
             FrameBuffer frameBuffer = geometryFrameBuffer.getFrameBuffer();
             List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(attachments.size(), stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(attachments.size(), stack);
             for (Attachment attachment : attachments) {
                 if (attachment.isDepthAttachment()) {
                     clearValues.apply(v -> v.depthStencil().depth(1.0f));
@@ -899,7 +899,7 @@ public class GeometryRenderActivity {
             }
             clearValues.flip();
 
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(geometryFrameBuffer.getRenderPass().getVkRenderPass())
                     .pClearValues(clearValues)
@@ -911,7 +911,7 @@ public class GeometryRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -920,7 +920,7 @@ public class GeometryRenderActivity {
                     .maxDepth(1.0f);
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
-            VkRect2D.Buffer scissor = VkRect2D.callocStack(1, stack)
+            VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack)
                     .extent(it -> it
                             .width(width)
                             .height(height))
@@ -1562,7 +1562,7 @@ public class Device {
     public Device(Instance instance, PhysicalDevice physicalDevice) {
         ...
             // Set up required features
-            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.callocStack(stack);
+            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.calloc(stack);
             VkPhysicalDeviceFeatures supportedFeatures = this.physicalDevice.getVkPhysicalDeviceFeatures();
             samplerAnisotropy = supportedFeatures.samplerAnisotropy();
             if (samplerAnisotropy) {

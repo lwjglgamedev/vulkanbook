@@ -56,9 +56,9 @@ When creating objects, we need to define their structure, sometimes with other s
 - `pNext`: Pointer to an extension-specific structure.
 - `flags`: Often unused, but intended for specific behaviors. 
 
-##### Vk\*.Buffer & .callocStack()
+##### Vk\*.Buffer & .calloc()
 
-Sometimes Vulkan expects a list of objects, either with a single element or multiple. In these cases, we have to create a Buffer object, which is a subclass of most objects. Either way, we still have to run a `callocStack` command in order to create the object. For a singular item, use `callocStack(stack)`, and for multiple, use `callocStack(x, stack)`, where x is the amount of items in the list.
+Sometimes Vulkan expects a list of objects, either with a single element or multiple. In these cases, we have to create a Buffer object, which is a subclass of most objects. Either way, we still have to run a `calloc` command in order to create the object. For a singular item, use `calloc(stack)`, and for multiple, use `calloc(x, stack)`, where x is the amount of items in the list.
 
 Back to the constructor:
 
@@ -69,7 +69,7 @@ public class Instance {
         ...
             // Create application information
             ByteBuffer appShortName = stack.UTF8("VulkanBook");
-            VkApplicationInfo appInfo = VkApplicationInfo.callocStack(stack)
+            VkApplicationInfo appInfo = VkApplicationInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
                     .pApplicationName(appShortName)
                     .applicationVersion(1)
@@ -91,7 +91,7 @@ The structure type parameter sType, which, as its names suggests, defines its ty
 - `engineVersion`: The engine version.
 - `apiVersion`: The version of the Vulkan API. This value should be the highest value of the Vulkan version that his application should use encoded according to what is stated in Vulkan specification (major, minor and patch version). In this case we are using version `1.1.0`. If you are using a newer version that has been ported to Java, use that number.
 
-Most of the time these attributes are set to `NULL` and `0` respectively. Since we are allocating the structure in the stack using the `callocStack` stack method, all the memory block associated to it will be initialized with zeros, so we do not need to explicitly set up these common attributes.
+Most of the time these attributes are set to `NULL` and `0` respectively. Since we are allocating the structure in the stack using the `calloc` stack method, all the memory block associated to it will be initialized with zeros, so we do not need to explicitly set up these common attributes.
 
 ## Layers
 
@@ -150,7 +150,7 @@ public class Instance {
     private List<String> getSupportedValidationLayers() {
     	try (MemoryStack stack = MemoryStack.stackPush()) {
         ...
-			VkLayerProperties.Buffer propsBuf = VkLayerProperties.callocStack(numLayers, stack);
+			VkLayerProperties.Buffer propsBuf = VkLayerProperties.calloc(numLayers, stack);
 			vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
 			List<String> supportedLayers = new ArrayList<>();
 			for (int i = 0; i < numLayers; i++) {
@@ -340,7 +340,7 @@ public class Instance {
     public Instance(boolean validate) {
         ...
             // Create instance info
-            VkInstanceCreateInfo instanceInfo = VkInstanceCreateInfo.callocStack(stack)
+            VkInstanceCreateInfo instanceInfo = VkInstanceCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
                     .pNext(extension)
                     .pApplicationInfo(appInfo)

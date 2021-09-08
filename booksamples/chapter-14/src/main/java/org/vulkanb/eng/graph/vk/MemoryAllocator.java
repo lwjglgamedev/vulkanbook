@@ -16,10 +16,10 @@ public class MemoryAllocator {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pAllocator = stack.mallocPointer(1);
 
-            VmaVulkanFunctions vmaVulkanFunctions = VmaVulkanFunctions.callocStack(stack)
+            VmaVulkanFunctions vmaVulkanFunctions = VmaVulkanFunctions.calloc(stack)
                     .set(instance.getVkInstance(), vkDevice);
 
-            VmaAllocatorCreateInfo createInfo = VmaAllocatorCreateInfo.callocStack(stack)
+            VmaAllocatorCreateInfo createInfo = VmaAllocatorCreateInfo.calloc(stack)
                     .instance(instance.getVkInstance())
                     .device(vkDevice)
                     .physicalDevice(physicalDevice.getVkPhysicalDevice())

@@ -28,12 +28,12 @@ public class Device {
             requiredExtensions.put(0, stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
 
             // Set up required features
-            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.callocStack(stack);
+            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.calloc(stack);
 
             // Enable all the queue families
             VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
-            VkDeviceQueueCreateInfo.Buffer queueCreationInfoBuf = VkDeviceQueueCreateInfo.callocStack(numQueuesFamilies, stack);
+            VkDeviceQueueCreateInfo.Buffer queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
             for (int i = 0; i < numQueuesFamilies; i++) {
                 FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
                 queueCreationInfoBuf.get(i)
@@ -42,7 +42,7 @@ public class Device {
                         .pQueuePriorities(priorities);
             }
 
-            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.callocStack(stack)
+            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
                     .ppEnabledExtensionNames(requiredExtensions)
                     .pEnabledFeatures(features)

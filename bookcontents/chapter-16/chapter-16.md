@@ -277,7 +277,7 @@ public class GlobalBuffers {
 
         private void recordTransferCommand(CommandBuffer cmd, VulkanBuffer dstBuffer) {
             try (MemoryStack stack = MemoryStack.stackPush()) {
-                VkBufferCopy.Buffer copyRegion = VkBufferCopy.callocStack(1, stack)
+                VkBufferCopy.Buffer copyRegion = VkBufferCopy.calloc(1, stack)
                         .srcOffset(0).dstOffset(0).size(stgVulkanBuffer.getRequestedSize());
                 vkCmdCopyBuffer(cmd.getVkCommandBuffer(), stgVulkanBuffer.getBuffer(), dstBuffer.getBuffer(), copyRegion);
             }
@@ -596,7 +596,7 @@ public class GlobalBuffers {
                     continue;
                 }
                 for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
-                    VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.callocStack(stack);
+                    VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.calloc(stack);
                     indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
                     indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
                     indexedIndirectCommand.instanceCount(entities.size());
@@ -678,7 +678,7 @@ public class GlobalBuffers {
                     vulkanAnimEntityList.add(vulkanAnimEntity);
                     List<VulkanAnimEntity.VulkanAnimMesh> vulkanAnimMeshList = vulkanAnimEntity.getVulkanAnimMeshList();
                     for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
-                        VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.callocStack(stack);
+                        VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.calloc(stack);
                         indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
                         indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
                         indexedIndirectCommand.instanceCount(1);
@@ -892,7 +892,7 @@ public abstract class DescriptorSetLayout {
         public SimpleDescriptorSetLayout(Device device, int descriptorType, int descriptorCount, int binding, int stage) {
             super(device);
             try (MemoryStack stack = MemoryStack.stackPush()) {
-                VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
+                VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.calloc(1, stack);
                 layoutBindings.get(0)
                 ...
                         .descriptorCount(descriptorCount)
@@ -1404,7 +1404,7 @@ public class TextureDescriptorSet extends DescriptorSet {
                                 List<Texture> textureList, TextureSampler textureSampler, int binding) {
         ...
             int numImages = textureList.size();
-            VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(numImages, stack);
+            VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.calloc(numImages, stack);
             for (int i = 0; i < numImages; i++) {
                 Texture texture = textureList.get(i);
                 imageInfo.get(i)
@@ -1413,7 +1413,7 @@ public class TextureDescriptorSet extends DescriptorSet {
                         .sampler(textureSampler.getVkSampler());
             }
 
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
+            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.calloc(1, stack);
             descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
                     .dstSet(vkDescriptorSet)
@@ -1897,13 +1897,13 @@ public class ComputePipeline {
         ...
             VkPushConstantRange.Buffer vpcr = null;
             if (pipeLineCreationInfo.pushConstantsSize() > 0) {
-                vpcr = VkPushConstantRange.callocStack(1, stack)
+                vpcr = VkPushConstantRange.calloc(1, stack)
                         .stageFlags(VK_SHADER_STAGE_COMPUTE_BIT)
                         .offset(0)
                         .size(pipeLineCreationInfo.pushConstantsSize());
             }
         ...
-            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
                     .pSetLayouts(ppLayout)
                     .pPushConstantRanges(vpcr);

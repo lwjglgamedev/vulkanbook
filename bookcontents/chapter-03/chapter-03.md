@@ -359,7 +359,7 @@ public class Device {
     public Device(PhysicalDevice physicalDevice) {
         ...
             // Set up required features
-            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.callocStack(stack);
+            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.calloc(stack);
         ...
     }
     ...
@@ -376,7 +376,7 @@ public class Device {
             // Enable all the queue families
             VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
-            VkDeviceQueueCreateInfo.Buffer queueCreationInfoBuf = VkDeviceQueueCreateInfo.callocStack(numQueuesFamilies, stack);
+            VkDeviceQueueCreateInfo.Buffer queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
             for (int i = 0; i < numQueuesFamilies; i++) {
                 FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
                 queueCreationInfoBuf.get(i)
@@ -401,7 +401,7 @@ public class Device {
     ...
     public Device(PhysicalDevice physicalDevice) {
         ...
-            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.callocStack(stack)
+            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
                     .ppEnabledExtensionNames(requiredExtensions)
                     .pEnabledFeatures(features)

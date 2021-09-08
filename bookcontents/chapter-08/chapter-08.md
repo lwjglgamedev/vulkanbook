@@ -118,7 +118,7 @@ public class ModelLoader {
             if (result == aiReturn_SUCCESS) {
                 diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
             }
-            AIString aiTexturePath = AIString.callocStack(stack);
+            AIString aiTexturePath = AIString.calloc(stack);
             aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
                     null, null, null, null, null);
             String texturePath = aiTexturePath.dataString();
@@ -412,7 +412,7 @@ public class Texture {
     ...
     private void recordImageTransition(MemoryStack stack, CommandBuffer cmd, int oldLayout, int newLayout) {
 
-        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.callocStack(1, stack)
+        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.calloc(1, stack)
                 .sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
                 .oldLayout(oldLayout)
                 .newLayout(newLayout)
@@ -493,7 +493,7 @@ public class Texture {
     ...
     private void recordCopyBuffer(MemoryStack stack, CommandBuffer cmd, VulkanBuffer bufferData) {
 
-        VkBufferImageCopy.Buffer region = VkBufferImageCopy.callocStack(1, stack)
+        VkBufferImageCopy.Buffer region = VkBufferImageCopy.calloc(1, stack)
                 .bufferOffset(0)
                 .bufferRowLength(0)
                 .bufferImageHeight(0)
@@ -745,7 +745,7 @@ public class DescriptorPool {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int maxSets = 0;
             int numTypes = descriptorTypeCounts.size();
-            VkDescriptorPoolSize.Buffer typeCounts = VkDescriptorPoolSize.callocStack(numTypes, stack);
+            VkDescriptorPoolSize.Buffer typeCounts = VkDescriptorPoolSize.calloc(numTypes, stack);
             for (int i = 0; i < numTypes; i++) {
                 maxSets += descriptorTypeCounts.get(i).count();
                 typeCounts.get(i)
@@ -753,7 +753,7 @@ public class DescriptorPool {
                         .descriptorCount(descriptorTypeCounts.get(i).count());
             }
 
-            VkDescriptorPoolCreateInfo descriptorPoolInfo = VkDescriptorPoolCreateInfo.callocStack(stack)
+            VkDescriptorPoolCreateInfo descriptorPoolInfo = VkDescriptorPoolCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
                     .flags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
                     .pPoolSizes(typeCounts)
@@ -847,14 +847,14 @@ public abstract class DescriptorSetLayout {
         public SimpleDescriptorSetLayout(Device device, int descriptorType, int binding, int stage) {
             super(device);
             try (MemoryStack stack = MemoryStack.stackPush()) {
-                VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.callocStack(1, stack);
+                VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.calloc(1, stack);
                 layoutBindings.get(0)
                         .binding(binding)
                         .descriptorType(descriptorType)
                         .descriptorCount(1)
                         .stageFlags(stage);
 
-                VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.callocStack(stack)
+                VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.calloc(stack)
                         .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
                         .pBindings(layoutBindings);
 
@@ -907,7 +907,7 @@ public class TextureSampler {
     public TextureSampler(Device device, int mipLevels) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.callocStack(stack)
+            VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO)
                     .magFilter(VK_FILTER_LINEAR)
                     .minFilter(VK_FILTER_LINEAR)
@@ -967,7 +967,7 @@ public class Device {
     ...
     public Device(PhysicalDevice physicalDevice) {
         ...
-            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.callocStack(stack);
+            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.calloc(stack);
             VkPhysicalDeviceFeatures supportedFeatures = this.physicalDevice.getVkPhysicalDeviceFeatures();
             samplerAnisotropy = supportedFeatures.samplerAnisotropy();
             if (samplerAnisotropy) {
@@ -1009,7 +1009,7 @@ public class TextureDescriptorSet extends DescriptorSet {
             Device device = descriptorPool.getDevice();
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
             pDescriptorSetLayout.put(0, descriptorSetLayout.getVkDescriptorLayout());
-            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
+            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
                     .descriptorPool(descriptorPool.getVkDescriptorPool())
                     .pSetLayouts(pDescriptorSetLayout);
@@ -1034,12 +1034,12 @@ public class TextureDescriptorSet extends DescriptorSet {
                                 Texture texture, TextureSampler textureSampler, int binding) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
-            VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
+            VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.calloc(1, stack)
                     .imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
                     .imageView(texture.getImageView().getVkImageView())
                     .sampler(textureSampler.getVkSampler());
 
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
+            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.calloc(1, stack);
             descrBuffer.get(0)
                     .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
                     .dstSet(vkDescriptorSet)
@@ -1096,7 +1096,7 @@ public abstract class DescriptorSet {
                 Device device = descriptorPool.getDevice();
                 LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
                 pDescriptorSetLayout.put(0, descriptorSetLayout.getVkDescriptorLayout());
-                VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
+                VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.calloc(stack)
                         .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
                         .descriptorPool(descriptorPool.getVkDescriptorPool())
                         .pSetLayouts(pDescriptorSetLayout);
@@ -1107,12 +1107,12 @@ public abstract class DescriptorSet {
 
                 vkDescriptorSet = pDescriptorSet.get(0);
 
-                VkDescriptorBufferInfo.Buffer bufferInfo = VkDescriptorBufferInfo.callocStack(1, stack)
+                VkDescriptorBufferInfo.Buffer bufferInfo = VkDescriptorBufferInfo.calloc(1, stack)
                         .buffer(buffer.getBuffer())
                         .offset(0)
                         .range(size);
 
-                VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(1, stack);
+                VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.calloc(1, stack);
 
                 descrBuffer.get(0)
                         .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
@@ -1177,7 +1177,7 @@ public class Pipeline {
                 ppLayout.put(i, descriptorSetLayouts[i].getVkDescriptorLayout());
             }
 
-            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
                     .pSetLayouts(ppLayout)
                     .pPushConstantRanges(vpcr);

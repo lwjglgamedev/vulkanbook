@@ -196,7 +196,7 @@ public class GeometryRenderActivity {
 
             FrameBuffer frameBuffer = geometryFrameBuffer.getFrameBuffer();
             List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(attachments.size(), stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(attachments.size(), stack);
             for (Attachment attachment : attachments) {
                 if (attachment.isDepthAttachment()) {
                     clearValues.apply(v -> v.depthStencil().depth(1.0f));
@@ -206,7 +206,7 @@ public class GeometryRenderActivity {
             }
             clearValues.flip();
 
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(geometryFrameBuffer.getRenderPass().getVkRenderPass())
                     .pClearValues(clearValues)
@@ -222,7 +222,7 @@ public class GeometryRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -231,7 +231,7 @@ public class GeometryRenderActivity {
                     .maxDepth(1.0f);
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
-            VkRect2D.Buffer scissor = VkRect2D.callocStack(1, stack)
+            VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack)
                     .extent(it -> it
                             .width(width)
                             .height(height))

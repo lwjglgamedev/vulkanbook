@@ -23,7 +23,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
             this.binding = binding;
             LongBuffer pDescriptorSetLayout = stack.mallocLong(1);
             pDescriptorSetLayout.put(0, descriptorSetLayout.getVkDescriptorLayout());
-            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.callocStack(stack)
+            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
                     .descriptorPool(descriptorPool.getVkDescriptorPool())
                     .pSetLayouts(pDescriptorSetLayout);
@@ -52,10 +52,10 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
     public void update(List<Attachment> attachments) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int numAttachments = attachments.size();
-            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.callocStack(numAttachments, stack);
+            VkWriteDescriptorSet.Buffer descrBuffer = VkWriteDescriptorSet.calloc(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {
                 Attachment attachment = attachments.get(i);
-                VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.callocStack(1, stack)
+                VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.calloc(1, stack)
                         .sampler(textureSampler.getVkSampler())
                         .imageView(attachment.getImageView().getVkImageView());
                 if (attachment.isDepthAttachment()) {

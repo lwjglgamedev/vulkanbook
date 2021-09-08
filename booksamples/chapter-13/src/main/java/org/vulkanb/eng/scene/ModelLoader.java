@@ -106,7 +106,7 @@ public class ModelLoader {
             if (result == aiReturn_SUCCESS) {
                 diffuse = new Vector4f(colour.r(), colour.g(), colour.b(), colour.a());
             }
-            AIString aiTexturePath = AIString.callocStack(stack);
+            AIString aiTexturePath = AIString.calloc(stack);
             aiGetMaterialTexture(aiMaterial, aiTextureType_DIFFUSE, 0, aiTexturePath, (IntBuffer) null,
                     null, null, null, null, null);
             String texturePath = aiTexturePath.dataString();
@@ -115,7 +115,7 @@ public class ModelLoader {
                 diffuse = new Vector4f(0.0f, 0.0f, 0.0f, 0.0f);
             }
 
-            AIString aiNormalMapPath = AIString.callocStack(stack);
+            AIString aiNormalMapPath = AIString.calloc(stack);
             Assimp.aiGetMaterialTexture(aiMaterial, aiTextureType_NORMALS, 0, aiNormalMapPath, (IntBuffer) null,
                     null, null, null, null, null);
             String normalMapPath = aiNormalMapPath.dataString();
@@ -123,7 +123,7 @@ public class ModelLoader {
                 normalMapPath = texturesDir + File.separator + new File(normalMapPath).getName();
             }
 
-            AIString aiMetallicRoughnessPath = AIString.callocStack(stack);
+            AIString aiMetallicRoughnessPath = AIString.calloc(stack);
             Assimp.aiGetMaterialTexture(aiMaterial, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, 0, aiMetallicRoughnessPath, (IntBuffer) null,
                     null, null, null, null, null);
             String metallicRoughnessPath = aiMetallicRoughnessPath.dataString();

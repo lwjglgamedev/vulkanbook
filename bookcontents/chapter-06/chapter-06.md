@@ -16,7 +16,7 @@ public class VulkanBuffer {
         requestedSize = size;
         mappedMemory = NULL;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.callocStack(stack)
+            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
                     .size(size)
                     .usage(usage)
@@ -46,7 +46,7 @@ public class VulkanBuffer {
     ...
     public VulkanBuffer(Device device, long size, int usage, int reqMask) {
         ...
-            VkMemoryRequirements memReqs = VkMemoryRequirements.mallocStack(stack);
+            VkMemoryRequirements memReqs = VkMemoryRequirements.malloc(stack);
             vkGetBufferMemoryRequirements(device.getVkDevice(), buffer, memReqs);
         ...
     }
@@ -65,7 +65,7 @@ public class VulkanBuffer {
     ...
     public VulkanBuffer(Device device, long size, int usage, int reqMask) {
         ...
-            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.callocStack(stack)
+            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
                     .allocationSize(memReqs.size())
                     .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),
@@ -523,7 +523,7 @@ public class VulkanModel {
     ...
     private static void recordTransferCommand(CommandBuffer cmd, TransferBuffers transferBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkBufferCopy.Buffer copyRegion = VkBufferCopy.callocStack(1, stack)
+            VkBufferCopy.Buffer copyRegion = VkBufferCopy.calloc(1, stack)
                     .srcOffset(0).dstOffset(0).size(transferBuffers.srcBuffer().getRequestedSize());
             vkCmdCopyBuffer(cmd.getVkCommandBuffer(), transferBuffers.srcBuffer().getBuffer(),
                     transferBuffers.dstBuffer().getBuffer(), copyRegion);
@@ -604,7 +604,7 @@ public class ShaderProgram {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ByteBuffer pCode = stack.malloc(code.length).put(0, code);
 
-            VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.callocStack(stack)
+            VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
                     .pCode(pCode);
 
@@ -755,7 +755,7 @@ public class PipelineCache {
         LOGGER.debug("Creating pipeline cache");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkPipelineCacheCreateInfo createInfo = VkPipelineCacheCreateInfo.callocStack(stack)
+            VkPipelineCacheCreateInfo createInfo = VkPipelineCacheCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
 
             LongBuffer lp = stack.mallocLong(1);
@@ -813,7 +813,7 @@ public class Pipeline {
 
             ShaderProgram.ShaderModule[] shaderModules = pipeLineCreationInfo.shaderProgram.getShaderModules();
             int numModules = shaderModules.length;
-            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.callocStack(numModules, stack);
+            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.calloc(numModules, stack);
             for (int i = 0; i < numModules; i++) {
                 shaderStages.get(i)
                         .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
@@ -837,7 +837,7 @@ public class Pipeline {
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
             VkPipelineInputAssemblyStateCreateInfo vkPipelineInputAssemblyStateCreateInfo =
-                    VkPipelineInputAssemblyStateCreateInfo.callocStack(stack)
+                    VkPipelineInputAssemblyStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO)
                             .topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
         ...
@@ -854,7 +854,7 @@ public class Pipeline {
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
             VkPipelineViewportStateCreateInfo vkPipelineViewportStateCreateInfo =
-                    VkPipelineViewportStateCreateInfo.callocStack(stack)
+                    VkPipelineViewportStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO)
                             .viewportCount(1)
                             .scissorCount(1);
@@ -872,7 +872,7 @@ public class Pipeline {
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
             VkPipelineRasterizationStateCreateInfo vkPipelineRasterizationStateCreateInfo =
-                    VkPipelineRasterizationStateCreateInfo.callocStack(stack)
+                    VkPipelineRasterizationStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO)
                             .polygonMode(VK_POLYGON_MODE_FILL)
                             .cullMode(VK_CULL_MODE_NONE)
@@ -899,7 +899,7 @@ public class Pipeline {
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
             VkPipelineMultisampleStateCreateInfo vkPipelineMultisampleStateCreateInfo =
-                    VkPipelineMultisampleStateCreateInfo.callocStack(stack)
+                    VkPipelineMultisampleStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO)
                             .rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
         ...
@@ -915,14 +915,14 @@ public class Pipeline {
     ...
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
-            VkPipelineColorBlendAttachmentState.Buffer blendAttState = VkPipelineColorBlendAttachmentState.callocStack(
+            VkPipelineColorBlendAttachmentState.Buffer blendAttState = VkPipelineColorBlendAttachmentState.calloc(
                     pipeLineCreationInfo.numColorAttachments(), stack);
             for (int i = 0; i < pipeLineCreationInfo.numColorAttachments(); i++) {
                 blendAttState.get(i)
                         .colorWriteMask(VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
             }
             VkPipelineColorBlendStateCreateInfo colorBlendState =
-                    VkPipelineColorBlendStateCreateInfo.callocStack(stack)
+                    VkPipelineColorBlendStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO)
                             .pAttachments(blendAttState);
         ...
@@ -941,7 +941,7 @@ public class Pipeline {
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
             VkPipelineDynamicStateCreateInfo vkPipelineDynamicStateCreateInfo =
-                    VkPipelineDynamicStateCreateInfo.callocStack(stack)
+                    VkPipelineDynamicStateCreateInfo.calloc(stack)
                             .sType(VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO)
                             .pDynamicStates(stack.ints(
                                     VK_DYNAMIC_STATE_VIEWPORT,
@@ -960,7 +960,7 @@ public class Pipeline {
     ...
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
-            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
+            VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
 
             vkCheck(vkCreatePipelineLayout(device.getVkDevice(), pPipelineLayoutCreateInfo, null, lp),
@@ -979,7 +979,7 @@ public class Pipeline {
     ...
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
         ...
-            VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.callocStack(1, stack)
+            VkGraphicsPipelineCreateInfo.Buffer pipeline = VkGraphicsPipelineCreateInfo.calloc(1, stack)
                     .sType(VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
                     .pStages(shaderStages)
                     .pVertexInputState(pipeLineCreationInfo.viInputStateInfo().getVi())
@@ -1164,10 +1164,10 @@ public class ForwardRenderActivity {
             fence.reset();
 
             commandBuffer.reset();
-            VkClearValue.Buffer clearValues = VkClearValue.callocStack(1, stack);
+            VkClearValue.Buffer clearValues = VkClearValue.calloc(1, stack);
             clearValues.apply(0, v -> v.color().float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1));
 
-            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.callocStack(stack)
+            VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
                     .renderPass(renderPass.getVkRenderPass())
                     .pClearValues(clearValues)
@@ -1193,7 +1193,7 @@ public class ForwardRenderActivity {
         ...
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -1202,7 +1202,7 @@ public class ForwardRenderActivity {
                     .maxDepth(1.0f);
             vkCmdSetViewport(cmdHandle, 0, viewport);
 
-            VkRect2D.Buffer scissor = VkRect2D.callocStack(1, stack)
+            VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack)
                     .extent(it -> it
                             .width(width)
                             .height(height))

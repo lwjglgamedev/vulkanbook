@@ -27,13 +27,13 @@ public class VulkanBuffer {
         this.device = device;
         requestedSize = size;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.callocStack(stack)
+            VkBufferCreateInfo bufferCreateInfo = VkBufferCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
                     .size(size)
                     .usage(bufferUsage)
                     .sharingMode(VK_SHARING_MODE_EXCLUSIVE);
 
-            VmaAllocationCreateInfo allocInfo = VmaAllocationCreateInfo.callocStack(stack)
+            VmaAllocationCreateInfo allocInfo = VmaAllocationCreateInfo.calloc(stack)
                     .requiredFlags(requiredFlags)
                     .usage(memoryUsage);
 

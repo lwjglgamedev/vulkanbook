@@ -145,7 +145,7 @@ public class GuiRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.getVkPipeline());
 
-            VkViewport.Buffer viewport = VkViewport.callocStack(1, stack)
+            VkViewport.Buffer viewport = VkViewport.calloc(1, stack)
                     .x(0)
                     .y(height)
                     .height(-height)
@@ -174,7 +174,7 @@ public class GuiRenderActivity {
                     pipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 
             ImVec4 imVec4 = new ImVec4();
-            VkRect2D.Buffer rect = VkRect2D.callocStack(1, stack);
+            VkRect2D.Buffer rect = VkRect2D.calloc(1, stack);
             ImDrawData imDrawData = ImGui.getDrawData();
             int numCmdLists = imDrawData.getCmdListsCount();
             int offsetIdx = 0;

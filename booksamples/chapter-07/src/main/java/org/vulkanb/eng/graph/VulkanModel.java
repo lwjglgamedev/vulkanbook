@@ -74,7 +74,7 @@ public class VulkanModel {
 
     private static void recordTransferCommand(CommandBuffer cmd, TransferBuffers transferBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkBufferCopy.Buffer copyRegion = VkBufferCopy.callocStack(1, stack)
+            VkBufferCopy.Buffer copyRegion = VkBufferCopy.calloc(1, stack)
                     .srcOffset(0).dstOffset(0).size(transferBuffers.srcBuffer().getRequestedSize());
             vkCmdCopyBuffer(cmd.getVkCommandBuffer(), transferBuffers.srcBuffer().getBuffer(),
                     transferBuffers.dstBuffer().getBuffer(), copyRegion);

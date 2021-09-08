@@ -153,7 +153,7 @@ public class GlobalBuffers {
                     vulkanAnimEntityList.add(vulkanAnimEntity);
                     List<VulkanAnimEntity.VulkanAnimMesh> vulkanAnimMeshList = vulkanAnimEntity.getVulkanAnimMeshList();
                     for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
-                        VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.callocStack(stack);
+                        VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.calloc(stack);
                         indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
                         indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
                         indexedIndirectCommand.instanceCount(1);
@@ -438,7 +438,7 @@ public class GlobalBuffers {
                     continue;
                 }
                 for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
-                    VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.callocStack(stack);
+                    VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.calloc(stack);
                     indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
                     indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
                     indexedIndirectCommand.instanceCount(entities.size());
@@ -532,7 +532,7 @@ public class GlobalBuffers {
 
         private void recordTransferCommand(CommandBuffer cmd, VulkanBuffer dstBuffer) {
             try (MemoryStack stack = MemoryStack.stackPush()) {
-                VkBufferCopy.Buffer copyRegion = VkBufferCopy.callocStack(1, stack)
+                VkBufferCopy.Buffer copyRegion = VkBufferCopy.calloc(1, stack)
                         .srcOffset(0).dstOffset(0).size(stgVulkanBuffer.getRequestedSize());
                 vkCmdCopyBuffer(cmd.getVkCommandBuffer(), stgVulkanBuffer.getBuffer(), dstBuffer.getBuffer(), copyRegion);
             }
