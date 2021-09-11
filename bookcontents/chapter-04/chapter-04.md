@@ -298,8 +298,9 @@ public class SwapChain {
                 "Failed to get surface images");
 
         result = new ImageView[numImages];
+        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(format).aspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
         for (int i = 0; i < numImages; i++) {
-            result[i] = new ImageView(device, swapChainImages.get(i), format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+            result[i] = new ImageView(device, swapChainImages.get(i), imageViewData);
         }
 
         return result;
@@ -309,8 +310,62 @@ public class SwapChain {
 ```
 
 The first thing we do is retrieve the **actual** number of images that our swap chain has. But wait, we had already specified this when we created the swap chain, why we do need to retrieve that again? The answer is that we created the swap chain with a desired number of images, but the Vulkan driver may have returned a different number. This is why we need to call the  `vkGetSwapchainImagesKHR` function to retrieve the number of images. After that, we call that same function again to retrieve the handles to the images themselves.
-Now we iterate over the images to create new `ImageView` instances. The `ImageView` class encapsulates the creation and disposal of Vulkan image views. Its constructor is defined like this:
+Now we iterate over the images to create new `ImageView` instances. The `ImageView` class encapsulates the creation and disposal of Vulkan image views. Since the parameters to properly set up image views can be quite lengthy, it defines a build helper class, as an inner class, using a fluent like API style. This way we will increase readability of the code tha constructs images, and we will be able to add support for new parameters without breaking existing code.
 
+```java
+...
+public class ImageView {
+    ....
+    public static class ImageViewData {
+        private int aspectMask;
+        private int baseArrayLayer;
+        private int format;
+        private int layerCount;
+        private int mipLevels;
+        private int viewType;
+
+        public ImageViewData() {
+            this.baseArrayLayer = 0;
+            this.layerCount = 1;
+            this.mipLevels = 1;
+            this.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        }
+
+        public ImageView.ImageViewData aspectMask(int aspectMask) {
+            this.aspectMask = aspectMask;
+            return this;
+        }
+
+        public ImageView.ImageViewData baseArrayLayer(int baseArrayLayer) {
+            this.baseArrayLayer = baseArrayLayer;
+            return this;
+        }
+
+        public ImageView.ImageViewData format(int format) {
+            this.format = format;
+            return this;
+        }
+
+        public ImageView.ImageViewData layerCount(int layerCount) {
+            this.layerCount = layerCount;
+            return this;
+        }
+
+        public ImageView.ImageViewData mipLevels(int mipLevels) {
+            this.mipLevels = mipLevels;
+            return this;
+        }
+
+        public ImageView.ImageViewData viewType(int viewType) {
+            this.viewType = viewType;
+            return this;
+        }
+    }
+    ...
+}
+```
+
+You will see how all these parameters in the constructor of the `ImageView` class.
 ```java
 ...
 public class ImageView {
@@ -318,21 +373,23 @@ public class ImageView {
     private final Device device;
     private final long vkImageView;
 
-    public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
+    public ImageView(Device device, long vkImage, ImageViewData imageViewData) {
         this.device = device;
+        this.aspectMask = imageViewData.aspectMask;
+        this.mipLevels = imageViewData.mipLevels;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
             VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
                     .image(vkImage)
-                    .viewType(VK_IMAGE_VIEW_TYPE_2D)
-                    .format(format)
+                    .viewType(imageViewData.viewType)
+                    .format(imageViewData.format)
                     .subresourceRange(it -> it
                             .aspectMask(aspectMask)
                             .baseMipLevel(0)
                             .levelCount(mipLevels)
-                            .baseArrayLayer(0)
-                            .layerCount(1));
+                            .baseArrayLayer(imageViewData.baseArrayLayer)
+                            .layerCount(imageViewData.layerCount));
 
             vkCheck(vkCreateImageView(device.getVkDevice(), viewCreateInfo, null, lp),
                     "Failed to create image view");

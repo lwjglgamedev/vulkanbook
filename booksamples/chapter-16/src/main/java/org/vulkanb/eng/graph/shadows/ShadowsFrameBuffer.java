@@ -28,10 +28,10 @@ public class ShadowsFrameBuffer {
                     format(VK_FORMAT_D32_SFLOAT).arrayLayers(GraphConstants.SHADOW_MAP_CASCADE_COUNT);
             Image depthImage = new Image(device, imageData);
 
-            int aspectMask = Attachment.calcAspectMask(usage);
-
-            ImageView depthImageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(),
-                    aspectMask, 1, VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(depthImage.getFormat()).
+                    aspectMask(Attachment.calcAspectMask(usage)).viewType(VK_IMAGE_VIEW_TYPE_2D_ARRAY).
+                    baseArrayLayer(0).layerCount(GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            ImageView depthImageView = new ImageView(device, depthImage.getVkImage(), imageViewData);
             depthAttachment = new Attachment(depthImage, depthImageView, true);
 
             shadowsRenderPass = new ShadowsRenderPass(device, depthAttachment);

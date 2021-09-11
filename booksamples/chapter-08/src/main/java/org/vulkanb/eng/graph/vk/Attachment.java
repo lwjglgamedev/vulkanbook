@@ -25,7 +25,8 @@ public class Attachment {
             depthAttachment = true;
         }
 
-        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), aspectMask, 1);
+        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
+        imageView = new ImageView(device, image.getVkImage(), imageViewData);
     }
 
     public void cleanup() {

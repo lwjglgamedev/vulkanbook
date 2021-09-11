@@ -15,29 +15,23 @@ public class ImageView {
     private final int mipLevels;
     private final long vkImageView;
 
-    public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
-        this(device, vkImage, format, aspectMask, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 0, 1);
-
-    }
-
-    public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels, int viewType,
-                     int baseArrayLayer, int layerCount) {
+    public ImageView(Device device, long vkImage, ImageViewData imageViewData) {
         this.device = device;
-        this.aspectMask = aspectMask;
-        this.mipLevels = mipLevels;
+        this.aspectMask = imageViewData.aspectMask;
+        this.mipLevels = imageViewData.mipLevels;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
             VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
                     .image(vkImage)
-                    .viewType(viewType)
-                    .format(format)
+                    .viewType(imageViewData.viewType)
+                    .format(imageViewData.format)
                     .subresourceRange(it -> it
                             .aspectMask(aspectMask)
                             .baseMipLevel(0)
                             .levelCount(mipLevels)
-                            .baseArrayLayer(baseArrayLayer)
-                            .layerCount(layerCount));
+                            .baseArrayLayer(imageViewData.baseArrayLayer)
+                            .layerCount(imageViewData.layerCount));
 
             vkCheck(vkCreateImageView(device.getVkDevice(), viewCreateInfo, null, lp),
                     "Failed to create image view");
@@ -59,5 +53,51 @@ public class ImageView {
 
     public long getVkImageView() {
         return vkImageView;
+    }
+
+    public static class ImageViewData {
+        private int aspectMask;
+        private int baseArrayLayer;
+        private int format;
+        private int layerCount;
+        private int mipLevels;
+        private int viewType;
+
+        public ImageViewData() {
+            this.baseArrayLayer = 0;
+            this.layerCount = 1;
+            this.mipLevels = 1;
+            this.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        }
+
+        public ImageView.ImageViewData aspectMask(int aspectMask) {
+            this.aspectMask = aspectMask;
+            return this;
+        }
+
+        public ImageView.ImageViewData baseArrayLayer(int baseArrayLayer) {
+            this.baseArrayLayer = baseArrayLayer;
+            return this;
+        }
+
+        public ImageView.ImageViewData format(int format) {
+            this.format = format;
+            return this;
+        }
+
+        public ImageView.ImageViewData layerCount(int layerCount) {
+            this.layerCount = layerCount;
+            return this;
+        }
+
+        public ImageView.ImageViewData mipLevels(int mipLevels) {
+            this.mipLevels = mipLevels;
+            return this;
+        }
+
+        public ImageView.ImageViewData viewType(int viewType) {
+            this.viewType = viewType;
+            return this;
+        }
     }
 }

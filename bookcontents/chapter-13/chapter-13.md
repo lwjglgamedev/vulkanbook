@@ -327,8 +327,10 @@ public class ShadowsFrameBuffer {
 
             int aspectMask = Attachment.calcAspectMask(usage);
 
-            ImageView depthImageView = new ImageView(device, depthImage.getVkImage(), depthImage.getFormat(),
-                    aspectMask, 1, VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(depthImage.getFormat()).
+                    aspectMask(aspectMask).viewType(VK_IMAGE_VIEW_TYPE_2D_ARRAY).
+                    layerCount( GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            ImageView depthImageView = new ImageView(device, depthImage.getVkImage(), imageViewData);
             depthAttachment = new Attachment(depthImage, depthImageView, true);
 
             shadowsRenderPass = new ShadowsRenderPass(device, depthAttachment);
@@ -343,35 +345,7 @@ public class ShadowsFrameBuffer {
 }
 ```
 
-In this specific case, we are handling the creation of the image that will hold the depth values for the cascade shadow maps manually (instead of delegating this to the `Attachment` class). We will use a layered image, in which each layer will hold the depth values for each of the cascade splits. We will need to take this into consideration when creating the image. This multi-layered image approach needs also be considered in the image view associated to the image. In the `ImageView` class, we will create a new constructor that will allow us to setup the number of layers and the base layer where we will start for this specific view.
-
-```java
-public class ImageView {
-    ...
-    public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels) {
-        this(device, vkImage, format, aspectMask, mipLevels, VK_IMAGE_VIEW_TYPE_2D, 0, 1);
-
-    }
-
-    public ImageView(Device device, long vkImage, int format, int aspectMask, int mipLevels, int viewType,
-                     int baseArrayLayer, int layerCount) {
-        ...
-            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
-                    .image(vkImage)
-                    .viewType(viewType)
-                    .format(format)
-                    .subresourceRange(it -> it
-                            .aspectMask(aspectMask)
-                            .baseMipLevel(0)
-                            .levelCount(mipLevels)
-                            .baseArrayLayer(baseArrayLayer)
-                            .layerCount(layerCount));
-        ...
-    }
-    ...
-}
-```
+In this specific case, we are handling the creation of the image that will hold the depth values for the cascade shadow maps manually (instead of delegating this to the `Attachment` class). We will use a layered image, in which each layer will hold the depth values for each of the cascade splits. We will need to take this into consideration when creating the image. This multi-layered image approach needs also be considered in the image view associated to the image.
 
 Due to the previous changes, the `Attachment` class also needs to be modified to allow external classes to directly pass references to `Image` and `ImageViews` instances instead of creating them in the constructor. The code to calculate the aspect mask of and image view based on its associated image has also been extracted to a new method named `calcAspectMask`.
 
@@ -393,7 +367,8 @@ public class Attachment {
         int aspectMask = calcAspectMask(usage);
         depthAttachment = aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;
 
-        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), aspectMask, 1);
+        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
+        imageView = new ImageView(device, image.getVkImage(), imageViewData);
     }
 
     public static int calcAspectMask(int usage) {

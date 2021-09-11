@@ -183,8 +183,9 @@ public class SwapChain {
                 "Failed to get surface images");
 
         result = new ImageView[numImages];
+        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(format).aspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
         for (int i = 0; i < numImages; i++) {
-            result[i] = new ImageView(device, swapChainImages.get(i), format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+            result[i] = new ImageView(device, swapChainImages.get(i), imageViewData);
         }
 
         return result;

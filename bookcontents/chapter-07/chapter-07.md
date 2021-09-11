@@ -5,7 +5,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 ## Depth Image
 
-The first thing we must do is create a depth image. In the case of the swap chain, images were already there, we just used a image view to access them. This case is different, we need to allocate the images by ourselves. In order to handle that task we will create a new class named `Image`. Since image creation parameters can be lengthy, we will create first an inner class named `ImageData`, which will act as build helper class using a fluent style API. This way we will increase readability of the code tha constructs images, and we will be able to add support for new parameters without breaking existing code.
+The first thing we must do is create a depth image. In the case of the swap chain, images were already there, we just used a image view to access them. This case is different, we need to allocate the images by ourselves. In order to handle that task we will create a new class named `Image`. Since image creation parameters can be lengthy, we will create first an inner class named `ImageData`, which will act as build helper class using a fluent style API. Like in the `ImageView` class, this will increase readability of the code tha constructs images, and we will be able to add support for new parameters without breaking existing code.
 ```java
 public class Image {
     ...
@@ -250,7 +250,8 @@ public class Attachment {
             depthAttachment = true;
         }
 
-        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), aspectMask, 1);
+        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
+        imageView = new ImageView(device, image.getVkImage(), imageViewData);
     }
 
     public void cleanup() {

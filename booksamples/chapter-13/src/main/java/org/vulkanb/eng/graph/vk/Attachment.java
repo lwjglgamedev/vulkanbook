@@ -23,7 +23,8 @@ public class Attachment {
         int aspectMask = calcAspectMask(usage);
         depthAttachment = aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;
 
-        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), aspectMask, 1);
+        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
+        imageView = new ImageView(device, image.getVkImage(), imageViewData);
     }
 
     public static int calcAspectMask(int usage) {

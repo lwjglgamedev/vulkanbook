@@ -88,7 +88,9 @@ public class Texture {
                 usage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT).
                 format(imageFormat).mipLevels(mipLevels);
         image = new Image(device, imageData);
-        imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).
+                aspectMask(VK_IMAGE_ASPECT_COLOR_BIT).mipLevels(mipLevels);
+        imageView = new ImageView(device, image.getVkImage(), imageViewData);
     }
 
     public String getFileName() {
