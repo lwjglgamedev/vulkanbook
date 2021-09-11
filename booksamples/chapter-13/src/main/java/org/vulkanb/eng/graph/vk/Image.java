@@ -16,33 +16,28 @@ public class Image {
     private final long vkImage;
     private final long vkMemory;
 
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
-        this(device, width, height, format, usage, mipLevels, sampleCount, 1);
-    }
-
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount,
-                 int arrayLayers) {
+    public Image(Device device, ImageData imageData) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            this.format = format;
-            this.mipLevels = mipLevels;
+            this.format = imageData.format;
+            this.mipLevels = imageData.mipLevels;
 
             VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
                     .imageType(VK_IMAGE_TYPE_2D)
                     .format(format)
                     .extent(it -> it
-                            .width(width)
-                            .height(height)
+                            .width(imageData.width)
+                            .height(imageData.height)
                             .depth(1)
                     )
                     .mipLevels(mipLevels)
-                    .arrayLayers(arrayLayers)
-                    .samples(sampleCount)
+                    .arrayLayers(imageData.arrayLayers)
+                    .samples(imageData.sampleCount)
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .sharingMode(VK_SHARING_MODE_EXCLUSIVE)
                     .tiling(VK_IMAGE_TILING_OPTIMAL)
-                    .usage(usage);
+                    .usage(imageData.usage);
 
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateImage(device.getVkDevice(), imageCreateInfo, null, lp), "Failed to create image");
@@ -90,4 +85,55 @@ public class Image {
         return vkMemory;
     }
 
+    public static class ImageData {
+        private int arrayLayers;
+        private int format;
+        private int height;
+        private int mipLevels;
+        private int sampleCount;
+        private int usage;
+        private int width;
+
+        public ImageData() {
+            this.format = VK_FORMAT_R8G8B8A8_SRGB;
+            this.mipLevels = 1;
+            this.sampleCount = 1;
+            this.arrayLayers = 1;
+        }
+
+        public ImageData arrayLayers(int arrayLayers) {
+            this.arrayLayers = arrayLayers;
+            return this;
+        }
+
+        public ImageData format(int format) {
+            this.format = format;
+            return this;
+        }
+
+        public ImageData height(int height) {
+            this.height = height;
+            return this;
+        }
+
+        public ImageData mipLevels(int mipLevels) {
+            this.mipLevels = mipLevels;
+            return this;
+        }
+
+        public ImageData sampleCount(int sampleCount) {
+            this.sampleCount = sampleCount;
+            return this;
+        }
+
+        public ImageData usage(int usage) {
+            this.usage = usage;
+            return this;
+        }
+
+        public ImageData width(int width) {
+            this.width = width;
+            return this;
+        }
+    }
 }

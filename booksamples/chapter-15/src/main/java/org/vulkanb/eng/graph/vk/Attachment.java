@@ -4,9 +4,9 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Attachment {
 
+    private final boolean depthAttachment;
     private final Image image;
     private final ImageView imageView;
-    private final boolean depthAttachment;
 
     public Attachment(Image image, ImageView imageView, boolean depthAttachment) {
         this.image = image;
@@ -15,7 +15,10 @@ public class Attachment {
     }
 
     public Attachment(Device device, int width, int height, int format, int usage) {
-        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);
+        Image.ImageData imageData = new Image.ImageData().width(width).height(height).
+                usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+                format(format);
+        image = new Image(device, imageData);
 
         int aspectMask = calcAspectMask(usage);
         depthAttachment = aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;

@@ -317,14 +317,13 @@ public class ShadowsFrameBuffer {
     public ShadowsFrameBuffer(Device device) {
         LOGGER.debug("Creating ShadowsFrameBuffer");
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            int mipLevels = 1;
-            int sampleCount = 1;
             int usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
             EngineProperties engineProperties = EngineProperties.getInstance();
             int shadowMapSize = engineProperties.getShadowMapSize();
-            Image depthImage = new Image(device, shadowMapSize, shadowMapSize,
-                    VK_FORMAT_D32_SFLOAT, usage | VK_IMAGE_USAGE_SAMPLED_BIT, mipLevels, sampleCount,
-                    GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            Image.ImageData imageData = new Image.ImageData().width(shadowMapSize).height(shadowMapSize).
+                    usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+                    format(VK_FORMAT_D32_SFLOAT).arrayLayers(GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            Image depthImage = new Image(device, imageData);
 
             int aspectMask = Attachment.calcAspectMask(usage);
 
@@ -344,34 +343,7 @@ public class ShadowsFrameBuffer {
 }
 ```
 
-In this specific case, we are handling the creation of the image that will hold the depth values for the cascade shadow maps manually (instead of delegating this to the `Attachment` class). We will use a layered image, in which each layer will hold the depth values for each of the cascade splits. To support this, we need to modify the `Image` class so we can now create multi-layered images. We have opted to created a new constructor with this extra argument while keeping the old one to simplify image creation in the rest of the cases.
-
-```java
-public class Image {
-    ...
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
-        this(device, width, height, format, usage, mipLevels, sampleCount, 1);
-    }
-
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount,
-                 int arrayLayers) {
-        this.device = device;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            this.format = format;
-            this.mipLevels = mipLevels;
-
-            VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.calloc(stack)
-                ...
-                    .arrayLayers(arrayLayers)
-                ...
-            ...
-        }
-    }
-    ...
-}
-```
-
-This multi-layered image approach needs also be considered in the image view associated to the image. As in the `Image` class case, we will create a new constructor that will allow us to setup the number of layers and the base layer where we will start for this specific view.
+In this specific case, we are handling the creation of the image that will hold the depth values for the cascade shadow maps manually (instead of delegating this to the `Attachment` class). We will use a layered image, in which each layer will hold the depth values for each of the cascade splits. We will need to take this into consideration when creating the image. This multi-layered image approach needs also be considered in the image view associated to the image. In the `ImageView` class, we will create a new constructor that will allow us to setup the number of layers and the base layer where we will start for this specific view.
 
 ```java
 public class ImageView {
@@ -401,7 +373,7 @@ public class ImageView {
 }
 ```
 
-Due to the previous changes, the `Attachment` class also needs to be modified to allow external classes to directly pass references to `Image` and `ImageViews` instances instead of creating them in the constructor. The code to calculate teh aspect mas of and image view based on its associated image has also been extracted to a new method named `calcAspectMask`.
+Due to the previous changes, the `Attachment` class also needs to be modified to allow external classes to directly pass references to `Image` and `ImageViews` instances instead of creating them in the constructor. The code to calculate the aspect mask of and image view based on its associated image has also been extracted to a new method named `calcAspectMask`.
 
 ```java
 public class Attachment {
@@ -413,7 +385,10 @@ public class Attachment {
     }
 
     public Attachment(Device device, int width, int height, int format, int usage) {
-        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);
+        Image.ImageData imageData = new Image.ImageData().width(width).height(height).
+                usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+                format(format);
+        image = new Image(device, imageData);
 
         int aspectMask = calcAspectMask(usage);
         depthAttachment = aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;

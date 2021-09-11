@@ -162,9 +162,10 @@ public class Texture {
             height = h.get();
             mipLevels = (int) Math.floor(log2(Math.min(width, height))) + 1;
         ...
-            image = new Image(device, width, height, imageFormat,
-                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                    mipLevels, 1);
+            Image.ImageData imageData = new Image.ImageData().width(width).height(height).
+                    usage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT).
+                    format(imageFormat).mipLevels(mipLevels);
+            image = new Image(device, imageData);
         ...
     }
     ...

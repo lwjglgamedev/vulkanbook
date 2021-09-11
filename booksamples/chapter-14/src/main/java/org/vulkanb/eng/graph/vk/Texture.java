@@ -45,9 +45,10 @@ public class Texture {
             mipLevels = (int) Math.floor(log2(Math.min(width, height))) + 1;
 
             createStgBuffer(device, buf);
-            image = new Image(device, width, height, imageFormat,
-                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                    mipLevels, 1);
+            Image.ImageData imageData = new Image.ImageData().width(width).height(height).
+                    usage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT).
+                    format(imageFormat).mipLevels(mipLevels);
+            image = new Image(device, imageData);
             imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
         }
 
@@ -184,7 +185,7 @@ public class Texture {
         }
 
         barrier.subresourceRange(it -> it
-                .baseMipLevel(mipLevels - 1))
+                        .baseMipLevel(mipLevels - 1))
                 .oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
                 .newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
                 .srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)

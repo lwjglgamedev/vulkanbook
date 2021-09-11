@@ -20,14 +20,13 @@ public class ShadowsFrameBuffer {
     public ShadowsFrameBuffer(Device device) {
         LOGGER.debug("Creating ShadowsFrameBuffer");
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            int mipLevels = 1;
-            int sampleCount = 1;
             int usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
             EngineProperties engineProperties = EngineProperties.getInstance();
             int shadowMapSize = engineProperties.getShadowMapSize();
-            Image depthImage = new Image(device, shadowMapSize, shadowMapSize,
-                    VK_FORMAT_D32_SFLOAT, usage | VK_IMAGE_USAGE_SAMPLED_BIT, mipLevels, sampleCount,
-                    GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            Image.ImageData imageData = new Image.ImageData().width(shadowMapSize).height(shadowMapSize).
+                    usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+                    format(VK_FORMAT_D32_SFLOAT).arrayLayers(GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            Image depthImage = new Image(device, imageData);
 
             int aspectMask = Attachment.calcAspectMask(usage);
 

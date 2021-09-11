@@ -43,8 +43,10 @@ public class Texture {
             mipLevels = 1;
 
             createStgBuffer(device, buf);
-            image = new Image(device, width, height, imageFormat, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                    mipLevels, 1);
+            Image.ImageData imageData = new Image.ImageData().width(width).height(height).
+                    usage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT).
+                    format(imageFormat).mipLevels(mipLevels);
+            image = new Image(device, imageData);
             imageView = new ImageView(device, image.getVkImage(), image.getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
         }
 

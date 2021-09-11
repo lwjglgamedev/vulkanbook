@@ -10,7 +10,10 @@ public class Attachment {
     private boolean depthAttachment;
 
     public Attachment(Device device, int width, int height, int format, int usage) {
-        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);
+        Image.ImageData imageData = new Image.ImageData().width(width).height(height).
+                usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+                format(format);
+        image = new Image(device, imageData);
 
         int aspectMask = 0;
         if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {

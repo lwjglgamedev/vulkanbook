@@ -5,33 +5,91 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 ## Depth Image
 
-The first thing we must do is create a depth image. In the case of the swap chain, images were already there, we just used a image view to access them. This case is different, we need to allocate the images by ourselves. In order to handle that task we will create a new class named `Image`. This class can used to manage any type of image, not only images to bee used asd depth attachments. The constructor starts like this:
+The first thing we must do is create a depth image. In the case of the swap chain, images were already there, we just used a image view to access them. This case is different, we need to allocate the images by ourselves. In order to handle that task we will create a new class named `Image`. Since image creation parameters can be lengthy, we will create first an inner class named `ImageData`, which will act as build helper class using a fluent style API. This way we will increase readability of the code tha constructs images, and we will be able to add support for new parameters without breaking existing code.
+```java
+public class Image {
+    ...
+        public ImageData() {
+            this.format = VK_FORMAT_R8G8B8A8_SRGB;
+            this.mipLevels = 1;
+            this.sampleCount = 1;
+            this.arrayLayers = 1;
+        }
+
+        public ImageData arrayLayers(int arrayLayers) {
+            this.arrayLayers = arrayLayers;
+            return this;
+        }
+
+        public ImageData format(int format) {
+            this.format = format;
+            return this;
+        }
+
+        public ImageData height(int height) {
+            this.height = height;
+            return this;
+        }
+
+        public ImageData mipLevels(int mipLevels) {
+            this.mipLevels = mipLevels;
+            return this;
+        }
+
+        public ImageData sampleCount(int sampleCount) {
+            this.sampleCount = sampleCount;
+            return this;
+        }
+
+        public ImageData usage(int usage) {
+            this.usage = usage;
+            return this;
+        }
+
+        public ImageData width(int width) {
+            this.width = width;
+            return this;
+        }
+    }
+}
+```
+The attributes for creating an image are:
+
+- `width` and `height`: The size of the image.
+- `format`:  Describes the format of the texel blocks that compose the image.
+- `usage`:  Describes the intended usage that this image will have.
+- `mipLevels`:  Describes the levels of detail available for this image (more on this in later chapters).
+- `sampleCount`:  Specifies the number of texels per sample (more on this in later chapters).
+- `arrayLayers`: Specifies the number of layers of an image (more on this in later chapters).
+
+
+The constructor of the `Image` class starts like this:
 
 ```java
 public class Image {
     ...
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+    public Image(Device device, ImageData imageData) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            this.format = format;
-            this.mipLevels = mipLevels;
+            this.format = imageData.format;
+            this.mipLevels = imageData.mipLevels;
 
             VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
                     .imageType(VK_IMAGE_TYPE_2D)
                     .format(format)
                     .extent(it -> it
-                            .width(width)
-                            .height(height)
+                            .width(imageData.width)
+                            .height(imageData.height)
                             .depth(1)
                     )
                     .mipLevels(mipLevels)
-                    .arrayLayers(1)
-                    .samples(sampleCount)
+                    .arrayLayers(imageData.arrayLayers)
+                    .samples(imageData.sampleCount)
                     .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
                     .sharingMode(VK_SHARING_MODE_EXCLUSIVE)
                     .tiling(VK_IMAGE_TILING_OPTIMAL)
-                    .usage(usage);
+                    .usage(imageData.usage);
             ...
         }
         ...
@@ -40,13 +98,6 @@ public class Image {
 }
 ```
 
-The constructor receives the following parameters:
-
-- `width` and `height`: The size of the image.
-- `format`:  Describes the format of the texel blocks that compose the image.
-- `usage`:  Describes the intended usage that this image will have.
-- `mipLevels`:  Describes the levels of detail available for this image (more on this in later chapters).
-- `sampleCount`:  Specifies the number of texels per sample (more on this in later chapters).
 
 Besides storing some parameters as attributes of the class, the first thing we do is instantiate a structure needed to create an image named `VkImageCreateInfo`. The attributes that we are using are:
 
@@ -55,7 +106,7 @@ Besides storing some parameters as attributes of the class, the first thing we d
 - `format`: Described above, format of the texel blocks that compose the image.
 - `extent`:  It is the size of the image. In this case, the structure needs to support 3D images, so it includes the depth. For 2D images we just set it to `1`.
 - `mipLevels`:  Already described in the constructor's parameters description.
-- `arrayLayers`:  Images can be an array of layers. This is different than a 3D image. A 3D image contains data that is referred to the three axis. An array of layers are a set of 2D images indexed by a layer number. In our case we will just set it to `1`. 
+- `arrayLayers`:  Images can be an array of layers. This is different than a 3D image. A 3D image contains data that is referred to the three axis. An array of layers are a set of 2D images indexed by a layer number. 
 - `samples`: Already described in the constructor's parameters description (`sampleCount`).
 - `initialLayout`:  This is the initial layout of the image. We just set it to `VK_IMAGE_LAYOUT_UNDEFINED`. If a transition to another layout is required it will need to be done later on. (This depends on the use case for the image, this is why we do not perform the transition here).
 - `sharingMode`: It specifies if this resource will be shared by more than a single queue family at a time (`VK_SHARING_MODE_CONCURRENT`) or not (`VK_SHARING_MODE_EXCLUSIVE`).
@@ -67,7 +118,7 @@ Now we can create the image by invoking the `vkCreateImage` Vulkan function:
 ```java
 public class Image {
     ...
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+    public Image(Device device, ImageData imageData) {
             ...
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateImage(device.getVkDevice(), imageCreateInfo, null, lp), "Failed to create image");
@@ -85,7 +136,7 @@ After that we need to allocate the memory associated to that image. As in the ca
 ```java
 public class Image {
     ...
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+    public Image(Device device, ImageData imageData) {
             ...
             // Get memory requirements for this object
             VkMemoryRequirements memReqs = VkMemoryRequirements.calloc(stack);
@@ -103,7 +154,7 @@ With that information we can populate the `VkMemoryAllocateInfo` structure which
 ```java
 public class Image {
     ...
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+    public Image(Device device, ImageData imageData) {
             ...
             // Select memory size and type
             VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.calloc(stack)
@@ -124,7 +175,7 @@ Again, the code is similar as the one used with the buffers, once we have got th
 ```java
 public class Image {
     ...
-    public Image(Device device, int width, int height, int format, int usage, int mipLevels, int sampleCount) {
+    public Image(Device device, ImageData imageData) {
             ...
             // Allocate memory
             vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
@@ -184,7 +235,10 @@ public class Attachment {
     private boolean depthAttachment;
 
     public Attachment(Device device, int width, int height, int format, int usage) {
-        image = new Image(device, width, height, format, usage | VK_IMAGE_USAGE_SAMPLED_BIT, 1, 1);
+        Image.ImageData imageData = new Image.ImageData().width(width).height(height).
+                usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+                format(format);
+        image = new Image(device, imageData);
 
         int aspectMask = 0;
         if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
