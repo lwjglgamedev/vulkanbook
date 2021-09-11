@@ -76,8 +76,8 @@ public class CascadeShadow {
         // Calculate split depths based on view camera frustum
         // Based on method presented in https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch10.html
         for (int i = 0; i < GraphConstants.SHADOW_MAP_CASCADE_COUNT; i++) {
-            float p = (float) (i + 1) / (float) (GraphConstants.SHADOW_MAP_CASCADE_COUNT);
-            float log = (float) (minZ * Math.pow(ratio, p));
+            float p = (i + 1) / (float) (GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+            float log = (float) (minZ * java.lang.Math.pow(ratio, p));
             float uniform = minZ + range * p;
             float d = cascadeSplitLambda * (log - uniform) + uniform;
             cascadeSplits[i] = (d - nearClip) / clipRange;
@@ -168,9 +168,9 @@ public class CascadeShadow {
             float radius = 0.0f;
             for (int j = 0; j < 8; j++) {
                 float distance = (new Vector3f(frustumCorners[j]).sub(frustumCenter)).length();
-                radius = Math.max(radius, distance);
+                radius = java.lang.Math.max(radius, distance);
             }
-            radius = (float) Math.ceil(radius * 16.0f) / 16.0f;
+            radius = (float) java.lang.Math.ceil(radius * 16.0f) / 16.0f;
             ...
         }
         ...
