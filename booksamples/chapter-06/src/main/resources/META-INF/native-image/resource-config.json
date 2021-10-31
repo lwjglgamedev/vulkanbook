@@ -1,0 +1,27 @@
+{
+  "resources":{
+  "includes":[
+    {
+      "pattern":"\\QMETA-INF/services/org.tinylog.configuration.ConfigurationLoader\\E"
+    }, 
+    {
+      "pattern":"\\QMETA-INF/services/org.tinylog.provider.LoggingProvider\\E"
+    }, 
+    {
+      "pattern":"\\QMETA-INF/services/org.tinylog.writers.Writer\\E"
+    }, 
+    {
+      "pattern":"\\Qeng.properties\\E"
+    }, 
+    {
+      "pattern":"\\Qtinylog.properties\\E"
+    }, 
+    {
+      "pattern":"\\Qwindows/x64/org/lwjgl/glfw/glfw.dll\\E"
+    }, 
+    {
+      "pattern":"\\Qwindows/x64/org/lwjgl/lwjgl.dll\\E"
+    }
+  ]},
+  "bundles":[]
+}

@@ -16,7 +16,7 @@ So let's go back to coding and start by encapsulating all the code for selecting
 public class PhysicalDevice {
     ...
     public static PhysicalDevice createPhysicalDevice(Instance instance, String prefferredDeviceName) {
-        LOGGER.debug("Selecting physical devices");
+        Logger.debug("Selecting physical devices");
         PhysicalDevice selectedPhysicalDevice = null;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             // Get available devices
@@ -46,14 +46,14 @@ public class PhysicalDevice {
 
                 String deviceName = physicalDevice.getDeviceName();
                 if (physicalDevice.hasGraphicsQueueFamily() && physicalDevice.hasKHRSwapChainExtension()) {
-                    LOGGER.debug("Device [{}] supports required extensions", deviceName);
+                    Logger.debug("Device [{}] supports required extensions", deviceName);
                     if (prefferredDeviceName != null && prefferredDeviceName.equals(deviceName)) {
                         selectedPhysicalDevice = physicalDevice;
                         break;
                     }
                     devices.add(physicalDevice);
                 } else {
-                    LOGGER.debug("Device [{}] does not support required extensions", deviceName);
+                    Logger.debug("Device [{}] does not support required extensions", deviceName);
                     physicalDevice.cleanup();
                 }
             }
@@ -90,7 +90,7 @@ public class PhysicalDevice {
             if (selectedPhysicalDevice == null) {
                 throw new RuntimeException("No suitable physical devices found");
             }
-            LOGGER.debug("Selected device: [{}]", selectedPhysicalDevice.getDeviceName());
+            Logger.debug("Selected device: [{}]", selectedPhysicalDevice.getDeviceName());
         }
 
         return selectedPhysicalDevice;
@@ -111,7 +111,7 @@ public class PhysicalDevice {
         vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, null),
                 "Failed to get number of physical devices");
         int numDevices = intBuffer.get(0);
-        LOGGER.debug("Detected {} physical device(s)", numDevices);
+        Logger.debug("Detected {} physical device(s)", numDevices);
 
         // Populate physical devices list pointer
         pPhysicalDevices = stack.mallocPointer(numDevices);
@@ -130,8 +130,6 @@ Let's now review the definition of the instance attributes and methods of the `P
 ```java
 public class PhysicalDevice {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final VkExtensionProperties.Buffer vkDeviceExtensions;
     private final VkPhysicalDeviceMemoryProperties vkMemoryProperties;
     private final VkPhysicalDevice vkPhysicalDevice;
@@ -195,8 +193,8 @@ The class provides a `cleanup` method, to free its resources:
 public class PhysicalDevice {
     ...
     public void cleanup() {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
+        if (Logger.isDebugEnabled()) {
+            Logger.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
         }
         vkMemoryProperties.free();
         vkPhysicalDeviceFeatures.free();
@@ -310,8 +308,6 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Device {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final PhysicalDevice physicalDevice;
     private final VkDevice vkDevice;
 ```
@@ -322,7 +318,7 @@ The Vulkan structure `VkDevice` is the one that will hold or Vulkan logical devi
 public class Device {
     ...
     public Device(PhysicalDevice physicalDevice) {
-        LOGGER.debug("Creating device");
+        Logger.debug("Creating device");
 
         this.physicalDevice = physicalDevice;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -435,7 +431,7 @@ To complete the `Device` class, here are the rest of the methods:
 public class Device {
     ...
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan device");
+        Logger.debug("Destroying Vulkan device");
         vkDestroyDevice(vkDevice, null);
     }
 
@@ -481,13 +477,11 @@ import java.nio.LongBuffer;
 
 public class Surface {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final PhysicalDevice physicalDevice;
     private final long vkSurface;
 
     public Surface(PhysicalDevice physicalDevice, long windowHandle) {
-        LOGGER.debug("Creating Vulkan surface");
+        Logger.debug("Creating Vulkan surface");
         this.physicalDevice = physicalDevice;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer pSurface = stack.mallocLong(1);
@@ -498,7 +492,7 @@ public class Surface {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan surface");
+        Logger.debug("Destroying Vulkan surface");
         KHRSurface.vkDestroySurfaceKHR(physicalDevice.getVkPhysicalDevice().getInstance(), vkSurface, null);
     }
 
@@ -530,12 +524,10 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class Queue {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final VkQueue vkQueue;
 
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
-        LOGGER.debug("Creating queue");
+        Logger.debug("Creating queue");
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pQueue = stack.mallocPointer(1);

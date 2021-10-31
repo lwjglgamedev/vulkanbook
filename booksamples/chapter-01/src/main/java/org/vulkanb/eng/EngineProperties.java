@@ -1,6 +1,6 @@
 package org.vulkanb.eng;
 
-import org.apache.logging.log4j.*;
+import org.tinylog.Logger;
 
 import java.io.*;
 import java.util.Properties;
@@ -8,7 +8,6 @@ import java.util.Properties;
 public class EngineProperties {
     private static final int DEFAULT_UPS = 30;
     private static final String FILENAME = "eng.properties";
-    private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
     private int ups;
 
@@ -20,7 +19,7 @@ public class EngineProperties {
             props.load(stream);
             ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
         } catch (IOException excp) {
-            LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
+            Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
     }
 

@@ -63,7 +63,7 @@ The `loadModel` method version which accepts the flags as a parameter is defined
 public class ModelLoader {
     ...
     public static ModelData loadModel(String modelId, String modelPath, String texturesDir, int flags) {
-        LOGGER.debug("Loading model data [{}]", modelPath);
+        Logger.debug("Loading model data [{}]", modelPath);
         if (!new File(modelPath).exists()) {
             throw new RuntimeException("Model path does not exist [" + modelPath + "]");
         }
@@ -96,7 +96,7 @@ public class ModelLoader {
         ModelData modelData = new ModelData(modelId, meshDataList, materialList);
 
         aiReleaseImport(aiScene);
-        LOGGER.debug("Loaded model [{}]", modelPath);
+        Logger.debug("Loaded model [{}]", modelPath);
         return modelData;
     }
     ...
@@ -295,7 +295,7 @@ The `Texture` class constructor is defined like this:
 public class Texture {
     ...
     public Texture(Device device, String fileName, int imageFormat) {
-        LOGGER.debug("Creating texture [{}]", fileName);
+        Logger.debug("Creating texture [{}]", fileName);
         recordedTransition = false;
         this.fileName = fileName;
         ByteBuffer buf;
@@ -391,7 +391,7 @@ public class Texture {
     ...
     public void recordTextureTransition(CommandBuffer cmd) {
         if (stgBuffer != null !recordedTransition) {
-            LOGGER.debug("Recording transition for texture [{}]", fileName);
+            Logger.debug("Recording transition for texture [{}]", fileName);
             recordedTransition = true;
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -399,7 +399,7 @@ public class Texture {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
         } else {
-            LOGGER.debug("Texture [{}] has already been transitioned", fileName);
+            Logger.debug("Texture [{}] has already been transitioned", fileName);
         }
     }
     ...
@@ -743,7 +743,7 @@ Descriptors represent shader resources such us buffers, images or samplers. We w
 public class DescriptorPool {
     ...
     public DescriptorPool(Device device, List<DescriptorTypeCount> descriptorTypeCounts) {
-        LOGGER.debug("Creating descriptor pool");
+        Logger.debug("Creating descriptor pool");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int maxSets = 0;
@@ -819,8 +819,6 @@ import static org.lwjgl.vulkan.VK11.vkDestroyDescriptorSetLayout;
 
 public abstract class DescriptorSetLayout {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final Device device;
     
     protected long vkDescriptorLayout;
@@ -830,7 +828,7 @@ public abstract class DescriptorSetLayout {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying descriptor set layout");
+        Logger.debug("Destroying descriptor set layout");
         vkDestroyDescriptorSetLayout(device.getVkDevice(), vkDescriptorLayout, null);
     }
 
@@ -1426,9 +1424,9 @@ public class Render {
     }
 
     public void loadModels(List<ModelData> modelDataList) {
-        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        Logger.debug("Loading {} model(s)", modelDataList.size());
         vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
-        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
+        Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         fwdRenderActivity.registerModels(vulkanModels);
     }

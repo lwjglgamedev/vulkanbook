@@ -1,10 +1,10 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWVulkan;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.*;
 import java.util.*;
@@ -21,15 +21,13 @@ public class Instance {
             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final VkInstance vkInstance;
 
     private VkDebugUtilsMessengerCreateInfoEXT debugUtils;
     private long vkDebugHandle;
 
     public Instance(boolean validate) {
-        LOGGER.debug("Creating Vulkan instance");
+        Logger.debug("Creating Vulkan instance");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             // Create application information
             ByteBuffer appShortName = stack.UTF8("VulkanBook");
@@ -47,16 +45,16 @@ public class Instance {
             boolean supportsValidation = validate;
             if (validate && numValidationLayers == 0) {
                 supportsValidation = false;
-                LOGGER.warn("Request validation but no supported validation layers found. Falling back to no validation");
+                Logger.warn("Request validation but no supported validation layers found. Falling back to no validation");
             }
-            LOGGER.debug("Validation: {}", supportsValidation);
+            Logger.debug("Validation: {}", supportsValidation);
 
             // Set required  layers
             PointerBuffer requiredLayers = null;
             if (supportsValidation) {
                 requiredLayers = stack.mallocPointer(numValidationLayers);
                 for (int i = 0; i < numValidationLayers; i++) {
-                    LOGGER.debug("Using validation layer [{}]", validationLayers.get(i));
+                    Logger.debug("Using validation layer [{}]", validationLayers.get(i));
                     requiredLayers.put(i, stack.ASCII(validationLayers.get(i)));
                 }
             }
@@ -113,22 +111,21 @@ public class Instance {
                 .messageType(MESSAGE_TYPE_BITMASK)
                 .pfnUserCallback((messageSeverity, messageTypes, pCallbackData, pUserData) -> {
                     VkDebugUtilsMessengerCallbackDataEXT callbackData = VkDebugUtilsMessengerCallbackDataEXT.create(pCallbackData);
-                    Level logLevel = Level.DEBUG;
                     if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0) {
-                        logLevel = Level.INFO;
+                        Logger.info("VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0) {
-                        logLevel = Level.WARN;
+                        Logger.warn("VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
-                        logLevel = Level.ERROR;
+                        Logger.error("VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                    } else {
+                        Logger.debug("VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     }
-
-                    LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     return VK_FALSE;
                 });
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan instance");
+        Logger.debug("Destroying Vulkan instance");
         if (vkDebugHandle != VK_NULL_HANDLE) {
             vkDestroyDebugUtilsMessengerEXT(vkInstance, vkDebugHandle, null);
         }
@@ -144,7 +141,7 @@ public class Instance {
             IntBuffer numLayersArr = stack.callocInt(1);
             vkEnumerateInstanceLayerProperties(numLayersArr, null);
             int numLayers = numLayersArr.get(0);
-            LOGGER.debug("Instance supports [{}] layers", numLayers);
+            Logger.debug("Instance supports [{}] layers", numLayers);
 
             VkLayerProperties.Buffer propsBuf = VkLayerProperties.calloc(numLayers, stack);
             vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
@@ -153,7 +150,7 @@ public class Instance {
                 VkLayerProperties props = propsBuf.get(i);
                 String layerName = props.layerNameString();
                 supportedLayers.add(layerName);
-                LOGGER.debug("Supported layer [{}]", layerName);
+                Logger.debug("Supported layer [{}]", layerName);
             }
 
             List<String> layersToUse = new ArrayList<>();

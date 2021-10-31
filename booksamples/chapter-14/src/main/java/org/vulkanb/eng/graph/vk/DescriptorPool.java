@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.LongBuffer;
 import java.util.List;
@@ -12,13 +12,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class DescriptorPool {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final Device device;
     private final long vkDescriptorPool;
 
     public DescriptorPool(Device device, List<DescriptorTypeCount> descriptorTypeCounts) {
-        LOGGER.debug("Creating descriptor pool");
+        Logger.debug("Creating descriptor pool");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int maxSets = 0;
@@ -45,7 +43,7 @@ public class DescriptorPool {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying descriptor pool");
+        Logger.debug("Destroying descriptor pool");
         vkDestroyDescriptorPool(device.getVkDevice(), vkDescriptorPool, null);
     }
 

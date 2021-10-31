@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.geometry;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkExtent2D;
+import org.tinylog.Logger;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
@@ -10,22 +10,20 @@ import java.util.List;
 
 public class GeometryFrameBuffer {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final GeometryRenderPass geometryRenderPass;
 
     private FrameBuffer frameBuffer;
     private GeometryAttachments geometryAttachments;
 
     public GeometryFrameBuffer(SwapChain swapChain) {
-        LOGGER.debug("Creating GeometryFrameBuffer");
+        Logger.debug("Creating GeometryFrameBuffer");
         createAttachments(swapChain);
         geometryRenderPass = new GeometryRenderPass(swapChain.getDevice(), geometryAttachments.getAttachments());
         createFrameBuffer(swapChain);
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Geometry FrameBuffer");
+        Logger.debug("Destroying Geometry FrameBuffer");
         geometryRenderPass.cleanup();
         geometryAttachments.cleanup();
         frameBuffer.cleanup();

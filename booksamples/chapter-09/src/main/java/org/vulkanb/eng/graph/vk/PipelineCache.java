@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkPipelineCacheCreateInfo;
+import org.tinylog.Logger;
 
 import java.nio.LongBuffer;
 
@@ -11,13 +11,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class PipelineCache {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final Device device;
     private final long vkPipelineCache;
 
     public PipelineCache(Device device) {
-        LOGGER.debug("Creating pipeline cache");
+        Logger.debug("Creating pipeline cache");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkPipelineCacheCreateInfo createInfo = VkPipelineCacheCreateInfo.calloc(stack)
@@ -31,7 +29,7 @@ public class PipelineCache {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying pipeline cache");
+        Logger.debug("Destroying pipeline cache");
         vkDestroyPipelineCache(device.getVkDevice(), vkPipelineCache, null);
     }
 

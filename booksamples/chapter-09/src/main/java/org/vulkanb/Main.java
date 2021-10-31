@@ -1,7 +1,7 @@
 package org.vulkanb;
 
-import org.apache.logging.log4j.*;
 import org.joml.*;
+import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.scene.*;
@@ -13,12 +13,11 @@ import static org.lwjgl.glfw.GLFW.*;
 
 public class Main implements IAppLogic {
 
-    private static final Logger LOGGER = LogManager.getLogger();
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float MOVEMENT_SPEED = 10.0f / 1E9f;
 
     public static void main(String[] args) {
-        LOGGER.info("Starting application");
+        Logger.info("Starting application");
 
         Engine engine = new Engine("Vulkan Book", new Main());
         engine.start();

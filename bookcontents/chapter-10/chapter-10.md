@@ -252,22 +252,20 @@ import java.nio.LongBuffer;
 
 public class GeometryFrameBuffer {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final GeometryRenderPass geometryRenderPass;
     
     private FrameBuffer frameBuffer;
     private GeometryAttachments geometryAttachments;
 
     public GeometryFrameBuffer(SwapChain swapChain) {
-        LOGGER.debug("Creating GeometryFrameBuffer");
+        Logger.debug("Creating GeometryFrameBuffer");
         createAttachments(swapChain);
         geometryRenderPass = new GeometryRenderPass(swapChain.getDevice(), geometryAttachments.getAttachments());
         createFrameBuffer(swapChain);
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Geometry FrameBuffer");
+        Logger.debug("Destroying Geometry FrameBuffer");
         geometryRenderPass.cleanup();
         geometryAttachments.cleanup();
         frameBuffer.cleanup();
@@ -842,20 +840,18 @@ import java.util.Arrays;
 
 public class LightingFrameBuffer {
     
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final LightingRenderPass lightingRenderPass;
     
     private FrameBuffer[] frameBuffers;
 
     public LightingFrameBuffer(SwapChain swapChain) {
-        LOGGER.debug("Creating Lighting FrameBuffer");
+        Logger.debug("Creating Lighting FrameBuffer");
         lightingRenderPass = new LightingRenderPass(swapChain);
         createFrameBuffers(swapChain);
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Lighting FrameBuffer");
+        Logger.debug("Destroying Lighting FrameBuffer");
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         lightingRenderPass.cleanup();
     }
@@ -1008,12 +1004,11 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class AttachmentsLayout extends DescriptorSetLayout {
-    private static final Logger LOGGER = LogManager.getLogger();
 
     public AttachmentsLayout(Device device, int numAttachments) {
         super(device);
 
-        LOGGER.debug("Creating Attachments Layout");
+        Logger.debug("Creating Attachments Layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.calloc(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {

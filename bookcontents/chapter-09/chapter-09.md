@@ -116,9 +116,9 @@ Now, when loading the models in the `Render` class, we will re-order the materia
 public class Render {
     ...
     public void loadModels(List<ModelData> modelDataList) {
-        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        Logger.debug("Loading {} model(s)", modelDataList.size());
         vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
-        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
+        Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         // Reorder materials inside models
         vulkanModels.forEach(m -> {
@@ -185,14 +185,14 @@ public class Texture {
     ...
     public void recordTextureTransition(CommandBuffer cmd) {
         if (stgBuffer != null) {
-            LOGGER.debug("Recording transition for texture [{}]", fileName);
+            Logger.debug("Recording transition for texture [{}]", fileName);
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 recordCopyBuffer(stack, cmd, stgBuffer);
                 recordGenerateMipMaps(stack, cmd);
             }
         } else {
-            LOGGER.debug("Texture [{}] has already been transitioned", fileName);
+            Logger.debug("Texture [{}] has already been transitioned", fileName);
         }
     }
     ...

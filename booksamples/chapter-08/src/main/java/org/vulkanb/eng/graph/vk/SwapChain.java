@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 import org.vulkanb.eng.Window;
 
 import java.nio.*;
@@ -12,8 +12,6 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class SwapChain {
-
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private final Device device;
     private final ImageView[] imageViews;
@@ -25,7 +23,7 @@ public class SwapChain {
     private int currentFrame;
 
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
-        LOGGER.debug("Creating Vulkan SwapChain");
+        Logger.debug("Creating Vulkan SwapChain");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
 
@@ -102,7 +100,7 @@ public class SwapChain {
             result = Math.min(requestedImages, maxImages);
         }
         result = Math.max(result, minImages);
-        LOGGER.debug("Requested [{}] images, got [{}] images. Surface capabilities, maxImages: [{}], minImages [{}]",
+        Logger.debug("Requested [{}] images, got [{}] images. Surface capabilities, maxImages: [{}], minImages [{}]",
                 requestedImages, result, maxImages, minImages);
 
         return result;
@@ -160,7 +158,7 @@ public class SwapChain {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan SwapChain");
+        Logger.debug("Destroying Vulkan SwapChain");
         swapChainExtent.free();
         Arrays.stream(imageViews).forEach(ImageView::cleanup);
         Arrays.stream(syncSemaphoresList).forEach(SyncSemaphores::cleanup);

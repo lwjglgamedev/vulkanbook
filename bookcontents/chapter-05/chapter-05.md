@@ -195,13 +195,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandPool {
     
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final Device device;
     private final long vkCommandPool;
 
     public CommandPool(Device device, int queueFamilyIndex) {
-        LOGGER.debug("Creating Vulkan CommandPool");
+        Logger.debug("Creating Vulkan CommandPool");
 
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -244,14 +242,12 @@ Now that are able to create command pools, let's review the class that will allo
 ```java
 public class CommandBuffer {
 	
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final CommandPool commandPool;
     private final boolean oneTimeSubmit;
     private final VkCommandBuffer vkCommandBuffer;
     
     public CommandBuffer(CommandPool commandPool, boolean primary, boolean oneTimeSubmit) {
-        LOGGER.trace("Creating command buffer");
+        Logger.trace("Creating command buffer");
         this.commandPool = commandPool;
         this.oneTimeSubmit = oneTimeSubmit;
         VkDevice vkDevice = commandPool.getDevice().getVkDevice();
@@ -305,7 +301,7 @@ To start recording we need to create a `VkCommandBufferBeginInfo` structure and 
 public class CommandBuffer {
     ...
     public void cleanup() {
-        LOGGER.trace("Destroying command buffer");
+        Logger.trace("Destroying command buffer");
         vkFreeCommandBuffers(commandPool.getDevice().getVkDevice(), commandPool.getVkCommandPool(),
                 vkCommandBuffer);
     }

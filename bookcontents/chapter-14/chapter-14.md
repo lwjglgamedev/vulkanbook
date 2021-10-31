@@ -127,7 +127,7 @@ public class ModelLoader {
 
         int numAnimations = aiScene.mNumAnimations();
         if (numAnimations > 0) {
-            LOGGER.debug("Processing animations");
+            Logger.debug("Processing animations");
             List<Bone> boneList = new ArrayList<>();
             List<ModelData.AnimMeshData> animMeshDataList = new ArrayList<>();
             for (int i = 0; i < numMeshes; i++) {
@@ -144,7 +144,7 @@ public class ModelLoader {
         }
 
         aiReleaseImport(aiScene);
-        LOGGER.debug("Loaded model [{}]", modelPath);
+        Logger.debug("Loaded model [{}]", modelPath);
         return modelData;
     }
     ...
@@ -570,9 +570,6 @@ In order to support the execution of commands that will go through the compute p
 ```java
 public class ComputePipeline {
 
-    
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final Device device;
     private final long vkPipeline;
     private final long vkPipelineLayout;
@@ -600,7 +597,7 @@ Going back to the `ComputePipeline` constructor, we first initialize the `VkPipe
 public class ComputePipeline {
     ...
     public ComputePipeline(PipelineCache pipelineCache, ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo) {
-        LOGGER.debug("Creating compute pipeline");
+        Logger.debug("Creating compute pipeline");
         device = pipelineCache.getDevice();
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.callocLong(1);
@@ -673,7 +670,7 @@ The `ComputePipeline` class is completed by the `getter` methods to retrieve the
 public class ComputePipeline {
     ...
     public void cleanup() {
-        LOGGER.debug("Destroying compute pipeline");
+        Logger.debug("Destroying compute pipeline");
         vkDestroyPipelineLayout(device.getVkDevice(), vkPipelineLayout, null);
         vkDestroyPipeline(device.getVkDevice(), vkPipeline, null);
     }

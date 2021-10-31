@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.lighting;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkExtent2D;
+import org.tinylog.Logger;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
@@ -10,20 +10,18 @@ import java.util.Arrays;
 
 public class LightingFrameBuffer {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final LightingRenderPass lightingRenderPass;
 
     private FrameBuffer[] frameBuffers;
 
     public LightingFrameBuffer(SwapChain swapChain) {
-        LOGGER.debug("Creating Lighting FrameBuffer");
+        Logger.debug("Creating Lighting FrameBuffer");
         lightingRenderPass = new LightingRenderPass(swapChain);
         createFrameBuffers(swapChain);
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Lighting FrameBuffer");
+        Logger.debug("Destroying Lighting FrameBuffer");
         Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
         lightingRenderPass.cleanup();
     }

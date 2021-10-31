@@ -138,7 +138,7 @@ In order to load the texture, we need to modify the `Texture` class to be able t
 public class Texture {
     ...
     public Texture(Device device, String fileName, int imageFormat) {
-        LOGGER.debug("Creating texture [{}]", fileName);
+        Logger.debug("Creating texture [{}]", fileName);
         recordedTransition = false;
         this.fileName = fileName;
         ByteBuffer buf;

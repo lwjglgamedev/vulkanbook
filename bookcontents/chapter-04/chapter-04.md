@@ -29,15 +29,13 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class SwapChain {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final Device device;
     private final ImageView[] imageViews;
     private final SurfaceFormat surfaceFormat;
     private final long vkSwapChain;
 
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
-        LOGGER.debug("Creating Vulkan SwapChain");
+        Logger.debug("Creating Vulkan SwapChain");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
 
@@ -78,7 +76,7 @@ public class SwapChain {
             result = Math.min(requestedImages, maxImages);
         }
         result = Math.max(result, minImages);
-        LOGGER.debug("Requested [{}] images, got [{}] images. Surface capabilities, maxImages: [{}], minImages [{}]",
+        Logger.debug("Requested [{}] images, got [{}] images. Surface capabilities, maxImages: [{}], minImages [{}]",
                 requestedImages, result, maxImages, minImages);
 
         return result;
@@ -430,7 +428,7 @@ Going back to the `Swapchain`class we need also to create a `cleanup` method to 
 public class SwapChain {
     ...
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan SwapChain");
+        Logger.debug("Destroying Vulkan SwapChain");
         Arrays.stream(imageViews).forEach(ImageView::cleanup);
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
     }

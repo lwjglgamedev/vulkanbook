@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.LongBuffer;
 
@@ -10,9 +10,6 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public abstract class DescriptorSetLayout {
-
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final Device device;
 
     protected long vkDescriptorLayout;
@@ -22,7 +19,7 @@ public abstract class DescriptorSetLayout {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying descriptor set layout");
+        Logger.debug("Destroying descriptor set layout");
         vkDestroyDescriptorSetLayout(device.getVkDevice(), vkDescriptorLayout, null);
     }
 

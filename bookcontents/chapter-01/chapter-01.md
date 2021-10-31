@@ -19,17 +19,15 @@ So let's start from the beginning with, of all things, our `Main` class:
 ```java
 package org.vulkanb;
 
-import org.apache.logging.log4j.*;
+import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.scene.Scene;
 
 public class Main implements IAppLogic {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     public static void main(String[] args) {
-        LOGGER.info("Starting application");
+        Logger.info("Starting application");
         Engine engine = new Engine("Vulkan Book", new Main());
         engine.start();
     }
@@ -139,7 +137,7 @@ You may have notice that we use a class named `EngineProperties`, which in this 
 ```java
 package org.vulkanb.eng;
 
-import org.apache.logging.log4j.*;
+import org.tinylog.Logger;
 
 import java.io.*;
 import java.util.Properties;
@@ -147,7 +145,6 @@ import java.util.Properties;
 public class EngineProperties {
     private static final int DEFAULT_UPS = 30;
     private static final String FILENAME = "eng.properties";
-    private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
     private int ups;
 
@@ -159,7 +156,7 @@ public class EngineProperties {
             props.load(stream);
             ups = Integer.parseInt(props.getOrDefault("ups", DEFAULT_UPS).toString());
         } catch (IOException excp) {
-            LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
+            Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
     }
 

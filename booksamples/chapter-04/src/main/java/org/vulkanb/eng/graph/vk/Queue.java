@@ -1,20 +1,18 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import static org.lwjgl.vulkan.VK11.*;
 
 public class Queue {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final VkQueue vkQueue;
 
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
-        LOGGER.debug("Creating queue");
+        Logger.debug("Creating queue");
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer pQueue = stack.mallocPointer(1);

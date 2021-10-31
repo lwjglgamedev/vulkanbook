@@ -1,6 +1,6 @@
 package org.vulkanb.eng;
 
-import org.apache.logging.log4j.*;
+import org.tinylog.Logger;
 
 import java.io.*;
 import java.util.Properties;
@@ -9,7 +9,6 @@ public class EngineProperties {
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final int DEFAULT_UPS = 30;
     private static final String FILENAME = "eng.properties";
-    private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
     private String physDeviceName;
     private int requestedImages;
@@ -29,7 +28,7 @@ public class EngineProperties {
             requestedImages = Integer.parseInt(props.getOrDefault("requestedImages", DEFAULT_REQUESTED_IMAGES).toString());
             vSync = Boolean.parseBoolean(props.getOrDefault("vsync", true).toString());
         } catch (IOException excp) {
-            LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
+            Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
     }
 

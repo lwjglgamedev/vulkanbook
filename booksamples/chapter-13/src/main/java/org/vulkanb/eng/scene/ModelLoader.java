@@ -1,10 +1,10 @@
 package org.vulkanb.eng.scene;
 
-import org.apache.logging.log4j.*;
 import org.joml.Vector4f;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.assimp.*;
 import org.lwjgl.system.MemoryStack;
+import org.tinylog.Logger;
 
 import java.io.File;
 import java.nio.IntBuffer;
@@ -14,8 +14,6 @@ import static org.lwjgl.assimp.Assimp.*;
 import static org.vulkanb.eng.EngineUtils.*;
 
 public class ModelLoader {
-
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private ModelLoader() {
         // Utility class
@@ -28,7 +26,7 @@ public class ModelLoader {
     }
 
     public static ModelData loadModel(String modelId, String modelPath, String texturesDir, int flags) {
-        LOGGER.debug("Loading model data [{}]", modelPath);
+        Logger.debug("Loading model data [{}]", modelPath);
         if (!new File(modelPath).exists()) {
             throw new RuntimeException("Model path does not exist [" + modelPath + "]");
         }
@@ -61,7 +59,7 @@ public class ModelLoader {
         ModelData modelData = new ModelData(modelId, meshDataList, materialList);
 
         aiReleaseImport(aiScene);
-        LOGGER.debug("Loaded model [{}]", modelPath);
+        Logger.debug("Loaded model [{}]", modelPath);
         return modelData;
     }
 

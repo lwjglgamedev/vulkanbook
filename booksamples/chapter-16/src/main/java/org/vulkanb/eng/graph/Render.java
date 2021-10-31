@@ -1,7 +1,7 @@
 package org.vulkanb.eng.graph;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
+import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
 import org.vulkanb.eng.graph.geometry.GeometryRenderActivity;
@@ -17,8 +17,6 @@ import java.util.*;
 import static org.lwjgl.vulkan.VK11.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 public class Render {
-
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private final AnimationComputeActivity animationComputeActivity;
     private final CommandPool commandPool;
@@ -114,9 +112,9 @@ public class Render {
     }
 
     public void loadModels(List<ModelData> modelDataList) {
-        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        Logger.debug("Loading {} model(s)", modelDataList.size());
         vulkanModels.addAll(globalBuffers.loadModels(modelDataList, textureCache, commandPool, graphQueue));
-        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
+        Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         geometryRenderActivity.loadModels(textureCache);
     }

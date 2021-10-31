@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.lighting;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.LongBuffer;
@@ -12,12 +12,10 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class AttachmentsLayout extends DescriptorSetLayout {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     public AttachmentsLayout(Device device, int numAttachments) {
         super(device);
 
-        LOGGER.debug("Creating Attachments Layout");
+        Logger.debug("Creating Attachments Layout");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkDescriptorSetLayoutBinding.Buffer layoutBindings = VkDescriptorSetLayoutBinding.calloc(numAttachments, stack);
             for (int i = 0; i < numAttachments; i++) {

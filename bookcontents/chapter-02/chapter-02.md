@@ -110,9 +110,9 @@ public class Instance {
             boolean supportsValidation = validate;
             if (validate && numValidationLayers == 0) {
                 supportsValidation = false;
-                LOGGER.warn("Request validation but no supported validation layers found. Falling back to no validation");
+                Logger.warn("Request validation but no supported validation layers found. Falling back to no validation");
             }
-            LOGGER.debug("Validation: {}", supportsValidation);
+            Logger.debug("Validation: {}", supportsValidation);
         ...
     }
     ...
@@ -129,7 +129,7 @@ public class Instance {
 			IntBuffer numLayersArr = stack.callocInt(1);
 			vkEnumerateInstanceLayerProperties(numLayersArr, null);
 			int numLayers = numLayersArr.get(0);
-			LOGGER.debug("Instance supports [{}] layers", numLayers);
+			Logger.debug("Instance supports [{}] layers", numLayers);
         ...
 		}
     }
@@ -157,7 +157,7 @@ public class Instance {
 				VkLayerProperties props = propsBuf.get(i);
 				String layerName = props.layerNameString();
 				supportedLayers.add(layerName);
-				LOGGER.debug("Supported layer [{}]", layerName);
+				Logger.debug("Supported layer [{}]", layerName);
 			}
         ...
 		}
@@ -218,7 +218,7 @@ public class Instance {
             if (supportsValidation) {
                 requiredLayers = stack.mallocPointer(numValidationLayers);
                 for (int i = 0; i < numValidationLayers; i++) {
-					LOGGER.debug("Using validation layer [{}]", validationLayers.get(i));
+					Logger.debug("Using validation layer [{}]", validationLayers.get(i));
 					requiredLayers.put(i, stack.ASCII(validationLayers.get(i)));
                 }
             }
@@ -301,16 +301,15 @@ public class Instance {
                 .messageType(MESSAGE_TYPE_BITMASK)
                 .pfnUserCallback((messageSeverity, messageTypes, pCallbackData, pUserData) -> {
                     VkDebugUtilsMessengerCallbackDataEXT callbackData = VkDebugUtilsMessengerCallbackDataEXT.create(pCallbackData);
-                    Level logLevel = Level.DEBUG;
                     if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0) {
-                        logLevel = Level.INFO;
+                        Logger.info("VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0) {
-                        logLevel = Level.WARN;
+                        Logger.warn("VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
-                        logLevel = Level.ERROR;
+                        Logger.error("VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                    } else {
+                        Logger.debug("VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     }
-
-                    LOGGER.log(logLevel, "VkDebugUtilsCallback, {}", callbackData.pMessageString());
                     return VK_FALSE;
                 });
         return result;
@@ -402,7 +401,7 @@ The `Instance` class provides two additional methods, one for free resources (na
 public class Instance {
     ...
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan instance");
+        Logger.debug("Destroying Vulkan instance");
         if (vkDebugHandle != VK_NULL_HANDLE) {
             vkDestroyDebugUtilsMessengerEXT(vkInstance, vkDebugHandle, null);
         }

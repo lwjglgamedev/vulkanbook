@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.*;
 
@@ -10,15 +10,13 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ComputePipeline {
-    
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private final Device device;
     private final long vkPipeline;
     private final long vkPipelineLayout;
 
     public ComputePipeline(PipelineCache pipelineCache, ComputePipeline.PipeLineCreationInfo pipeLineCreationInfo) {
-        LOGGER.debug("Creating compute pipeline");
+        Logger.debug("Creating compute pipeline");
         device = pipelineCache.getDevice();
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.callocLong(1);
@@ -60,7 +58,7 @@ public class ComputePipeline {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying compute pipeline");
+        Logger.debug("Destroying compute pipeline");
         vkDestroyPipelineLayout(device.getVkDevice(), vkPipelineLayout, null);
         vkDestroyPipeline(device.getVkDevice(), vkPipeline, null);
     }

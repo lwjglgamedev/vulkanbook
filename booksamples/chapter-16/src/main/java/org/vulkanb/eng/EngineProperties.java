@@ -1,6 +1,6 @@
 package org.vulkanb.eng;
 
-import org.apache.logging.log4j.*;
+import org.tinylog.Logger;
 
 import java.io.*;
 import java.util.Properties;
@@ -19,7 +19,6 @@ public class EngineProperties {
     private static final float DEFAULT_Z_FAR = 100.f;
     private static final float DEFAULT_Z_NEAR = 1.0f;
     private static final String FILENAME = "eng.properties";
-    private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
     private String defaultTexturePath;
     private float fov;
@@ -69,7 +68,7 @@ public class EngineProperties {
             maxAnimWeightsBuffer = Integer.parseInt(props.getOrDefault("maxAnimWeightsBuffer", DEFAULT_MAX_ANIM_WEIGHTS_BUF).toString());
             maxJointMatricesBuffer = Integer.parseInt(props.getOrDefault("maxJointMatricesBuffer", DEFAULT_JOINT_MATRICES_BUF).toString());
         } catch (IOException excp) {
-            LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
+            Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
     }
 

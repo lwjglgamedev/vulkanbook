@@ -1,23 +1,21 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandBuffer {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final CommandPool commandPool;
     private final boolean oneTimeSubmit;
     private final VkCommandBuffer vkCommandBuffer;
 
     public CommandBuffer(CommandPool commandPool, boolean primary, boolean oneTimeSubmit) {
-        LOGGER.trace("Creating command buffer");
+        Logger.trace("Creating command buffer");
         this.commandPool = commandPool;
         this.oneTimeSubmit = oneTimeSubmit;
         VkDevice vkDevice = commandPool.getDevice().getVkDevice();
@@ -48,7 +46,7 @@ public class CommandBuffer {
     }
 
     public void cleanup() {
-        LOGGER.trace("Destroying command buffer");
+        Logger.trace("Destroying command buffer");
         vkFreeCommandBuffers(commandPool.getDevice().getVkDevice(), commandPool.getVkCommandPool(),
                 vkCommandBuffer);
     }

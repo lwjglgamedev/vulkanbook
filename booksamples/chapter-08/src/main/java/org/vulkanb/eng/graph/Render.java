@@ -1,6 +1,6 @@
 package org.vulkanb.eng.graph;
 
-import org.apache.logging.log4j.*;
+import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
@@ -9,8 +9,6 @@ import org.vulkanb.eng.scene.*;
 import java.util.*;
 
 public class Render {
-
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private final CommandPool commandPool;
     private final Device device;
@@ -60,9 +58,9 @@ public class Render {
     }
 
     public void loadModels(List<ModelData> modelDataList) {
-        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        Logger.debug("Loading {} model(s)", modelDataList.size());
         vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
-        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
+        Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         fwdRenderActivity.registerModels(vulkanModels);
     }

@@ -1,9 +1,9 @@
 package org.vulkanb.eng.graph;
 
-import org.apache.logging.log4j.*;
 import org.joml.Matrix4f;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
@@ -17,7 +17,6 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndexedIndirectCommand.SIZEOF;
-    private static final Logger LOGGER = LogManager.getLogger();
     // Handle std430 alignment
     private static final int MATERIAL_PADDING = GraphConstants.FLOAT_LENGTH * 3;
     private static final int MATERIAL_SIZE = GraphConstants.VEC4_SIZE + GraphConstants.INT_LENGTH * 3 +
@@ -37,7 +36,7 @@ public class GlobalBuffers {
     private List<VulkanAnimEntity> vulkanAnimEntityList;
 
     public GlobalBuffers(Device device) {
-        LOGGER.debug("Creating global buffers");
+        Logger.debug("Creating global buffers");
         EngineProperties engProps = EngineProperties.getInstance();
         verticesBuffer = new VulkanBuffer(device, engProps.getMaxVerticesBuffer(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
@@ -54,7 +53,7 @@ public class GlobalBuffers {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying global buffers");
+        Logger.debug("Destroying global buffers");
         verticesBuffer.cleanup();
         indicesBuffer.cleanup();
         if (indirectBuffer != null) {

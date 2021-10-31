@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkCommandPoolCreateInfo;
+import org.tinylog.Logger;
 
 import java.nio.LongBuffer;
 
@@ -11,13 +11,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandPool {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final Device device;
     private final long vkCommandPool;
 
     public CommandPool(Device device, int queueFamilyIndex) {
-        LOGGER.debug("Creating Vulkan CommandPool");
+        Logger.debug("Creating Vulkan CommandPool");
 
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {

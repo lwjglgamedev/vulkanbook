@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkShaderModuleCreateInfo;
+import org.tinylog.Logger;
 
 import java.io.*;
 import java.nio.*;
@@ -12,8 +12,6 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ShaderProgram {
-
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private final Device device;
     private final ShaderModule[] shaderModules;
@@ -29,7 +27,7 @@ public class ShaderProgram {
                 shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle);
             }
         } catch (IOException excp) {
-            LOGGER.error("Error reading shader files", excp);
+            Logger.error("Error reading shader files", excp);
             throw new RuntimeException(excp);
         }
     }

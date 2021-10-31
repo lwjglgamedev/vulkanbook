@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.*;
 
@@ -10,8 +10,6 @@ import static org.lwjgl.stb.STBImage.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 public class Texture {
-
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private final int height;
     private final int mipLevels;
@@ -24,7 +22,7 @@ public class Texture {
     private VulkanBuffer stgBuffer;
 
     public Texture(Device device, String fileName, int imageFormat) {
-        LOGGER.debug("Creating texture [{}]", fileName);
+        Logger.debug("Creating texture [{}]", fileName);
         recordedTransition = false;
         this.fileName = fileName;
         ByteBuffer buf;
@@ -252,7 +250,7 @@ public class Texture {
 
     public void recordTextureTransition(CommandBuffer cmd) {
         if (stgBuffer != null && !recordedTransition) {
-            LOGGER.debug("Recording transition for texture [{}]", fileName);
+            Logger.debug("Recording transition for texture [{}]", fileName);
             recordedTransition = true;
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -260,7 +258,7 @@ public class Texture {
                 recordGenerateMipMaps(stack, cmd);
             }
         } else {
-            LOGGER.debug("Texture [{}] has already been transitioned", fileName);
+            Logger.debug("Texture [{}] has already been transitioned", fileName);
         }
     }
 

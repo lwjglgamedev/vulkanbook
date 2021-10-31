@@ -48,15 +48,19 @@ We will use the following libraries:
 
 - [Maven](http://maven.apache.org/) to build the samples.
 
-- [Apache Log4j 2](https://logging.apache.org/log4j/2.x/) for logging.
+- [Tiny Log](https://tinylog.org/) for logging.
 
 - [RenderDoc](https://renderdoc.org/) for graphics debugging.
+
+- [GraalVM](https://www.graalvm.org) to generate native images (optional)
 
 You will also need the following:
 
 - The Vulkan [SDK](https://vulkan.lunarg.com/).
 
 Bring your own IDE. However, since it is a multi-module project it is advised to open each chapter independently. If you still want to work with the root project, please be aware that you will need to set the working directory to the root of each of the sub-projects you want to run. The resources (such as 3D models, shaders and textures are loaded using relative paths to the working directory).
+
+The maven files support native image generation, through GraalVM, by activating the native profile. In order to activate this, you need to properly setup GraalVM in your environment and to install native building tools. Please, check GraalVM documentation for that. In order to generate native images you just need to execute `mvn -Pnative clean package`.
 
 ## Resources used for writing this book
 

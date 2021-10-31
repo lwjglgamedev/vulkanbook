@@ -315,7 +315,7 @@ The next step is to create a new class named `ShadowsFrameBuffer` that, as in th
 public class ShadowsFrameBuffer {
     ...
     public ShadowsFrameBuffer(Device device) {
-        LOGGER.debug("Creating ShadowsFrameBuffer");
+        Logger.debug("Creating ShadowsFrameBuffer");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             int usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
             EngineProperties engineProperties = EngineProperties.getInstance();
@@ -411,7 +411,7 @@ Finally, the `ShadowsFrameBuffer` class defines a `cleanup` and `getter`methods:
 public class ShadowsFrameBuffer {
     ...
     public void cleanup() {
-        LOGGER.debug("Destroying ShadowsFrameBuffer");
+        Logger.debug("Destroying ShadowsFrameBuffer");
         shadowsRenderPass.cleanup();
         depthAttachment.cleanup();
         frameBuffer.cleanup();

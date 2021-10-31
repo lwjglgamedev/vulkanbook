@@ -1,6 +1,6 @@
 package org.vulkanb.eng;
 
-import org.apache.logging.log4j.*;
+import org.tinylog.Logger;
 
 import java.io.*;
 import java.util.Properties;
@@ -8,22 +8,21 @@ import java.util.Properties;
 public class EngineProperties {
     private static final float DEFAULT_FOV = 60.0f;
     private static final int DEFAULT_MAX_JOINTS_MATRICES_LISTS = 100;
-    private static final int DEFAULT_STORAGES_BUFFERS = 100;
     private static final int DEFAULT_MAX_MATERIALS = 500;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
     private static final float DEFAULT_SHADOW_BIAS = 0.00005f;
     private static final int DEFAULT_SHADOW_MAP_SIZE = 2048;
+    private static final int DEFAULT_STORAGES_BUFFERS = 100;
     private static final int DEFAULT_UPS = 30;
     private static final float DEFAULT_Z_FAR = 100.f;
     private static final float DEFAULT_Z_NEAR = 1.0f;
     private static final String FILENAME = "eng.properties";
-    private static final Logger LOGGER = LogManager.getLogger();
     private static EngineProperties instance;
     private String defaultTexturePath;
     private float fov;
     private int maxJointsMatricesLists;
-    private int maxStorageBuffers;
     private int maxMaterials;
+    private int maxStorageBuffers;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -61,7 +60,7 @@ public class EngineProperties {
             maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", DEFAULT_STORAGES_BUFFERS).toString());
             maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", DEFAULT_MAX_JOINTS_MATRICES_LISTS).toString());
         } catch (IOException excp) {
-            LOGGER.error("Could not read [{}] properties file", FILENAME, excp);
+            Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
     }
 
@@ -84,12 +83,12 @@ public class EngineProperties {
         return maxJointsMatricesLists;
     }
 
-    public int getMaxStorageBuffers() {
-        return maxStorageBuffers;
-    }
-
     public int getMaxMaterials() {
         return maxMaterials;
+    }
+
+    public int getMaxStorageBuffers() {
+        return maxStorageBuffers;
     }
 
     public String getPhysDeviceName() {

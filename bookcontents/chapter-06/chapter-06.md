@@ -573,8 +573,6 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class ShaderProgram {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final Device device;
     private final ShaderModule[] shaderModules;
 
@@ -589,7 +587,7 @@ public class ShaderProgram {
                 shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle);
             }
         } catch (IOException excp) {
-            LOGGER.error("Error reading shader files", excp);
+            Logger.error("Error reading shader files", excp);
             throw new RuntimeException(excp);
         }
     }
@@ -669,13 +667,13 @@ public class ShaderCompiler {
             File glslFile = new File(glsShaderFile);
             File spvFile = new File(glsShaderFile + ".spv");
             if (!spvFile.exists() || glslFile.lastModified() > spvFile.lastModified()) {
-                LOGGER.debug("Compiling [{}] to [{}]", glslFile.getPath(), spvFile.getPath());
+                Logger.debug("Compiling [{}] to [{}]", glslFile.getPath(), spvFile.getPath());
                 String shaderCode = new String(Files.readAllBytes(glslFile.toPath()));
 
                 compiledShader = compileShader(shaderCode, shaderType);
                 Files.write(spvFile.toPath(), compiledShader);
             } else {
-                LOGGER.debug("Shader [{}] already compiled. Loading compiled version: [{}]", glslFile.getPath(), spvFile.getPath());
+                Logger.debug("Shader [{}] already compiled. Loading compiled version: [{}]", glslFile.getPath(), spvFile.getPath());
             }
         } catch (IOException excp) {
             throw new RuntimeException(excp);
@@ -746,13 +744,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class PipelineCache {
     
-    private static final Logger LOGGER = LogManager.getLogger();
-    
     private final Device device;
     private final long vkPipelineCache;
 
     public PipelineCache(Device device) {
-        LOGGER.debug("Creating pipeline cache");
+        Logger.debug("Creating pipeline cache");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkPipelineCacheCreateInfo createInfo = VkPipelineCacheCreateInfo.calloc(stack)
@@ -766,7 +762,7 @@ public class PipelineCache {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying pipeline cache");
+        Logger.debug("Destroying pipeline cache");
         vkDestroyPipelineCache(device.getVkDevice(), vkPipelineCache, null);
     }
 
@@ -804,7 +800,7 @@ The constructor of the `Pipeline`class starts like this:
 public class Pipeline {
     ...
     public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
-        LOGGER.debug("Creating pipeline");
+        Logger.debug("Creating pipeline");
         device = pipelineCache.getDevice();
         try (MemoryStack stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
@@ -1007,7 +1003,7 @@ The constructor is now finished. The rest of the methods of the class are the `c
 public class Pipeline {
     ...
     public void cleanup() {
-        LOGGER.debug("Destroying pipeline");
+        Logger.debug("Destroying pipeline");
         vkDestroyPipelineLayout(device.getVkDevice(), vkPipelineLayout, null);
         vkDestroyPipeline(device.getVkDevice(), vkPipeline, null);
     }
@@ -1069,9 +1065,9 @@ public class Render {
     }
 
     public void loadModels(List<ModelData> modelDataList) {
-        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        Logger.debug("Loading {} model(s)", modelDataList.size());
         vulkanModels.addAll(VulkanModel.transformModels(modelDataList, commandPool, graphQueue));
-        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
+        Logger.debug("Loaded {} model(s)", modelDataList.size());
     }
 
     public void render(Window window, Scene scene) {

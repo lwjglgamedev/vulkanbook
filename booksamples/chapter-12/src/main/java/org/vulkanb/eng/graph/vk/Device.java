@@ -1,9 +1,9 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.FloatBuffer;
 
@@ -12,15 +12,13 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Device {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final MemoryAllocator memoryAllocator;
     private final PhysicalDevice physicalDevice;
     private final boolean samplerAnisotropy;
     private final VkDevice vkDevice;
 
     public Device(Instance instance, PhysicalDevice physicalDevice) {
-        LOGGER.debug("Creating device");
+        Logger.debug("Creating device");
 
         this.physicalDevice = physicalDevice;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -65,7 +63,7 @@ public class Device {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan device");
+        Logger.debug("Destroying Vulkan device");
         memoryAllocator.cleanUp();
         vkDestroyDevice(vkDevice, null);
     }

@@ -1,7 +1,7 @@
 package org.vulkanb;
 
-import org.apache.logging.log4j.*;
 import org.joml.Vector3f;
+import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.scene.*;
@@ -10,14 +10,12 @@ import java.util.*;
 
 public class Main implements IAppLogic {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private float angle = 0;
     private Entity cubeEntity;
     private Vector3f rotatingAngle = new Vector3f(1, 1, 1);
 
     public static void main(String[] args) {
-        LOGGER.info("Starting application");
+        Logger.info("Starting application");
 
         Engine engine = new Engine("Vulkan Book", new Main());
         engine.start();

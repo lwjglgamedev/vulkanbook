@@ -13,14 +13,14 @@
     <version>1.0.0</version>
     <dependencies>
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>${log4j.version}</version>
+            <groupId>org.tinylog</groupId>
+            <artifactId>tinylog-api</artifactId>
+            <version>${tinylog.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>${log4j.version}</version>
+            <groupId>org.tinylog</groupId>
+            <artifactId>tinylog-impl</artifactId>
+            <version>${tinylog.version}</version>
         </dependency>
         <dependency>
             <groupId>org.lwjgl</groupId>
@@ -67,7 +67,7 @@
             <artifactId>imgui-java-binding</artifactId>
             <version>${imgui-java.version}</version>
         </dependency>
-
+		
         <!-- Natives -->
         <dependency>
             <groupId>org.lwjgl</groupId>

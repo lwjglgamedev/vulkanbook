@@ -1,9 +1,9 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.*;
 
@@ -12,13 +12,11 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class Queue {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     private final int queueFamilyIndex;
     private final VkQueue vkQueue;
 
     public Queue(Device device, int queueFamilyIndex, int queueIndex) {
-        LOGGER.debug("Creating queue");
+        Logger.debug("Creating queue");
 
         this.queueFamilyIndex = queueFamilyIndex;
         try (MemoryStack stack = MemoryStack.stackPush()) {

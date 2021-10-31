@@ -1,10 +1,10 @@
 package org.vulkanb.eng.scene;
 
-import org.apache.logging.log4j.*;
 import org.joml.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.assimp.*;
 import org.lwjgl.system.MemoryStack;
+import org.tinylog.Logger;
 
 import java.io.File;
 import java.lang.Math;
@@ -19,7 +19,6 @@ public class ModelLoader {
     public static final int MAX_JOINTS = 150;
     public static final int MAX_WEIGHTS = 4;
     private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
-    private static final Logger LOGGER = LogManager.getLogger();
 
     private ModelLoader() {
         // Utility class
@@ -129,7 +128,7 @@ public class ModelLoader {
     }
 
     public static ModelData loadModel(String modelId, String modelPath, String texturesDir, int flags) {
-        LOGGER.debug("Loading model data [{}]", modelPath);
+        Logger.debug("Loading model data [{}]", modelPath);
         if (!new File(modelPath).exists()) {
             throw new RuntimeException("Model path does not exist [" + modelPath + "]");
         }
@@ -163,7 +162,7 @@ public class ModelLoader {
 
         int numAnimations = aiScene.mNumAnimations();
         if (numAnimations > 0) {
-            LOGGER.debug("Processing animations");
+            Logger.debug("Processing animations");
             List<Bone> boneList = new ArrayList<>();
             List<ModelData.AnimMeshData> animMeshDataList = new ArrayList<>();
             for (int i = 0; i < numMeshes; i++) {
@@ -180,7 +179,7 @@ public class ModelLoader {
         }
 
         aiReleaseImport(aiScene);
-        LOGGER.debug("Loaded model [{}]", modelPath);
+        Logger.debug("Loaded model [{}]", modelPath);
         return modelData;
     }
 

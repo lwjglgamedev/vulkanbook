@@ -1,9 +1,9 @@
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
 import java.nio.IntBuffer;
 import java.util.*;
@@ -13,14 +13,13 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class PhysicalDevice {
 
-    private static final Logger LOGGER = LogManager.getLogger();
-    private Set<Integer> suportedSampleCount;
     private final VkExtensionProperties.Buffer vkDeviceExtensions;
     private final VkPhysicalDeviceMemoryProperties vkMemoryProperties;
     private final VkPhysicalDevice vkPhysicalDevice;
     private final VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
     private final VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
     private final VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
+    private Set<Integer> suportedSampleCount;
 
     private PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -56,7 +55,7 @@ public class PhysicalDevice {
     }
 
     public static PhysicalDevice createPhysicalDevice(Instance instance, String prefferredDeviceName) {
-        LOGGER.debug("Selecting physical devices");
+        Logger.debug("Selecting physical devices");
         PhysicalDevice selectedPhysicalDevice = null;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             // Get available devices
@@ -74,14 +73,14 @@ public class PhysicalDevice {
 
                 String deviceName = physicalDevice.getDeviceName();
                 if (physicalDevice.hasGraphicsQueueFamily() && physicalDevice.hasKHRSwapChainExtension()) {
-                    LOGGER.debug("Device [{}] supports required extensions", deviceName);
+                    Logger.debug("Device [{}] supports required extensions", deviceName);
                     if (prefferredDeviceName != null && prefferredDeviceName.equals(deviceName)) {
                         selectedPhysicalDevice = physicalDevice;
                         break;
                     }
                     devices.add(physicalDevice);
                 } else {
-                    LOGGER.debug("Device [{}] does not support required extensions", deviceName);
+                    Logger.debug("Device [{}] does not support required extensions", deviceName);
                     physicalDevice.cleanup();
                 }
             }
@@ -97,7 +96,7 @@ public class PhysicalDevice {
             if (selectedPhysicalDevice == null) {
                 throw new RuntimeException("No suitable physical devices found");
             }
-            LOGGER.debug("Selected device: [{}]", selectedPhysicalDevice.getDeviceName());
+            Logger.debug("Selected device: [{}]", selectedPhysicalDevice.getDeviceName());
         }
 
         return selectedPhysicalDevice;
@@ -110,7 +109,7 @@ public class PhysicalDevice {
         vkCheck(vkEnumeratePhysicalDevices(instance.getVkInstance(), intBuffer, null),
                 "Failed to get number of physical devices");
         int numDevices = intBuffer.get(0);
-        LOGGER.debug("Detected {} physical device(s)", numDevices);
+        Logger.debug("Detected {} physical device(s)", numDevices);
 
         // Populate physical devices list pointer
         pPhysicalDevices = stack.mallocPointer(numDevices);
@@ -122,11 +121,11 @@ public class PhysicalDevice {
     private Set<Integer> calSupportedSampleCount(VkPhysicalDeviceProperties devProps) {
         Set<Integer> result = new HashSet<>();
         long colorCounts = Integer.toUnsignedLong(vkPhysicalDeviceProperties.limits().framebufferColorSampleCounts());
-        LOGGER.debug("Color max samples: {}", colorCounts);
+        Logger.debug("Color max samples: {}", colorCounts);
         long depthCounts = Integer.toUnsignedLong(devProps.limits().framebufferDepthSampleCounts());
-        LOGGER.debug("Depth max samples: {}", depthCounts);
+        Logger.debug("Depth max samples: {}", depthCounts);
         int counts = (int) (Math.min(colorCounts, depthCounts));
-        LOGGER.debug("Max samples: {}", depthCounts);
+        Logger.debug("Max samples: {}", depthCounts);
 
         result.add(VK_SAMPLE_COUNT_1_BIT);
         if ((counts & VK_SAMPLE_COUNT_64_BIT) > 0) {
@@ -152,8 +151,8 @@ public class PhysicalDevice {
     }
 
     public void cleanup() {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
+        if (Logger.isDebugEnabled()) {
+            Logger.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
         }
         vkMemoryProperties.free();
         vkPhysicalDeviceFeatures.free();

@@ -100,7 +100,7 @@ public class Device {
     }
 
     public void cleanup() {
-        LOGGER.debug("Destroying Vulkan device");
+        Logger.debug("Destroying Vulkan device");
         memoryAllocator.cleanUp();
         vkDestroyDevice(vkDevice, null);
     }
@@ -376,7 +376,7 @@ public class ShaderProgram {
                         shaderModuleData[i].specInfo());
             }
         } catch (IOException excp) {
-            LOGGER.error("Error reading shader files", excp);
+            Logger.error("Error reading shader files", excp);
             throw new RuntimeException(excp);
         }
     }

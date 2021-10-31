@@ -147,7 +147,7 @@ public class AnimationComputeActivity {
                 for (VulkanAnimEntity.VulkanAnimMesh vulkanAnimMesh : vulkanAnimEntity.getVulkanAnimMeshList()) {
                     VulkanModel.VulkanMesh mesh = vulkanAnimMesh.vulkanMesh();
 
-                    int groupSize = (int) Math.ceil((mesh.verticesSize() / InstancedVertexBufferStructure.SIZE_IN_BYTES) / (float) LOCAL_SIZE_X);
+                    int groupSize = (int) Math.ceil((mesh.verticesSize() / (float) InstancedVertexBufferStructure.SIZE_IN_BYTES) / LOCAL_SIZE_X);
 
                     // Push constants
                     ByteBuffer pushConstantBuffer = stack.malloc(PUSH_CONSTANTS_SIZE);

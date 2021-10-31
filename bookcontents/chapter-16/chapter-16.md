@@ -67,10 +67,8 @@ In the `GlobalBuffers` we initialize some of those buffers along with some other
 ```java
 public class GlobalBuffers {
     ...
-    private static final Logger LOGGER = LogManager.getLogger();
-    ...
     public GlobalBuffers(Device device) {
-        LOGGER.debug("Creating global buffers");
+        Logger.debug("Creating global buffers");
         EngineProperties engProps = EngineProperties.getInstance();
         verticesBuffer = new VulkanBuffer(device, engProps.getMaxVerticesBuffer(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
@@ -146,7 +144,7 @@ Back to the `GlobalBuffers` class, the next method is the `cleanup()` method, wh
 public class GlobalBuffers {
     ...
     public void cleanup() {
-        LOGGER.debug("Destroying global buffers");
+        Logger.debug("Destroying global buffers");
         verticesBuffer.cleanup();
         indicesBuffer.cleanup();
         if (indirectBuffer != null) {
@@ -1008,9 +1006,9 @@ If you recall the `GlobalBuffers` class, it is responsible of loading the models
 public class Render {
     ...
     public void loadModels(List<ModelData> modelDataList) {
-        LOGGER.debug("Loading {} model(s)", modelDataList.size());
+        Logger.debug("Loading {} model(s)", modelDataList.size());
         vulkanModels.addAll(globalBuffers.loadModels(modelDataList, textureCache, commandPool, graphQueue));
-        LOGGER.debug("Loaded {} model(s)", modelDataList.size());
+        Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         geometryRenderActivity.loadModels(textureCache);
     }
@@ -1786,7 +1784,7 @@ public class AnimationComputeActivity {
                 for (VulkanAnimEntity.VulkanAnimMesh vulkanAnimMesh : vulkanAnimEntity.getVulkanAnimMeshList()) {
                     VulkanModel.VulkanMesh mesh = vulkanAnimMesh.vulkanMesh();
 
-                    int groupSize = (int) Math.ceil((mesh.verticesSize() / InstancedVertexBufferStructure.SIZE_IN_BYTES) / (float) LOCAL_SIZE_X);
+                    int groupSize = (int) Math.ceil((mesh.verticesSize() / (float) InstancedVertexBufferStructure.SIZE_IN_BYTES) / LOCAL_SIZE_X);
 
                     // Push constants
                     ByteBuffer pushConstantBuffer = stack.malloc(PUSH_CONSTANTS_SIZE);
