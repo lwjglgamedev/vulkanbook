@@ -52,7 +52,7 @@ This signals to create a Vulkan object, using some things we will set up later. 
 
 When creating objects, we need to define their structure, sometimes with other structures. All structures inherit these types:
 
-- `sType`: The structure type (required).
+- `sType`: The structure type (required). Although this is required in regular C/C++ Code, LWJGL provides a convenience method to set it automatically, named `sType$Default`. This method does ot require the `sType` field to be set. In this book we will not use this method so you can compare easily with C/C++ code.
 - `pNext`: Pointer to an extension-specific structure.
 - `flags`: Often unused, but intended for specific behaviors. 
 
