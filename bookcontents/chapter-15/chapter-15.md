@@ -116,7 +116,7 @@ public class GuiRenderActivity {
         ImInt texWidth = new ImInt();
         ImInt texHeight = new ImInt();
         ByteBuffer buf = imGuiIO.getFonts().getTexDataAsRGBA32(texWidth, texHeight);
-        fontsTexture = new Texture(device, buf, texWidth.get(), texHeight.get(), VK_FORMAT_R8G8B8A8_UNORM);
+        fontsTexture = new Texture(device, buf, texWidth.get(), texHeight.get(), VK_FORMAT_R8G8B8A8_SRGB);
 
         CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
         cmd.beginRecording();

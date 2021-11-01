@@ -94,11 +94,11 @@ public class SwapChain {
             vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.getVkPhysicalDevice(),
                     surface.getVkSurface(), ip, surfaceFormats), "Failed to get surface formats");
 
-            imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+            imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
             colorSpace = surfaceFormats.get(0).colorSpace();
             for (int i = 0; i < numFormats; i++) {
                 VkSurfaceFormatKHR surfaceFormatKHR = surfaceFormats.get(i);
-                if (surfaceFormatKHR.format() == VK_FORMAT_B8G8R8A8_UNORM &&
+                if (surfaceFormatKHR.format() == VK_FORMAT_B8G8R8A8_SRGB &&
                         surfaceFormatKHR.colorSpace() == KHRSurface.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                     imageFormat = surfaceFormatKHR.format();
                     colorSpace = surfaceFormatKHR.colorSpace();

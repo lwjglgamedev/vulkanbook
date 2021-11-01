@@ -284,7 +284,7 @@ public class GlobalBuffers {
             }
             int normalMapIdx = textureCache.getPosition(material.normalMapPath());
 
-            texture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_SRGB);
+            texture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_UNORM);
             if (texture != null) {
                 textureList.add(texture);
             }

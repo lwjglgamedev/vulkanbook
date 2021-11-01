@@ -123,11 +123,11 @@ public class SwapChain {
             vkCheck(KHRSurface.vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.getVkPhysicalDevice(),
                     surface.getVkSurface(), ip, surfaceFormats), "Failed to get surface formats");
 
-            imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+            imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
             colorSpace = surfaceFormats.get(0).colorSpace();
             for (int i = 0; i < numFormats; i++) {
                 VkSurfaceFormatKHR surfaceFormatKHR = surfaceFormats.get(i);
-                if (surfaceFormatKHR.format() == VK_FORMAT_B8G8R8A8_UNORM &&
+                if (surfaceFormatKHR.format() == VK_FORMAT_B8G8R8A8_SRGB &&
                         surfaceFormatKHR.colorSpace() == KHRSurface.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                     imageFormat = surfaceFormatKHR.format();
                     colorSpace = surfaceFormatKHR.colorSpace();
@@ -141,7 +141,7 @@ public class SwapChain {
 }
 ```
 
-The first thing we do is retrieve the number of formats our surface supports by calling the `vkGetPhysicalDeviceSurfaceFormatsKHR` Vulkan function. As with many other Vulkan samples, we first call that function to get the total number of formats supported and then we create a buffer of structures, `VkSurfaceFormatKHR` in this case, to retrieve the data by calling the same function again. Once we have all that data, we iterate over the formats trying to check if `VK_FORMAT_B8G8R8A8_UNORM`(8 bits for RGBA channels normalized) and SRGB non linear color space are supported. `SurfaceFormat` is just a `record` which stores the image format and the color space:
+The first thing we do is retrieve the number of formats our surface supports by calling the `vkGetPhysicalDeviceSurfaceFormatsKHR` Vulkan function. As with many other Vulkan samples, we first call that function to get the total number of formats supported and then we create a buffer of structures, `VkSurfaceFormatKHR` in this case, to retrieve the data by calling the same function again. Once we have all that data, we iterate over the formats trying to check if `VK_FORMAT_B8G8R8A8_SRGB` and SRGB non linear color space are supported. `SurfaceFormat` is just a `record` which stores the image format and the color space:
 ```java
 public class SwapChain {
     ...

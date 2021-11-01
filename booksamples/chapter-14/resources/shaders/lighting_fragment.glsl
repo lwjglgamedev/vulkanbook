@@ -227,7 +227,7 @@ void main() {
 
     vec3 ambient = lights.ambientLightColor.rgb * albedo * ao;
 
-    outFragColor = vec4(pow(ambient * shadowFactor + lightColor * shadowFactor, vec3(0.4545)), 1.0);
+    outFragColor = vec4(ambient * shadowFactor + lightColor * shadowFactor, 1.0);
 
     if (DEBUG_SHADOWS == 1) {
         switch (cascadeIndex) {

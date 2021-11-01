@@ -150,5 +150,5 @@ void main() {
 
     vec3 ambient = lights.ambientLightColor.rgb * albedo * ao;
 
-    outFragColor = vec4(pow(ambient + lightColor, vec3(0.4545)), 1.0);
+    outFragColor = vec4(ambient + lightColor, 1.0);
 }
