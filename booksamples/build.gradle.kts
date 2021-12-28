@@ -20,17 +20,16 @@ subprojects {
 
     repositories {
 	    mavenCentral()
-		maven(url="https://oss.sonatype.org/content/repositories/snapshots/")
     }
 
     val jomlVersion = "1.10.2"
-    val log4jVersion = "2.14.1"
-    val lwjglVersion = "3.3.0-SNAPSHOT"
-	var imguiVersion = "1.82.1"
+    val tinyLogVersion = "2.4.1"
+    val lwjglVersion = "3.3.0"
+	var imguiVersion = "1.85.1"
 
     dependencies {
-        implementation("org.apache.logging.log4j:log4j-api:$log4jVersion")
-        implementation("org.apache.logging.log4j:log4j-core:$log4jVersion")
+        implementation("org.tinylog:tinylog-api:$tinyLogVersion")
+        implementation("org.tinylog:tinylog-impl:$tinyLogVersion")
         implementation("org.lwjgl:lwjgl:$lwjglVersion")
         implementation("org.lwjgl:lwjgl-glfw:$lwjglVersion")
         implementation("org.lwjgl:lwjgl-vulkan:$lwjglVersion")
