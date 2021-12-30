@@ -123,6 +123,7 @@
         <module>chapter-14</module>
         <module>chapter-15</module>
         <module>chapter-16</module>
+        <module>appendix-01</module>
     </modules>
 
     <properties>

@@ -1,0 +1,270 @@
+[
+{
+  "name":"[F"}
+,
+{
+  "name":"java.lang.Double",
+  "queriedMethods":[{"name":"doubleToRawLongBits","parameterTypes":["double"] }]}
+,
+{
+  "name":"java.lang.Float",
+  "queriedMethods":[{"name":"floatToRawIntBits","parameterTypes":["float"] }]}
+,
+{
+  "name":"java.lang.Long",
+  "queriedMethods":[{"name":"rotateLeft","parameterTypes":["long","int"] }]}
+,
+{
+  "name":"java.lang.Object"}
+,
+{
+  "name":"java.lang.ProcessHandle",
+  "methods":[{"name":"current","parameterTypes":[] }]}
+,
+{
+  "name":"java.nio.Buffer",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.ByteBuffer",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.DirectByteBuffer",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.DirectCharBufferU",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.DirectDoubleBufferU",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.DirectFloatBufferU",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.DirectIntBufferU",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.DirectLongBufferU",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.DirectShortBufferU",
+  "allDeclaredFields":true}
+,
+{
+  "name":"java.nio.MappedByteBuffer",
+  "allDeclaredFields":true}
+,
+{
+  "name":"org.joml.Matrix2f",
+  "fields":[
+    {"name":"m00"}, 
+    {"name":"m01"}, 
+    {"name":"m10"}, 
+    {"name":"m11"}
+  ]}
+,
+{
+  "name":"org.joml.Matrix3d",
+  "fields":[
+    {"name":"m00"}, 
+    {"name":"m01"}, 
+    {"name":"m02"}, 
+    {"name":"m10"}, 
+    {"name":"m11"}, 
+    {"name":"m12"}, 
+    {"name":"m20"}, 
+    {"name":"m21"}, 
+    {"name":"m22"}
+  ]}
+,
+{
+  "name":"org.joml.Matrix3f",
+  "fields":[
+    {"name":"m00"}, 
+    {"name":"m01"}, 
+    {"name":"m02"}, 
+    {"name":"m10"}, 
+    {"name":"m11"}, 
+    {"name":"m12"}, 
+    {"name":"m20"}, 
+    {"name":"m21"}, 
+    {"name":"m22"}
+  ]}
+,
+{
+  "name":"org.joml.Matrix3x2f",
+  "fields":[
+    {"name":"m00"}, 
+    {"name":"m01"}, 
+    {"name":"m10"}, 
+    {"name":"m11"}, 
+    {"name":"m20"}, 
+    {"name":"m21"}
+  ]}
+,
+{
+  "name":"org.joml.Matrix4d",
+  "fields":[
+    {"name":"m00"}, 
+    {"name":"m01"}, 
+    {"name":"m02"}, 
+    {"name":"m03"}, 
+    {"name":"m10"}, 
+    {"name":"m11"}, 
+    {"name":"m12"}, 
+    {"name":"m13"}, 
+    {"name":"m20"}, 
+    {"name":"m21"}, 
+    {"name":"m22"}, 
+    {"name":"m23"}, 
+    {"name":"m30"}, 
+    {"name":"m31"}, 
+    {"name":"m32"}, 
+    {"name":"m33"}
+  ]}
+,
+{
+  "name":"org.joml.Matrix4f",
+  "fields":[
+    {"name":"m00"}, 
+    {"name":"m01"}, 
+    {"name":"m02"}, 
+    {"name":"m03"}, 
+    {"name":"m10"}, 
+    {"name":"m11"}, 
+    {"name":"m12"}, 
+    {"name":"m13"}, 
+    {"name":"m20"}, 
+    {"name":"m21"}, 
+    {"name":"m22"}, 
+    {"name":"m23"}, 
+    {"name":"m30"}, 
+    {"name":"m31"}, 
+    {"name":"m32"}, 
+    {"name":"m33"}
+  ]}
+,
+{
+  "name":"org.joml.Matrix4x3f",
+  "fields":[
+    {"name":"m00"}, 
+    {"name":"m01"}, 
+    {"name":"m02"}, 
+    {"name":"m10"}, 
+    {"name":"m11"}, 
+    {"name":"m12"}, 
+    {"name":"m20"}, 
+    {"name":"m21"}, 
+    {"name":"m22"}, 
+    {"name":"m30"}, 
+    {"name":"m31"}, 
+    {"name":"m32"}
+  ]}
+,
+{
+  "name":"org.joml.Quaternionf",
+  "fields":[
+    {"name":"w"}, 
+    {"name":"x"}, 
+    {"name":"y"}, 
+    {"name":"z"}
+  ]}
+,
+{
+  "name":"org.joml.Vector2f",
+  "fields":[
+    {"name":"x"}, 
+    {"name":"y"}
+  ]}
+,
+{
+  "name":"org.joml.Vector2i",
+  "fields":[
+    {"name":"x"}, 
+    {"name":"y"}
+  ]}
+,
+{
+  "name":"org.joml.Vector3f",
+  "fields":[
+    {"name":"x"}, 
+    {"name":"y"}, 
+    {"name":"z"}
+  ]}
+,
+{
+  "name":"org.joml.Vector3i",
+  "fields":[
+    {"name":"x"}, 
+    {"name":"y"}, 
+    {"name":"z"}
+  ]}
+,
+{
+  "name":"org.joml.Vector4f",
+  "fields":[
+    {"name":"w"}, 
+    {"name":"x"}, 
+    {"name":"y"}, 
+    {"name":"z"}
+  ]}
+,
+{
+  "name":"org.joml.Vector4i",
+  "fields":[
+    {"name":"w"}, 
+    {"name":"x"}, 
+    {"name":"y"}, 
+    {"name":"z"}
+  ]}
+,
+{
+  "name":"org.lwjgl.system.CallbackI",
+  "queriedMethods":[{"name":"callback","parameterTypes":["long","long"] }]}
+,
+{
+  "name":"org.lwjgl.system.CustomBuffer",
+  "fields":[
+    {"name":"capacity"}, 
+    {"name":"container"}, 
+    {"name":"limit"}, 
+    {"name":"mark"}, 
+    {"name":"position"}
+  ]}
+,
+{
+  "name":"org.lwjgl.system.Pointer$Default",
+  "fields":[{"name":"address"}]}
+,
+{
+  "name":"org.lwjgl.system.Struct",
+  "fields":[{"name":"container"}]}
+,
+{
+  "name":"org.tinylog.configuration.PropertiesConfigurationLoader",
+  "methods":[{"name":"<init>","parameterTypes":[] }]}
+,
+{
+  "name":"org.tinylog.core.TinylogLoggingProvider",
+  "methods":[{"name":"<init>","parameterTypes":[] }]}
+,
+{
+  "name":"org.tinylog.writers.ConsoleWriter",
+  "methods":[{"name":"<init>","parameterTypes":["java.util.Map"] }]}
+,
+{
+  "name":"sun.misc.Unsafe",
+  "allDeclaredFields":true,
+  "queriedMethods":[
+    {"name":"getLong","parameterTypes":["java.lang.Object","long"] }, 
+    {"name":"putLong","parameterTypes":["java.lang.Object","long","long"] }
+  ]}
+
+]
