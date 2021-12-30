@@ -32,7 +32,7 @@ public class Device {
                 Logger.warn("Requested check point extensions but not supported by device");
                 enableCheckPoints = false;
             }
-            int numRequiredExtensions = enableCheckPoints ? 3 : 1;
+            int numRequiredExtensions = enableCheckPoints ? 2 : 1;
             PointerBuffer requiredExtensions = stack.mallocPointer(numRequiredExtensions);
             requiredExtensions.put(0, stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
             if (enableCheckPoints) {
@@ -41,7 +41,6 @@ public class Device {
                 } else {
                     requiredExtensions.put(1, stack.ASCII(AMDBufferMarker.VK_AMD_BUFFER_MARKER_EXTENSION_NAME));
                 }
-                requiredExtensions.put(2, stack.ASCII(KHRSynchronization2.VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME));
             }
 
             // Set up required features

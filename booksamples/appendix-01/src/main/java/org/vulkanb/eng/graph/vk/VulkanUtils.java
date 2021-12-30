@@ -9,7 +9,6 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.AMDBufferMarker.vkCmdWriteBufferMarkerAMD;
-import static org.lwjgl.vulkan.KHRSynchronization2.vkGetQueueCheckpointData2NV;
 import static org.lwjgl.vulkan.NVDeviceDiagnosticCheckpoints.*;
 import static org.lwjgl.vulkan.VK11.*;
 
@@ -35,7 +34,7 @@ public class VulkanUtils {
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer count = stack.callocInt(1);
-            vkGetQueueCheckpointData2NV(queue.getVkQueue(), count, null);
+            vkGetQueueCheckpointDataNV(queue.getVkQueue(), count, null);
             int numCheckPoints = count.get(0);
             if (numCheckPoints > 0) {
                 VkCheckpointDataNV.Buffer checkpointData = VkCheckpointDataNV.calloc(numCheckPoints, stack);
