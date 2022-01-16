@@ -61,7 +61,7 @@ public class Render {
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
         animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache);
         guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
-                lightingRenderActivity.getLightingFrameBuffer());
+                lightingRenderActivity.getLightingFrameBuffer().getLightingRenderPass().getVkRenderPass());
         entitiesLoadedTimeStamp = 0;
         createCommandBuffers();
     }

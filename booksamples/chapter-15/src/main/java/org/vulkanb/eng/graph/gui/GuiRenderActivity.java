@@ -6,7 +6,6 @@ import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.lighting.LightingFrameBuffer;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.*;
@@ -37,7 +36,7 @@ public class GuiRenderActivity {
     private VulkanBuffer[] vertexBuffers;
 
     public GuiRenderActivity(SwapChain swapChain, CommandPool commandPool, Queue queue, PipelineCache pipelineCache,
-                             LightingFrameBuffer lightingFrameBuffer) {
+                             long vkRenderPass) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
 
@@ -45,7 +44,7 @@ public class GuiRenderActivity {
         createUIResources(swapChain, commandPool, queue);
         createDescriptorPool();
         createDescriptorSets();
-        createPipeline(pipelineCache, lightingFrameBuffer);
+        createPipeline(pipelineCache, vkRenderPass);
     }
 
     public void cleanup() {
@@ -76,10 +75,9 @@ public class GuiRenderActivity {
                 fontsTextureSampler, 0);
     }
 
-    private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
-        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
-                GraphConstants.FLOAT_LENGTH * 2,
+    private void createPipeline(PipelineCache pipelineCache, long vkRenderPass) {
+        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(vkRenderPass,
+                shaderProgram, 1, false, true, GraphConstants.FLOAT_LENGTH * 2,
                 new ImGuiVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();

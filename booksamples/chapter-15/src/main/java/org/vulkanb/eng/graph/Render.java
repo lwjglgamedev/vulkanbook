@@ -54,7 +54,7 @@ public class Render {
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
         animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache, scene);
         guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
-                lightingRenderActivity.getLightingFrameBuffer());
+                lightingRenderActivity.getLightingFrameBuffer().getLightingRenderPass().getVkRenderPass());
     }
 
     public void cleanup() {

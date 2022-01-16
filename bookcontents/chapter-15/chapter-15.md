@@ -54,7 +54,7 @@ public class GuiRenderActivity {
     private VulkanBuffer[] vertexBuffers;
 
     public GuiRenderActivity(SwapChain swapChain, CommandPool commandPool, Queue queue, PipelineCache pipelineCache,
-                             LightingFrameBuffer lightingFrameBuffer) {
+                             long vkRenderPass) {
         this.swapChain = swapChain;
         device = swapChain.getDevice();
 
@@ -62,7 +62,7 @@ public class GuiRenderActivity {
         createUIResources(swapChain, commandPool, queue);
         createDescriptorPool();
         createDescriptorSets();
-        createPipeline(pipelineCache, lightingFrameBuffer);
+        createPipeline(pipelineCache, vkRenderPass);
     }
 
     public void cleanup() {
@@ -228,10 +228,9 @@ In the `createPipeline` we just set up the pipeline used for rendering the GUI:
 ```java
 public class GuiRenderActivity {
     ...
-    private void createPipeline(PipelineCache pipelineCache, LightingFrameBuffer lightingFrameBuffer) {
-        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
-                lightingFrameBuffer.getLightingRenderPass().getVkRenderPass(), shaderProgram, 1, false, true,
-                GraphConstants.FLOAT_LENGTH * 4,
+    private void createPipeline(PipelineCache pipelineCache, long vkRenderPass) {
+        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(vkRenderPass,
+                shaderProgram, 1, false, true, GraphConstants.FLOAT_LENGTH * 2,
                 new ImGuiVertexBufferStructure(), descriptorSetLayouts);
         pipeline = new Pipeline(pipelineCache, pipeLineCreationInfo);
         pipeLineCreationInfo.cleanup();
@@ -542,7 +541,7 @@ public class Render {
     public Render(Window window, Scene scene) {
         ...
         guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
-                lightingRenderActivity.getLightingFrameBuffer());
+                lightingRenderActivity.getLightingFrameBuffer().getLightingRenderPass().getVkRenderPass());
     }
 
     public void cleanup() {
