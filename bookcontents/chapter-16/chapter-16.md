@@ -603,8 +603,8 @@ public class GlobalBuffers {
                     indexedIndirectCommandList.add(indexedIndirectCommand);
 
                     numIndirectCommands++;
-                    firstInstance++;
-                    numInstances = numInstances + entities.size();
+                    firstInstance += entities.size();
+                    numInstances += entities.size();
                 }
             }
             if (numIndirectCommands > 0) {
