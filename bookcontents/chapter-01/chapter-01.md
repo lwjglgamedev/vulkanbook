@@ -258,7 +258,7 @@ public class Window {
             throw new RuntimeException("Failed to create the GLFW window");
         }
 
-        glfwSetFramebufferSizeCallback(windowHandle, (window, w, h) -> resize(width, height));
+        glfwSetFramebufferSizeCallback(windowHandle, (window, w, h) -> resize(w, h));
 
         glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
