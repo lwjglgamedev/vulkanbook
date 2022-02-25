@@ -19,3 +19,4 @@ The book is structured in the following chapters:
 - [Chapter 14](chapter-14/chapter-14.md): Animation.
 - [Chapter 15](chapter-15/chapter-15.md): Render of GUI elements through ImGui.
 - [Chapter 16](chapter-16/chapter-16.md): This chapter starts the way to a bind-less render through indirect drawing.
+- [Appendix 01](appendix-01/appendix-01.md): This chapter provides some insights on how to troubleshoot a loss of device error.

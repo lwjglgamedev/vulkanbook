@@ -241,6 +241,4 @@ public class PhysicalDevice {
     public enum CheckPointExtension {
         NONE, NVIDIA, AMD;
     }
-
-
 }
