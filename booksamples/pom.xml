@@ -133,7 +133,7 @@
         <!-- Versions -->
         <java.version>17</java.version>
 		
-        <imgui-java.version>1.86.0</imgui-java.version>
+        <imgui-java.version>1.86.4</imgui-java.version>
         <joml.version>1.10.4</joml.version>
         <lwjgl.version>3.3.1</lwjgl.version>
         <maven-compiler-plugin.version>3.9.0</maven-compiler-plugin.version>
