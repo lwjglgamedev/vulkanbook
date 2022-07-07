@@ -390,7 +390,7 @@ In order for Vulkan to correctly use the image, we need to transition it to the 
 public class Texture {
     ...
     public void recordTextureTransition(CommandBuffer cmd) {
-        if (stgBuffer != null !recordedTransition) {
+        if (stgBuffer != null && !recordedTransition) {
             Logger.debug("Recording transition for texture [{}]", fileName);
             recordedTransition = true;
             try (MemoryStack stack = MemoryStack.stackPush()) {
