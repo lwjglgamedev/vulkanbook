@@ -1023,7 +1023,7 @@ float filterPCF(vec4 sc, uint cascadeIndex)
 
 This purpose of this function to return an average shadow factor calculated using the values obtained from the fragments that surround the current one. It just calculates this, retrieving the shadow factor for each of them, calling the `textureProj` function, by passing an offset that will be used when sampling the shadow map.
 
-In the `main` function, taking as an input the view position, we get the world position by applying the inverse viww matrix, with that information, we iterate over the split distances, calculated for each cascade split, to determine the cascade index that this fragment belongs to and calculate the shadow factor:
+In the `main` function, taking as an input the view position, we get the world position by applying the inverse view matrix, with that information, we iterate over the split distances, calculated for each cascade split, to determine the cascade index that this fragment belongs to and calculate the shadow factor:
 
 ```glsl
 void main() {
