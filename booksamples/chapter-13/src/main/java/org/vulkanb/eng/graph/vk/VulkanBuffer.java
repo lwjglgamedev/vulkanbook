@@ -1,7 +1,7 @@
 package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.*;
 import org.lwjgl.util.vma.VmaAllocationCreateInfo;
 import org.lwjgl.vulkan.VkBufferCreateInfo;
 
@@ -43,11 +43,12 @@ public class VulkanBuffer {
                     pAllocation, null), "Failed to create buffer");
             buffer = lp.get(0);
             allocation = pAllocation.get(0);
-            pb = PointerBuffer.allocateDirect(1);
+            pb = MemoryUtil.memAllocPointer(1);
         }
     }
 
     public void cleanup() {
+        MemoryUtil.memFree(pb);
         unMap();
         vmaDestroyBuffer(device.getMemoryAllocator().getVmaAllocator(), buffer, allocation);
     }

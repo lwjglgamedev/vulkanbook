@@ -1,7 +1,7 @@
 package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
 
 import java.nio.LongBuffer;
@@ -12,9 +12,9 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class VulkanBuffer {
 
-    private final Device device;
     private final long allocationSize;
     private final long buffer;
+    private final Device device;
     private final long memory;
     private final PointerBuffer pb;
     private final long requestedSize;
@@ -47,7 +47,7 @@ public class VulkanBuffer {
             vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
             allocationSize = memAlloc.allocationSize();
             memory = lp.get(0);
-            pb = PointerBuffer.allocateDirect(1);
+            pb = MemoryUtil.memAllocPointer(1);
 
             vkCheck(vkBindBufferMemory(device.getVkDevice(), buffer, memory, 0), "Failed to bind buffer memory");
         }

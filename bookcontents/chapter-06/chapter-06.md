@@ -100,7 +100,7 @@ public class VulkanUtils {
 }
 ```
 
-The `typeBits` attribute is a bit mask which defines the supported memory types of the physical device. A bit set to `1` means that the type of memory (associated to that index) is supported. The `reqMask` attribute is the type of memory that we need (for example if that memory will be accessed only by the GPU or also by the application). This method basically iterates over all the memory types, checking if that memory index (first condition) is supported by the device and if that it meets the requested type (second condition). Now we can go back to the `VulkanBuffer` constructor and invoke the `vkAllocateMemory` to allocate the memory. After that we can get the finally allocated size and get a handle to that chunk of memory. We also allocate a `PointerBuffer` which will be used in other methods of the class.
+The `typeBits` attribute is a bit mask which defines the supported memory types of the physical device. A bit set to `1` means that the type of memory (associated to that index) is supported. The `reqMask` attribute is the type of memory that we need (for example if that memory will be accessed only by the GPU or also by the application). This method basically iterates over all the memory types, checking if that memory index (first condition) is supported by the device and if that it meets the requested type (second condition). Now we can go back to the `VulkanBuffer` constructor and invoke the `vkAllocateMemory` to allocate the memory. After that we can get the finally allocated size and get a handle to that chunk of memory. We also allocate a `PointerBuffer` (using `MemoryUtil` class to be more efficient) which will be used in other methods of the class.
 
 ```java
 public class VulkanBuffer {
@@ -110,7 +110,7 @@ public class VulkanBuffer {
             vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
             allocationSize = memAlloc.allocationSize();
             memory = lp.get(0);
-            pb = PointerBuffer.allocateDirect(1);
+            pb = MemoryUtil.memAllocPointer(1);
         ...
     }
     ...
@@ -131,12 +131,13 @@ public class VulkanBuffer {
 }
 ```
 
-The constructor is now finished. The next methods are the usual `cleanup`method and some getters for the properties that define the buffer:
+The constructor is now finished. The next methods are the usual `cleanup`method and some getters for the properties that define the buffer (since the `PointerBuffer` have been allocated using `MemoryUtil` we need to free it manually):
 
 ```java
 public class VulkanBuffer {
     ...
     public void cleanup() {
+        MemoryUtil.memFree(pb);
         vkDestroyBuffer(device.getVkDevice(), buffer, null);
         vkFreeMemory(device.getVkDevice(), memory, null);
     }
