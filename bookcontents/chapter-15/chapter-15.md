@@ -371,9 +371,11 @@ public class GuiRenderActivity {
                     rect.extent(it -> it.width((int) (imVec4.z - imVec4.x)).height((int) (imVec4.w - imVec4.y)));
                     vkCmdSetScissor(cmdHandle, 0, rect);
                     int numElements = imDrawData.getCmdListCmdBufferElemCount(i, j);
-                    vkCmdDrawIndexed(cmdHandle, numElements, 1, offsetIdx, offsetVtx, 0);
-                    offsetIdx += numElements;
+                    vkCmdDrawIndexed(cmdHandle, numElements, 1,
+                            offsetIdx + imDrawData.getCmdListCmdBufferIdxOffset(i, j),
+                            offsetVtx + imDrawData.getCmdListCmdBufferVtxOffset(i, j), 0);
                 }
+                offsetIdx += imDrawData.getCmdListIdxBufferSize(i);
                 offsetVtx += imDrawData.getCmdListVtxBufferSize(i);
             }
         }
