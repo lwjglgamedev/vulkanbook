@@ -786,7 +786,6 @@ public class GlobalBuffers {
         }
         long mappedMemory = instanceBuffer.map();
         ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) instanceBuffer.getRequestedSize());
-        instanceBuffer.map();
         int pos = 0;
         for (VulkanModel vulkanModel : vulkanModels) {
             List<Entity> entities = scene.getEntitiesByModelId(vulkanModel.getModelId());
