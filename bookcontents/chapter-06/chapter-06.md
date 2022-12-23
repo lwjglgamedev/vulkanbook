@@ -1181,7 +1181,7 @@ public class ForwardRenderActivity {
 }
 ```
 
-Although the code looks similar to the one use din the previous chapter, there is an important change, we are resetting the command buffer. In the previous chapter, we pre-record the command buffers at the beginning. Here we are recording a command buffer in each frame, we need to reset them prior to is usage. It is important to do it after the fence has been signaled, to prevent the command buffer rest while is still in use. The new code starts now:
+Although the code looks similar to the one used in the previous chapter, there is an important change, we are resetting the command buffer. In the previous chapter, we pre-record the command buffers at the beginning. Here we are recording a command buffer in each frame, we need to reset them prior to is usage. It is important to do it after the fence has been signaled, to prevent the command buffer rest while is still in use. The new code starts now:
 
 ```java
 public class ForwardRenderActivity {
@@ -1245,6 +1245,26 @@ public class ForwardRenderActivity {
 ```
 
 We iterate over all the models, then over their meshes and start by binding their vertices buffer by calling the `vkCmdBindVertexBuffers`. The next draw calls will use that data as an input. We also bind the buffer that holds the indices by calling the `vkCmdBindIndexBuffer` and finally we record the drawing of the vertices using those indices by calling the `vkCmdDrawIndexed`. After that, we finalize the render pass and the recording.
+
+Finally, we need to slightly modify the `submit` method in the `ForwardRenderActivity`, we need to remove the waiting form the fence that protects access to the command buffer since this is done now in the `recordCommandBuffer` method.
+```java
+public class ForwardRenderActivity {
+    ...
+    public void submit(Queue queue) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            int idx = swapChain.getCurrentFrame();
+            CommandBuffer commandBuffer = commandBuffers[idx];
+            Fence currentFence = fences[idx];
+            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
+            queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
+                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
+                    stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+                    stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
+        }
+    }
+    ...
+}
+```
 
 ## Shaders code
 
