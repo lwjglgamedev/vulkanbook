@@ -320,7 +320,7 @@ public class VertexBufferStructure extends VertexInputStateInfo {
 }
 ```
 
-We define a new constant named `TEXT_COORD_COMPONENTS`  which states that the texture coordinates will be composed by two elements (two floats). The number of attributes of each vertex will be now two (defined by the constant `NUMBER_OF_ATTRIBUTES`), one for the position components and another one for the texture coordinates. We need to define another attribute for the texture coordinates, therefore the buffer of `VkVertexInputAttributeDescription` will have an extra element.  The attribute definition itself is quite similar to the one used for the positions, in this case, the size will be for two floats. Finally, the stride need to be update due to the length increase.
+We define a new constant named `TEXT_COORD_COMPONENTS`  which states that the texture coordinates will be composed by two elements (two floats). The number of attributes of each vertex will be now two (defined by the constant `NUMBER_OF_ATTRIBUTES`), one for the position components and another one for the texture coordinates. We need to define another attribute for the texture coordinates, therefore the buffer of `VkVertexInputAttributeDescription` will have an extra element. The attribute definition itself is quite similar to the one used for the positions, in this case, the size will be for two floats. Finally, the stride need to be update due to the length increase.
 
 We need to modify the `ModelData.MeshData` class to include texture coordinates:
 
@@ -333,7 +333,7 @@ public class ModelData {
 }
 ```
 
-An therefore,  the way we load vertices in the `VulkanModel` class needs also to be updated:
+And consequently, the way we load vertices in the `VulkanModel` class needs also to be updated:
 
 ```java
 public class VulkanModel {
@@ -486,7 +486,8 @@ public class EngineProperties {
     ...
 }
 ```
-We are going also to introduce a new concept for the engine that will allow to define game entities and use the same `Mesh` to render multiple elements. Instead of rendering meshes, we will have entities which have some properties, such as their scale, position and rotation and will be associated to a mesh. They can model a player, NPCs or scene objects and will be managed by a class named `Entity`, which is defined like this:
+
+We are going also to introduce a new concept for the engine that will allow to define game entities and use the same `Model` to render multiple elements. Instead of directly rendering models, we will have entities which have some properties, such as their scale, position and rotation and will be associated to a model. They can model a player, NPCs or scene objects and will be managed by a class named `Entity`, which is defined like this:
 
 ```java
 package org.vulkanb.eng.scene;
@@ -573,16 +574,16 @@ public class Scene {
 }
 ```
 
-The constructor receives the a `Window` instance and creates a `Map` of `List`s which will contain `Entity` instances. That map will organized the entities by its `meshId`. The constructor initializes that map and also creates an instance of the `Projection` class, which will hold the perspective matrix. The next method will be used to add new entities:
+The constructor receives the a `Window` instance and creates a `Map` of `List`s which will contain `Entity` instances. That map will organized the entities by its `modelId`. The constructor initializes that map and also creates an instance of the `Projection` class, which will hold the perspective matrix. The next method will be used to add new entities:
 
 ```java
 public class Scene {
     ...
     public void addEntity(Entity entity) {
-        List<Entity> entities = entitiesMap.get(entity.getMeshId());
+        List<Entity> entities = entitiesMap.get(entity.getModelId());
         if (entities == null) {
             entities = new ArrayList<>();
-            entitiesMap.put(entity.getMeshId(), entities);
+            entitiesMap.put(entity.getModelId(), entities);
         }
         entities.add(entity);
     }
@@ -612,7 +613,7 @@ public class Scene {
     }
 
     public void removeEntity(Entity entity) {
-        List<Entity> entities = entitiesMap.get(entity.getMeshId());
+        List<Entity> entities = entitiesMap.get(entity.getModelId());
         if (entities != null) {
             entities.removeIf(e -> e.getId().equals(entity.getId()));
         }

@@ -342,7 +342,7 @@ public class VulkanModel {
 }
 ```
 
-This class just stores a List of meshes, defined by the `VulkanMesh` record, which contain the buffers associated to the vertices positions and the indices. It provides a method to get the model identifier (it should unique per application), the meshes data  and a `cleanup` method. The interest of this class resides in its static methods which will be used to create those buffers. This class provides a `public` `static` method named `transformModels` which will be used to create a set of `VulkanModel` instances using the model raw data positions and indices for the different meshes). That raw data is encapsulated in a class named `ModelData` which is defined like this:
+This class just stores a List of meshes, defined by the `VulkanMesh` record, which contain the buffers associated to the vertices positions and the indices. It provides a method to get the model identifier (it should unique per application), the associated meshes data and a `cleanup` method. The interest of this class resides in its static methods which will be used to create those buffers. This class provides a `public` `static` method named `transformModels` which will be used to create a set of `VulkanModel` instances using the model raw data positions and indices for the different meshes). That raw data is encapsulated in a class named `ModelData` which is defined like this:
 
 ```java
 package org.vulkanb.eng.scene;
@@ -371,7 +371,7 @@ public class ModelData {
 }
 ```
 
-As you can see the `ModelData` class is quite similar to the `VulkanModel` one. The difference here is that the `ModelData` class holds the raw date for the model, while the `VulkanModel` class holds references to that information loaded in GPU buffers.
+As you can see the `ModelData` class is quite similar to the `VulkanModel` one. The difference here is that the `ModelData` class holds the raw data of the model, while the `VulkanModel` class holds references to that information loaded in GPU buffers.
 
 Going back to the `VulkanModel`class, the `transformModels` method will return as many `VulkanModel` instances as `ModelData` instances received. It will encapsulate all the buffers and data copy creations operations. As it has been shown before, each `VulkanMesh` instance has two buffers, one for positions and another one for the indices. These buffers will be used by the GPU while rendering but we need to access them form the CPU in order to load the data into them. We could use buffers that are accessible from both the CPU and the GPU, but the performance would be worse than buffers that can only used by the GPU. So, how do we solve this? The answer is by using intermediate buffers:
 
@@ -383,7 +383,7 @@ Going back to the `VulkanModel`class, the `transformModels` method will return a
 
 The purpose of the `transformModels` method is to perform these actions for the positions and indices buffers for each of the `ModelData.MeshData` instances. It should be used at the initialization stage as a bulk loading mechanism (more efficient). Copying from one buffer to another implies submitting a transfer command to a queue and waiting for it to complete. Instead of submitting these operations one by one, we can record all these commands into a single `CommandBuffer`, submit them just once and also wait once for the commands to be finished. This will be much more efficient than submitting small commands one at a time.
 
-The `loadMeshes` method starts like this:
+The `transformModels` method starts like this:
 
 ```java
 public class VulkanModel {
