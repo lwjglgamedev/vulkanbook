@@ -25,7 +25,7 @@ public class Texture {
         Logger.debug("Creating texture [{}]", fileName);
         recordedTransition = false;
         this.fileName = fileName;
-        ByteBuffer buf;
+        ByteBuffer buf = null;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer w = stack.mallocInt(1);
             IntBuffer h = stack.mallocInt(1);
@@ -49,9 +49,11 @@ public class Texture {
             ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).
                     aspectMask(VK_IMAGE_ASPECT_COLOR_BIT).mipLevels(mipLevels);
             imageView = new ImageView(device, image.getVkImage(), imageViewData);
+        } finally {
+            if (buf != null) {
+                stbi_image_free(buf);
+            }
         }
-
-        stbi_image_free(buf);
     }
 
     public void cleanup() {

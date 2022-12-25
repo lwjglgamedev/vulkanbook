@@ -37,6 +37,8 @@ Up to now, we have been manually defining the 3D models directly in the code. In
 We will create a new class named `ModelLoader`, which defines a method named `loadModel` to achieve the above mentioned goal:
 
 ```java
+package org.vulkanb.eng.scene;
+    ...
 public class ModelLoader {
     ...
     public static ModelData loadModel(String modelId, String modelPath, String texturesDir) {
@@ -48,7 +50,7 @@ public class ModelLoader {
 }
 ```
 
-The `loadMeshes` method receives an identifier associated to the model, the path to the file that contains the data of the model, and the directory where the textures will reside. This method just calls the homonym method in the same class with a  set of flags that will control the post-processing actions that Assimp will perform (it is a basically a utility method to setup the most common used flags). In our case we are using the following flags:
+The `loadModel` method receives an identifier associated to the model, the path to the file that contains the data of the model, and the directory where the textures will reside. This method just calls the homonym method in the same class with a  set of flags that will control the post-processing actions that Assimp will perform (it is a basically a utility method to setup the most common used flags). In our case we are using the following flags:
 
 - `aiProcess_GenSmoothNormals`: This will try to generate smooth normals for all the vertices in the mesh.
 - `aiProcess_JoinIdenticalVertices`: This will try to identify and combine duplicated vertices.
@@ -134,10 +136,20 @@ public class ModelLoader {
 }
 ```
 
-We get the the texture associated to the diffuse color of the material by calling the `aiGetMaterialTexture` function. This function receives as a parameter an instance of an `AIString` that will be used to return the texture path. If the path is present (if it is not null or empty) we insert the path where the textures for this model will reside. Many models use absolute paths, which probably won't fit with the path were you store the model. This is the reason why get just the file name, without the possible path (either absolute or relative)that could be used in the model. Once we have got the texture path, we retrieve the material diffuse color by calling the `aiGetMaterialColor` function. All that information is stored in an instance of the `ModelData.Material` class. The constructed instance is appended to the list passed as a parameter that will contain all the materials of the model. The `ModelData.Material` class is defined like this:
+We get the the texture associated to the diffuse color of the material by calling the `aiGetMaterialTexture` function. This function receives as a parameter an instance of an `AIString` that will be used to return the texture path. If the path is present (if it is not null or empty) we insert the path where the textures for this model will reside. Many models use absolute paths, which probably won't fit with the path were you store the model. This is the reason why get just the file name, without the possible path (either absolute or relative)that could be used in the model. Once we have got the texture path, we retrieve the material diffuse color by calling the `aiGetMaterialColor` function. All that information is stored in an instance of the `ModelData.Material` class. The constructed instance is appended to the list passed as a parameter that will contain all the materials of the model. The `ModelData` needs to be modified to include the definition of the `ModelData.Material` class and to hold the data for the associated materials:
 
 ```java
 public class ModelData {
+    private List<Material> materialList;
+    ...
+    public ModelData(String modelId, List<MeshData> meshDataList, List<Material> materialList) {
+        ...
+        this.materialList = materialList;
+    }
+
+    public List<Material> getMaterialList() {
+        return materialList;
+    }
     ...
     public record Material(String texturePath, Vector4f diffuseColor) {
         public static final Vector4f DEFAULT_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
@@ -292,6 +304,8 @@ We have already created the classes that support images and image views, however
 The `Texture` class constructor is defined like this:
 
 ```java
+package org.vulkanb.eng.graph.vk;
+    ...
 public class Texture {
     ...
     public Texture(Device device, String fileName, int imageFormat) {
@@ -521,6 +535,8 @@ This method invokes the `vkCmdCopyBufferToImage` to record the command which wil
 Now that the `Texture` class is complete, we are ready to to use it. In 3D models, it is common that multiple meshes share the same texture file, we want to control that to avoid loading the same resource multiple times. We will create a new class named `TextureCache` to control this:
 
 ```java
+package org.vulkanb.eng.graph;
+    ...
 public class TextureCache {
 
     private final IndexedLinkedHashMap<String, Texture> textureMap;
@@ -628,7 +644,7 @@ public class IndexedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
 }
 ```
 
-The next step is to update the `VulkanModel` class to support material definition. By now, a material will hold a reference to the color of the material and its texture, but it will be modified in teh future to define other parameters (such as normal maps, etc.). The same material can be applied to several meshes, so we will organize meshes around them to render efficiently. The modifications are listed below:
+The next step is to update the `VulkanModel` class to support material definition. By now, a material will hold a reference to the color of the material and its texture, but it will be modified in the future to define other parameters (such as normal maps, etc.). The same material can be applied to several meshes, so we will organize meshes around them to render efficiently. The modifications are listed below:
 
 ```java
 public class VulkanModel {
@@ -647,7 +663,7 @@ public class VulkanModel {
 }
 ```
 
-We need to change also the `transformModels` method to load the textures:
+`VulkanModel` class will no longer store a list of meshes but a list of materials (which will hold references to meshes). Therefore, the `vulkanMaterialList` attribute needs to be removed. We need to change also the `transformModels` method to load the textures:
 
 ```java
 public class VulkanModel {
@@ -667,6 +683,8 @@ public class VulkanModel {
     
     public static List<VulkanModel> transformModels(List<ModelData> modelDataList, TextureCache textureCache,
                                                     CommandPool commandPool, Queue queue) {
+        ...
+        List<Texture> textureList = new ArrayList<>();
         ...
         for (ModelData modelData : modelDataList) {
             VulkanModel vulkanModel = new VulkanModel(modelData.getModelId());
@@ -740,6 +758,8 @@ public class VulkanModel {
 Descriptors represent shader resources such us buffers, images or samplers. We will need to use descriptors in order to access the textures from the shaders and also for uniforms (in Vulkan uniforms are just the way to access buffers in the shaders). Descriptors are grouped in descriptor sets, whose general structure is defined through descriptor layouts. Descriptors are like handles to access resources from shaders, and they are created through a descriptor pool. So let's start by defining a new class to handle those pools. This is the constructor of the `DescriptorPool` class:
 
 ```java
+package org.vulkanb.eng.graph.vk;
+    ...
 public class DescriptorPool {
     ...
     public DescriptorPool(Device device, List<DescriptorTypeCount> descriptorTypeCounts) {
@@ -797,6 +817,11 @@ The rest of the methods of this class are the classical cleanup and getter to ob
 ```java
 public class DescriptorPool {
     ...
+    public void cleanup() {
+        Logger.debug("Destroying descriptor pool");
+        vkDestroyDescriptorPool(device.getVkDevice(), vkDescriptorPool, null);
+    }
+    ...    
     public Device getDevice() {
         return device;
     }
@@ -813,9 +838,14 @@ The format of each descriptor set must me defined by a descriptor set layout. Th
 ```java
 package org.vulkanb.eng.graph.vk;
 
-import org.apache.logging.log4j.*;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
 
-import static org.lwjgl.vulkan.VK11.vkDestroyDescriptorSetLayout;
+import java.nio.LongBuffer;
+
+import static org.lwjgl.vulkan.VK11.*;
+import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public abstract class DescriptorSetLayout {
 
@@ -883,7 +913,22 @@ public abstract class DescriptorSetLayout {
     ...
 }
 ```
-This class sets the descriptor layout type to the `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER` valued.  A combined image sampler is a descriptor type which combines an image sampler with an image into a single descriptor set. This is the type that we need when using a `sampler2D` in a shader (more on this later).
+This class sets the descriptor layout type to the `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER` value.  A combined image sampler is a descriptor type which combines an image sampler with an image into a single descriptor set. This is the type that we need when using a `sampler2D` in a shader (more on this later).
+
+Finally, we will define a descriptor set lay out which will be used for uniforms. This will be a new class named `UniformDescriptorSetLayout` that will also extend the `SimpleDescriptorSetLayout` class:
+
+```java
+public abstract class DescriptorSetLayout {
+    ...
+    public static class UniformDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public UniformDescriptorSetLayout(Device device, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, binding, stage);
+        }
+    }
+    ...
+}
+```
+This class sets the descriptor layout type to the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` value.
 
 We have just talked about samplers, but what are samplers anyway? Images are not usually accessed directly when used as textures. When we access a texture, we usually want to apply some type of filters, we may have mip levels and maybe specify some repetition patterns. All that is handled through a sampler. We have already created the image and a descriptor set layout which combines an image and a sampler. That combination of image and sampler will be used in our shader, but in our application we need to explicitly create the sampler. Therefore we will create a new class named `TextureSampler`: 
 
@@ -1255,7 +1300,7 @@ public class ForwardRenderActivity {
 }
 ```
 
-The `VulkanUtils` defines two `copyMatrixToBuffer` methods. The first one just uses an offset equal to `0` as the starting copying point an calls the secon onde:
+The `VulkanUtils` defines two `copyMatrixToBuffer` methods. The first one just uses an offset equal to `0` as the starting copying point an calls the second one:
 ```java
 public class VulkanUtils {
     ...
@@ -1296,7 +1341,7 @@ public class ForwardRenderActivity {
     public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {
         ...
             LongBuffer descriptorSets = stack.mallocLong(2)
-                    .put(0, matrixDescriptorSet.getVkDescriptorSet());
+                    .put(0, projMatrixDescriptorSet.getVkDescriptorSet());
             for (VulkanModel vulkanModel : vulkanModelList) {
                 String modelId = vulkanModel.getModelId();
                 List<Entity> entities = scene.getEntitiesByModelId(modelId);
@@ -1409,18 +1454,16 @@ The changes required in the `Render` class are smaller, we basically instantiate
 public class Render {
     ...
     private TextureCache textureCache;
+    ...
+    public Render(Window window, Scene scene) {
+        ...
+        textureCache = new TextureCache();
+    }
 
     public void cleanup() {
         ...
         textureCache.cleanup();
         ...
-    }
-
-    public void init(Window window, Scene scene) {
-        ...
-        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool, pipelineCache, scene);
-        ...
-        textureCache = new TextureCache();
     }
 
     public void loadModels(List<ModelData> modelDataList) {
@@ -1430,21 +1473,7 @@ public class Render {
 
         fwdRenderActivity.registerModels(vulkanModels);
     }
-
-    public void render(Window window, Scene scene) {
-        ...
-        if (window.isResized() || swapChain.acquireNextImage()) {
-            ...
-            resize(window);
-            ...
-        }
-        ...
-    }
-
-    private void resize(Window window) {
-        ...
-        fwdRenderActivity.resize(swapChain);
-    }
+    ...
 }
 ```
 

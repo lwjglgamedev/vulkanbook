@@ -141,7 +141,7 @@ public class Texture {
         Logger.debug("Creating texture [{}]", fileName);
         recordedTransition = false;
         this.fileName = fileName;
-        ByteBuffer buf;
+        ByteBuffer buf = null;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer w = stack.mallocInt(1);
             IntBuffer h = stack.mallocInt(1);
@@ -158,9 +158,11 @@ public class Texture {
             mipLevels = (int) Math.floor(log2(Math.min(width, height))) + 1;
 
             createTextureResources(device, buf, imageFormat);
+        } finally {
+            if (buf != null) {
+                stbi_image_free(buf);
+            }
         }
-
-        stbi_image_free(buf);
     }
 
     public Texture(Device device, ByteBuffer buf, int width, int height, int imageFormat) {
