@@ -128,7 +128,7 @@ public class GeometryRenderPass {
 }
 ```
 
-We need to create a `VkAttachmentDescription` structure to describe each of the output attachments. The format used will be the same format as the one of the underlying image. We want each attachment to be cleared at the beginning of the subpass, so we use the `VK_ATTACHMENT_LOAD_OP_CLEAR` for the `loadOp` attribute. The contents of the attachments will be used in the lighting render pass, therefore, we need those contents to be preserved at the end of the subpass. This is why we use the `VK_ATTACHMENT_STORE_OP_STORE` value for the `storeOp` attribute. Since we don't care about the stencil components so we use the `VK_ATTACHMENT_LOAD_OP_DONT_CARE` flag. When this render pass finishes, the attachments will be used as read only inputs in the lighting render pass. This is why we set the `VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL` for color attachments and `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` for the depth attachment as the final layout to transition into when the render pass finishes.
+We need to create a `VkAttachmentDescription` structure to describe each of the output attachments. The format used will be the same format as the one of the underlying image. We want each attachment to be cleared at the beginning of the subpass, so we use the `VK_ATTACHMENT_LOAD_OP_CLEAR` for the `loadOp` attribute. The contents of the attachments will be used in the lighting render pass, therefore, we need those contents to be preserved at the end of the subpass. This is why we use the `VK_ATTACHMENT_STORE_OP_STORE` value for the `storeOp` attribute. Since we don't care about the stencil components so we use the `VK_ATTACHMENT_LOAD_OP_DONT_CARE` flag. When this render pass finishes, the attachments will be used as read only inputs in the lighting render pass. This is why we set the `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` for color attachments and `VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL` for the depth attachment as the final layout to transition into when the render pass finishes.
 
 The next step is to define the color and depth references that will be used in the render subpasses. In our case, we will be using just one subpass. As explained in previous chapters, we should provide the reference to the attachments that will be used with the layout used during that subpass:
 
@@ -215,7 +215,7 @@ public class GeometryRenderPass {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)
@@ -800,7 +800,7 @@ public class LightingRenderPass {
                     .srcAccessMask(0)
                     .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc()
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachments)
                     .pSubpasses(subPass)
