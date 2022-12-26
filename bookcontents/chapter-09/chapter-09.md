@@ -184,8 +184,9 @@ The next step is to modify the `recordTextureTransition`:
 public class Texture {
     ...
     public void recordTextureTransition(CommandBuffer cmd) {
-        if (stgBuffer != null) {
+        if (stgBuffer != null && !recordedTransition) {
             Logger.debug("Recording transition for texture [{}]", fileName);
+            recordedTransition = true;
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 recordImageTransition(stack, cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 recordCopyBuffer(stack, cmd, stgBuffer);
@@ -545,7 +546,7 @@ public abstract class DescriptorSet {
 
 ## Completing the changes
 
-Now it is the turn to modify the `ForwardRenderActivity` class. We start be fining new attributes for the descriptors associated to the materials, and a new descriptor set for the uniform that will hold the view matrix associated to the camera.
+Now it is the turn to modify the `ForwardRenderActivity` class. We start be fining new attributes for the descriptors associated to the materials, and a new descriptor set for the uniforms that will hold the view matrices associated to the camera. As it has been described before, the `Pipeline.PipeLineCreationInfo pipeLineCreationInfo` record has also been modified to control if we will use blending or not.
 
 ```java
 public class ForwardRenderActivity {
@@ -556,11 +557,17 @@ public class ForwardRenderActivity {
     private  DescriptorSet.DynUniformDescriptorSet materialsDescriptorSet;
     ....
     private VulkanBuffer[] viewMatricesBuffer;
-    private MatrixDescriptorSet[] viewMatricesDescriptorSets;
+    private DescriptorSet.UniformDescriptorSet[] viewMatricesDescriptorSets;
     ...
     public ForwardRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         ...
         materialSize = calcMaterialsUniformSize();
+        ...
+        createDescriptorSets(numImages);
+
+        Pipeline.PipeLineCreationInfo pipeLineCreationInfo = new Pipeline.PipeLineCreationInfo(
+                renderPass.getVkRenderPass(), fwdShaderProgram, 1, true, true, GraphConstants.MAT4X4_SIZE,
+                new VertexBufferStructure(), descriptorSetLayouts);
         ...
     }
     ...
@@ -770,7 +777,53 @@ public class ForwardRenderActivity {
 }
 ```
 
-As you can see, we create a buffer of for positions to hold the descriptor sets. We setup the view matrix descriptor set and the materials descriptor set. The `dynDescrSetOffset` attribute will hold the offset inside the materials buffer used to refer to the proper uniform data. This will be used in the `vkCmdBindDescriptorSets` function.
+As you can see, we create a buffer of for positions to hold the descriptor sets. We setup the view matrix descriptor set and the materials descriptor set. The `dynDescrSetOffset` attribute will hold the offset inside the materials buffer used to refer to the proper uniform data. This will be used in the `vkCmdBindDescriptorSets` function. In that function we use the regular descriptor sets, which was partially filled up in the `recordCommandBuffer` method for the decsriptor sets which do not change per entity. In this method, we will fill up the per-material descriptor set, the texture, at the position `2` (the one that is expected in the shader for that element).
+
+The vertex shader (`fwd_vertex.glsl`) needs to be updated to use the uniform that contains the view matrix:
+```glsl
+#version 450
+
+layout(location = 0) in vec3 entityPos;
+layout(location = 1) in vec2 entityTextCoords;
+
+layout(location = 0) out vec2 textCoords;
+
+layout(set = 0, binding = 0) uniform ProjUniform {
+    mat4 projectionMatrix;
+} projUniform;
+layout(set = 1, binding = 0) uniform ViewUniform {
+    mat4 viewMatrix;
+} viewUniform;
+
+layout(push_constant) uniform matrices {
+    mat4 modelMatrix;
+} push_constants;
+
+void main()
+{
+    gl_Position = projUniform.projectionMatrix * viewUniform.viewMatrix * push_constants.modelMatrix * vec4(entityPos, 1);
+    textCoords = entityTextCoords;
+}
+```
+
+The fragment shader (`fwd_fragment.glsl`) needs to be updated to use the material information:
+```glsl
+#version 450
+
+layout(location = 0) in vec2 textCoords;
+layout(location = 0) out vec4 uFragColor;
+
+layout(set = 2, binding = 0) uniform sampler2D textSampler;
+
+layout(set = 3, binding = 0) uniform MaterialUniform {
+    vec4 diffuseColor;
+} material;
+
+void main()
+{
+    uFragColor = material.diffuseColor + texture(textSampler, textCoords);
+}
+```
 
 The last step is to change the `Main` class to use the camera and a new model. In this case we will be using the famous Sponza model (we are using the models from [GitHub - KhronosGroup/glTF-Sample-Models: glTF Sample Models](https://github.com/KhronosGroup/glTF-Sample-Models)). We have modified the `handleInput` to update the camera position with the mouse movement when pressing the right button:
 
