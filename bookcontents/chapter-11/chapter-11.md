@@ -1064,6 +1064,36 @@ void main() {
 
 We first sample the albedo, normal map (converting from [0, -1] to [-1, 1] range) and the PBR attachment according to current fragment coordinates. As it has been explained before, we need the fragment position to perform the light calculations. But, we have no position attachments. This is where the depth attachment and the inverse projection matrix comes into play. With that information we can reconstruct the world position (view space coordinates) without requiring to have another attachment which stores the position. You will see in other tutorials, that they set up a specific attachment for positions, but it is much more efficient to do it this way. Always remember, that, the less memory consumed by the deferred attachments, the better. With all that information we just simply iterate over the lights to calculate the light contribution to the final color.
 
+## Other modifications
+
+In the `Render` class, we need to add the `Scene` instance when instantiating `LightingRenderActivity`:
+
+```java
+public class Render {
+    ...
+    public Render(Window window, Scene scene) {
+        ...
+        lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache,
+                geometryRenderActivity.getAttachments(), scene);
+    }
+    ...
+}
+```
+
+Also, since we are discarding semi-transparent objects, we can remove the re-ordering the models which set up ones that have no transparencies first:
+```java
+public class Render {
+    ...
+    public void loadModels(List<ModelData> modelDataList) {
+        Logger.debug("Loading {} model(s)", modelDataList.size());
+        vulkanModels.addAll(VulkanModel.transformModels(modelDataList, textureCache, commandPool, graphQueue));
+        Logger.debug("Loaded {} model(s)", modelDataList.size());
+
+        geometryRenderActivity.registerModels(vulkanModels);
+    }
+    ...
+}
+```
 ## Setting up some lights
 
 The last step is to setup some lights in our scene. We will define the ambient light color, a directional light (we can change the direction of that light with left and  right arrows) and one green point light:
