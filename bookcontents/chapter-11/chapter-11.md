@@ -444,7 +444,7 @@ public class GeometryAttachments {
 }
 ```
 
-We have defined two new attachments:
+Please pay attention that we have defined two new attachments (the `NUMBER_ATTACHMENTS` constant has been increased to `4`):
 
 - The normals attachment will hold normals data. Although they can be packed in a more efficient format, we will use the `VK_FORMAT_A2B10G10R10_UNORM_PACK32` flag to store the information as a 32 bit package where the normals will be stored unsigned.
 - The PBR attachment will hold information used for PBR shading (more on this later on). That is it will store information about the roughness and metal factors of the materials.
