@@ -164,7 +164,7 @@ public class VulkanBuffer {
                     pAllocation, null), "Failed to create buffer");
             buffer = lp.get(0);
             allocation = pAllocation.get(0);
-            pb = PointerBuffer.allocateDirect(1);
+            pb = MemoryUtil.memAllocPointer(1);
         }
     }
     ...
