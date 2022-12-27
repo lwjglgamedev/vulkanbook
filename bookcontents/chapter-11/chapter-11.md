@@ -219,7 +219,7 @@ public class VulkanModel {
         boolean hasTexture = material.texturePath() != null && material.texturePath().trim().length() > 0;
         Texture normalMapTexture = textureCache.createTexture(device, material.normalMapPath(), VK_FORMAT_R8G8B8A8_UNORM);
         boolean hasNormalMapTexture = material.normalMapPath() != null && material.normalMapPath().trim().length() > 0;
-        Texture metalRoughTexture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_SRGB);
+        Texture metalRoughTexture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_UNORM);
         boolean hasMetalRoughTexture = material.metalRoughMap() != null && material.metalRoughMap().trim().length() > 0;
 
         texture.recordTextureTransition(cmd);
