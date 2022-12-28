@@ -963,7 +963,7 @@ layout(set = 3, binding = 0) uniform ShadowsUniforms {
 ```
 
 We will create a new function, named `calcShadow`, which given a world position an a cascade split index, will return a shadow factor that will be applied to the final fragment color. If the fragment is not affected by a shadow, the result will be `1`, it will not affect the final color:
-```glsl`
+```glsl
 float calcShadow(vec4 worldPosition, uint cascadeIndex)
 {
     vec4 shadowMapPosition = shadowsUniforms.cascadeshadows[cascadeIndex].projViewMatrix * worldPosition;
@@ -981,7 +981,6 @@ float calcShadow(vec4 worldPosition, uint cascadeIndex)
     return shadow;
 
 }
-
 ```
 This function, transforms from world coordinates space to the NDC space of the directional light, for a specific cascade split, using its ortographic projection. That is, we multiply world space by the projection view matrix of the specified cascade split. After that, we need to transform those coordinates to texture coordinates (that is in the range [0, 1], starting at the top left corner). With that information, we can apply PCF or not. If not, we will call the `textureProj` function which just calculates the shadow factor without applying any filtering and is defined like this:
 ```glsl
