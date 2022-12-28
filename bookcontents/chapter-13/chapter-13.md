@@ -17,6 +17,8 @@ The problem with shadow depth maps is their resolution, we need to cover a wide 
 We will start by creating a new package, `org.vulkanb.eng.graph.shadows`, that will hold all the code related to calculate and render the shadow maps. The first class in this package will be responsible of calculating the matrices required to render the shadow maps from light perspective. The class is named `CascadeShadow` and will store the projection view matrix (from light perspective) for a specific cascade shadow split (`projViewMatrix` attribute) and the far plane distance for its ortho-projection matrix (`splitDistance` attribute):
 
 ```java
+package org.vulkanb.eng.graph.shadows;
+...
 public class CascadeShadow {
 
     private Matrix4f projViewMatrix;
@@ -286,7 +288,7 @@ public class ShadowsRenderPass {
                     .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
 
             // Render pass
-            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack) renderPassInfo = VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack).calloc(stack)
+            VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
                     .pAttachments(attachmentsDesc)
                     .pSubpasses(subpass)
@@ -913,7 +915,7 @@ public class LightingFrameBuffer {
             for (int i = 0; i < numImages; i++) {
                 attachmentsBuff.put(0, swapChain.getImageViews()[i].getVkImageView());
                 frameBuffers[i] = new FrameBuffer(swapChain.getDevice(), width, height,
-                        attachmentsBuff, lightingRenderPass.getVkRenderPass());
+                        attachmentsBuff, lightingRenderPass.getVkRenderPass(), 1);
             }
         }
     }
@@ -1072,7 +1074,7 @@ void main() {
 }
 ```
 
-Now we can examine the changes in the `LightingRenderActivity` class. First, we need a uniform that will hold the inverse projection and view matrices. Previously, we had just one buffer, because it only contained the inverse projection matrix. Since this did not change between frames we just needed one buffer. However, now, it will store also the inverse view matrix. That matrix can change between frame, so to avoid modifying the buffer while rendering, we will have as many buffers as swap chain images. We will need also new buffers, and descriptor sets for the cascade shadow splits data. We will not update that uniform in the constructor, but while recording the commands, therefore the constructor has been changed (no `Scene` instance as a parameter) and the `updateInvProjMatrix` method removed. We need also new uniforms for the data of the cascade splits projection view uniforms and cascade instances). In the `cleanup` method, we just need to free those resources.
+Now we can examine the changes in the `LightingRenderActivity` class. First, we need a uniform that will hold the inverse projection and view matrices. Previously, we had just one buffer, because it only contained the inverse projection matrix. Since this did not change between frames we just needed one buffer. However, now, it will store also the inverse view matrix. That matrix can change between frame, so to avoid modifying the buffer while rendering, we will have as many buffers as swap chain images. We will need also new buffers, and descriptor sets for the cascade shadow splits data. We will not update that uniform in the constructor, but while recording the commands, therefore the constructor has been changed (no `Scene` instance as a parameter) and the `updateInvProjMatrix` method has been removed. We need also new uniforms for the data of the cascade splits projection view uniforms and cascade instances). In the `cleanup` method, we just need to free those resources.
 
 ```java
 public class LightingRenderActivity {
@@ -1085,7 +1087,24 @@ public class LightingRenderActivity {
     ...
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
                                   List<Attachment> attachments, Scene scene) {
-        ...
+        this.swapChain = swapChain;
+        this.scene = scene;
+        device = swapChain.getDevice();
+        auxVec = new Vector4f();
+        lightSpecConstants = new LightSpecConstants();
+
+        lightingFrameBuffer = new LightingFrameBuffer(swapChain);
+        int numImages = swapChain.getNumImages();
+        createShaders();
+        createDescriptorPool(attachments);
+        createUniforms(numImages);
+        createDescriptorSets(attachments, numImages);
+        createPipeline(pipelineCache);
+        createCommandBuffers(commandPool, numImages);
+
+        for (int i = 0; i < numImages; i++) {
+            preRecordCommandBuffer(i);
+        }
     }
 
     public void cleanup() {
@@ -1335,11 +1354,11 @@ public class Render {
     public void render(Window window, Scene scene) {
         ...
         CommandBuffer commandBuffer = geometryRenderActivity.beginRecording();
-        geometryRenderActivity.recordCommandBuffer(commandBuffer, meshList, scene);
-        shadowRenderActivity.recordCommandBuffer(commandBuffer, meshList, scene);
+        geometryRenderActivity.recordCommandBuffer(commandBuffer, vulkanModels);
+        shadowRenderActivity.recordCommandBuffer(commandBuffer, vulkanModels);
         geometryRenderActivity.endRecording(commandBuffer);
         geometryRenderActivity.submit(graphQueue);
-        lightingRenderActivity.prepareCommandBuffer(scene, shadowRenderActivity.getShadowCascades());
+        lightingRenderActivity.prepareCommandBuffer(shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.submit(graphQueue);
 
         if (swapChain.presentImage(graphQueue)) {
