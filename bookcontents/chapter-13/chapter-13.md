@@ -433,7 +433,7 @@ public class ShadowsFrameBuffer {
 }
 ```
 
-The next step is to create a new class that will control the rendering of the shadow maps. The class will be named `ShadowRenderActivity` and will render the scene from the light point of view for each shadow split. That information will be stored as a depth map, which in our case, will be a multi-layered image. One approach to achieve this is to render the scene, from the light point of view for each of the cascades individually. We would be rendering the scene as many times as cadacade splits we have, storing the depth information for each split in a layer. We can do this much better, we could achieve the same results just submitting the drawing commands for the scene elements once, by using a geometry shader. Geometry shaders are executed between vertex and fragment shaders, allowing us to transforms the primitives. In this specific case, we will use them to generate new primitives, one for each of the cascade splits taking as an input the original primitives which are generated in the vertex shader while rendering the scene. That is, taking a single triangle we will be generating three triangles, one per cascade split. We will see the details when examining the shaders, however, keep in mind that in this case we will be using a pair of vertex-geometry shaders, instead of the usual vertex-fragment shaders pair that we have been employing on previous chapters.
+The next step is to create a new class that will control the rendering of the shadow maps. The class will be named `ShadowRenderActivity` and will render the scene from the light point of view for each shadow split. That information will be stored as a depth map, which in our case, will be a multi-layered image. One approach to achieve this is to render the scene, from the light point of view for each of the cascades individually. We would be rendering the scene as many times as cascade splits we have, storing the depth information for each split in a layer. We can do this much better, we could achieve the same results just submitting the drawing commands for the scene elements once, by using a geometry shader. Geometry shaders are executed between vertex and fragment shaders, allowing us to transforms the primitives. In this specific case, we will use them to generate new primitives, one for each of the cascade splits taking as an input the original primitives which are generated in the vertex shader while rendering the scene. That is, taking a single triangle we will be generating three triangles, one per cascade split. We will see the details when examining the shaders, however, keep in mind that in this case we will be using a pair of vertex-geometry shaders, instead of the usual vertex-fragment shaders pair that we have been employing on previous chapters.
 
 The `ShadowRenderActivity` class starts like this:
 
@@ -495,7 +495,7 @@ public class ShadowRenderActivity {
 }
 ```
 
-The `createDescriptorPool` should already be familiar to you, in this case we will be using just regular uniforms to hold the cascade splits information. We need to cerate sepparate buffers per swap chain image to avoid modifying the buffers while we are using them for rendering. 
+The `createDescriptorPool` should already be familiar to you, in this case we will be using just regular uniforms to hold the cascade splits information. We need to cerate separate buffers per swap chain image to avoid modifying the buffers while we are using them for rendering. 
 
 ```java
 public class ShadowRenderActivity {
