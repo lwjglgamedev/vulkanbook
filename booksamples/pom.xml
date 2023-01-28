@@ -13,7 +13,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>${exec-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>java-agent</id>
@@ -95,7 +95,7 @@
                             <addClasspath>true</addClasspath>
                             <mainClass>${main.class}</mainClass>
                             <classpathPrefix>lib/</classpathPrefix>
-							<useUniqueVersions>false</useUniqueVersions>
+                            <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                         <manifestEntries>
                             <Built-By>${built.by}</Built-By>
@@ -133,15 +133,16 @@
         <!-- Versions -->
         <java.version>17</java.version>
 		
+		<exec-maven-plugin.version>3.1.0</exec-maven-plugin.version>
         <imgui-java.version>1.86.6</imgui-java.version>
         <joml.version>1.10.5</joml.version>
         <lwjgl.version>3.3.1</lwjgl.version>
-        <maven-compiler-plugin.version>3.9.0</maven-compiler-plugin.version>
-        <maven-dependency-plugin.version>3.2.0</maven-dependency-plugin.version>
-        <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
-        <maven-resources-plugin.version>3.2.0</maven-resources-plugin.version>
-        <native-maven-plugin.version>0.9.9</native-maven-plugin.version>
-        <tinylog.version>2.5.0</tinylog.version>
+        <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+        <maven-dependency-plugin.version>3.5.0</maven-dependency-plugin.version>
+        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <maven-resources-plugin.version>3.3.0</maven-resources-plugin.version>
+        <native-maven-plugin.version>0.9.19</native-maven-plugin.version>
+        <tinylog.version>2.6.0</tinylog.version>
     </properties>
 
     <profiles>
@@ -191,12 +192,13 @@
                             <execution>
                                 <id>build-native</id>
                                 <goals>
-                                   <goal>build</goal>
+                                   <goal>compile-no-fork</goal>
                                 </goals>
                                 <phase>package</phase>
                             </execution>
                         </executions>
                         <configuration>
+                            <debug>false</debug>
                         </configuration>
                     </plugin>
                  </plugins>
