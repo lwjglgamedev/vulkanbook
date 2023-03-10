@@ -2,6 +2,7 @@ package org.vulkanb.eng.graph.gui;
 
 import imgui.*;
 import imgui.type.ImInt;
+import org.lwjgl.glfw.*;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -13,6 +14,7 @@ import org.vulkanb.eng.scene.*;
 import java.nio.*;
 import java.util.*;
 
+import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 public class GuiRenderActivity {
@@ -249,5 +251,35 @@ public class GuiRenderActivity {
 
         vertexBuffer.unMap();
         indicesBuffer.unMap();
+    }
+
+    public static class CharCallBack implements GLFWCharCallbackI {
+        @Override
+        public void invoke(long windowHandle, int c) {
+            ImGuiIO io = ImGui.getIO();
+            if (!io.getWantCaptureKeyboard()) {
+                return;
+            }
+            io.addInputCharacter(c);
+        }
+    }
+
+    public static class KeyCallback implements GLFWKeyCallbackI {
+        @Override
+        public void invoke(long windowHandle, int key, int scancode, int action, int mods) {
+            ImGuiIO io = ImGui.getIO();
+            if (!io.getWantCaptureKeyboard()) {
+                return;
+            }
+            if (action == GLFW_PRESS) {
+                io.setKeysDown(key, true);
+            } else if (action == GLFW_RELEASE) {
+                io.setKeysDown(key, false);
+            }
+            io.setKeyCtrl(io.getKeysDown(GLFW_KEY_LEFT_CONTROL) || io.getKeysDown(GLFW_KEY_RIGHT_CONTROL));
+            io.setKeyShift(io.getKeysDown(GLFW_KEY_LEFT_SHIFT) || io.getKeysDown(GLFW_KEY_RIGHT_SHIFT));
+            io.setKeyAlt(io.getKeysDown(GLFW_KEY_LEFT_ALT) || io.getKeysDown(GLFW_KEY_RIGHT_ALT));
+            io.setKeySuper(io.getKeysDown(GLFW_KEY_LEFT_SUPER) || io.getKeysDown(GLFW_KEY_RIGHT_SUPER));
+        }
     }
 }

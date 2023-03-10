@@ -16,10 +16,10 @@ public class Window {
     private long windowHandle;
 
     public Window(String title) {
-        this(title, null);
+        this(title, null, null);
     }
 
-    public Window(String title, GLFWKeyCallbackI keyCallback) {
+    public Window(String title, GLFWKeyCallbackI keyCallback, GLFWCharCallbackI charCallback) {
         if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
@@ -52,6 +52,9 @@ public class Window {
                 keyCallback.invoke(window, key, scancode, action, mods);
             }
         });
+        if (charCallback != null) {
+            glfwSetCharCallback(windowHandle, charCallback);
+        }
 
         mouseInput = new MouseInput(windowHandle);
     }

@@ -3,6 +3,7 @@ package org.vulkanb.eng;
 import imgui.*;
 import org.joml.Vector2f;
 import org.vulkanb.eng.graph.Render;
+import org.vulkanb.eng.graph.gui.GuiRenderActivity;
 import org.vulkanb.eng.scene.Scene;
 
 public class Engine {
@@ -15,7 +16,7 @@ public class Engine {
 
     public Engine(String windowTitle, IAppLogic appLogic) {
         this.appLogic = appLogic;
-        window = new Window(windowTitle);
+        window = new Window(windowTitle, new GuiRenderActivity.KeyCallback(), new GuiRenderActivity.CharCallBack());
         scene = new Scene(window);
         render = new Render(window, scene);
         appLogic.init(window, scene, render);

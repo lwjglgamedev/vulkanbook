@@ -475,7 +475,7 @@ public final class GraphConstants {
 }
 ``` 
 
-Finally, the `GuiRenderActivity` class, defines a `resize` method that should be invoked when the render area changes its size. In this methods, we just update the ImGui display size:
+The `GuiRenderActivity` class also defines a `resize` method that should be invoked when the render area changes its size. In this methods, we just update the ImGui display size:
 ```java
 public class GuiRenderActivity {
     ...
@@ -488,6 +488,73 @@ public class GuiRenderActivity {
     ...
 }
 ```
+
+To complete the `GuiRenderActivity` class we will define two callbacks so Imgui widgets are able to capture keys. First we need to define an inner class which will implement GLFW key callback, and is defined like this:
+
+```java
+public class GuiRenderActivity {
+    ...
+    public static class KeyCallback implements GLFWKeyCallbackI {
+        @Override
+        public void invoke(long windowHandle, int key, int scancode, int action, int mods) {
+            ImGuiIO io = ImGui.getIO();
+            if (!io.getWantCaptureKeyboard()) {
+                return;
+            }
+            if (action == GLFW_PRESS) {
+                io.setKeysDown(key, true);
+            } else if (action == GLFW_RELEASE) {
+                io.setKeysDown(key, false);
+            }
+            io.setKeyCtrl(io.getKeysDown(GLFW_KEY_LEFT_CONTROL) || io.getKeysDown(GLFW_KEY_RIGHT_CONTROL));
+            io.setKeyShift(io.getKeysDown(GLFW_KEY_LEFT_SHIFT) || io.getKeysDown(GLFW_KEY_RIGHT_SHIFT));
+            io.setKeyAlt(io.getKeysDown(GLFW_KEY_LEFT_ALT) || io.getKeysDown(GLFW_KEY_RIGHT_ALT));
+            io.setKeySuper(io.getKeysDown(GLFW_KEY_LEFT_SUPER) || io.getKeysDown(GLFW_KEY_RIGHT_SUPER));
+        }
+    }
+    ...
+}
+```
+This callback first check if ImGui needs to capture keyboard (that is, the focus is om some Imgui window / widget). If so, we set up the state of Imgui according to key pressed or released events.
+
+We will also define an inner class which implements a char a char call back so text input widgets can process those events.
+```java
+public class GuiRenderActivity {
+    ...
+    public static class CharCallBack implements GLFWCharCallbackI {
+        @Override
+        public void invoke(long windowHandle, int c) {
+            ImGuiIO io = ImGui.getIO();
+            if (!io.getWantCaptureKeyboard()) {
+                return;
+            }
+            io.addInputCharacter(c);
+        }
+    }
+    ...
+}
+```
+
+Our `Window` class already supported the addition of new key callbacks but not of custom char callbacks. We need to update it to receive it as a parameter an set up properly GLFW to use that callback.
+```java
+public class Window {
+    ...
+    public Window(String title) {
+        this(title, null, null);
+    }
+
+    public Window(String title, GLFWKeyCallbackI keyCallback, GLFWCharCallbackI charCallback) {
+        ...
+        if (charCallback != null) {
+            glfwSetCharCallback(windowHandle, charCallback);
+        }
+
+        mouseInput = new MouseInput(windowHandle);
+    }
+    ...
+}
+```
+
 
 The vertex shader used for rendering the GUI is quite simple, we just transform the coordinates so they are in the `[-1, 1]` range and output the texture coordinates and color so they can be used in the fragment shader:
 ```glsl
@@ -690,9 +757,15 @@ public class Scene {
 }
 ```
 
-We will modify also the `Engine` class to check if the input has been handled by ImGui prior to delegating the input handling to the `IAppLogic` instance. By doing so, the application can opt to not respond to user input.
+We will modify also the `Engine` class to check if the input has been handled by ImGui prior to delegating the input handling to the `IAppLogic` instance. By doing so, the application can opt to not respond to user input. Also, we will use the callbacks required by ImGui when creating the window.
 ```java
 public class Engine {
+    ...
+    public Engine(String windowTitle, IAppLogic appLogic) {
+        ...
+        window = new Window(windowTitle, new GuiRenderActivity.KeyCallback(), new GuiRenderActivity.CharCallBack());
+        ...
+    }
     ...
     private boolean handleInputGui() {
         ImGuiIO imGuiIO = ImGui.getIO();
@@ -755,6 +828,9 @@ public class Main implements IAppLogic {
     ...
     @Override
     public void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed) {
+        if (inputConsumed) {
+            return;
+        }
         ...
         if (window.isKeyPressed(GLFW_KEY_0)) {
             scene.setGuiInstance(null);
