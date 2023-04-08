@@ -127,11 +127,28 @@ public class GuiRenderActivity {
 
         vertexBuffers = new VulkanBuffer[swapChain.getNumImages()];
         indicesBuffers = new VulkanBuffer[swapChain.getNumImages()];
-    }
+
+        ImGuiIO io = ImGui.getIO();
+        io.setKeyMap(ImGuiKey.Tab, GLFW_KEY_TAB);
+        io.setKeyMap(ImGuiKey.LeftArrow, GLFW_KEY_LEFT);
+        io.setKeyMap(ImGuiKey.RightArrow, GLFW_KEY_RIGHT);
+        io.setKeyMap(ImGuiKey.UpArrow, GLFW_KEY_UP);
+        io.setKeyMap(ImGuiKey.DownArrow, GLFW_KEY_DOWN);
+        io.setKeyMap(ImGuiKey.PageUp, GLFW_KEY_PAGE_UP);
+        io.setKeyMap(ImGuiKey.PageDown, GLFW_KEY_PAGE_DOWN);
+        io.setKeyMap(ImGuiKey.Home, GLFW_KEY_HOME);
+        io.setKeyMap(ImGuiKey.End, GLFW_KEY_END);
+        io.setKeyMap(ImGuiKey.Insert, GLFW_KEY_INSERT);
+        io.setKeyMap(ImGuiKey.Delete, GLFW_KEY_DELETE);
+        io.setKeyMap(ImGuiKey.Backspace, GLFW_KEY_BACKSPACE);
+        io.setKeyMap(ImGuiKey.Space, GLFW_KEY_SPACE);
+        io.setKeyMap(ImGuiKey.Enter, GLFW_KEY_ENTER);
+        io.setKeyMap(ImGuiKey.Escape, GLFW_KEY_ESCAPE);
+        io.setKeyMap(ImGuiKey.KeyPadEnter, GLFW_KEY_KP_ENTER);    }
     ...
 }
 ```
-In the `createUIResources` method, we first need to call the `ImGui` `createContext` function. This should be the very first call prior to invoking any other ImGui functions. After that, we retrieve a reference to the `ImGuiIO`, and call the `setIniFilename` method. The reason for doing that, is that ImGui, by default, will create a file named `imgui.ini` when the context is destroyed. This `imgui.ini` file will hold the position and size of the GUI elements, so they can be restored to their last positions. We will not be using that feature, so we set `null` as the parameter of the `setIniFilename` to deactivate that feature. After that, we set the display size and a scale. The next step is to load the texture that will be used to render fonts in a `Texture` instance, which will be transitioned to the adequate final layout. The final step is to create buffer arrays that will hold the vertices data and their indices (we will use sepparate buffers per swapchain image to be able to change them when they are being accessed by the previous image).
+In the `createUIResources` method, we first need to call the `ImGui` `createContext` function. This should be the very first call prior to invoking any other ImGui functions. After that, we retrieve a reference to the `ImGuiIO`, and call the `setIniFilename` method. The reason for doing that, is that ImGui, by default, will create a file named `imgui.ini` when the context is destroyed. This `imgui.ini` file will hold the position and size of the GUI elements, so they can be restored to their last positions. We will not be using that feature, so we set `null` as the parameter of the `setIniFilename` to deactivate that feature. After that, we set the display size and a scale. The next step is to load the texture that will be used to render fonts in a `Texture` instance, which will be transitioned to the adequate final layout. After that, we need to create buffer arrays that will hold the vertices data and their indices (we will use separate buffers per swapchain image to be able to change them when they are being accessed by the previous image). The final step is to properly initialize `ImGui` key map which translates GLFW key codes to the ones used by `ImGui`. This is required to properly handle special keys in certain widgets (such as text widgets, where arrows and delete buttons need to be processed by `ImGui`).
 
 In order to load the texture, we need to modify the `Texture` class to be able to receive the texture data directly in a `ByteBuffer`. The common code used in both constructors has been extracted to the `createTextureResources` method.
 ```java
