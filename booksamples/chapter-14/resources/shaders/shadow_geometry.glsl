@@ -16,7 +16,7 @@ layout(set = 0, binding = 0) uniform ProjUniforms {
 
 void main()
 {
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 3; i++)
     {
         outTextCoords = inTextCoords[i];
         gl_Layer = gl_InvocationID;
