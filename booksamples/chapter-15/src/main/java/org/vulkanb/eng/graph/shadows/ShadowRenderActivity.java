@@ -18,6 +18,8 @@ import static org.lwjgl.vulkan.VK11.*;
 
 public class ShadowRenderActivity {
 
+    private static final String SHADOW_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/shadow_fragment.glsl";
+    private static final String SHADOW_FRAGMENT_SHADER_FILE_SPV = SHADOW_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String SHADOW_GEOMETRY_SHADER_FILE_GLSL = "resources/shaders/shadow_geometry.glsl";
     private static final String SHADOW_GEOMETRY_SHADER_FILE_SPV = SHADOW_GEOMETRY_SHADER_FILE_GLSL + ".spv";
     private static final String SHADOW_VERTEX_SHADER_FILE_GLSL = "resources/shaders/shadow_vertex.glsl";
@@ -30,11 +32,14 @@ public class ShadowRenderActivity {
     private List<CascadeShadow> cascadeShadows;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
+    private Map<String, TextureDescriptorSet> descriptorSetMap;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
     private ShaderProgram shaderProgram;
     private VulkanBuffer[] shadowsUniforms;
     private SwapChain swapChain;
+    private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
+    private TextureSampler textureSampler;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene) {
@@ -54,23 +59,31 @@ public class ShadowRenderActivity {
         pipeLine.cleanup();
         Arrays.stream(shadowsUniforms).forEach(VulkanBuffer::cleanup);
         uniformDescriptorSetLayout.cleanup();
+        textureDescriptorSetLayout.cleanup();
+        textureSampler.cleanup();
         descriptorPool.cleanup();
         shaderProgram.cleanup();
         shadowsFrameBuffer.cleanup();
     }
 
     private void createDescriptorPool(int numImages) {
+        EngineProperties engineProps = EngineProperties.getInstance();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(numImages, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
     private void createDescriptorSets(int numImages) {
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_GEOMETRY_BIT);
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformDescriptorSetLayout,
+                textureDescriptorSetLayout,
         };
 
+        descriptorSetMap = new HashMap<>();
+        textureSampler = new TextureSampler(device, 1);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet[numImages];
         shadowsUniforms = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
@@ -95,11 +108,13 @@ public class ShadowRenderActivity {
         if (engineProperties.isShaderRecompilation()) {
             ShaderCompiler.compileShaderIfChanged(SHADOW_VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
             ShaderCompiler.compileShaderIfChanged(SHADOW_GEOMETRY_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_geometry_shader);
+            ShaderCompiler.compileShaderIfChanged(SHADOW_FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
         }
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV),
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_GEOMETRY_BIT, SHADOW_GEOMETRY_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV),
                 });
     }
 
@@ -171,19 +186,17 @@ public class ShadowRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            LongBuffer descriptorSets = stack.mallocLong(1)
+            LongBuffer descriptorSets = stack.mallocLong(2)
                     .put(0, projMatrixDescriptorSet[idx].getVkDescriptorSet());
 
-            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
-
-            recordEntities(stack, cmdHandle, vulkanModelList, entityAnimationsBuffers);
+            recordEntities(stack, cmdHandle, vulkanModelList, descriptorSets, entityAnimationsBuffers);
 
             vkCmdEndRenderPass(cmdHandle);
         }
     }
 
     private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList,
+                                LongBuffer descriptorSets,
                                 Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         LongBuffer offsets = stack.mallocLong(1);
         offsets.put(0, 0L);
@@ -196,6 +209,7 @@ public class ShadowRenderActivity {
             }
             int meshCount = 0;
             for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
                 for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
                     if (!vulkanModel.hasAnimations()) {
                         vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
@@ -204,6 +218,10 @@ public class ShadowRenderActivity {
                     vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
                     for (Entity entity : entities) {
+                        descriptorSets.put(1, textureDescriptorSet.getVkDescriptorSet());
+                        vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+
                         setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
                         if (vulkanModel.hasAnimations()) {
                             List<AnimationComputeActivity.EntityAnimationBuffer> animationsBuffer = entityAnimationsBuffers.get(entity.getId());
@@ -215,6 +233,15 @@ public class ShadowRenderActivity {
                     }
                     meshCount++;
                 }
+            }
+        }
+    }
+
+    public void registerModels(List<VulkanModel> vulkanModelList) {
+        device.waitIdle();
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                updateTextureDescriptorSet(vulkanMaterial.texture());
             }
         }
     }
@@ -238,6 +265,16 @@ public class ShadowRenderActivity {
         for (CascadeShadow cascadeShadow : cascadeShadows) {
             VulkanUtils.copyMatrixToBuffer(shadowsUniforms[idx], cascadeShadow.getProjViewMatrix(), offset);
             offset += GraphConstants.MAT4X4_SIZE;
+        }
+    }
+
+    private void updateTextureDescriptorSet(Texture texture) {
+        String textureFileName = texture.getFileName();
+        TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(textureFileName);
+        if (textureDescriptorSet == null) {
+            textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout,
+                    texture, textureSampler, 0);
+            descriptorSetMap.put(textureFileName, textureDescriptorSet);
         }
     }
 }

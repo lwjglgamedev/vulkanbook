@@ -1324,12 +1324,13 @@ public class ShadowRenderActivity {
     public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
                                      Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         ...
-            recordEntities(stack, cmdHandle, vulkanModelList, entityAnimationsBuffers);
+            recordEntities(stack, cmdHandle, vulkanModelList, descriptorSets, entityAnimationsBuffers);
         ...
     }
 
 
     private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList,
+                                LongBuffer descriptorSets,
                                 Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         ...
         LongBuffer vertexBuffer = stack.mallocLong(1);
@@ -1337,6 +1338,7 @@ public class ShadowRenderActivity {
             ...
             int meshCount = 0;
             for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
                 for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
                     if (!vulkanModel.hasAnimations()) {
                         vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
@@ -1345,6 +1347,10 @@ public class ShadowRenderActivity {
                     vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
                     for (Entity entity : entities) {
+                        descriptorSets.put(1, textureDescriptorSet.getVkDescriptorSet());
+                        vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+
                         setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
                         if (vulkanModel.hasAnimations()) {
                             List<AnimationComputeActivity.EntityAnimationBuffer> animationsBuffer = entityAnimationsBuffers.get(entity.getId());
@@ -1413,7 +1419,7 @@ public class Render {
 }
 ```
 
-Finally, we need to modify the `render` method to record the compute shader commands to animate the buffers associated to entities which have animations. As we have nmmentioned in the introduction, we have tried to keep the code as simple as possible. However, animation buffers should only be updated attending to the duration of the different key frames and the desired interpolating frequency. Also, compute commands recording could be performed asynchronously in a separate thread. In order to keep this example simple, we will just update those buffers in each render cycle.
+Finally, we need to modify the `render` method to record the compute shader commands to animate the buffers associated to entities which have animations. As we have mentioned in the introduction, we have tried to keep the code as simple as possible. However, animation buffers should only be updated attending to the duration of the different key frames and the desired interpolating frequency. Also, compute commands recording could be performed asynchronously in a separate thread. In order to keep this example simple, we will just update those buffers in each render cycle.
 ```java
 public class Render {
     ...

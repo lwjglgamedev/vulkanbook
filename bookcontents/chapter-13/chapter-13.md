@@ -433,13 +433,15 @@ public class ShadowsFrameBuffer {
 }
 ```
 
-The next step is to create a new class that will control the rendering of the shadow maps. The class will be named `ShadowRenderActivity` and will render the scene from the light point of view for each shadow split. That information will be stored as a depth map, which in our case, will be a multi-layered image. One approach to achieve this is to render the scene, from the light point of view for each of the cascades individually. We would be rendering the scene as many times as cascade splits we have, storing the depth information for each split in a layer. We can do this much better, we could achieve the same results just submitting the drawing commands for the scene elements once, by using a geometry shader. Geometry shaders are executed between vertex and fragment shaders, allowing us to transforms the primitives. In this specific case, we will use them to generate new primitives, one for each of the cascade splits taking as an input the original primitives which are generated in the vertex shader while rendering the scene. That is, taking a single triangle we will be generating three triangles, one per cascade split. We will see the details when examining the shaders, however, keep in mind that in this case we will be using a pair of vertex-geometry shaders, instead of the usual vertex-fragment shaders pair that we have been employing on previous chapters.
+The next step is to create a new class that will control the rendering of the shadow maps. The class will be named `ShadowRenderActivity` and will render the scene from the light point of view for each shadow split. That information will be stored as a depth map, which in our case, will be a multi-layered image. One approach to achieve this is to render the scene, from the light point of view for each of the cascades individually. We would be rendering the scene as many times as cascade splits we have, storing the depth information for each split in a layer. We can do this much better, we could achieve the same results just submitting the drawing commands for the scene elements once, by using a geometry shader. Geometry shaders are executed between vertex and fragment shaders, allowing us to transform the primitives. In this specific case, we will use them to generate new primitives, one for each of the cascade splits taking as an input the original primitives which are generated in the vertex shader while rendering the scene. That is, taking a single triangle we will be generating three triangles, one per cascade split. We will see the details when examining the shaders, however, keep in mind that in this case we will be using a set of vertex-geometry-fragment shaders, instead of the usual vertex-fragment shaders pair that we have been employing on previous chapters.
 
 The `ShadowRenderActivity` class starts like this:
 
 ```java
 public class ShadowRenderActivity {
 
+    private static final String SHADOW_FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/shadow_fragment.glsl";
+    private static final String SHADOW_FRAGMENT_SHADER_FILE_SPV = SHADOW_FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String SHADOW_GEOMETRY_SHADER_FILE_GLSL = "resources/shaders/shadow_geometry.glsl";
     private static final String SHADOW_GEOMETRY_SHADER_FILE_SPV = SHADOW_GEOMETRY_SHADER_FILE_GLSL + ".spv";
     private static final String SHADOW_VERTEX_SHADER_FILE_GLSL = "resources/shaders/shadow_vertex.glsl";
@@ -448,6 +450,7 @@ public class ShadowRenderActivity {
     private List<CascadeShadow> cascadeShadows;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
+    private Map<String, TextureDescriptorSet> descriptorSetMap;
     private Device device;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
@@ -456,6 +459,8 @@ public class ShadowRenderActivity {
     private ShadowsFrameBuffer shadowsFrameBuffer;
     private VulkanBuffer[] shadowsUniforms;
     private SwapChain swapChain;
+    private DescriptorSetLayout.SamplerDescriptorSetLayout textureDescriptorSetLayout;
+    private TextureSampler textureSampler;    
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene) {
@@ -474,7 +479,7 @@ public class ShadowRenderActivity {
 }
 ```
 
-As you can see, its definition is quite similar to the `GeometryRenderActivity` class, we define some constants for the shaders and several attributes to hold the descriptor set,s buffers, the pipeline, etc. In the constructor we create and instance of the frame buffer and call several methods to complete the initialization. Let's review those method by order of appearance. The `createShaders` method, just creates a new `ShaderProgram` which links a vertex and a geometry shader:
+As you can see, its definition is quite similar to the `GeometryRenderActivity` class, we define some constants for the shaders and several attributes to hold the descriptor sets, buffers, the pipeline, etc. In the constructor we create and instance of the frame buffer and call several methods to complete the initialization. Let's review those method by order of appearance. The `createShaders` method, just creates a new `ShaderProgram` which links a vertex, a geometry shader and a fragment shader:
 
 ```java
 public class ShadowRenderActivity {
@@ -484,42 +489,50 @@ public class ShadowRenderActivity {
         if (engineProperties.isShaderRecompilation()) {
             ShaderCompiler.compileShaderIfChanged(SHADOW_VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
             ShaderCompiler.compileShaderIfChanged(SHADOW_GEOMETRY_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_geometry_shader);
+            ShaderCompiler.compileShaderIfChanged(SHADOW_FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
         }
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV),
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_GEOMETRY_BIT, SHADOW_GEOMETRY_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV),
                 });
     }
     ...
 }
 ```
 
-The `createDescriptorPool` should already be familiar to you, in this case we will be using just regular uniforms to hold the cascade splits information. We need to cerate separate buffers per swap chain image to avoid modifying the buffers while we are using them for rendering. 
+The `createDescriptorPool` should already be familiar to you, in this case we will be using just regular uniforms to hold the cascade splits information. We need to create separate buffers per swap chain image to avoid modifying the buffers while we are using them for rendering. We will also need uniforms to access texture information of the models (we need to check transparent fragments so they do not cast shadows).
 
 ```java
 public class ShadowRenderActivity {
     ...
     private void createDescriptorPool(int numImages) {
+        EngineProperties engineProps = EngineProperties.getInstance();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(numImages, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
     ...
 }
 ```
 
-The `createDescriptorSets` method just creates de required descriptor sets and the associated buffers used to pass uniform values. In our case, we will be using the projection view matrices buffers as uniforms to render the depth maps.
+The `createDescriptorSets` method just creates de required descriptor sets and the associated buffers used to pass uniform values. In our case, we will be using the projection view matrices buffers as uniforms to render the depth maps and the textures associated to the materials.
 
 ```java
 public class ShadowRenderActivity {
     ...
     private void createDescriptorSets(int numImages) {
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_GEOMETRY_BIT);
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformDescriptorSetLayout,
+                textureDescriptorSetLayout,
         };
 
+        descriptorSetMap = new HashMap<>();
+        textureSampler = new TextureSampler(device, 1);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet[numImages];
         shadowsUniforms = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
@@ -575,6 +588,8 @@ public class ShadowRenderActivity {
         pipeLine.cleanup();
         Arrays.stream(shadowsUniforms).forEach(VulkanBuffer::cleanup);
         uniformDescriptorSetLayout.cleanup();
+        textureDescriptorSetLayout.cleanup();
+        textureSampler.cleanup();
         descriptorPool.cleanup();
         shaderProgram.cleanup();
         shadowsFrameBuffer.cleanup();
@@ -647,19 +662,16 @@ public class ShadowRenderActivity {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeLine.getVkPipeline());
 
-            LongBuffer descriptorSets = stack.mallocLong(1)
+            LongBuffer descriptorSets = stack.mallocLong(2)
                     .put(0, projMatrixDescriptorSet[idx].getVkDescriptorSet());
 
-            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
-
-            recordEntities(stack, cmdHandle, vulkanModelList);
+            recordEntities(stack, cmdHandle, vulkanModelList, descriptorSets);
 
             vkCmdEndRenderPass(cmdHandle);
         }
     }
 
-    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList) {
+    private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, List<VulkanModel> vulkanModelList, LongBuffer descriptorSets) {
         LongBuffer offsets = stack.mallocLong(1);
         offsets.put(0, 0L);
         LongBuffer vertexBuffer = stack.mallocLong(1);
@@ -670,12 +682,17 @@ public class ShadowRenderActivity {
                 continue;
             }
             for (VulkanModel.VulkanMaterial material : vulkanModel.getVulkanMaterialList()) {
+                TextureDescriptorSet textureDescriptorSet = descriptorSetMap.get(material.texture().getFileName());
                 for (VulkanModel.VulkanMesh mesh : material.vulkanMeshList()) {
                     vertexBuffer.put(0, mesh.verticesBuffer().getBuffer());
                     vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
                     vkCmdBindIndexBuffer(cmdHandle, mesh.indicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
                     for (Entity entity : entities) {
+                        descriptorSets.put(1, textureDescriptorSet.getVkDescriptorSet());
+                        vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
+
                         setPushConstant(pipeLine, cmdHandle, entity.getModelMatrix());
                         vkCmdDrawIndexed(cmdHandle, mesh.numIndices(), 1, 0, 0, 0);
                     }
@@ -692,6 +709,22 @@ The methods are quite similar to the one used in the `GeometryRenderActivity` cl
 - In this case, we receive a `CommandBuffer` instance as a parameter, instead of creating our command buffers for rendering the depth map. We will use the same command buffer used while doing the geometry pass to render the depth maps. Doing this way there is no need to add additionally synchronization code so the lighting phase starts when the scene and the depth maps have been properly render. We can do this, because rendering the geometry information and the depth maps are independent.
 - Since we are using the geometry command buffer, we do not perform any reset operation over it and we do not need to provide a submit method. This will be done when submitting the geometry stage commands.
 - We only update the projection view matrices of the cascade splits if the directional light has changed or the camera has moved. This way, we avoid performing this calculations for each frame if nothing changes.
+
+We will need also a method, which will be called from the `Render` class to set up the texture descriptor sets (as in the `GeometryRenderActivity` class):
+```java
+public class ShadowRenderActivity {
+    ...
+    public void registerModels(List<VulkanModel> vulkanModelList) {
+        device.waitIdle();
+        for (VulkanModel vulkanModel : vulkanModelList) {
+            for (VulkanModel.VulkanMaterial vulkanMaterial : vulkanModel.getVulkanMaterialList()) {
+                updateTextureDescriptorSet(vulkanMaterial.texture());
+            }
+        }
+    }
+    ...
+}
+```
 
 The rest of the methods of this class are for supporting resizing (we just store the reference to the new swap chain and update the cascades splits projection matrices), for setting the push constants (that will hold the model matrices) and for updating the uniform buffers that will contain the cascade splits projection view matrices.
 
@@ -723,7 +756,7 @@ public class ShadowRenderActivity {
 }
 ```
 
-The vertex shader (`shadow_vertex.glsl`) is quite simple, we just apply the model matrix, passed as a push constant, to transform the input coordinates:
+The vertex shader (`shadow_vertex.glsl`) is quite simple, we just apply the model matrix, passed as a push constant, to transform the input coordinates. We need also to pass the texture coordinates to the next shader (geometry).
 
 ```glsl
 #version 450
@@ -738,9 +771,12 @@ layout(push_constant) uniform matrices {
     mat4 modelMatrix;
 } push_constants;
 
+layout (location = 0) out vec2 outTextCoord;
+
 void main()
 {
     gl_Position = push_constants.modelMatrix * vec4(entityPos, 1.0f);
+    outTextCoord = entityTextCoords;
 }
 ```
 
@@ -755,14 +791,19 @@ The interesting part comes in the geometry shader (`shadow_geometry.glsl`):
 layout (triangles, invocations = SHADOW_MAP_CASCADE_COUNT) in;
 layout (triangle_strip, max_vertices = 3) out;
 
+layout (location = 0) in vec2 inTextCoords[];
+layout (location = 0) out vec2 outTextCoords;
+
 layout(set = 0, binding = 0) uniform ProjUniforms {
     mat4 projViewMatrices[SHADOW_MAP_CASCADE_COUNT];
 } projUniforms;
 
+
 void main()
 {
-    for (int i = 0; i < gl_in.length(); i++)
+    for (int i = 0; i < 4; i++)
     {
+        outTextCoords = inTextCoords[i];
         gl_Layer = gl_InvocationID;
         gl_Position = projUniforms.projViewMatrices[gl_InvocationID] * gl_in[i].gl_Position;
         EmitVertex();
@@ -773,7 +814,27 @@ void main()
 
 First of all, unfortunately, we cannot pass the number of cascade splits as a specialization constant or as an uniform. The geometry shader will be instanced (please do not mix this with instanced rendering, which is a different concept), that is we will be generating multiple primitives (triangles) for a single input primitive. That is, the geometry shader will be executed, instanced, many times for each input triangle. This is controlled by the `invocations` parameter in the layout qualifier. This parameter requires a literal integer, therefore, we cannot use uniforms or specialization constants to pass the number of splits. Please keep this in mind if you want to modify that number, you will need to update the geometry shader manually. Taking all of this into consideration, the main method, contains a loop that will generate as many vertices as vertices has the input primitive. For each of them, we will apply the projection view matrix associated to one of the cascade splits, storing that information in a specific layer of the depth image used as an output attachment. The geometry shader will be executed three times for each input primitive, therefore, a single triangle will generate three. 
 
-If we do not want to use geometry shaders, we could get the same results using a fragment shader. In this case, however, we would need to record the commands to draw the scene items as many times as cascade splits we have. In this approach we would need also dedicated image views (one per split) to dump the results to a specific layer of the output attachment. In a fragment shader we cannot specify the layer where we should dump the results. In the geometry shader, we aer setting this by using the `gl_Layer` pre-built variable, which is assigned to the iteration of the geometry shader (from `0` to `invocations`). 
+If we do not want to use geometry shaders, we could get the same results using a fragment shader. In this case, however, we would need to record the commands to draw the scene items as many times as cascade splits we have. In this approach we would need also dedicated image views (one per split) to dump the results to a specific layer of the output attachment. In a fragment shader we cannot specify the layer where we should dump the results. In the geometry shader, we aer setting this by using the `gl_Layer` pre-built variable, which is assigned to the iteration of the geometry shader (from `0` to `invocations`).
+
+Another important aspect is that we receive the texture coordinates in the `inTextCoords` input variable. This is declared as an array, which is mandatory for input variables in geometry shaders. We use that input variable to pass it to the fragment shader stage using the `outTextCoords` variable.
+
+The fragment shader, `shadow_fragment.glsl`, is defined like this:
+```glsl
+#version 450
+
+layout (set = 1, binding = 0) uniform sampler2D textSampler;
+layout (location = 0) in vec2 inTextCoords;
+
+void main()
+{
+    float alpha = texture(textSampler, inTextCoords).a;
+    if (alpha < 0.5) {
+        discard;
+    }
+}
+```
+
+As you can see, we use the texture coordinates to check the level of transparency of the fragment and discard the ones below `0.5`. By doing so, we will control that transparent fragments will not cast any shadow. Keep in mind that if you do not need to support transparent elements, you can remove the fragment shader, depth values would be generated correctly just form the output of the geometry shader. In this case, there is no need to have even an empty fragment shader. You can just remove it.
 
 ## Changes in geometry phase
 

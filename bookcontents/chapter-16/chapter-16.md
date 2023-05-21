@@ -1000,7 +1000,7 @@ public class Render {
 }
 ```
 
-If you recall the `GlobalBuffers` class, it is responsible of loading the models data into the appropriate buffers, therefore the `loadModels` method in the `Render` class will need to be updated, since that work is already been done. We will review later on what needs to be done now in the `GeometryRenderActivity` class.
+If you recall the `GlobalBuffers` class, it is responsible of loading the models data into the appropriate buffers, therefore the `loadModels` method in the `Render` class will need to be updated, since that work is already been done. We will review later on what needs to be done now in the `GeometryRenderActivity` and `ShadowRenderActivity` classes.
 ```java
 public class Render {
     ...
@@ -1010,6 +1010,7 @@ public class Render {
         Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         geometryRenderActivity.loadModels(textureCache);
+        shadowRenderActivity.loadModels(textureCache);
     }
     ...
 }
@@ -1119,8 +1120,6 @@ With all the changes above, the `GeometryRenderActivity` class has been simplifi
 public class GeometryRenderActivity {
     ...
     private final GeometrySpecConstants geometrySpecConstants;
-    ...
-    private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
     ...
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
     ...
@@ -1601,7 +1600,53 @@ void main()
 
 Besides extracting some of the code previously in the `main` function, we now access a single buffer that has the material information using the material index. We also access an array of textures, using a texture index that is stored in the material information.
 
-`ShadowRenderActivity` class has been simplified even more. We just need to update the pipeline creation to take into consideration the new vertex structure with per-instance attributes and change the drawing commands to submit a draw indirect command for animated and non-animated entities. As in the case of the `GeometryRenderActivity`, the `recordCommandBuffer` receives the index of the current frame in the swap chain. We will no longer be updating the cascade shadow maps and the projection matrices in this method.
+`ShadowRenderActivity` class has been simplified also a lot. We need to adapt the descriptor sets to use materials storage buffer:
+```java
+public class ShadowRenderActivity {
+    ...
+    private GeometrySpecConstants geometrySpecConstants;
+    private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
+    ...
+    private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
+    ...
+    private TextureDescriptorSet textureDescriptorSet;
+    ...
+    public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene, GlobalBuffers globalBuffers) {
+        ...
+        geometrySpecConstants = new GeometrySpecConstants();
+        ...
+        createDescriptorSets(numImages, globalBuffers);
+        ...
+    }
+
+    public void cleanup() {
+        ...
+        geometrySpecConstants.cleanup();
+        ...
+        storageDescriptorSetLayout.cleanup();
+        ...
+    }
+
+
+    private void createDescriptorSets(int numImages, GlobalBuffers globalBuffers) {
+        ...
+        textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, engineProperties.getMaxTextures(), 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        descriptorSetLayouts = new DescriptorSetLayout[]{
+                uniformDescriptorSetLayout,
+                textureDescriptorSetLayout,
+                storageDescriptorSetLayout,
+        };
+        ...
+        materialsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
+                globalBuffers.getMaterialsBuffer(), 0);
+        ...
+    }
+    ...
+}
+```
+
+We also need to update the pipeline creation to take into consideration the new vertex structure with per-instance attributes and change the drawing commands to submit a draw indirect command for animated and non-animated entities. As in the case of the `GeometryRenderActivity`, the `recordCommandBuffer` receives the index of the current frame in the swap chain. We will no longer be updating the cascade shadow maps and the projection matrices in this method.
 ```java
 public class ShadowRenderActivity {
     ...
@@ -1611,6 +1656,17 @@ public class ShadowRenderActivity {
                 GeometryAttachments.NUMBER_COLOR_ATTACHMENTS, true, true, 0,
                 new InstancedVertexBufferStructure(), descriptorSetLayouts);
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
+    }
+
+    private void createShaders() {
+        ...
+        shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
+                {
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_GEOMETRY_BIT, SHADOW_GEOMETRY_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV,
+                                geometrySpecConstants.getSpecInfo()),
+                });
     }
     ...
     public void recordCommandBuffer(CommandBuffer commandBuffer, GlobalBuffers globalBuffers, int idx) {
@@ -1672,16 +1728,117 @@ public class ShadowRenderActivity {
 }
 ```
 
-The shadow vertex shader, `shadow_vertex.glsl`, just needs to be updated to use the per-instance data:
+The `ShadowRenderActivity` class will also have a `loadModels` method similar to the one defined in the `GeometryRenderActivity` to set up the texture descriptor set:
+```java
+public class ShadowRenderActivity {
+    ...
+    public void loadModels(TextureCache textureCache) {
+        device.waitIdle();
+        // Size of the descriptor is setup in the layout, we need to fill up the texture list
+        // up to the number defined in the layout (reusing last texture)
+        List<Texture> textureCacheList = textureCache.getAsList();
+        int textureCacheSize = textureCacheList.size();
+        List<Texture> textureList = new ArrayList<>(textureCacheList);
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        int maxTextures = engineProperties.getMaxTextures();
+        for (int i = 0; i < maxTextures - textureCacheSize; i++) {
+            textureList.add(textureCacheList.get(textureCacheSize - 1));
+        }
+        textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout, textureList,
+                textureSampler, 0);
+    }    ...
+}
+```
+
+The shadow vertex shader, `shadow_vertex.glsl`, just needs to be updated to use the per-instance data and also pass the material index to next stages as a new output variable:
 ```glsl
-...
+#version 450
+
+layout(location = 0) in vec3 entityPos;
+layout(location = 1) in vec3 entityNormal;
+layout(location = 2) in vec3 entityTangent;
+layout(location = 3) in vec3 entityBitangent;
+layout(location = 4) in vec2 entityTextCoords;
+
 // Instanced attributes
 layout (location = 5) in mat4 entityModelMatrix;
 layout (location = 9) in uint entityMatIdx;
 
+layout (location = 0) out vec2 outTextCoord;
+layout (location = 1) out flat uint outMatIdx;
+
 void main()
 {
     gl_Position = entityModelMatrix * vec4(entityPos, 1.0f);
+    outTextCoord = entityTextCoords;
+    outMatIdx = entityMatIdx;
+}
+```
+
+The shadow geometry shader, `shadow_geometry.glsl`, needs just to be updated to pass the material index, received as a new input, to the fragment shader:
+```glsl
+#version 450
+
+// You should change this manually if GraphConstants.SHADOW_MAP_CASCADE_COUNT changes
+#define SHADOW_MAP_CASCADE_COUNT 3
+
+layout (triangles, invocations = SHADOW_MAP_CASCADE_COUNT) in;
+layout (triangle_strip, max_vertices = 3) out;
+
+layout (location = 0) in vec2 inTextCoords[];
+layout (location = 1) in uint intMatIdx[];
+
+layout (location = 0) out vec2 outTextCoords;
+layout (location = 1) out flat uint outMatIdx;
+
+layout(set = 0, binding = 0) uniform ProjUniforms {
+    mat4 projViewMatrices[SHADOW_MAP_CASCADE_COUNT];
+} projUniforms;
+
+
+void main()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        outTextCoords = inTextCoords[i];
+        outMatIdx = intMatIdx[i];
+        gl_Layer = gl_InvocationID;
+        gl_Position = projUniforms.projViewMatrices[gl_InvocationID] * gl_in[i].gl_Position;
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+```
+
+In the shadow fragment shader, `shadow_fragment_shader.glsl` we need to change how we access the material texture as in the case of the geometry shader:
+```glsl
+#version 450
+
+layout (constant_id = 0) const int MAX_TEXTURES = 100;
+
+struct Material {
+    vec4 diffuseColor;
+    int textureIdx;
+    int normalMapIdx;
+    int metalRoughMapIdx;
+    float roughnessFactor;
+    float metallicFactor;
+};
+
+layout (set = 1, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
+layout (std430, set=2, binding=0) readonly buffer srcBuf {
+    Material data[];
+} materialsBuf;
+layout (location = 0) in vec2 inTextCoords;
+layout (location = 1) in flat uint intMatIdx;
+
+void main()
+{
+    Material material = materialsBuf.data[intMatIdx];
+    float alpha = texture(textSampler[material.textureIdx], inTextCoords).a;
+    if (alpha < 0.5) {
+        discard;
+    }
 }
 ```
 

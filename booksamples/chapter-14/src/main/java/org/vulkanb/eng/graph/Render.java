@@ -92,6 +92,7 @@ public class Render {
         Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         geometryRenderActivity.registerModels(vulkanModels);
+        shadowRenderActivity.registerModels(vulkanModels);
         animationComputeActivity.registerModels(vulkanModels);
     }
 

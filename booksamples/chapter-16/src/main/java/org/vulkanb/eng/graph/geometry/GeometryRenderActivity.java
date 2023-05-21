@@ -29,7 +29,6 @@ public class GeometryRenderActivity {
 
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] geometryDescriptorSetLayouts;
-    private DescriptorSetLayout.DynUniformDescriptorSetLayout materialDescriptorSetLayout;
     private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet projMatrixDescriptorSet;
@@ -67,7 +66,6 @@ public class GeometryRenderActivity {
         Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
-        materialDescriptorSetLayout.cleanup();
         textureDescriptorSetLayout.cleanup();
         uniformDescriptorSetLayout.cleanup();
         storageDescriptorSetLayout.cleanup();
@@ -90,7 +88,6 @@ public class GeometryRenderActivity {
         EngineProperties engineProperties = EngineProperties.getInstance();
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_VERTEX_BIT);
         textureDescriptorSetLayout = new DescriptorSetLayout.SamplerDescriptorSetLayout(device, engineProperties.getMaxTextures(), 0, VK_SHADER_STAGE_FRAGMENT_BIT);
-        materialDescriptorSetLayout = new DescriptorSetLayout.DynUniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         geometryDescriptorSetLayouts = new DescriptorSetLayout[]{
                 uniformDescriptorSetLayout,

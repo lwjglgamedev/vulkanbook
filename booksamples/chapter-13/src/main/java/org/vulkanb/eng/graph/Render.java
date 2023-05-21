@@ -74,6 +74,7 @@ public class Render {
         Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         geometryRenderActivity.registerModels(vulkanModels);
+        shadowRenderActivity.registerModels(vulkanModels);
     }
 
     public void render(Window window, Scene scene) {
