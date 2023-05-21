@@ -1,6 +1,6 @@
 # Troubleshooting device loss error
 
-In this appendix we will provide some insights on how to torubleshoot Vulakn device loss errors. The root cause of device loss errors may be hard to track, therefore, Vulkan provides some debugging extensions to help developpers track down these errors.
+In this appendix we will provide some insights on how to troubleshoot Vulkan device loss errors. The root cause of device loss errors may be hard to track, therefore, Vulkan provides some debugging extensions to help developers track down these errors.
 
 You can find the complete source code for this chapter [here](../../booksamples/appendix-01).
 
@@ -146,7 +146,7 @@ The `insertBufferMarker` can be used to insert buffer markers into a command buf
 - The command buffer into which the marker is recorded.
 - The pipeline stage whose completion triggers the marker write.
 - A buffer where the marker will be written to.
-- An offet to that buffer.
+- An offset to that buffer.
 - The marker itself, which is a 32 bit value.
 
 The `insertDebugCheckPoint` is the equivalent one for NVIDIA GPUs. In this case, it calls the `vkCmdSetCheckpointNV` which just needs a command buffer and a checkpoint marker (a long value). In this case, since the markers are not written to another buffer, we need to dump the status of the checkpoints by calling the `dumpCheckPoints` which retrieves the most recent diagnostic checkpoints that were executed by the device.
