@@ -18,15 +18,15 @@ public class VulkanUtils {
         // Utility class
     }
 
+    public static void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
+        copyMatrixToBuffer(vulkanBuffer, matrix, 0);
+    }
+
     public static void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix, int offset) {
         long mappedMemory = vulkanBuffer.map();
         ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) vulkanBuffer.getRequestedSize());
         matrix.get(offset, matrixBuffer);
         vulkanBuffer.unMap();
-    }
-
-    public static void copyMatrixToBuffer(VulkanBuffer vulkanBuffer, Matrix4f matrix) {
-        copyMatrixToBuffer(vulkanBuffer, matrix, 0);
     }
 
     public static List<CheckPoint> dumpCheckPoints(Queue queue) {

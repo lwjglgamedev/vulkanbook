@@ -33,6 +33,7 @@ public class ShadowRenderActivity {
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
+    private boolean firstRun;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
     private ShaderProgram shaderProgram;
@@ -43,6 +44,7 @@ public class ShadowRenderActivity {
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene) {
+        firstRun = true;
         this.swapChain = swapChain;
         this.scene = scene;
         device = swapChain.getDevice();
@@ -137,8 +139,11 @@ public class ShadowRenderActivity {
     public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList,
                                     Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
+            if (firstRun || scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+                if (firstRun) {
+                    firstRun = false;
+                }
             }
 
             int idx = swapChain.getCurrentFrame();

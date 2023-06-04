@@ -14,7 +14,7 @@ import static org.lwjgl.glfw.GLFW.*;
 public class Main implements IAppLogic {
 
     private static final float MOUSE_SENSITIVITY = 0.1f;
-    private static final float MOVEMENT_SPEED = 10.0f / 1E9f;
+    private static final float MOVEMENT_SPEED = 0.01f;
 
     private float angleInc;
     private Entity bobEntity;
@@ -35,7 +35,7 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+    public void input(Window window, Scene scene, long diffTimeMillis) {
         float move = diffTimeMillis * MOVEMENT_SPEED;
         Camera camera = scene.getCamera();
         if (window.isKeyPressed(GLFW_KEY_W)) {
@@ -82,12 +82,6 @@ public class Main implements IAppLogic {
             lightAngle = 180;
         }
         updateDirectionalLight();
-
-        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
-        if (entityAnimation.isStarted()) {
-            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
-            entityAnimation.setCurrentFrame(currentFrame);
-        }
     }
 
     @Override
@@ -130,6 +124,15 @@ public class Main implements IAppLogic {
         Light[] lightArr = new Light[lights.size()];
         lightArr = lights.toArray(lightArr);
         scene.setLights(lightArr);
+    }
+
+    @Override
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
+        if (entityAnimation.isStarted()) {
+            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
+            entityAnimation.setCurrentFrame(currentFrame);
+        }
     }
 
     private void updateDirectionalLight() {

@@ -55,7 +55,7 @@ public class Render {
         textureCache = new TextureCache();
         globalBuffers = new GlobalBuffers(device);
         geometryRenderActivity = new GeometryRenderActivity(swapChain, pipelineCache, scene, globalBuffers);
-        shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache, scene);
+        shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache, scene, globalBuffers);
         List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
         attachments.add(shadowRenderActivity.getDepthAttachment());
         lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
@@ -117,6 +117,7 @@ public class Render {
         Logger.debug("Loaded {} model(s)", modelDataList.size());
 
         geometryRenderActivity.loadModels(textureCache);
+        shadowRenderActivity.loadModels(textureCache);
     }
 
     private void recordCommands() {

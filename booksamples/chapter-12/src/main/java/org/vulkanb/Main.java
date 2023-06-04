@@ -14,7 +14,7 @@ import static org.lwjgl.glfw.GLFW.*;
 public class Main implements IAppLogic {
 
     private static final float MOUSE_SENSITIVITY = 0.1f;
-    private static final float MOVEMENT_SPEED = 10.0f / 1E9f;
+    private static final float MOVEMENT_SPEED = 0.01f;
 
     private float angleInc;
     private Light directionalLight;
@@ -33,7 +33,42 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+    public void init(Window window, Scene scene, Render render) {
+        List<ModelData> modelDataList = new ArrayList<>();
+
+        String sponzaModelId = "sponza-model";
+        ModelData sponzaModelData = ModelLoader.loadModel(sponzaModelId, "resources/models/sponza/Sponza.gltf",
+                "resources/models/sponza");
+        modelDataList.add(sponzaModelData);
+        Entity sponzaEntity = new Entity("SponzaEntity", sponzaModelId, new Vector3f(0.0f, 0.0f, 0.0f));
+        scene.addEntity(sponzaEntity);
+
+        render.loadModels(modelDataList);
+
+        Camera camera = scene.getCamera();
+        camera.setPosition(0.0f, 5.0f, 0.0f);
+        camera.setRotation((float) Math.toRadians(20.0f), (float) Math.toRadians(90.f));
+
+        scene.getAmbientLight().set(0.2f, 0.2f, 0.2f, 1.0f);
+        List<Light> lights = new ArrayList<>();
+        directionalLight = new Light();
+        directionalLight.getPosition().set(0.0f, 1.0f, 0.0f, 0.0f);
+        directionalLight.getColor().set(1.0f, 1.0f, 1.0f, 1.0f);
+        lights.add(directionalLight);
+        updateDirectionalLight();
+
+        Light light = new Light();
+        light.getPosition().set(0, 1, 0, 1.0f);
+        light.getColor().set(0.0f, 1.0f, 0.0f, 1.0f);
+        lights.add(light);
+
+        Light[] lightArr = new Light[lights.size()];
+        lightArr = lights.toArray(lightArr);
+        scene.setLights(lightArr);
+    }
+
+    @Override
+    public void input(Window window, Scene scene, long diffTimeMillis) {
         float move = diffTimeMillis * MOVEMENT_SPEED;
         Camera camera = scene.getCamera();
         if (window.isKeyPressed(GLFW_KEY_W)) {
@@ -76,38 +111,8 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void init(Window window, Scene scene, Render render) {
-        List<ModelData> modelDataList = new ArrayList<>();
-
-        String sponzaModelId = "sponza-model";
-        ModelData sponzaModelData = ModelLoader.loadModel(sponzaModelId, "resources/models/sponza/Sponza.gltf",
-                "resources/models/sponza");
-        modelDataList.add(sponzaModelData);
-        Entity sponzaEntity = new Entity("SponzaEntity", sponzaModelId, new Vector3f(0.0f, 0.0f, 0.0f));
-        scene.addEntity(sponzaEntity);
-
-        render.loadModels(modelDataList);
-
-        Camera camera = scene.getCamera();
-        camera.setPosition(0.0f, 5.0f, 0.0f);
-        camera.setRotation((float) Math.toRadians(20.0f), (float) Math.toRadians(90.f));
-
-        scene.getAmbientLight().set(0.2f, 0.2f, 0.2f, 1.0f);
-        List<Light> lights = new ArrayList<>();
-        directionalLight = new Light();
-        directionalLight.getPosition().set(0.0f, 1.0f, 0.0f, 0.0f);
-        directionalLight.getColor().set(1.0f, 1.0f, 1.0f, 1.0f);
-        lights.add(directionalLight);
-        updateDirectionalLight();
-
-        Light light = new Light();
-        light.getPosition().set(0, 1, 0, 1.0f);
-        light.getColor().set(0.0f, 1.0f, 0.0f, 1.0f);
-        lights.add(light);
-
-        Light[] lightArr = new Light[lights.size()];
-        lightArr = lights.toArray(lightArr);
-        scene.setLights(lightArr);
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        // To be implemented
     }
 
     private void updateDirectionalLight() {

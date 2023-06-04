@@ -1,6 +1,7 @@
 package org.vulkanb.eng.graph.gui;
 
 import imgui.*;
+import imgui.flag.ImGuiKey;
 import imgui.type.ImInt;
 import org.lwjgl.glfw.*;
 import org.lwjgl.system.*;
@@ -121,6 +122,24 @@ public class GuiRenderActivity {
 
         vertexBuffers = new VulkanBuffer[swapChain.getNumImages()];
         indicesBuffers = new VulkanBuffer[swapChain.getNumImages()];
+
+        ImGuiIO io = ImGui.getIO();
+        io.setKeyMap(ImGuiKey.Tab, GLFW_KEY_TAB);
+        io.setKeyMap(ImGuiKey.LeftArrow, GLFW_KEY_LEFT);
+        io.setKeyMap(ImGuiKey.RightArrow, GLFW_KEY_RIGHT);
+        io.setKeyMap(ImGuiKey.UpArrow, GLFW_KEY_UP);
+        io.setKeyMap(ImGuiKey.DownArrow, GLFW_KEY_DOWN);
+        io.setKeyMap(ImGuiKey.PageUp, GLFW_KEY_PAGE_UP);
+        io.setKeyMap(ImGuiKey.PageDown, GLFW_KEY_PAGE_DOWN);
+        io.setKeyMap(ImGuiKey.Home, GLFW_KEY_HOME);
+        io.setKeyMap(ImGuiKey.End, GLFW_KEY_END);
+        io.setKeyMap(ImGuiKey.Insert, GLFW_KEY_INSERT);
+        io.setKeyMap(ImGuiKey.Delete, GLFW_KEY_DELETE);
+        io.setKeyMap(ImGuiKey.Backspace, GLFW_KEY_BACKSPACE);
+        io.setKeyMap(ImGuiKey.Space, GLFW_KEY_SPACE);
+        io.setKeyMap(ImGuiKey.Enter, GLFW_KEY_ENTER);
+        io.setKeyMap(ImGuiKey.Escape, GLFW_KEY_ESCAPE);
+        io.setKeyMap(ImGuiKey.KeyPadEnter, GLFW_KEY_KP_ENTER);
     }
 
     public void recordCommandBuffer(Scene scene, CommandBuffer commandBuffer) {
@@ -187,9 +206,11 @@ public class GuiRenderActivity {
                     rect.extent(it -> it.width((int) (imVec4.z - imVec4.x)).height((int) (imVec4.w - imVec4.y)));
                     vkCmdSetScissor(cmdHandle, 0, rect);
                     int numElements = imDrawData.getCmdListCmdBufferElemCount(i, j);
-                    vkCmdDrawIndexed(cmdHandle, numElements, 1, offsetIdx, offsetVtx, 0);
-                    offsetIdx += numElements;
+                    vkCmdDrawIndexed(cmdHandle, numElements, 1,
+                            offsetIdx + imDrawData.getCmdListCmdBufferIdxOffset(i, j),
+                            offsetVtx + imDrawData.getCmdListCmdBufferVtxOffset(i, j), 0);
                 }
+                offsetIdx += imDrawData.getCmdListIdxBufferSize(i);
                 offsetVtx += imDrawData.getCmdListVtxBufferSize(i);
             }
         }

@@ -22,11 +22,6 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
-        // To be implemented
-    }
-
-    @Override
     public void init(Window window, Scene scene, Render render) {
         String modelId = "TriangleModel";
         ModelData.MeshData meshData = new ModelData.MeshData(new float[]{
@@ -40,5 +35,15 @@ public class Main implements IAppLogic {
         List<ModelData> modelDataList = new ArrayList<>();
         modelDataList.add(modelData);
         render.loadModels(modelDataList);
+    }
+
+    @Override
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        // To be implemented
+    }
+
+    @Override
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        // To be implemented
     }
 }

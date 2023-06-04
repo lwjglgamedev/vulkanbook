@@ -10,9 +10,9 @@ import java.util.*;
 
 public class Main implements IAppLogic {
 
+    private final Vector3f rotatingAngle = new Vector3f(1, 1, 1);
     private float angle = 0;
     private Entity cubeEntity;
-    private Vector3f rotatingAngle = new Vector3f(1, 1, 1);
 
     public static void main(String[] args) {
         Logger.info("Starting application");
@@ -24,16 +24,6 @@ public class Main implements IAppLogic {
     @Override
     public void cleanup() {
         // To be implemented
-    }
-
-    @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
-        angle += 1.0f;
-        if (angle >= 360) {
-            angle = angle - 360;
-        }
-        cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
-        cubeEntity.updateModelMatrix();
     }
 
     @Override
@@ -85,5 +75,20 @@ public class Main implements IAppLogic {
         cubeEntity = new Entity("CubeEntity", modelId, new Vector3f(0.0f, 0.0f, 0.0f));
         cubeEntity.setPosition(0, 0, -2);
         scene.addEntity(cubeEntity);
+    }
+
+    @Override
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        // To be implemented
+    }
+
+    @Override
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        angle += 1.0f;
+        if (angle >= 360) {
+            angle = angle - 360;
+        }
+        cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
+        cubeEntity.updateModelMatrix();
     }
 }

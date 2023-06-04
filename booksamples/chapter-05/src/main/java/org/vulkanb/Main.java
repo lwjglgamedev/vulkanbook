@@ -20,12 +20,17 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+    public void init(Window window, Scene scene, Render render) {
         // To be implemented
     }
 
     @Override
-    public void init(Window window, Scene scene, Render render) {
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        // To be implemented
+    }
+
+    @Override
+    public void update(Window window, Scene scene, long diffTimeMillis) {
         // To be implemented
     }
 }

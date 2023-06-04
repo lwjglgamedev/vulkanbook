@@ -29,6 +29,7 @@ public class ShadowRenderActivity {
     private List<CascadeShadow> cascadeShadows;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
+    private boolean firstRun;
     private GeometrySpecConstants geometrySpecConstants;
     private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
     private Pipeline pipeLine;
@@ -43,6 +44,7 @@ public class ShadowRenderActivity {
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene, GlobalBuffers globalBuffers) {
+        firstRun = true;
         this.swapChain = swapChain;
         this.scene = scene;
         device = swapChain.getDevice();
@@ -245,8 +247,11 @@ public class ShadowRenderActivity {
     }
 
     public void render() {
-        if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
+        if (firstRun || scene.isLightChanged() || scene.getCamera().isHasMoved()) {
             CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+            if (firstRun) {
+                firstRun = false;
+            }
         }
 
         int idx = swapChain.getCurrentFrame();

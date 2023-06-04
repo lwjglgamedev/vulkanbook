@@ -1713,8 +1713,11 @@ The new `render` method will contain the code, previously in the `render` method
 public class ShadowRenderActivity {
     ...
     public void render() {
-        if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
+        if (firstRun || scene.isLightChanged() || scene.getCamera().isHasMoved()) {
             CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+            if (firstRun) {
+                firstRun = false;
+            }
         }
 
         int idx = swapChain.getCurrentFrame();
@@ -2109,19 +2112,6 @@ public class Main implements IAppLogic {
     ...
     private int maxFrames = 0;
     ...
-    public void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed) {
-        ...
-        if (window.isKeyPressed(GLFW_KEY_SPACE)) {
-            bobEntity.getEntityAnimation().setStarted(!bobEntity.getEntityAnimation().isStarted());
-        }
-        ...
-        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
-        if (entityAnimation != null && entityAnimation.isStarted()) {
-            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
-            entityAnimation.setCurrentFrame(currentFrame);
-        }
-    }
-    ...
     public void init(Window window, Scene scene, Render render) {
         ...
         String bobModelId = "bob-model";
@@ -2137,6 +2127,24 @@ public class Main implements IAppLogic {
         scene.addEntity(bobEntity);
         ...
     }
+    ...
+    public void input(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed) {
+        ...
+        if (window.isKeyPressed(GLFW_KEY_SPACE)) {
+            bobEntity.getEntityAnimation().setStarted(!bobEntity.getEntityAnimation().isStarted());
+        }
+        ...
+    }
+    ...
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
+        if (entityAnimation != null && entityAnimation.isStarted()) {
+            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
+            entityAnimation.setCurrentFrame(currentFrame);
+        }
+    }
+    ...
+}
 ```
 
 The results will be exactly the same as in chapter 14, but now we have the basis of a bind-less pipeline.

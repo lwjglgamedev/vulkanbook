@@ -38,6 +38,10 @@ public class PhysicalDevice {
         return result;
     }
     ...
+    public CheckPointExtension getCheckPointExtension() {
+        return checkPointExtension;
+    }
+    ...
     public enum CheckPointExtension {
         NONE, NVIDIA, AMD;
     }
@@ -138,6 +142,9 @@ public class VulkanUtils {
         }
     }
     ...
+
+    public record CheckPoint(long marker, int stage) {
+    }
 }
 ```
 

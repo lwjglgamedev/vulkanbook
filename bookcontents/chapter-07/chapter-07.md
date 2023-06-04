@@ -955,9 +955,9 @@ The next step missing now is to modify the `init` method in or `Main` class:
 ```java
 public class Main implements IAppLogic {
     ...
+    private final Vector3f rotatingAngle = new Vector3f(1, 1, 1);
     private float angle = 0;
     private Entity cubeEntity;
-    private Vector3f rotatingAngle = new Vector3f(1, 1, 1);
     ...    
     @Override
     public void init(Window window, Scene scene, Render render) {
@@ -1013,13 +1013,13 @@ public class Main implements IAppLogic {
 }
 ```
 
-We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color. After that, we need to create also a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `handleInput`method, that will be invoked periodically to update that angle:
+We are defining the coordinates of a cube, and setting some random texture coordinates to see some changes in the color. After that, we need to create also a new `Entity` instance in order to render the cube. We want the cube to spin, so we use the `update`method, that will be invoked periodically to update that angle:
 
 ```java
 public class Main implements IAppLogic {
     ...
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+    public void update(Window window, Scene scene, long diffTimeMillis) {
         angle += 1.0f;
         if (angle >= 360) {
             angle = angle - 360;
@@ -1027,7 +1027,6 @@ public class Main implements IAppLogic {
         cubeEntity.getRotation().identity().rotateAxis((float) Math.toRadians(angle), rotatingAngle);
         cubeEntity.updateModelMatrix();
     }
-    ...
 }
 ```
 

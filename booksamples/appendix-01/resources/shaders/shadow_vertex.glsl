@@ -10,7 +10,12 @@ layout(location = 4) in vec2 entityTextCoords;
 layout (location = 5) in mat4 entityModelMatrix;
 layout (location = 9) in uint entityMatIdx;
 
+layout (location = 0) out vec2 outTextCoord;
+layout (location = 1) out flat uint outMatIdx;
+
 void main()
 {
     gl_Position = entityModelMatrix * vec4(entityPos, 1.0f);
+    outTextCoord = entityTextCoords;
+    outMatIdx = entityMatIdx;
 }

@@ -48,6 +48,7 @@ public class VulkanBuffer {
     }
 
     public void cleanup() {
+        MemoryUtil.memFree(pb);
         unMap();
         vmaDestroyBuffer(device.getMemoryAllocator().getVmaAllocator(), buffer, allocation);
     }

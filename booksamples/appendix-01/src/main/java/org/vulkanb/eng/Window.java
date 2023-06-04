@@ -9,11 +9,11 @@ import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
 public class Window {
 
+    private final MouseInput mouseInput;
+    private final long windowHandle;
     private int height;
-    private MouseInput mouseInput;
     private boolean resized;
     private int width;
-    private long windowHandle;
 
     public Window(String title) {
         this(title, null, null);

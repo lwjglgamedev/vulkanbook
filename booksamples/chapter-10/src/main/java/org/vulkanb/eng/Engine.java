@@ -5,11 +5,11 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Engine {
 
-    private IAppLogic appLogic;
-    private Render render;
+    private final IAppLogic appLogic;
+    private final Render render;
+    private final Scene scene;
+    private final Window window;
     private boolean running;
-    private Scene scene;
-    private Window window;
 
     public Engine(String windowTitle, IAppLogic appLogic) {
         this.appLogic = appLogic;
@@ -27,27 +27,29 @@ public class Engine {
 
     public void run() {
         EngineProperties engineProperties = EngineProperties.getInstance();
-        long initialTime = System.nanoTime();
-        double timeU = 1000000000d / engineProperties.getUps();
-        double deltaU = 0;
+        long initialTime = System.currentTimeMillis();
+        float timeU = 1000.0f / engineProperties.getUps();
+        double deltaUpdate = 0;
 
         long updateTime = initialTime;
         while (running && !window.shouldClose()) {
-
             window.pollEvents();
 
-            long currentTime = System.nanoTime();
-            deltaU += (currentTime - initialTime) / timeU;
-            initialTime = currentTime;
+            long now = System.currentTimeMillis();
+            deltaUpdate += (now - initialTime) / timeU;
 
-            if (deltaU >= 1) {
-                long diffTimeNanos = currentTime - updateTime;
-                appLogic.handleInput(window, scene, diffTimeNanos);
-                updateTime = currentTime;
-                deltaU--;
+            appLogic.input(window, scene, now - initialTime);
+
+            if (deltaUpdate >= 1) {
+                long diffTimeNanos = now - updateTime;
+                appLogic.update(window, scene, diffTimeNanos);
+                updateTime = now;
+                deltaUpdate--;
             }
 
             render.render(window, scene);
+
+            initialTime = now;
         }
 
         cleanup();

@@ -451,6 +451,7 @@ public class ShadowRenderActivity {
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private Map<String, TextureDescriptorSet> descriptorSetMap;
+    private boolean firstRun;
     private Device device;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
@@ -464,6 +465,7 @@ public class ShadowRenderActivity {
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene) {
+        firstRun = true;
         this.swapChain = swapChain;
         this.scene = scene;
         device = swapChain.getDevice();
@@ -613,8 +615,11 @@ public class ShadowRenderActivity {
     ...
     public void recordCommandBuffer(CommandBuffer commandBuffer, List<VulkanModel> vulkanModelList) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            if (scene.isLightChanged() || scene.getCamera().isHasMoved()) {
+            if (firstRun || scene.isLightChanged() || scene.getCamera().isHasMoved()) {
                 CascadeShadow.updateCascadeShadows(cascadeShadows, scene);
+                if (firstRun) {
+                    firstRun = false;
+                }
             }
 
             int idx = swapChain.getCurrentFrame();
@@ -1508,7 +1513,6 @@ public class Engine {
     public void run() {
         ...
         while (running && !window.shouldClose()) {
-
             scene.getCamera().setHasMoved(false);
             ...
         }
@@ -1566,7 +1570,7 @@ public class Main implements IAppLogic {
     ...
     private float lightAngle = 90.1f;
     ...
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+    public void input(Window window, Scene scene, long diffTimeMillis) {
         ...
         if (window.isKeyPressed(GLFW_KEY_LEFT)) {
             angleInc -= 0.05f;

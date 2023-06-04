@@ -1044,6 +1044,7 @@ public class Main implements IAppLogic {
         modelDataList.add(modelData);
         render.loadModels(modelDataList);
     }
+    ...
 }
 ```
 

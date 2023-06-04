@@ -1437,24 +1437,11 @@ public class Render {
 }
 ```
 
-The last step is to load an animated model in the `Main` class. We just need to load it as in the case of static models, but specifying that it will contain animations. We need also to invoke the `Render` class `loadAnimation` method to register the animation for an entity. In the `handleInput` method we will use to space bar to pause / resume the animation and automatically select the next key frame, when animation is not paused, in each update cycle. 
+The last step is to load an animated model in the `Main` class. We just need to load it as in the case of static models, but specifying that it will contain animations. We need also to invoke the `Render` class `loadAnimation` method to register the animation for an entity. In the `inut` method we will use to space bar to pause / resume the animation. In the `update`method we will automatically select the next key frame, when animation is not paused, in each update cycle. 
 ```java
 public class Main implements IAppLogic {
     ...
     private Entity bobEntity;
-    ...
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
-        ...
-        if (window.isKeyPressed(GLFW_KEY_SPACE)) {
-            bobEntity.getEntityAnimation().setStarted(!bobEntity.getEntityAnimation().isStarted());
-        }
-        ...
-        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
-        if (entityAnimation.isStarted()) {
-            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
-            entityAnimation.setCurrentFrame(currentFrame);
-        }
-    }
     ...
     public void init(Window window, Scene scene, Render render) {
         ...
@@ -1478,6 +1465,23 @@ public class Main implements IAppLogic {
         ...
     }
     ...
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        ...
+        if (window.isKeyPressed(GLFW_KEY_SPACE)) {
+            bobEntity.getEntityAnimation().setStarted(!bobEntity.getEntityAnimation().isStarted());
+        }
+        ...
+    }
+    ...
+    @Override
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        Entity.EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
+        if (entityAnimation.isStarted()) {
+            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
+            entityAnimation.setCurrentFrame(currentFrame);
+        }
+    }
+    ...    
 }
 ```
 

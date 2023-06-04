@@ -38,22 +38,28 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
+    public void init(Window window, Scene scene, Render render) {
         // To be implemented
     }
 
     @Override
-    public void init(Window window, Scene scene, Render render) {
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        // To be implemented
+    }
+
+    @Override
+    public void update(Window window, Scene scene, long diffTimeMillis) {
         // To be implemented
     }
 }
 ```
 
-As you can see, in the `main` method, we just start our render/game engine, modeled by the `Engine` class. This class requires, in its constructor, the name of the application and a reference to the class which will implement the application logic. This is controlled by an interface `IAppLogic` which defines three methods:
+As you can see, in the `main` method, we just start our render/game engine, modeled by the `Engine` class. This class requires, in its constructor, the name of the application and a reference to the class which will implement the application logic. This is controlled by an interface `IAppLogic` which defines four methods:
 
-- `init`: Invoked upon application startup to create the required resources (meshes, textures, etc).
-- `handelInput`: Which is invoked periodically so that the application can update its stated reacting to user input.
 - `cleanup`: Which is invoked when the application finished to properly release the acquired resources.
+- `init`: Invoked upon application startup to create the required resources (meshes, textures, etc).
+- `input`: Which is invoked periodically so that the application can update its stated reacting to user input.
+- `update`: Which is invoked periodically so that the application can update its state.
 
 ## Engine
 
@@ -67,11 +73,11 @@ import org.vulkanb.eng.scene.Scene;
 
 public class Engine {
 
-    private IAppLogic appLogic;
-    private Render render;
+    private final IAppLogic appLogic;
+    private final Render render;
+    private final Scene scene;
+    private final Window window;
     private boolean running;
-    private Scene scene;
-    private Window window;
 
     public Engine(String windowTitle, IAppLogic appLogic) {
         this.appLogic = appLogic;
@@ -89,27 +95,29 @@ public class Engine {
 
     public void run() {
         EngineProperties engineProperties = EngineProperties.getInstance();
-        long initialTime = System.nanoTime();
-        double timeU = 1000000000d / engineProperties.getUps();
-        double deltaU = 0;
+        long initialTime = System.currentTimeMillis();
+        float timeU = 1000.0f / engineProperties.getUps();
+        double deltaUpdate = 0;
 
         long updateTime = initialTime;
         while (running && !window.shouldClose()) {
+            window.pollEvents();
 
-            this.window.pollEvents();
+            long now = System.currentTimeMillis();
+            deltaUpdate += (now - initialTime) / timeU;
 
-            long currentTime = System.nanoTime();
-            deltaU += (currentTime - initialTime) / timeU;
-            initialTime = currentTime;
+            appLogic.input(window, scene, now - initialTime);
 
-            if (deltaU >= 1) {
-                long diffTimeNanos = currentTime - updateTime;
-                appLogic.handleInput(window, scene, diffTimeNanos);
-                updateTime = currentTime;
-                deltaU--;
+            if (deltaUpdate >= 1) {
+                long diffTimeNanos = now - updateTime;
+                appLogic.update(window, scene, diffTimeNanos);
+                updateTime = now;
+                deltaUpdate--;
             }
 
             render.render(window, scene);
+
+            initialTime = now;
         }
 
         cleanup();
@@ -130,7 +138,7 @@ Let's dissect what we are doing in the constructor. We first create a `Window` c
 
 Basically the engine class is an infinite loop, modeled in the `run` method, which is triggered in the `start` method. This class also provides a handy `stop` method to get out of said loop and a `cleanup` method to free resources when the loop exists.
 
-Let's go back to the core method of the `Engine` class, the `run` method. We basically control the elapsed time since the last loop block to check if enough seconds have passed to update the state. If so, we calculate the elapsed time since the last update and invoke the `handleInput` method from the `IAppLogic` instance. We invoke the `render` method in each turn of the loop. Later on we will be able to limit the frame rate using vsync, or leave it uncapped.
+Let's go back to the core method of the `Engine` class, the `run` method. We basically control the elapsed time since the last loop block to check if enough seconds have passed to update the state. If so, we calculate the elapsed time since the last update and invoke the `update` method from the `IAppLogic` instance. We invoke the `input` from the `IAppLogic` instance and the `render` method in each turn of the loop. Later on we will be able to limit the frame rate using vsync, or leave it uncapped.
 
 You may have notice that we use a class named `EngineProperties`, which in this case establishes the updates per second. This is a class which reads a property file that will allow us to configure several parameters of the engine at runtime. The code is pretty straight forward:
 
@@ -224,12 +232,11 @@ import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 
 public class Window {
 
+    private final MouseInput mouseInput;
+    private final long windowHandle;
     private int height;
-    private GLFWKeyCallbackI keyCallback;
-    private MouseInput mouseInput;
     private boolean resized;
     private int width;
-    private long windowHandle;
 
     public Window(String title) {
         this(title, null);
@@ -354,11 +361,11 @@ import static org.lwjgl.glfw.GLFW.*;
 
 public class MouseInput {
 
-    private Vector2f currentPos;
-    private Vector2f displVec;
+    private final Vector2f currentPos;
+    private final Vector2f displVec;
+    private final Vector2f previousPos;
     private boolean inWindow;
     private boolean leftButtonPressed;
-    private Vector2f previousPos;
     private boolean rightButtonPressed;
 
     public MouseInput(long windowHandle) {

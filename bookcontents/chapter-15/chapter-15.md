@@ -799,13 +799,8 @@ public class Engine {
         ...
         while (running && !window.shouldClose()) {
             ...
-            if (deltaU >= 1) {
-                ...
-                long diffTimeNanos = currentTime - updateTime;
-                boolean inputConsumed = handleInputGui();
-                appLogic.handleInput(window, scene, diffTimeNanos, inputConsumed);
-                ...
-            }
+            boolean inputConsumed = handleInputGui();
+            appLogic.input(window, scene, now - initialTime, inputConsumed);
             ...
         }
         ...
@@ -814,11 +809,11 @@ public class Engine {
 }
 ```
 
-This change requires to modify the `IAppLogic` `handleInput` method to receive an extra `boolean` parameter which flags that the input has been consumed by the GUI.
+This change requires to modify the `IAppLogic` `input` method to receive an extra `boolean` parameter which flags that the input has been consumed by the GUI.
 ```java
 public interface IAppLogic {
     ...
-    void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed);
+    void input(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed);
     ...
 }
 ```

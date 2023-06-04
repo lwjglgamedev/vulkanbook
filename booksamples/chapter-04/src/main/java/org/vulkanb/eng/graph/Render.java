@@ -11,7 +11,6 @@ public class Render {
     private final Instance instance;
     private final PhysicalDevice physicalDevice;
     private final Surface surface;
-
     private SwapChain swapChain;
 
     public Render(Window window, Scene scene) {

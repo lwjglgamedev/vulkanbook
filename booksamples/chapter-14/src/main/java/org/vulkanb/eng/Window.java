@@ -10,10 +10,10 @@ import static org.lwjgl.glfw.GLFWVulkan.glfwVulkanSupported;
 public class Window {
 
     private int height;
-    private MouseInput mouseInput;
+    private final MouseInput mouseInput;
     private boolean resized;
     private int width;
-    private long windowHandle;
+    private final long windowHandle;
 
     public Window(String title) {
         this(title, null);

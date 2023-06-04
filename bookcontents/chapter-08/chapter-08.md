@@ -1524,6 +1524,7 @@ public class Main implements IAppLogic {
 
         render.loadModels(modelDataList);
     }
+    ...
 }
 ```
 
