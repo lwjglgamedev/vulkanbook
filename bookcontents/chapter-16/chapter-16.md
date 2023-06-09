@@ -690,6 +690,9 @@ public class GlobalBuffers {
                     }
                 }
             }
+            if (bufferOffset == 0) {
+                return;
+            }
             animVerticesBuffer = new VulkanBuffer(device, bufferOffset, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
@@ -776,7 +779,9 @@ public class GlobalBuffers {
         Predicate<VulkanModel> excludeAnimatedEntitiesPredicate = VulkanModel::hasAnimations;
         loadInstanceData(scene, vulkanModels, instanceDataBuffers[currentSwapChainIdx], excludeAnimatedEntitiesPredicate);
         Predicate<VulkanModel> excludedStaticEntitiesPredicate = v -> !v.hasAnimations();
-        loadInstanceData(scene, vulkanModels, animInstanceDataBuffers[currentSwapChainIdx], excludedStaticEntitiesPredicate);
+        if (animInstanceDataBuffers != null) {
+            loadInstanceData(scene, vulkanModels, animInstanceDataBuffers[currentSwapChainIdx], excludedStaticEntitiesPredicate);
+        }
     }
 
     private void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, VulkanBuffer instanceBuffer,
@@ -1031,8 +1036,10 @@ public class Render {
         ...
         globalBuffers.loadInstanceData(scene, vulkanModels, swapChain.getCurrentFrame());
 
-        animationComputeActivity.recordCommandBuffer(globalBuffers);
-        animationComputeActivity.submit();
+        if (globalBuffers.getAnimVerticesBuffer() != null) {
+            animationComputeActivity.recordCommandBuffer(globalBuffers);
+            animationComputeActivity.submit();
+        }
 
         CommandBuffer commandBuffer = acquireCurrentCommandBuffer();
         geometryRenderActivity.render();
@@ -1902,6 +1909,9 @@ Instead of having multiple descriptor sets and buffers per model, we will have a
 public class AnimationComputeActivity {
     ...
     public void onAnimatedEntitiesLoaded(GlobalBuffers globalBuffers) {
+        if (globalBuffers.getAnimVerticesBuffer() == null) {
+            return;
+        }
         srcVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
                 storageDescriptorSetLayout, globalBuffers.getVerticesBuffer(), 0);
         weightsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,

@@ -166,6 +166,9 @@ public class GlobalBuffers {
                     }
                 }
             }
+            if (bufferOffset == 0) {
+                return;
+            }
             animVerticesBuffer = new VulkanBuffer(device, bufferOffset, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
@@ -236,7 +239,9 @@ public class GlobalBuffers {
         Predicate<VulkanModel> excludeAnimatedEntitiesPredicate = VulkanModel::hasAnimations;
         loadInstanceData(scene, vulkanModels, instanceDataBuffers[currentSwapChainIdx], excludeAnimatedEntitiesPredicate);
         Predicate<VulkanModel> excludedStaticEntitiesPredicate = v -> !v.hasAnimations();
-        loadInstanceData(scene, vulkanModels, animInstanceDataBuffers[currentSwapChainIdx], excludedStaticEntitiesPredicate);
+        if (animInstanceDataBuffers != null) {
+            loadInstanceData(scene, vulkanModels, animInstanceDataBuffers[currentSwapChainIdx], excludedStaticEntitiesPredicate);
+        }
     }
 
     private void loadInstanceData(Scene scene, List<VulkanModel> vulkanModels, VulkanBuffer instanceBuffer,

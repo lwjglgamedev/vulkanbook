@@ -96,6 +96,9 @@ public class AnimationComputeActivity {
     }
 
     public void onAnimatedEntitiesLoaded(GlobalBuffers globalBuffers) {
+        if (globalBuffers.getAnimVerticesBuffer() == null) {
+            return;
+        }
         srcVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
                 storageDescriptorSetLayout, globalBuffers.getVerticesBuffer(), 0);
         weightsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,

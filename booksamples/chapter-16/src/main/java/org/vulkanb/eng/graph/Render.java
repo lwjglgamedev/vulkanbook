@@ -152,8 +152,10 @@ public class Render {
 
         globalBuffers.loadInstanceData(scene, vulkanModels, swapChain.getCurrentFrame());
 
-        animationComputeActivity.recordCommandBuffer(globalBuffers);
-        animationComputeActivity.submit();
+        if (globalBuffers.getAnimVerticesBuffer() != null) {
+            animationComputeActivity.recordCommandBuffer(globalBuffers);
+            animationComputeActivity.submit();
+        }
 
         CommandBuffer commandBuffer = acquireCurrentCommandBuffer();
         geometryRenderActivity.render();
