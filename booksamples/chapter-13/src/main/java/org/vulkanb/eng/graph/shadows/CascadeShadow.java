@@ -53,10 +53,10 @@ public class CascadeShadow {
             float splitDist = cascadeSplits[i];
 
             Vector3f[] frustumCorners = new Vector3f[]{
-                    new Vector3f(-1.0f, 1.0f, -1.0f),
-                    new Vector3f(1.0f, 1.0f, -1.0f),
-                    new Vector3f(1.0f, -1.0f, -1.0f),
-                    new Vector3f(-1.0f, -1.0f, -1.0f),
+                    new Vector3f(-1.0f, 1.0f, 0.0f),
+                    new Vector3f(1.0f, 1.0f, 0.0f),
+                    new Vector3f(1.0f, -1.0f, 0.0f),
+                    new Vector3f(-1.0f, -1.0f, 0.0f),
                     new Vector3f(-1.0f, 1.0f, 1.0f),
                     new Vector3f(1.0f, 1.0f, 1.0f),
                     new Vector3f(1.0f, -1.0f, 1.0f),
