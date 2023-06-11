@@ -96,7 +96,7 @@ public class GeometryRenderActivity {
                 textureDescriptorSetLayout,
         };
 
-        textureSampler = new TextureSampler(device, 1);
+        textureSampler = new TextureSampler(device, 1, true);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);

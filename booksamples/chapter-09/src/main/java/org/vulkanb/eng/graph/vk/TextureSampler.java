@@ -15,7 +15,7 @@ public class TextureSampler {
     private final Device device;
     private final long vkSampler;
 
-    public TextureSampler(Device device, int mipLevels) {
+    public TextureSampler(Device device, int mipLevels, boolean anisotropyEnable) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.calloc(stack)
@@ -33,7 +33,7 @@ public class TextureSampler {
                     .minLod(0.0f)
                     .maxLod(mipLevels)
                     .mipLodBias(0.0f);
-            if (device.isSamplerAnisotropy()) {
+            if (anisotropyEnable && device.isSamplerAnisotropy()) {
                 samplerInfo
                         .anisotropyEnable(true)
                         .maxAnisotropy(MAX_ANISOTROPY);

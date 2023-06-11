@@ -12,8 +12,8 @@ import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class AttachmentsDescriptorSet extends DescriptorSet {
 
-    private final Device device;
     private final int binding;
+    private final Device device;
     private final TextureSampler textureSampler;
 
     public AttachmentsDescriptorSet(DescriptorPool descriptorPool, AttachmentsLayout descriptorSetLayout,
@@ -34,7 +34,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
 
             vkDescriptorSet = pDescriptorSet.get(0);
 
-            textureSampler = new TextureSampler(device, 1);
+            textureSampler = new TextureSampler(device, 1, false);
 
             update(attachments);
         }

@@ -432,7 +432,7 @@ public class GeometryRenderActivity {
 
         EngineProperties engineProps = EngineProperties.getInstance();
         descriptorSetMap = new HashMap<>();
-        textureSampler = new TextureSampler(device, 1);
+        textureSampler = new TextureSampler(device, 1, true);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
@@ -1071,7 +1071,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
 
             vkDescriptorSet = pDescriptorSet.get(0);
 
-            textureSampler = new TextureSampler(device, 1);
+            textureSampler = new TextureSampler(device, 1, false);
 
             update(attachments);
         }
@@ -1116,7 +1116,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
 }
 ```
 
-Nothing new here, we are just creating a single descriptor composed by two images that will allow to access the attachments. We also create the sampler used to control how we are going to access the texture in this class for convenience (although this is not a descriptor set, it is handy to have it here). In the `update` method we link the descriptor set elements with each of the attachments and the texture sampler.
+Nothing new here, we are just creating a single descriptor composed by two images that will allow to access the attachments. We also create the sampler used to control how we are going to access the texture in this class for convenience (although this is not a descriptor set, it is handy to have it here). In this case we do not want to use anisotropic filter since it is not necessary for this pass (we are not dealing ith 3D objects which require aliasing reduction but with a single quad where we we need to pick values from using textures). In the `update` method we link the descriptor set elements with each of the attachments and the texture sampler.
 
 Going back to the `LightingRenderActivity` class, the `createPipeline` is almost identical than the one used in the `GeometryRenderActivity` class:
 

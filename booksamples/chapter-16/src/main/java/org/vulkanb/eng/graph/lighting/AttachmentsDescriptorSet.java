@@ -34,7 +34,7 @@ public class AttachmentsDescriptorSet extends DescriptorSet {
 
             vkDescriptorSet = pDescriptorSet.get(0);
 
-            textureSampler = new TextureSampler(device, 1);
+            textureSampler = new TextureSampler(device, 1, false);
 
             update(attachments);
         }

@@ -90,7 +90,7 @@ public class ShadowRenderActivity {
                 storageDescriptorSetLayout,
         };
 
-        textureSampler = new TextureSampler(device, 1);
+        textureSampler = new TextureSampler(device, 1, false);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet[numImages];
         materialsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
                 globalBuffers.getMaterialsBuffer(), 0);

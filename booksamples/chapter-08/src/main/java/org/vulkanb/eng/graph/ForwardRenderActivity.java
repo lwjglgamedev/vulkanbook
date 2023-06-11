@@ -19,9 +19,8 @@ public class ForwardRenderActivity {
     private static final String FRAGMENT_SHADER_FILE_SPV = FRAGMENT_SHADER_FILE_GLSL + ".spv";
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/fwd_vertex.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
-
-    private final Device device;
     private final CommandBuffer[] commandBuffers;
+    private final Device device;
     private final Fence[] fences;
     private final ShaderProgram fwdShaderProgram;
     private final Pipeline pipeLine;
@@ -116,7 +115,7 @@ public class ForwardRenderActivity {
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
         descriptorSetMap = new HashMap<>();
-        textureSampler = new TextureSampler(device, 1);
+        textureSampler = new TextureSampler(device, 1, true);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);

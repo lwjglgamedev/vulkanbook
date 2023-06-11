@@ -73,7 +73,7 @@ public class GuiRenderActivity {
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 textureDescriptorSetLayout,
         };
-        fontsTextureSampler = new TextureSampler(device, 1);
+        fontsTextureSampler = new TextureSampler(device, 1, true);
         textureDescriptorSet = new TextureDescriptorSet(descriptorPool, textureDescriptorSetLayout, fontsTexture,
                 fontsTextureSampler, 0);
     }

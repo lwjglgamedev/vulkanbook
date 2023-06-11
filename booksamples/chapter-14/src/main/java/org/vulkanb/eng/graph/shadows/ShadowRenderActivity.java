@@ -85,7 +85,7 @@ public class ShadowRenderActivity {
         };
 
         descriptorSetMap = new HashMap<>();
-        textureSampler = new TextureSampler(device, 1);
+        textureSampler = new TextureSampler(device, 1, false);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet[numImages];
         shadowsUniforms = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {

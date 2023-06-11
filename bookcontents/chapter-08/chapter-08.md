@@ -950,7 +950,7 @@ public class TextureSampler {
     private final Device device;
     private final long vkSampler;
 
-    public TextureSampler(Device device, int mipLevels) {
+    public TextureSampler(Device device, int mipLevels, boolean anisotropyEnable) {
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.calloc(stack)
@@ -968,7 +968,7 @@ public class TextureSampler {
                     .minLod(0.0f)
                     .maxLod(mipLevels)
                     .mipLodBias(0.0f);
-            if (device.isSamplerAnisotropy()) {
+            if (anisotropyEnable && device.isSamplerAnisotropy()) {
                 samplerInfo
                         .anisotropyEnable(true)
                         .maxAnisotropy(MAX_ANISOTROPY);
@@ -1272,7 +1272,7 @@ public class ForwardRenderActivity {
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
         descriptorSetMap = new HashMap<>();
-        textureSampler = new TextureSampler(device, 1);
+        textureSampler = new TextureSampler(device, 1, true);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
