@@ -26,6 +26,10 @@ public class Camera {
         recalculate();
     }
 
+    public Vector3f getPosition() {
+        return position;
+    }
+
     public Matrix4f getViewMatrix() {
         return viewMatrix;
     }
