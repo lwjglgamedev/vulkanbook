@@ -34,7 +34,7 @@ public class Main implements IAppLogic {
 
     @Override
     public void cleanup() {
-        // To be implemented
+        soundMgr.cleanup();
     }
 
     @Override
@@ -151,6 +151,8 @@ public class Main implements IAppLogic {
             lightAngle = 180;
         }
         updateDirectionalLight();
+
+        soundMgr.updateListenerPosition(camera);
     }
 
     @Override
