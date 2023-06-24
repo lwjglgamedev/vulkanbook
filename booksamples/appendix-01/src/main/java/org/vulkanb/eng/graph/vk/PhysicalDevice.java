@@ -20,7 +20,6 @@ public class PhysicalDevice {
     private final VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
     private final VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
     private CheckPointExtension checkPointExtension;
-    private Set<Integer> suportedSampleCount;
 
     private PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -40,7 +39,6 @@ public class PhysicalDevice {
                     "Failed to get extension properties");
 
             checkPointExtension = calCheckPointExtension(vkDeviceExtensions);
-            suportedSampleCount = calSupportedSampleCount(vkPhysicalDeviceProperties);
 
             // Get Queue family properties
             vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, intBuffer, null);
@@ -137,38 +135,6 @@ public class PhysicalDevice {
         return result;
     }
 
-    private Set<Integer> calSupportedSampleCount(VkPhysicalDeviceProperties devProps) {
-        Set<Integer> result = new HashSet<>();
-        long colorCounts = Integer.toUnsignedLong(vkPhysicalDeviceProperties.limits().framebufferColorSampleCounts());
-        Logger.debug("Color max samples: {}", colorCounts);
-        long depthCounts = Integer.toUnsignedLong(devProps.limits().framebufferDepthSampleCounts());
-        Logger.debug("Depth max samples: {}", depthCounts);
-        int counts = (int) (Math.min(colorCounts, depthCounts));
-        Logger.debug("Max samples: {}", depthCounts);
-
-        result.add(VK_SAMPLE_COUNT_1_BIT);
-        if ((counts & VK_SAMPLE_COUNT_64_BIT) > 0) {
-            result.add(VK_SAMPLE_COUNT_64_BIT);
-        }
-        if ((counts & VK_SAMPLE_COUNT_32_BIT) > 0) {
-            result.add(VK_SAMPLE_COUNT_32_BIT);
-        }
-        if ((counts & VK_SAMPLE_COUNT_16_BIT) > 0) {
-            result.add(VK_SAMPLE_COUNT_16_BIT);
-        }
-        if ((counts & VK_SAMPLE_COUNT_8_BIT) > 0) {
-            result.add(VK_SAMPLE_COUNT_8_BIT);
-        }
-        if ((counts & VK_SAMPLE_COUNT_4_BIT) > 0) {
-            result.add(VK_SAMPLE_COUNT_4_BIT);
-        }
-        if ((counts & VK_SAMPLE_COUNT_2_BIT) != 0) {
-            result.add(VK_SAMPLE_COUNT_2_BIT);
-        }
-
-        return result;
-    }
-
     public void cleanup() {
         if (Logger.isDebugEnabled()) {
             Logger.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
@@ -232,10 +198,6 @@ public class PhysicalDevice {
             }
         }
         return result;
-    }
-
-    public boolean supportsSampleCount(int numSamples) {
-        return suportedSampleCount.contains(numSamples);
     }
 
     public enum CheckPointExtension {
