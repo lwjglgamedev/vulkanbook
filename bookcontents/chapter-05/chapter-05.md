@@ -240,15 +240,27 @@ The rest of the methods of the class, as usual, are a `cleanup` method to releas
 Now that are able to create command pools, let's review the class that will allow us to instantiate command buffers, which as you can image it's named `CommandBuffer`. This is the constructor code:
 
 ```java
+package org.vulkanb.eng.graph.vk;
+
+import org.lwjgl.PointerBuffer;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.*;
+import org.tinylog.Logger;
+
+import static org.lwjgl.vulkan.VK11.*;
+import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+
 public class CommandBuffer {
 	
     private final CommandPool commandPool;
     private final boolean oneTimeSubmit;
     private final VkCommandBuffer vkCommandBuffer;
+    private boolean primary;
     
     public CommandBuffer(CommandPool commandPool, boolean primary, boolean oneTimeSubmit) {
         Logger.trace("Creating command buffer");
         this.commandPool = commandPool;
+        this.primary = primary;
         this.oneTimeSubmit = oneTimeSubmit;
         VkDevice vkDevice = commandPool.getDevice().getVkDevice();
 
@@ -269,7 +281,7 @@ public class CommandBuffer {
 }
 ```
 
-The constructor receives, as it first parameter, the command pool where this command buffer will be allocated to. The second parameter specifies if it is a primary or a secondary command buffer. Primary command buffers are submitted to queues for their execution and can contain several secondary command buffers. Secondary command buffers cannot be submitted directly to a queue, they always need to be included into a primary buffer. A use case for secondary buffers is command reuse. With secondary command buffers we can record some commands that may be shared between multiple primary command buffers. This way we can define "fixed" commands into secondary command buffers and combine them in primary buffers with other varying commands, reducing the workload. Keep in mind that you should not use too many secondary buffers, since they may affect performance. Use them with care. Finally, the last parameter is a `boolean` that indicates if the command buffer recordings will be submitted just once or if they can be submitted multiple times (we will see later on what this implies). We need to fill a structure named `VkCommandBufferAllocateInfo`. The parameters are:
+The constructor receives, as it first parameter, the command pool where this command buffer will be allocated to. The second parameter specifies if it is a primary or a secondary command buffer. Primary command buffers are submitted to queues for their execution and can contain several secondary command buffers. Secondary command buffers cannot be submitted directly to a queue, they always need to be included into a primary buffer. A use case for secondary buffers is command reuse. With secondary command buffers we can record some commands that may be shared between multiple primary command buffers. This way we can define "fixed" commands into secondary command buffers and combine them in primary buffers with other varying commands, reducing the workload. Another interesting use case for secondary command buffers is that they do not need to be "tied" to a render pass, we can record operations which require an active render pass without starting it. They will "inherit" the render pass the starting of the render pass of the primary buffer they are embedded in. Keep in mind that you should not use too many secondary buffers, since they may affect performance. Use them with care. Finally, the last parameter is a `boolean` that indicates if the command buffer recordings will be submitted just once or if they can be submitted multiple times (we will see later on what this implies). We need to fill a structure named `VkCommandBufferAllocateInfo`. The parameters are:
 
 - `commandPool`: Handle to the command pool which will be used to allocate the command buffer.
 - `level`: Indicates the level of the command buffer (primary or secondary).
@@ -282,20 +294,40 @@ The next method of the `CommandBuffer` class, named `beginRecording`, should be 
 public class CommandBuffer {
     ...
     public void beginRecording() {
+        beginRecording(null);
+    }
+
+    public void beginRecording(InheritanceInfo inheritanceInfo) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO);
             if (oneTimeSubmit) {
                 cmdBufInfo.flags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
             }
+            if (!primary) {
+                if (inheritanceInfo == null) {
+                    throw new RuntimeException("Secondary buffers must declare inheritance info");
+                }
+                VkCommandBufferInheritanceInfo vkInheritanceInfo = VkCommandBufferInheritanceInfo.calloc(stack)
+                        .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO)
+                        .renderPass(inheritanceInfo.vkRenderPass)
+                        .subpass(inheritanceInfo.subPass)
+                        .framebuffer(inheritanceInfo.vkFrameBuffer);
+                cmdBufInfo.pInheritanceInfo(vkInheritanceInfo);
+                cmdBufInfo.flags(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
+            }
             vkCheck(vkBeginCommandBuffer(vkCommandBuffer, cmdBufInfo), "Failed to begin command buffer");
         }
     }
     ...
+    public record InheritanceInfo(long vkRenderPass, long vkFrameBuffer, int subPass) {
+    }
 }
 ```
 
-To start recording we need to create a `VkCommandBufferBeginInfo` structure and invoke the `vkBeginCommandBuffer` function. If we are submitting a short lived command, we can signal that using the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. In this case, the driver may not try to optimize that command buffer since it will only be used one time. The next methods are the usual `cleanup` for releasing resources, to finalize the recording and another one to get the command buffer Vulkan instance.
+We have to methods to start recording, the first one, which receives no parameter is a convenience method which can be used for primary command buffers. The next one receives an InheritanceInfo instance which is required for secondary buffers. To start recording we need to create a `VkCommandBufferBeginInfo` structure and invoke the `vkBeginCommandBuffer` function. If we are submitting a short lived command, we can signal that using the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. In this case, the driver may not try to optimize that command buffer since it will only be used one time. Secondary buffers need to be instructed which render pass and frame buffer they will need to use since a render pass wil not be started when recording. We need to fill up the `VkCommandBufferInheritanceInfo` structure with that information and solo set the `VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT ` flag which indicates that the secondary command buffer is considered to be entirely inside a render pass. Secondary command buffers can be integrated into primary command buffers by executing the `vkCmdExecuteCommands` function.
+
+The next methods are the usual `cleanup` for releasing resources, to finalize the recording and another one to get the command buffer Vulkan instance.
 
 ```java
 public class CommandBuffer {

@@ -9,13 +9,16 @@ import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
 public class CommandBuffer {
+
     private final CommandPool commandPool;
     private final boolean oneTimeSubmit;
     private final VkCommandBuffer vkCommandBuffer;
+    private boolean primary;
 
     public CommandBuffer(CommandPool commandPool, boolean primary, boolean oneTimeSubmit) {
         Logger.trace("Creating command buffer");
         this.commandPool = commandPool;
+        this.primary = primary;
         this.oneTimeSubmit = oneTimeSubmit;
         VkDevice vkDevice = commandPool.getDevice().getVkDevice();
 
@@ -34,11 +37,27 @@ public class CommandBuffer {
     }
 
     public void beginRecording() {
+        beginRecording(null);
+    }
+
+    public void beginRecording(InheritanceInfo inheritanceInfo) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.calloc(stack)
                     .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO);
             if (oneTimeSubmit) {
                 cmdBufInfo.flags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+            }
+            if (!primary) {
+                if (inheritanceInfo == null) {
+                    throw new RuntimeException("Secondary buffers must declare inheritance info");
+                }
+                VkCommandBufferInheritanceInfo vkInheritanceInfo = VkCommandBufferInheritanceInfo.calloc(stack)
+                        .sType(VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO)
+                        .renderPass(inheritanceInfo.vkRenderPass)
+                        .subpass(inheritanceInfo.subPass)
+                        .framebuffer(inheritanceInfo.vkFrameBuffer);
+                cmdBufInfo.pInheritanceInfo(vkInheritanceInfo);
+                cmdBufInfo.flags(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
             }
             vkCheck(vkBeginCommandBuffer(vkCommandBuffer, cmdBufInfo), "Failed to begin command buffer");
         }
@@ -70,5 +89,8 @@ public class CommandBuffer {
         }
         fence.fenceWait();
         fence.cleanup();
+    }
+
+    public record InheritanceInfo(long vkRenderPass, long vkFrameBuffer, int subPass) {
     }
 }
