@@ -32,6 +32,7 @@ subprojects {
         implementation("org.tinylog:tinylog-impl:$tinyLogVersion")
         implementation("org.lwjgl:lwjgl:$lwjglVersion")
         implementation("org.lwjgl:lwjgl-glfw:$lwjglVersion")
+        implementation("org.lwjgl:lwjgl-openal:$lwjglVersion")
         implementation("org.lwjgl:lwjgl-vulkan:$lwjglVersion")
         implementation("org.lwjgl:lwjgl-shaderc:$lwjglVersion")
         implementation("org.lwjgl:lwjgl-stb:$lwjglVersion")
@@ -42,6 +43,7 @@ subprojects {
 
         runtimeOnly("org.lwjgl:lwjgl::$natives")
         runtimeOnly("org.lwjgl:lwjgl-glfw::$natives")
+        runtimeOnly("org.lwjgl:lwjgl-openal::$natives")
         runtimeOnly("org.lwjgl:lwjgl-shaderc::$natives")
         runtimeOnly("org.lwjgl:lwjgl-stb::$natives")
         runtimeOnly("org.lwjgl:lwjgl-assimp::$natives")
@@ -76,11 +78,12 @@ subprojects {
 	}
 	
     tasks.jar {
-        manifest {
-            attributes(
-                "Main-class" to "org.vulkanb.Main",
-                "Class-Path" to configurations.runtimeClasspath.files.joinToString(separator = " "){"${it.getName()}"}
-            )
-        }
-    }
+        manifest.attributes["Main-Class"] = "org.boxes.Main"
+        manifest.attributes["Class-Path"] = configurations
+            .runtimeClasspath
+            .get()
+            .joinToString(separator = " ") { file ->
+                "${file.name}"
+            }
+    }    
 }
