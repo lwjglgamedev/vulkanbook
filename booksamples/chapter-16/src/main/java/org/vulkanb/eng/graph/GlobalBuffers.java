@@ -133,6 +133,9 @@ public class GlobalBuffers {
         vulkanAnimEntityList = new ArrayList<>();
         numAnimIndirectCommands = 0;
         try (MemoryStack stack = MemoryStack.stackPush()) {
+            if (animVerticesBuffer != null) {
+                animVerticesBuffer.cleanup();
+            }
             Device device = commandPool.getDevice();
             CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
 

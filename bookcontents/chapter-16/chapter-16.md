@@ -657,6 +657,9 @@ public class GlobalBuffers {
         vulkanAnimEntityList = new ArrayList<>();
         numAnimIndirectCommands = 0;
         try (MemoryStack stack = MemoryStack.stackPush()) {
+            if (animVerticesBuffer != null) {
+                animVerticesBuffer.cleanup();
+            }
             Device device = commandPool.getDevice();
             CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
 
@@ -1911,6 +1914,10 @@ public class AnimationComputeActivity {
     public void onAnimatedEntitiesLoaded(GlobalBuffers globalBuffers) {
         if (globalBuffers.getAnimVerticesBuffer() == null) {
             return;
+        }
+        if (srcVerticesDescriptorSet != null) {
+            descriptorPool.cleanup();
+            createDescriptorPool();
         }
         srcVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
                 storageDescriptorSetLayout, globalBuffers.getVerticesBuffer(), 0);

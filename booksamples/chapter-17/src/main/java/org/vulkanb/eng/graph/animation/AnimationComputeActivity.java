@@ -99,6 +99,10 @@ public class AnimationComputeActivity {
         if (globalBuffers.getAnimVerticesBuffer() == null) {
             return;
         }
+        if (srcVerticesDescriptorSet != null) {
+            descriptorPool.cleanup();
+            createDescriptorPool();
+        }
         srcVerticesDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
                 storageDescriptorSetLayout, globalBuffers.getVerticesBuffer(), 0);
         weightsDescriptorSet = new DescriptorSet.StorageDescriptorSet(descriptorPool,
