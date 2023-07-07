@@ -344,6 +344,10 @@ public class Window {
         this.resized = resized;
     }
 
+    public void setShouldClose() {
+        glfwSetWindowShouldClose(windowHandle, true);
+    }
+    
     public boolean shouldClose() {
         return glfwWindowShouldClose(windowHandle);
     }
