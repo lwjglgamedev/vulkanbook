@@ -1,0 +1,12 @@
+{
+  "maps": [
+    {
+      "id": "Level 01",
+      "file": "resources/maps/map-01.txt",
+    },
+    {
+      "id": "Level 02",
+      "file": "resources/maps/map-02.txt",
+    },
+  ]
+}

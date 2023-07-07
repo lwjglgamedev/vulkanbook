@@ -1,0 +1,9 @@
+{
+  "fonts": [
+    {
+      "id": "MAIN",
+      "ttfFile": "resources/fonts/neuropolitical rg.otf",
+      "size": 82.0
+    },	
+  ]
+}

@@ -48,7 +48,7 @@ public class ModelData {
     public record AnimatedFrame(Matrix4f[] jointMatrices) {
     }
 
-    public record Animation(String name, float frameMills, List<AnimatedFrame> frames) {
+    public record Animation(String name, float frameMillis, List<AnimatedFrame> frames) {
     }
     ...
 }
@@ -257,9 +257,9 @@ public class ModelLoader {
         for (int i = 0; i < numAnimations; i++) {
             AIAnimation aiAnimation = AIAnimation.create(aiAnimations.get(i));
             int maxFrames = calcAnimationMaxFrames(aiAnimation);
-            float frameMills = (float) (aiAnimation.mDuration() / aiAnimation.mTicksPerSecond());
+            float frameMillis = (float) (aiAnimation.mDuration() / aiAnimation.mTicksPerSecond());
             List<ModelData.AnimatedFrame> frames = new ArrayList<>();
-            ModelData.Animation animation = new ModelData.Animation(aiAnimation.mName().dataString(), frameMills, frames);
+            ModelData.Animation animation = new ModelData.Animation(aiAnimation.mName().dataString(), frameMillis, frames);
             animations.add(animation);
 
             for (int j = 0; j < maxFrames; j++) {

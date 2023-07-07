@@ -1,0 +1,116 @@
+[
+{
+  "name":"imgui.ImFontAtlas",
+  "methods":[
+    {"name":"createAlpha8Pixels","parameterTypes":["int"] }, 
+    {"name":"createRgba32Pixels","parameterTypes":["int"] }
+  ]}
+,
+{
+  "name":"imgui.ImVec2",
+  "fields":[
+    {"name":"x"}, 
+    {"name":"y"}
+  ]}
+,
+{
+  "name":"imgui.ImVec4",
+  "fields":[
+    {"name":"w"}, 
+    {"name":"x"}, 
+    {"name":"y"}, 
+    {"name":"z"}
+  ]}
+,
+{
+  "name":"imgui.binding.ImGuiStruct",
+  "fields":[{"name":"ptr"}]}
+,
+{
+  "name":"imgui.callback.ImListClipperCallback",
+  "methods":[{"name":"accept","parameterTypes":["int"] }]}
+,
+{
+  "name":"imgui.callback.ImPlatformFuncViewport",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport"] }]}
+,
+{
+  "name":"imgui.callback.ImPlatformFuncViewportFloat",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport","float"] }]}
+,
+{
+  "name":"imgui.callback.ImPlatformFuncViewportImVec2",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport","imgui.ImVec2"] }]}
+,
+{
+  "name":"imgui.callback.ImPlatformFuncViewportString",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport","java.lang.String"] }]}
+,
+{
+  "name":"imgui.callback.ImPlatformFuncViewportSuppBoolean",
+  "methods":[{"name":"get","parameterTypes":["imgui.ImGuiViewport"] }]}
+,
+{
+  "name":"imgui.callback.ImPlatformFuncViewportSuppFloat",
+  "methods":[{"name":"get","parameterTypes":["imgui.ImGuiViewport"] }]}
+,
+{
+  "name":"imgui.callback.ImPlatformFuncViewportSuppImVec2",
+  "methods":[{"name":"get","parameterTypes":["imgui.ImGuiViewport","imgui.ImVec2"] }]}
+,
+{
+  "name":"imgui.callback.ImStrConsumer",
+  "methods":[{"name":"accept","parameterTypes":["java.lang.String"] }]}
+,
+{
+  "name":"imgui.callback.ImStrSupplier",
+  "methods":[{"name":"get","parameterTypes":[] }]}
+,
+{
+  "name":"imgui.type.ImString",
+  "methods":[{"name":"resizeInternal","parameterTypes":["int"] }]}
+,
+{
+  "name":"imgui.type.ImString$InputData",
+  "fields":[
+    {"name":"isDirty"}, 
+    {"name":"isResized"}, 
+    {"name":"size"}
+  ]}
+,
+{
+  "name":"java.lang.ClassLoader",
+  "methods":[
+    {"name":"getPlatformClassLoader","parameterTypes":[] }, 
+    {"name":"loadClass","parameterTypes":["java.lang.String"] }
+  ]}
+,
+{
+  "name":"java.lang.SecurityManager",
+  "fields":[{"name":"initialized"}]}
+,
+{
+  "name":"jdk.internal.loader.ClassLoaders$PlatformClassLoader"}
+,
+{
+  "name":"org.graalvm.nativebridge.jni.JNIExceptionWrapperEntryPoints",
+  "methods":[{"name":"getClassName","parameterTypes":["java.lang.Class"] }]}
+,
+{
+  "name":"org.lwjgl.system.CallbackI",
+  "methods":[{"name":"callback","parameterTypes":["long","long"] }]}
+,
+{
+  "name":"sun.management.VMManagementImpl",
+  "fields":[
+    {"name":"compTimeMonitoringSupport"}, 
+    {"name":"currentThreadCpuTimeSupport"}, 
+    {"name":"objectMonitorUsageSupport"}, 
+    {"name":"otherThreadCpuTimeSupport"}, 
+    {"name":"remoteDiagnosticCommandsSupport"}, 
+    {"name":"synchronizerUsageSupport"}, 
+    {"name":"threadAllocatedMemorySupport"}, 
+    {"name":"threadContentionMonitoringSupport"}
+  ]}
+
+]

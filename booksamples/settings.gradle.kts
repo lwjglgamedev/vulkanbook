@@ -17,4 +17,5 @@ include(
 	"chapter-16",
 	"chapter-17",
 	"appendix-01",
+	"appendix-02",
 )
