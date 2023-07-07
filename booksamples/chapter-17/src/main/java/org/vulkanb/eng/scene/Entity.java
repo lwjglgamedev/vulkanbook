@@ -54,6 +54,13 @@ public class Entity {
         return entityAnimation != null;
     }
 
+    public void resetRotation() {
+        rotation.x = 0.0f;
+        rotation.y = 0.0f;
+        rotation.z = 0.0f;
+        rotation.w = 1.0f;
+    }
+
     public void setEntityAnimation(EntityAnimation entityAnimation) {
         this.entityAnimation = entityAnimation;
     }

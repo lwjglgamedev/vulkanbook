@@ -537,6 +537,13 @@ public class Entity {
         return scale;
     }
 
+    public void resetRotation() {
+        rotation.x = 0.0f;
+        rotation.y = 0.0f;
+        rotation.z = 0.0f;
+        rotation.w = 1.0f;
+    }
+    
     public final void setPosition(float x, float y, float z) {
         position.x = x;
         position.y = y;
