@@ -48,12 +48,12 @@ public class ModelData {
     public record AnimatedFrame(Matrix4f[] jointMatrices) {
     }
 
-    public record Animation(String name, double duration, List<AnimatedFrame> frames) {
+    public record Animation(String name, float frameMills, List<AnimatedFrame> frames) {
     }
     ...
 }
 ```
-The new `animMeshDataList` attribute is the equivalent of the `meshDataList` one. That list will contain an entry for each mesh storing the relevant data for animated models. In this case, that data is grouped under the `AnimMeshData` and contains two arrays that will contain the weights that will modulate the transformations applied to the joints related to each vertex (related by their identifier in the hierarchy). That data is common to all the animations supported by the model, since it is related to the model structure itself, its skeleton. The `animationsList` attribute holds the list of animations defined for a model. An animation is described by the `Animation` record and consists on a name the duration of the animation and the data of the key frames that compose the animation. Key frame data is defined by the `AnimatedFrame` record which contains the transformation matrices for each of the model joints for that specific frame. Therefore, in order to load animated models we just need to get the additional structural data for mesh (weights and the joints they apply to) and the transformation matrices for each of those joints per animation key frame.
+The new `animMeshDataList` attribute is the equivalent of the `meshDataList` one. That list will contain an entry for each mesh storing the relevant data for animated models. In this case, that data is grouped under the `AnimMeshData` and contains two arrays that will contain the weights that will modulate the transformations applied to the joints related to each vertex (related by their identifier in the hierarchy). That data is common to all the animations supported by the model, since it is related to the model structure itself, its skeleton. The `animationsList` attribute holds the list of animations defined for a model. An animation is described by the `Animation` record and consists on a name the duration of the animation (in milliseconds) and the data of the key frames that compose the animation. Key frame data is defined by the `AnimatedFrame` record which contains the transformation matrices for each of the model joints for that specific frame. Therefore, in order to load animated models we just need to get the additional structural data for mesh (weights and the joints they apply to) and the transformation matrices for each of those joints per animation key frame.
 
 After that we need to modify the `Entity` class to add new attributes to control its animation state to pause / resume the animation, to select the proper animation and to select a specific key frame):
 ```java
@@ -76,12 +76,16 @@ public class Entity {
     public static class EntityAnimation {
         private int animationIdx;
         private int currentFrame;
+        private long frameStartTs;
         private boolean started;
 
         public EntityAnimation(boolean started, int animationIdx, int currentFrame) {
             this.started = started;
             this.animationIdx = animationIdx;
             this.currentFrame = currentFrame;
+            if (started) {
+                frameStartTs = System.currentTimeMillis();
+            }
         }
 
         public int getAnimationIdx() {
@@ -92,6 +96,10 @@ public class Entity {
             return currentFrame;
         }
 
+        public long getFrameStartTs() {
+            return frameStartTs;
+        }
+
         public boolean isStarted() {
             return started;
         }
@@ -99,15 +107,18 @@ public class Entity {
         public void setAnimationIdx(int animationIdx) {
             this.animationIdx = animationIdx;
         }
-
+        
         public void setCurrentFrame(int currentFrame) {
             this.currentFrame = currentFrame;
         }
 
         public void setStarted(boolean started) {
             this.started = started;
+            if (started) {
+                frameStartTs = System.currentTimeMillis();
+            }
         }
-    }    
+    }
 }
 ```
 
@@ -246,9 +257,9 @@ public class ModelLoader {
         for (int i = 0; i < numAnimations; i++) {
             AIAnimation aiAnimation = AIAnimation.create(aiAnimations.get(i));
             int maxFrames = calcAnimationMaxFrames(aiAnimation);
-
+            float frameMills = (float) (aiAnimation.mDuration() / aiAnimation.mTicksPerSecond());
             List<ModelData.AnimatedFrame> frames = new ArrayList<>();
-            ModelData.Animation animation = new ModelData.Animation(aiAnimation.mName().dataString(), aiAnimation.mDuration(), frames);
+            ModelData.Animation animation = new ModelData.Animation(aiAnimation.mName().dataString(), frameMills, frames);
             animations.add(animation);
 
             for (int j = 0; j < maxFrames; j++) {

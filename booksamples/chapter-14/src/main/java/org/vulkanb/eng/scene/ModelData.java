@@ -55,7 +55,7 @@ public class ModelData {
     public record AnimatedFrame(Matrix4f[] jointMatrices) {
     }
 
-    public record Animation(String name, double duration, List<AnimatedFrame> frames) {
+    public record Animation(String name, float frameMills, List<AnimatedFrame> frames) {
     }
 
     public record Material(String texturePath, String normalMapPath, String metalRoughMap, Vector4f diffuseColor,

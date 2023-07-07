@@ -193,9 +193,9 @@ public class ModelLoader {
         for (int i = 0; i < numAnimations; i++) {
             AIAnimation aiAnimation = AIAnimation.create(aiAnimations.get(i));
             int maxFrames = calcAnimationMaxFrames(aiAnimation);
-
+            float frameMills = (float) (aiAnimation.mDuration() / aiAnimation.mTicksPerSecond());
             List<ModelData.AnimatedFrame> frames = new ArrayList<>();
-            ModelData.Animation animation = new ModelData.Animation(aiAnimation.mName().dataString(), aiAnimation.mDuration(), frames);
+            ModelData.Animation animation = new ModelData.Animation(aiAnimation.mName().dataString(), frameMills, frames);
             animations.add(animation);
 
             for (int j = 0; j < maxFrames; j++) {

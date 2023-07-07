@@ -84,12 +84,16 @@ public class Entity {
     public static class EntityAnimation {
         private int animationIdx;
         private int currentFrame;
+        private long frameStartTs;
         private boolean started;
 
         public EntityAnimation(boolean started, int animationIdx, int currentFrame) {
             this.started = started;
             this.animationIdx = animationIdx;
             this.currentFrame = currentFrame;
+            if (started) {
+                frameStartTs = System.currentTimeMillis();
+            }
         }
 
         public int getAnimationIdx() {
@@ -98,6 +102,10 @@ public class Entity {
 
         public int getCurrentFrame() {
             return currentFrame;
+        }
+
+        public long getFrameStartTs() {
+            return frameStartTs;
         }
 
         public boolean isStarted() {
@@ -114,6 +122,9 @@ public class Entity {
 
         public void setStarted(boolean started) {
             this.started = started;
+            if (started) {
+                frameStartTs = System.currentTimeMillis();
+            }
         }
     }
 }
