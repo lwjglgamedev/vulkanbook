@@ -43,7 +43,7 @@ public class Engine {
 
             if (deltaUpdate >= 1) {
                 long diffTimeMilis = now - updateTime;
-                appLogic.update(window, scene, diffTimeNanos);
+                appLogic.update(window, scene, diffTimeMilis);
                 updateTime = now;
                 deltaUpdate--;
             }
