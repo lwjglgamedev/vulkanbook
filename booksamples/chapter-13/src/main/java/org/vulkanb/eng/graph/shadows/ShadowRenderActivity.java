@@ -58,7 +58,7 @@ public class ShadowRenderActivity {
 
     public void cleanup() {
         pipeLine.cleanup();
-        Arrays.stream(shadowsUniforms).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(shadowsUniforms).forEach(VulkanBuffer::cleanup);
         uniformDescriptorSetLayout.cleanup();
         textureDescriptorSetLayout.cleanup();
         textureSampler.cleanup();

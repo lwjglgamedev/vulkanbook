@@ -582,7 +582,7 @@ public class SwapChain {
     ...
     public void cleanup() {
         ...
-        Arrays.stream(syncSemaphoresList).forEach(SyncSemaphores::cleanup);
+        Arrays.asList(syncSemaphoresList).forEach(SyncSemaphores::cleanup);
         ...
     }    
     ...
@@ -738,10 +738,10 @@ The next method is the `cleanup`:
 public class ForwardRenderActivity {
     ...
     public void cleanup() {
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
         renderPass.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
     }
     ...
 }

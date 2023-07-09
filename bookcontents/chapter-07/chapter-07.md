@@ -867,7 +867,7 @@ public class ForwardRenderActivity {
     ...
     public void cleanup() {
         ...
-        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
+        Arrays.asList(depthAttachments).forEach(Attachment::cleanup);
         ...
     }
     ...
@@ -948,8 +948,8 @@ public class ForwardRenderActivity {
     ...
     public void resize(SwapChain swapChain) {
         this.swapChain = swapChain;
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
-        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(depthAttachments).forEach(Attachment::cleanup);
         createDepthImages();
         createFrameBuffers();
     }

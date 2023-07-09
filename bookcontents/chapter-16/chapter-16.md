@@ -160,10 +160,10 @@ public class GlobalBuffers {
         animJointMatricesBuffer.cleanup();
         animWeightsBuffer.cleanup();
         if (instanceDataBuffers != null) {
-            Arrays.stream(instanceDataBuffers).forEach(VulkanBuffer::cleanup);
+            Arrays.asList(instanceDataBuffers).forEach(VulkanBuffer::cleanup);
         }
         if (animInstanceDataBuffers != null) {
-            Arrays.stream(animInstanceDataBuffers).forEach(VulkanBuffer::cleanup);
+            Arrays.asList(animInstanceDataBuffers).forEach(VulkanBuffer::cleanup);
         }
     }
     ...
@@ -623,7 +623,7 @@ public class GlobalBuffers {
                 indexedIndirectCommandList.forEach(indCommandBuffer::put);
 
                 if (instanceDataBuffers != null) {
-                    Arrays.stream(instanceDataBuffers).forEach(VulkanBuffer::cleanup);
+                    Arrays.asList(instanceDataBuffers).forEach(VulkanBuffer::cleanup);
                 }
                 instanceDataBuffers = new VulkanBuffer[numSwapChainImages];
                 for (int i = 0; i < numSwapChainImages; i++) {
@@ -716,7 +716,7 @@ public class GlobalBuffers {
                 indexedIndirectCommandList.forEach(indCommandBuffer::put);
 
                 if (animInstanceDataBuffers != null) {
-                    Arrays.stream(animInstanceDataBuffers).forEach(VulkanBuffer::cleanup);
+                    Arrays.asList(animInstanceDataBuffers).forEach(VulkanBuffer::cleanup);
                 }
                 animInstanceDataBuffers = new VulkanBuffer[numSwapChainImages];
                 for (int i = 0; i < numSwapChainImages; i++) {
@@ -998,8 +998,8 @@ public class Render {
     ...
     public void cleanup() {
         ...
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
         ...
         globalBuffers.cleanup();
         ...

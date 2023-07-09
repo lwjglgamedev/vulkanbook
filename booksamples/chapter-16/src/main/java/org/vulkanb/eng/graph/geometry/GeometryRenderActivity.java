@@ -63,7 +63,7 @@ public class GeometryRenderActivity {
     public void cleanup() {
         pipeLine.cleanup();
         geometrySpecConstants.cleanup();
-        Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
         textureDescriptorSetLayout.cleanup();

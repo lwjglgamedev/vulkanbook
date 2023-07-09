@@ -72,10 +72,10 @@ public class ForwardRenderActivity {
     public void cleanup() {
         pipeLine.cleanup();
         fwdShaderProgram.cleanup();
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
         renderPass.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
     }
 
     public void recordCommandBuffer(List<VulkanModel> vulkanModelList) {

@@ -83,13 +83,13 @@ public class ForwardRenderActivity {
         textureSampler.cleanup();
         descriptorPool.cleanup();
         pipeLine.cleanup();
-        Arrays.stream(descriptorSetLayouts).forEach(DescriptorSetLayout::cleanup);
-        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
+        Arrays.asList(descriptorSetLayouts).forEach(DescriptorSetLayout::cleanup);
+        Arrays.asList(depthAttachments).forEach(Attachment::cleanup);
         fwdShaderProgram.cleanup();
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
         renderPass.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
     }
 
     private void createDepthImages() {
@@ -242,8 +242,8 @@ public class ForwardRenderActivity {
     public void resize(SwapChain swapChain) {
         VulkanUtils.copyMatrixToBuffer(projMatrixUniform, scene.getProjection().getProjectionMatrix());
         this.swapChain = swapChain;
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
-        Arrays.stream(depthAttachments).forEach(Attachment::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(depthAttachments).forEach(Attachment::cleanup);
         createDepthImages();
         createFrameBuffers();
     }

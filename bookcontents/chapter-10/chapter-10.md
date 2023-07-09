@@ -351,7 +351,7 @@ public class GeometryRenderActivity {
     public void cleanup() {
         pipeLine.cleanup();
         materialsBuffer.cleanup();
-        Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
         materialDescriptorSetLayout.cleanup();
@@ -360,8 +360,8 @@ public class GeometryRenderActivity {
         descriptorPool.cleanup();
         shaderProgram.cleanup();
         geometryFrameBuffer.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
     }
     ...
     public List<Attachment> getAttachments() {
@@ -852,7 +852,7 @@ public class LightingFrameBuffer {
 
     public void cleanup() {
         Logger.debug("Destroying Lighting FrameBuffer");
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
         lightingRenderPass.cleanup();
     }
 
@@ -882,7 +882,7 @@ public class LightingFrameBuffer {
     }
 
     public void resize(SwapChain swapChain) {
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
         createFrameBuffers(swapChain);
     }
 }
@@ -925,8 +925,8 @@ public class LightingRenderActivity {
         pipeline.cleanup();
         lightingFrameBuffer.cleanup();
         shaderProgram.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
     }
     ...
 }

@@ -68,13 +68,13 @@ public class LightingRenderActivity {
         attachmentsDescriptorSet.cleanup();
         attachmentsLayout.cleanup();
         descriptorPool.cleanup();
-        Arrays.stream(lightsBuffers).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(lightsBuffers).forEach(VulkanBuffer::cleanup);
         pipeline.cleanup();
         invProjBuffer.cleanup();
         lightingFrameBuffer.cleanup();
         shaderProgram.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
     }
 
     private void createCommandBuffers(CommandPool commandPool, int numImages) {

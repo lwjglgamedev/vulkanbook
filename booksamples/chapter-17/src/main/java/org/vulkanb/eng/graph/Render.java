@@ -89,8 +89,8 @@ public class Render {
         animationComputeActivity.cleanup();
         shadowRenderActivity.cleanup();
         geometryRenderActivity.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
         commandPool.cleanup();
         swapChain.cleanup();
         surface.cleanup();

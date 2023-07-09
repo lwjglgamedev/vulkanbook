@@ -87,7 +87,7 @@ public class GeometryRenderActivity {
     public void cleanup() {
         pipeLine.cleanup();
         materialsBuffer.cleanup();
-        Arrays.stream(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
         materialDescriptorSetLayout.cleanup();
@@ -96,8 +96,8 @@ public class GeometryRenderActivity {
         descriptorPool.cleanup();
         shaderProgram.cleanup();
         geometryFrameBuffer.cleanup();
-        Arrays.stream(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.stream(fences).forEach(Fence::cleanup);
+        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
+        Arrays.asList(fences).forEach(Fence::cleanup);
     }
 
     private void createCommandBuffers(CommandPool commandPool, int numImages) {

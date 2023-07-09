@@ -22,7 +22,7 @@ public class LightingFrameBuffer {
 
     public void cleanup() {
         Logger.debug("Destroying Lighting FrameBuffer");
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
         lightingRenderPass.cleanup();
     }
 
@@ -52,7 +52,7 @@ public class LightingFrameBuffer {
     }
 
     public void resize(SwapChain swapChain) {
-        Arrays.stream(frameBuffers).forEach(FrameBuffer::cleanup);
+        Arrays.asList(frameBuffers).forEach(FrameBuffer::cleanup);
         createFrameBuffers(swapChain);
     }
 }

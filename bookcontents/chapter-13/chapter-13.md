@@ -588,7 +588,7 @@ public class ShadowRenderActivity {
     ...
     public void cleanup() {
         pipeLine.cleanup();
-        Arrays.stream(shadowsUniforms).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(shadowsUniforms).forEach(VulkanBuffer::cleanup);
         uniformDescriptorSetLayout.cleanup();
         textureDescriptorSetLayout.cleanup();
         textureSampler.cleanup();
@@ -1174,9 +1174,9 @@ public class LightingRenderActivity {
 
     public void cleanup() {
         ...
-        Arrays.stream(invMatricesBuffers).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(invMatricesBuffers).forEach(VulkanBuffer::cleanup);
         ...
-        Arrays.stream(shadowsMatricesBuffers).forEach(VulkanBuffer::cleanup);
+        Arrays.asList(shadowsMatricesBuffers).forEach(VulkanBuffer::cleanup);
         ...
     }
     ...

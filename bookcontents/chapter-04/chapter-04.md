@@ -429,7 +429,7 @@ public class SwapChain {
     ...
     public void cleanup() {
         Logger.debug("Destroying Vulkan SwapChain");
-        Arrays.stream(imageViews).forEach(ImageView::cleanup);
+        Arrays.asList(imageViews).forEach(ImageView::cleanup);
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
     }
     ...
