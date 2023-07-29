@@ -20,6 +20,7 @@ public class Instance {
     public static final int MESSAGE_TYPE_BITMASK = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    private static final String PORTABILITY_EXTENSION = "VK_KHR_portability_enumeration";
 
     private final VkInstance vkInstance;
 
@@ -59,6 +60,8 @@ public class Instance {
                 }
             }
 
+            Set<String> instanceExtensions = getInstanceExtensions();
+
             // GLFW Extension
             PointerBuffer glfwExtensions = GLFWVulkan.glfwGetRequiredInstanceExtensions();
             if (glfwExtensions == null) {
@@ -66,13 +69,24 @@ public class Instance {
             }
 
             PointerBuffer requiredExtensions;
+
+            boolean usePortability = instanceExtensions.contains(PORTABILITY_EXTENSION) &&
+                    VulkanUtils.getOS() == VulkanUtils.OSType.MACOS;
             if (supportsValidation) {
                 ByteBuffer vkDebugUtilsExtension = stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-                requiredExtensions = stack.mallocPointer(glfwExtensions.remaining() + 1);
+                int numExtensions = usePortability ? glfwExtensions.remaining() + 2 : glfwExtensions.remaining() + 1;
+                requiredExtensions = stack.mallocPointer(numExtensions);
                 requiredExtensions.put(glfwExtensions).put(vkDebugUtilsExtension);
+                if (usePortability) {
+                    requiredExtensions.put(stack.UTF8(PORTABILITY_EXTENSION));
+                }
             } else {
-                requiredExtensions = stack.mallocPointer(glfwExtensions.remaining());
+                int numExtensions = usePortability ? glfwExtensions.remaining() + 1 : glfwExtensions.remaining();
+                requiredExtensions = stack.mallocPointer(numExtensions);
                 requiredExtensions.put(glfwExtensions);
+                if (usePortability) {
+                    requiredExtensions.put(stack.UTF8(KHRPortabilitySubset.VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
+                }
             }
             requiredExtensions.flip();
 
@@ -89,6 +103,9 @@ public class Instance {
                     .pApplicationInfo(appInfo)
                     .ppEnabledLayerNames(requiredLayers)
                     .ppEnabledExtensionNames(requiredExtensions);
+            if (usePortability) {
+                instanceInfo.flags(0x00000001); // VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR
+            }
 
             PointerBuffer pInstance = stack.mallocPointer(1);
             vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
@@ -134,6 +151,26 @@ public class Instance {
             debugUtils.free();
         }
         vkDestroyInstance(vkInstance, null);
+    }
+
+    private Set<String> getInstanceExtensions() {
+        Set<String> instanceExtensions = new HashSet<>();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer numExtensionsBuf = stack.callocInt(1);
+            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, null);
+            int numExtensions = numExtensionsBuf.get(0);
+            Logger.debug("Instance supports [{}] extensions", numExtensions);
+
+            VkExtensionProperties.Buffer instanceExtensionsProps = VkExtensionProperties.calloc(numExtensions, stack);
+            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, instanceExtensionsProps);
+            for (int i = 0; i < numExtensions; i++) {
+                VkExtensionProperties props = instanceExtensionsProps.get(i);
+                String extensionName = props.extensionNameString();
+                instanceExtensions.add(extensionName);
+                Logger.debug("Supported instance extension [{}]", extensionName);
+            }
+        }
+        return instanceExtensions;
     }
 
     private List<String> getSupportedValidationLayers() {

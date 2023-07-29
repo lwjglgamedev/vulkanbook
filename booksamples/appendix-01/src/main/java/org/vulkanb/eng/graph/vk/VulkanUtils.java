@@ -3,13 +3,10 @@ package org.vulkanb.eng.graph.vk;
 import org.joml.Matrix4f;
 import org.lwjgl.system.*;
 import org.lwjgl.vulkan.*;
-import org.tinylog.Logger;
 
-import java.nio.*;
-import java.util.*;
+import java.nio.ByteBuffer;
+import java.util.Locale;
 
-import static org.lwjgl.vulkan.AMDBufferMarker.vkCmdWriteBufferMarkerAMD;
-import static org.lwjgl.vulkan.NVDeviceDiagnosticCheckpoints.*;
 import static org.lwjgl.vulkan.VK11.*;
 
 public class VulkanUtils {
@@ -29,42 +26,20 @@ public class VulkanUtils {
         vulkanBuffer.unMap();
     }
 
-    public static List<CheckPoint> dumpCheckPoints(Queue queue) {
-        List<CheckPoint> result = new ArrayList<>();
-
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer count = stack.callocInt(1);
-            vkGetQueueCheckpointDataNV(queue.getVkQueue(), count, null);
-            int numCheckPoints = count.get(0);
-            if (numCheckPoints > 0) {
-                VkCheckpointDataNV.Buffer checkpointData = VkCheckpointDataNV.calloc(numCheckPoints, stack);
-                checkpointData.stream().forEach(c -> c.sType(VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV));
-
-                vkGetQueueCheckpointDataNV(queue.getVkQueue(), count, checkpointData);
-                checkpointData.forEach(c -> result.add(new CheckPoint(c.pCheckpointMarker(), c.stage())));
-            }
+    public static OSType getOS() {
+        OSType result;
+        String os = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
+        if ((os.indexOf("mac") >= 0) || (os.indexOf("darwin") >= 0)) {
+            result = OSType.MACOS;
+        } else if (os.indexOf("win") >= 0) {
+            result = OSType.WINDOWS;
+        } else if (os.indexOf("nux") >= 0) {
+            result = OSType.LINUX;
+        } else {
+            result = OSType.OTHER;
         }
+
         return result;
-    }
-
-    public static void insertBufferMarker(Device device, CommandBuffer cmdBuff, int pipelineStage, VulkanBuffer dstBuffer,
-                                          int offset, int marker) {
-        PhysicalDevice.CheckPointExtension checkPointExtension = device.getPhysicalDevice().getCheckPointExtension();
-        if (checkPointExtension == PhysicalDevice.CheckPointExtension.AMD) {
-            vkCmdWriteBufferMarkerAMD(cmdBuff.getVkCommandBuffer(), pipelineStage, dstBuffer.getBuffer(), offset,
-                    marker);
-        } else {
-            Logger.warn("Requested debug buffer marker in non supported device");
-        }
-    }
-
-    public static void insertDebugCheckPoint(Device device, CommandBuffer cmdBuff, long checkPointMarker) {
-        PhysicalDevice.CheckPointExtension checkPointExtension = device.getPhysicalDevice().getCheckPointExtension();
-        if (checkPointExtension == PhysicalDevice.CheckPointExtension.NVIDIA) {
-            vkCmdSetCheckpointNV(cmdBuff.getVkCommandBuffer(), checkPointMarker);
-        } else {
-            Logger.warn("Requested debug check point in non supported device");
-        }
     }
 
     public static int memoryTypeFromProperties(PhysicalDevice physDevice, int typeBits, int reqsMask) {
@@ -98,6 +73,5 @@ public class VulkanUtils {
         }
     }
 
-    public record CheckPoint(long marker, int stage) {
-    }
+    public enum OSType {WINDOWS, MACOS, LINUX, OTHER}
 }

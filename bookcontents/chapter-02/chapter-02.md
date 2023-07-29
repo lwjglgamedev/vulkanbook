@@ -228,7 +228,35 @@ public class Instance {
 }
 ```
 
-Now that we've setup all the validation layers, we move on to extensions. Because Vulkan is a cross-platform API, links to windowing systems are handled through extensions. In our case we will be using GLFW, which has extensions for Vulkan, so we need to include this as an extension with the following code:
+Now that we've setup all the validation layers, we move on to extensions. We will first create a method that will retrieve all the supported extensions named `getInstanceExtensions`:
+```java
+public class Instance {
+    ...
+    private Set<String> getInstanceExtensions() {
+        Set<String> instanceExtensions = new HashSet<>();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer numExtensionsBuf = stack.callocInt(1);
+            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, null);
+            int numExtensions = numExtensionsBuf.get(0);
+            Logger.debug("Instance supports [{}] extensions", numExtensions);
+
+            VkExtensionProperties.Buffer instanceExtensionsProps = VkExtensionProperties.calloc(numExtensions, stack);
+            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, instanceExtensionsProps);
+            for (int i = 0; i < numExtensions; i++) {
+                VkExtensionProperties props = instanceExtensionsProps.get(i);
+                String extensionName = props.extensionNameString();
+                instanceExtensions.add(extensionName);
+                Logger.debug("Supported instance extension [{}]", extensionName);
+            }
+        }
+        return instanceExtensions;
+    }
+    ...
+}
+```
+The method, as it will be frequent in many Vulkan API functions, first invoke the `vkEnumerateInstanceExtensionProperties` to get the number of supported extensions. After that, creates a method which will hold the extension properties by invoking the same function again, this time with the number of extensions and the buffer as parameters.
+
+Going back to the `Instance` constructor, because Vulkan is a cross-platform API, links to windowing systems are handled through extensions. In our case we will be using GLFW, which has extensions for Vulkan, so we need to include this as an extension with the following code:
 ```java
 public class Instance {
     ...
@@ -245,27 +273,70 @@ public class Instance {
 }
 ```
 
-Depending if we have enabled validation or not we will need to add the extension used for debugging. We will use the `VK_EXT_debug_utils` extension (which should be used instead of older debug extension such as `VK_EXT_debug_report` and `VK_EXT_debug_marker`).
+Depending if we have enabled validation or not we will need to add the extension used for debugging. We will use the `VK_EXT_debug_utils` extension (which should be used instead of older debug extension such as `VK_EXT_debug_report` and `VK_EXT_debug_marker`). In addition to that, if we are on MacOS and the `VK_KHR_portability_enumeration` is available we need to use that extension.
+
 ```java
 public class Instance {
     ...
     public Instance(boolean validate) {
         ...
-            PointerBuffer requiredExtensions;
+            boolean usePortability = instanceExtensions.contains(PORTABILITY_EXTENSION) &&
+                    VulkanUtils.getOS() == VulkanUtils.OSType.MACOS;
             if (supportsValidation) {
                 ByteBuffer vkDebugUtilsExtension = stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-                requiredExtensions = stack.mallocPointer(glfwExtensions.remaining() + 1);
+                int numExtensions = usePortability ? glfwExtensions.remaining() + 2 : glfwExtensions.remaining() + 1;
+                requiredExtensions = stack.mallocPointer(numExtensions);
                 requiredExtensions.put(glfwExtensions).put(vkDebugUtilsExtension);
+                if (usePortability) {
+                    requiredExtensions.put(stack.UTF8(PORTABILITY_EXTENSION));
+                }
             } else {
-                requiredExtensions = stack.mallocPointer(glfwExtensions.remaining());
+                int numExtensions = usePortability ? glfwExtensions.remaining() + 1 : glfwExtensions.remaining();
+                requiredExtensions = stack.mallocPointer(numExtensions);
                 requiredExtensions.put(glfwExtensions);
+                if (usePortability) {
+                    requiredExtensions.put(stack.UTF8(KHRPortabilitySubset.VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
+                }
             }
-            requiredExtensions.flip();        
+            requiredExtensions.flip();
         ...
     }
     ...
 }
 ```
+
+We have created a method named `getOS` in `VulkanUtils` class to get the type of OS:
+
+```java
+package org.vulkanb.eng.graph.vk;
+
+import static org.lwjgl.vulkan.VK11.VK_SUCCESS;
+
+public class VulkanUtils {
+
+    private VulkanUtils() {
+        // Utility class
+    }
+
+    public static OSType getOS() {
+        OSType result;
+        String os = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
+        if ((os.indexOf("mac") >= 0) || (os.indexOf("darwin") >= 0)) {
+            result = OSType.MACOS;
+        } else if (os.indexOf("win") >= 0) {
+            result = OSType.WINDOWS;
+        } else if (os.indexOf("nux") >= 0) {
+            result = OSType.LINUX;
+        } else {
+            result = OSType.OTHER;
+        }
+
+        return result;
+    }
+    ...
+}
+```
+
 
 Additionally, if we have enabled the debug extension, we will be interested in setting a callback, so we can, for example, log the information reported. We have already enabled the debugging extension, but we need to create it. We also need to pass this extension while creating  the instance to properly log errors while creating and destroying the instance:
 ```java
@@ -331,7 +402,7 @@ Finally, going back to the constructor, we have everything we need in order to c
 - The enabled layers.
 - The extensions requested.
 
-With that structure, we invoke the `vkCreateInstance` function, and we will get a pointer to the Vulkan instance. We store that address as a long attribute named `vkInstance`.
+With that structure, we invoke the `vkCreateInstance` function, and we will get a pointer to the Vulkan instance. We store that address as a long attribute named `vkInstance`. If we have enabled the portability extension, we need to set the `VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR` fla.
 
 ```java
 public class Instance {
@@ -345,6 +416,9 @@ public class Instance {
                     .pApplicationInfo(appInfo)
                     .ppEnabledLayerNames(requiredLayers)
                     .ppEnabledExtensionNames(requiredExtensions);
+            if (usePortability) {
+                instanceInfo.flags(0x00000001); // VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR
+            }
 
             PointerBuffer pInstance = stack.mallocPointer(1);
             vkCheck(vkCreateInstance(instanceInfo, null, pInstance), "Error creating instance");
@@ -377,16 +451,8 @@ public class Instance {
 Most of the Vulkan functions return an `int` value that is used to check if the call as succeeded or not. To check this, an utility method has been defined in the `VulkanUtils` class that throws a `RuntimeException` if the call does not return `VK_SUCCESS`.
 
 ```java
-package org.vulkanb.eng.graph.vk;
-
-import static org.lwjgl.vulkan.VK11.VK_SUCCESS;
-
 public class VulkanUtils {
-
-    private VulkanUtils() {
-        // Utility class
-    }
-
+    ...
     public static void vkCheck(int err, String errMsg) {
         if (err != VK_SUCCESS) {
             throw new RuntimeException(errMsg + ": " + err);
