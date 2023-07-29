@@ -75,6 +75,7 @@ public class Device {
     ...
     public Device(Instance instance, PhysicalDevice physicalDevice) {
         ...
+            // Define required extensions
             EngineProperties engineProperties = EngineProperties.getInstance();
             boolean enableCheckPoints = engineProperties.isEnableCheckPoints();
             PhysicalDevice.CheckPointExtension checkPointExtension = physicalDevice.getCheckPointExtension();
@@ -82,16 +83,29 @@ public class Device {
                 Logger.warn("Requested check point extensions but not supported by device");
                 enableCheckPoints = false;
             }
-            int numRequiredExtensions = enableCheckPoints ? 2 : 1;
+
+            int numRequiredExtensions = 1;
+            Set<String> deviceExtensions = getDeviceExtensions();
+            boolean usePortability = deviceExtensions.contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) && VulkanUtils.getOS() == VulkanUtils.OSType.MACOS;
+            if (usePortability) {
+                numRequiredExtensions++;
+            }
+            if (enableCheckPoints) {
+                numRequiredExtensions++;
+            }
             PointerBuffer requiredExtensions = stack.mallocPointer(numRequiredExtensions);
-            requiredExtensions.put(0, stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+            requiredExtensions.put(stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+            if (usePortability) {
+                requiredExtensions.put(stack.ASCII(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
+            }
             if (enableCheckPoints) {
                 if (checkPointExtension == PhysicalDevice.CheckPointExtension.NVIDIA) {
-                    requiredExtensions.put(1, stack.ASCII(NVDeviceDiagnosticCheckpoints.VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME));
+                    requiredExtensions.put(stack.ASCII(NVDeviceDiagnosticCheckpoints.VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME));
                 } else {
-                    requiredExtensions.put(1, stack.ASCII(AMDBufferMarker.VK_AMD_BUFFER_MARKER_EXTENSION_NAME));
+                    requiredExtensions.put(stack.ASCII(AMDBufferMarker.VK_AMD_BUFFER_MARKER_EXTENSION_NAME));
                 }
             }
+            requiredExtensions.flip();
         ...
     }
     ...

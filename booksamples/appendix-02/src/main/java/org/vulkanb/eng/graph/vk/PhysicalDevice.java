@@ -19,6 +19,7 @@ public class PhysicalDevice {
     private final VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures;
     private final VkPhysicalDeviceProperties vkPhysicalDeviceProperties;
     private final VkQueueFamilyProperties.Buffer vkQueueFamilyProps;
+    private CheckPointExtension checkPointExtension;
 
     private PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -36,6 +37,8 @@ public class PhysicalDevice {
             vkDeviceExtensions = VkExtensionProperties.calloc(intBuffer.get(0));
             vkCheck(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, (String) null, intBuffer, vkDeviceExtensions),
                     "Failed to get extension properties");
+
+            checkPointExtension = calCheckPointExtension(vkDeviceExtensions);
 
             // Get Queue family properties
             vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, intBuffer, null);
@@ -115,6 +118,23 @@ public class PhysicalDevice {
         return pPhysicalDevices;
     }
 
+    private CheckPointExtension calCheckPointExtension(VkExtensionProperties.Buffer vkDeviceExtensions) {
+        CheckPointExtension result = CheckPointExtension.NONE;
+
+        int numExtensions = vkDeviceExtensions != null ? vkDeviceExtensions.capacity() : 0;
+        for (int i = 0; i < numExtensions; i++) {
+            String extensionName = vkDeviceExtensions.get(i).extensionNameString();
+            if (NVDeviceDiagnosticCheckpoints.VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME.equals(extensionName)) {
+                result = CheckPointExtension.NVIDIA;
+                break;
+            } else if (AMDBufferMarker.VK_AMD_BUFFER_MARKER_EXTENSION_NAME.equals(extensionName)) {
+                result = CheckPointExtension.AMD;
+                break;
+            }
+        }
+        return result;
+    }
+
     public void cleanup() {
         if (Logger.isDebugEnabled()) {
             Logger.debug("Destroying physical device [{}]", vkPhysicalDeviceProperties.deviceNameString());
@@ -124,6 +144,10 @@ public class PhysicalDevice {
         vkQueueFamilyProps.free();
         vkDeviceExtensions.free();
         vkPhysicalDeviceProperties.free();
+    }
+
+    public CheckPointExtension getCheckPointExtension() {
+        return checkPointExtension;
     }
 
     public String getDeviceName() {
@@ -174,5 +198,9 @@ public class PhysicalDevice {
             }
         }
         return result;
+    }
+
+    public enum CheckPointExtension {
+        NONE, NVIDIA, AMD;
     }
 }

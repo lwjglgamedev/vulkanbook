@@ -337,17 +337,50 @@ public class Device {
     public Device(PhysicalDevice physicalDevice) {
         ...
             // Define required extensions
-            PointerBuffer requiredExtensions = stack.mallocPointer(1);
-            requiredExtensions.put(0, stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+            Set<String> deviceExtensions = getDeviceExtensions();
+            boolean usePortability = deviceExtensions.contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) && VulkanUtils.getOS() == VulkanUtils.OSType.MACOS;
+            int numExtensions = usePortability ? 2 : 1;
+            PointerBuffer requiredExtensions = stack.mallocPointer(numExtensions);
+            requiredExtensions.put(stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+            if (usePortability) {
+                requiredExtensions.put(stack.ASCII(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
+            }
+            requiredExtensions.flip();
         ...
     }
     ...
 }
 ```
 
-If you recall, when selecting the physical device we checked if it supported the KHR Swap chain extension, now it is the turn to explicitly say that we are going to use it. In order to define that we create a `PointerBuffer` which will hold a list of `null` terminated strings.
+If we are on MacOS and portability subset extension is supported, we need to enable it. Additionally, if you recall, when selecting the physical device we checked if it supported the KHR Swap chain extension, now it is the turn to explicitly say that we are going to use it. In order to define required extensions, we create a `PointerBuffer` which will hold a list of `null` terminated strings. The `getDeviceExtensions` method is similar to the one defined to get instance extensions:
 
-After that, we need set the features that we want to use. Features are certain capabilities which can be present or not in your physical device. For the ones that are present we can choose which ones to enable for our logical device. Some features control if compressed textures are enabled or not, if 64 bit floats are supported, etc. We could just simple use the set of features already supported by our physical device but doing this we may affect performance. By now we will not be enabling any feature, so we just allocate an empty structure.
+```java
+public class Device {
+    ...
+    private Set<String> getDeviceExtensions() {
+        Set<String> deviceExtensions = new HashSet<>();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer numExtensionsBuf = stack.callocInt(1);
+            vkEnumerateDeviceExtensionProperties(physicalDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, null);
+            int numExtensions = numExtensionsBuf.get(0);
+            Logger.debug("Device supports [{}] extensions", numExtensions);
+
+            VkExtensionProperties.Buffer propsBuff = VkExtensionProperties.calloc(numExtensions, stack);
+            vkEnumerateDeviceExtensionProperties(physicalDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
+            for (int i = 0; i < numExtensions; i++) {
+                VkExtensionProperties props = propsBuff.get(i);
+                String extensionName = props.extensionNameString();
+                deviceExtensions.add(extensionName);
+                Logger.debug("Supported device extension [{}]", extensionName);
+            }
+        }
+        return deviceExtensions;
+    }
+    ...
+}
+```
+
+Going back to the `Device` constructor, we need set the features that we want to use. Features are certain capabilities which can be present or not in your physical device. For the ones that are present we can choose which ones to enable for our logical device. Some features control if compressed textures are enabled or not, if 64 bit floats are supported, etc. We could just simple use the set of features already supported by our physical device but doing this we may affect performance. By now we will not be enabling any feature, so we just allocate an empty structure.
 
 ```java
 public class Device {

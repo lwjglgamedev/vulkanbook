@@ -4,9 +4,12 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
+import org.vulkanb.eng.EngineProperties;
 
-import java.nio.FloatBuffer;
+import java.nio.*;
+import java.util.*;
 
+import static org.lwjgl.vulkan.KHRPortabilitySubset.VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME;
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
 
@@ -24,8 +27,36 @@ public class Device {
         try (MemoryStack stack = MemoryStack.stackPush()) {
 
             // Define required extensions
-            PointerBuffer requiredExtensions = stack.mallocPointer(1);
-            requiredExtensions.put(0, stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+            EngineProperties engineProperties = EngineProperties.getInstance();
+            boolean enableCheckPoints = engineProperties.isEnableCheckPoints();
+            PhysicalDevice.CheckPointExtension checkPointExtension = physicalDevice.getCheckPointExtension();
+            if (enableCheckPoints && checkPointExtension == PhysicalDevice.CheckPointExtension.NONE) {
+                Logger.warn("Requested check point extensions but not supported by device");
+                enableCheckPoints = false;
+            }
+
+            int numRequiredExtensions = 1;
+            Set<String> deviceExtensions = getDeviceExtensions();
+            boolean usePortability = deviceExtensions.contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) && VulkanUtils.getOS() == VulkanUtils.OSType.MACOS;
+            if (usePortability) {
+                numRequiredExtensions++;
+            }
+            if (enableCheckPoints) {
+                numRequiredExtensions++;
+            }
+            PointerBuffer requiredExtensions = stack.mallocPointer(numRequiredExtensions);
+            requiredExtensions.put(stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+            if (usePortability) {
+                requiredExtensions.put(stack.ASCII(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
+            }
+            if (enableCheckPoints) {
+                if (checkPointExtension == PhysicalDevice.CheckPointExtension.NVIDIA) {
+                    requiredExtensions.put(stack.ASCII(NVDeviceDiagnosticCheckpoints.VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME));
+                } else {
+                    requiredExtensions.put(stack.ASCII(AMDBufferMarker.VK_AMD_BUFFER_MARKER_EXTENSION_NAME));
+                }
+            }
+            requiredExtensions.flip();
 
             // Set up required features
             VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.calloc(stack);
@@ -72,6 +103,26 @@ public class Device {
         Logger.debug("Destroying Vulkan device");
         memoryAllocator.cleanUp();
         vkDestroyDevice(vkDevice, null);
+    }
+
+    private Set<String> getDeviceExtensions() {
+        Set<String> deviceExtensions = new HashSet<>();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer numExtensionsBuf = stack.callocInt(1);
+            vkEnumerateDeviceExtensionProperties(physicalDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, null);
+            int numExtensions = numExtensionsBuf.get(0);
+            Logger.debug("Device supports [{}] extensions", numExtensions);
+
+            VkExtensionProperties.Buffer propsBuff = VkExtensionProperties.calloc(numExtensions, stack);
+            vkEnumerateDeviceExtensionProperties(physicalDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
+            for (int i = 0; i < numExtensions; i++) {
+                VkExtensionProperties props = propsBuff.get(i);
+                String extensionName = props.extensionNameString();
+                deviceExtensions.add(extensionName);
+                Logger.debug("Supported device extension [{}]", extensionName);
+            }
+        }
+        return deviceExtensions;
     }
 
     public MemoryAllocator getMemoryAllocator() {
