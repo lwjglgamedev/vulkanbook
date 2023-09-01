@@ -1,0 +1,78 @@
+[
+{
+  "name":"imgui.ImFontAtlas",
+  "methods":[{"name":"createAlpha8Pixels","parameterTypes":["int"] }, {"name":"createRgba32Pixels","parameterTypes":["int"] }]
+},
+{
+  "name":"imgui.ImVec2",
+  "fields":[{"name":"x"}, {"name":"y"}]
+},
+{
+  "name":"imgui.ImVec4",
+  "fields":[{"name":"w"}, {"name":"x"}, {"name":"y"}, {"name":"z"}]
+},
+{
+  "name":"imgui.assertion.ImAssertCallback",
+  "methods":[{"name":"imAssert","parameterTypes":["java.lang.String","int","java.lang.String"] }]
+},
+{
+  "name":"imgui.binding.ImGuiStruct",
+  "fields":[{"name":"ptr"}]
+},
+{
+  "name":"imgui.callback.ImGuiInputTextCallback",
+  "methods":[{"name":"accept","parameterTypes":["long"] }]
+},
+{
+  "name":"imgui.callback.ImListClipperCallback",
+  "methods":[{"name":"accept","parameterTypes":["int"] }]
+},
+{
+  "name":"imgui.callback.ImPlatformFuncViewport",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport"] }]
+},
+{
+  "name":"imgui.callback.ImPlatformFuncViewportFloat",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport","float"] }]
+},
+{
+  "name":"imgui.callback.ImPlatformFuncViewportImVec2",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport","imgui.ImVec2"] }]
+},
+{
+  "name":"imgui.callback.ImPlatformFuncViewportString",
+  "methods":[{"name":"accept","parameterTypes":["imgui.ImGuiViewport","java.lang.String"] }]
+},
+{
+  "name":"imgui.callback.ImPlatformFuncViewportSuppBoolean",
+  "methods":[{"name":"get","parameterTypes":["imgui.ImGuiViewport"] }]
+},
+{
+  "name":"imgui.callback.ImPlatformFuncViewportSuppFloat",
+  "methods":[{"name":"get","parameterTypes":["imgui.ImGuiViewport"] }]
+},
+{
+  "name":"imgui.callback.ImPlatformFuncViewportSuppImVec2",
+  "methods":[{"name":"get","parameterTypes":["imgui.ImGuiViewport","imgui.ImVec2"] }]
+},
+{
+  "name":"imgui.callback.ImStrConsumer",
+  "methods":[{"name":"accept","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"imgui.callback.ImStrSupplier",
+  "methods":[{"name":"get","parameterTypes":[] }]
+},
+{
+  "name":"imgui.extension.imguifiledialog.callback.ImGuiFileDialogPaneFun",
+  "methods":[{"name":"paneFun","parameterTypes":["java.lang.String","long","boolean"] }]
+},
+{
+  "name":"imgui.type.ImString",
+  "methods":[{"name":"resizeInternal","parameterTypes":["int"] }]
+},
+{
+  "name":"imgui.type.ImString$InputData",
+  "fields":[{"name":"isDirty"}, {"name":"isResized"}, {"name":"size"}]
+}
+]

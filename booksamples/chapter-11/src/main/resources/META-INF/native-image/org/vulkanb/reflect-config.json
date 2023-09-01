@@ -1,0 +1,14 @@
+[
+{
+  "name":"org.tinylog.configuration.PropertiesConfigurationLoader",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.tinylog.core.TinylogLoggingProvider",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.tinylog.writers.ConsoleWriter",
+  "methods":[{"name":"<init>","parameterTypes":["java.util.Map"] }]
+}
+]

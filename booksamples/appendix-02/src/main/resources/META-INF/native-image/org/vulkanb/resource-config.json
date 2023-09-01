@@ -1,0 +1,17 @@
+{
+  "resources":{
+  "includes":[
+    { "pattern":"\\Qeng.properties\\E" },
+	{ "pattern":"\\Qtinylog.properties\\E" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/(lwjgl.dll|liblwjgl.so|liblwjgl.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/glfw/(glfw.dll|libglfw.so|libglfw.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/shaderc/(shaderc.dll|libshaderc.so|libshaderc.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/assimp/(assimp.dll|libassimp.so|libassimp.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/assimp/(draco.dll|libdraco.so|libdraco.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/stb/(lwjgl_stb.dll|liblwjgl_stb.so|liblwjgl_stb.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/vma/(lwjgl_vma.dll|liblwjgl_vma.so|liblwjgl_vma.dylib)$" },
+	{ "pattern":"^io/imgui/java/native-bin/(imgui-java64.dll|libimgui-java64.so|libimgui-java64.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/openal/(OpenAL.dll|libopenal.so|libopenal.dylib)$" }
+	]},
+  "bundles":[]
+}
