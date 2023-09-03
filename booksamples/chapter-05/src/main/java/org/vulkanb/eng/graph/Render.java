@@ -46,8 +46,8 @@ public class Render {
     public void render(Window window, Scene scene) {
         swapChain.acquireNextImage();
 
-        fwdRenderActivity.submit(presentQueue);
+        fwdRenderActivity.submit(graphQueue);
 
-        swapChain.presentImage(graphQueue);
+        swapChain.presentImage(presentQueue);
     }
 }

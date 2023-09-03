@@ -1076,9 +1076,9 @@ public class Render {
         swapChain.acquireNextImage();
 
         fwdRenderActivity.recordCommandBuffer(meshList);
-        fwdRenderActivity.submit(presentQueue);
+        fwdRenderActivity.submit(graphQueue);
 
-        swapChain.presentImage(graphQueue);
+        swapChain.presentImage(presentQueue);
     }
 }
 ```

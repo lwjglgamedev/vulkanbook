@@ -87,7 +87,7 @@ public class Render {
         lightingRenderActivity.prepareCommandBuffer();
         lightingRenderActivity.submit(graphQueue);
 
-        if (swapChain.presentImage(graphQueue)) {
+        if (swapChain.presentImage(presentQueue)) {
             window.setResized(true);
         }
     }

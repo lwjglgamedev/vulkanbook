@@ -36,3 +36,5 @@ To all the readers that have contributed with corrections, improvements and idea
 
 - [SWinxy](https://github.com/SWinxy)
 - [Kai Burjack](https://github.com/httpdigest)
+- [Mjrlun](https://github.com/Mjrlun)
+- [Rongcui Dong](https://github.com/rongcuid)

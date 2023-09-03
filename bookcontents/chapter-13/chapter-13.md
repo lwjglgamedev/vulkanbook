@@ -1426,7 +1426,7 @@ public class Render {
         lightingRenderActivity.prepareCommandBuffer(shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.submit(graphQueue);
 
-        if (swapChain.presentImage(graphQueue)) {
+        if (swapChain.presentImage(presentQueue)) {
             window.setResized(true);
         }
     }

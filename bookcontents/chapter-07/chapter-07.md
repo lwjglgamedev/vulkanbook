@@ -760,9 +760,9 @@ public class Render {
         }
 
         fwdRenderActivity.recordCommandBuffer(vulkanModels);
-        fwdRenderActivity.submit(presentQueue);
+        fwdRenderActivity.submit(graphQueue);
 
-        if (swapChain.presentImage(graphQueue)) {
+        if (swapChain.presentImage(presentQueue)) {
             window.setResized(true);
         }
     }
