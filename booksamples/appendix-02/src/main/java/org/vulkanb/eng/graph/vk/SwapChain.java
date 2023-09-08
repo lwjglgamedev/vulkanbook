@@ -135,7 +135,7 @@ public class SwapChain {
         return new SurfaceFormat(imageFormat, colorSpace);
     }
 
-    public VkExtent2D calcSwapChainExtent(Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
+    private VkExtent2D calcSwapChainExtent(Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
         VkExtent2D result = VkExtent2D.calloc();
         if (surfCapabilities.currentExtent().width() == 0xFFFFFFFF) {
             // Surface size undefined. Set to the window size if within bounds

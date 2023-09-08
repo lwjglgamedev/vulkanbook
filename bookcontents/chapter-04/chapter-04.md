@@ -32,6 +32,7 @@ public class SwapChain {
     private final Device device;
     private final ImageView[] imageViews;
     private final SurfaceFormat surfaceFormat;
+    private final VkExtent2D swapChainExtent;
     private final long vkSwapChain;
 
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
@@ -158,7 +159,7 @@ public class SwapChain {
     ...
         public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
             ...
-            VkExtent2D swapChainExtent = calcSwapChainExtent(stack, window, surfCapabilities);
+            swapChainExtent = calcSwapChainExtent(window, surfCapabilities);
             ...
         }
     ...
@@ -170,7 +171,7 @@ The `calcSwapChainExtent` method is defined like this:
 ```java
 public class SwapChain {
     ...
-    public VkExtent2D calcSwapChainExtent(Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
+    private VkExtent2D calcSwapChainExtent(Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
         VkExtent2D result = VkExtent2D.calloc();
         if (surfCapabilities.currentExtent().width() == 0xFFFFFFFF) {
             // Surface size undefined. Set to the window size if within bounds
@@ -429,6 +430,7 @@ public class SwapChain {
     ...
     public void cleanup() {
         Logger.debug("Destroying Vulkan SwapChain");
+        swapChainExtent.free();
         Arrays.asList(imageViews).forEach(ImageView::cleanup);
         KHRSwapchain.vkDestroySwapchainKHR(device.getVkDevice(), vkSwapChain, null);
     }
