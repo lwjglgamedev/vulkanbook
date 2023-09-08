@@ -54,6 +54,7 @@ public class VulkanBuffer {
     }
 
     public void cleanup() {
+        MemoryUtil.memFree(pb);
         vkDestroyBuffer(device.getVkDevice(), buffer, null);
         vkFreeMemory(device.getVkDevice(), memory, null);
     }
