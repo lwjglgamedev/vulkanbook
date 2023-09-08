@@ -793,6 +793,10 @@ public class MemoryBarrier {
                 .dstAccessMask(dstAccessMask);
     }
 
+    public void cleanup() {
+        MemoryUtil.memFree(vkMemoryBarrier);
+    }
+    
     public VkMemoryBarrier.Buffer getVkMemoryBarrier() {
         return vkMemoryBarrier;
     }
@@ -856,6 +860,7 @@ public class AnimationComputeActivity {
         for (Map.Entry<String, List<EntityAnimationBuffer>> entry : entityAnimationsBuffers.entrySet()) {
             entry.getValue().forEach(EntityAnimationBuffer::cleanup);
         }
+        memoryBarrier.cleanup();
     }
     ...
 }
@@ -1281,6 +1286,8 @@ public class GeometryRenderActivity {
 
 You can see that the `recordCommandBuffer` has a new reference to the buffers that hold the animated vertices for each of the entities. This will be used in the `recordEntities` method. In this method, we just need to check if the entity is related to a model that has animations or not. If so, instead of using the data associated to the meshes of the model, we use the buffer associated to the animation for that entity.
 ```java
+public class GeometryRenderActivity {
+    ...
     private void recordEntities(MemoryStack stack, VkCommandBuffer cmdHandle, LongBuffer descriptorSets,
                                 List<VulkanModel> vulkanModelList,
                                 Map<String, List<AnimationComputeActivity.EntityAnimationBuffer>> entityAnimationsBuffers) {
@@ -1319,6 +1326,18 @@ You can see that the `recordCommandBuffer` has a new reference to the buffers th
             ...
         }
         ...
+    }
+    ...
+}
+```
+
+Finally, we need to free the memory barrier in the `cleanup` method:
+```java
+public class GeometryRenderActivity {
+    ...
+    public void cleanup() {
+        ...
+        memoryBarrier.cleanup();
     }
     ...
 }

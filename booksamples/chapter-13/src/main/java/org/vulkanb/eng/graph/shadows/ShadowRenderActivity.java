@@ -102,6 +102,7 @@ public class ShadowRenderActivity {
                 GeometryAttachments.NUMBER_COLOR_ATTACHMENTS, true, true, GraphConstants.MAT4X4_SIZE,
                 new VertexBufferStructure(), descriptorSetLayouts);
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
+        pipeLineCreationInfo.cleanup();
     }
 
     private void createShaders() {

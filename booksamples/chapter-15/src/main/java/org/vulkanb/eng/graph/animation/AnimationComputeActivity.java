@@ -62,6 +62,7 @@ public class AnimationComputeActivity {
         for (Map.Entry<String, List<EntityAnimationBuffer>> entry : entityAnimationsBuffers.entrySet()) {
             entry.getValue().forEach(EntityAnimationBuffer::cleanup);
         }
+        memoryBarrier.cleanup();
     }
 
     private void createCommandBuffers(CommandPool commandPool) {

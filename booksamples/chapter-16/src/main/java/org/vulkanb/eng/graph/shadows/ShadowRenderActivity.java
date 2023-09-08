@@ -110,6 +110,7 @@ public class ShadowRenderActivity {
                 GeometryAttachments.NUMBER_COLOR_ATTACHMENTS, true, true, 0,
                 new InstancedVertexBufferStructure(), descriptorSetLayouts);
         pipeLine = new Pipeline(pipelineCache, pipeLineCreationInfo);
+        pipeLineCreationInfo.cleanup();
     }
 
     private void createShaders() {

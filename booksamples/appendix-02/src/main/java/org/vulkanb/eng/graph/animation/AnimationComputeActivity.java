@@ -55,6 +55,7 @@ public class AnimationComputeActivity {
         descriptorPool.cleanup();
         storageDescriptorSetLayout.cleanup();
         fence.cleanup();
+        memoryBarrier.cleanup();
     }
 
     private void createCommandBuffers(CommandPool commandPool) {

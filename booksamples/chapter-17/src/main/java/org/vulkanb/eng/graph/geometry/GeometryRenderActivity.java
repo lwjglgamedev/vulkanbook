@@ -72,6 +72,7 @@ public class GeometryRenderActivity {
         descriptorPool.cleanup();
         shaderProgram.cleanup();
         geometryFrameBuffer.cleanup();
+        memoryBarrier.cleanup();
     }
 
     private void createDescriptorPool() {

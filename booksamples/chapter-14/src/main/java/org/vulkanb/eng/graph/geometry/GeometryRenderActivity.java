@@ -101,6 +101,7 @@ public class GeometryRenderActivity {
         geometryFrameBuffer.cleanup();
         Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
         Arrays.asList(fences).forEach(Fence::cleanup);
+        memoryBarrier.cleanup();
     }
 
     private void createCommandBuffers(CommandPool commandPool, int numImages) {
