@@ -31,8 +31,8 @@ public class Render {
         surface = new Surface(physicalDevice, window.getWindowHandle());
         graphQueue = new Queue.GraphicsQueue(device, 0);
         presentQueue = new Queue.PresentQueue(device, surface, 0);
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
-                engProps.isvSync());
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
+                presentQueue, new Queue[]{graphQueue});
         commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
         pipelineCache = new PipelineCache(device);
         fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool, pipelineCache, scene);
@@ -87,8 +87,8 @@ public class Render {
 
         swapChain.cleanup();
 
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
-                engProps.isvSync());
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
+                presentQueue, new Queue[]{graphQueue});
         fwdRenderActivity.resize(swapChain);
     }
 }

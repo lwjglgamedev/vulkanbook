@@ -544,10 +544,16 @@ public class Queue {
 }
 ```
 
-We could the same queue used to submit graphics commands, in that case we would need to check for both graphics and presentation capabilities. Let's get back to the `Render` class and review the the definition of the `render` method:
+Let's get back to the `Render` class, and review the changes in the constructor and the `render` method:
 
 ```java
 public class Render {
+    public Render(Window window, Scene scene) {
+        ...
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
+                presentQueue, new Queue[]{graphQueue});
+        ...
+    }
     ...
     public void render(Window window, Scene scene) {
         swapChain.acquireNextImage();
@@ -560,7 +566,58 @@ public class Render {
 }
 ```
 
-As you can see it matches the render loop figure presented above. The `SwapChain` class defines two new methods to acquire and present the used images. Let's review the changes of this class. First of all, in the constructor we create as many semaphores as images we have for the swap chain:
+As you can see it matches the render loop figure presented above. The `SwapChain` class defines two new methods to acquire and present the used images, there are also changes in the `SwapChain` constructor. Let's review them. As it has been explained above, We can have a single queue to combine graphics and presentation. In that case we would need to check for both graphics and presentation capabilities. However, for some hardware, this could not be the case and we may have different queue families for graphics and presentation. If this is the case, we need to modify how the swap chain access the images. If the queue families used for graphics and presentation are different we may need to access to render results from different queues families, therefore we cannot rely on exclusive access, we need to switch to concurrent access. In order to properly handle that, we will need to modify the `SwapChain` constructor to accept two new parameters:
+
+- The queue used for presentation.
+- Other queues which may have concurrent access. If you only use a single queue for everything just leave that parameter as null.
+
+The changes are like this:
+```java
+public class SwapChain {
+    ...
+    public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync,
+                     Queue.PresentQueue presentationQueue, Queue[] concurrentQueues) {
+        ...
+            VkSwapchainCreateInfoKHR vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.calloc(stack)
+                    .sType(KHRSwapchain.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR)
+                    .surface(surface.getVkSurface())
+                    .minImageCount(numImages)
+                    .imageFormat(surfaceFormat.imageFormat())
+                    .imageColorSpace(surfaceFormat.colorSpace())
+                    .imageExtent(swapChainExtent)
+                    .imageArrayLayers(1)
+                    .imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                    .preTransform(surfCapabilities.currentTransform())
+                    .compositeAlpha(KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+                    .clipped(true);
+            ...
+            int numQueues = concurrentQueues != null ? concurrentQueues.length : 0;
+            List<Integer> indices = new ArrayList<>();
+            for (int i = 0; i < numQueues; i++) {
+                Queue queue = concurrentQueues[i];
+                if (queue.getQueueFamilyIndex() != presentationQueue.getQueueFamilyIndex()) {
+                    indices.add(queue.getQueueFamilyIndex());
+                }
+            }
+            if (indices.size() > 0) {
+                IntBuffer intBuffer = stack.mallocInt(indices.size() + 1);
+                indices.forEach(i -> intBuffer.put(i));
+                intBuffer.put(presentationQueue.getQueueFamilyIndex()).flip();
+                vkSwapchainCreateInfo.imageSharingMode(VK_SHARING_MODE_CONCURRENT)
+                        .queueFamilyIndexCount(intBuffer.capacity())
+                        .pQueueFamilyIndices(intBuffer);
+            } else {
+                vkSwapchainCreateInfo.imageSharingMode(VK_SHARING_MODE_EXCLUSIVE);
+            }            
+        ...
+    }
+    ...
+}
+```
+
+As you can see, if we have a set of concurrent queues, we need to check which of them have different queue family index than the presentation queue. In that case, we  need to change from `VK_SHARING_MODE_EXCLUSIVE` to `VK_SHARING_MODE_CONCURRENT` and include in a buffer all the queue family indices that require concurrent access, including the presentation queue family itself.
+
+In addition to that, we need to add more changes to the constructor to create as many semaphores as images we have for the swap chain:
 
 ```java
 public class SwapChain {
@@ -573,9 +630,7 @@ public class SwapChain {
     public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
         ...
             syncSemaphoresList = new SyncSemaphores[numImages];
-            for (int i = 0; i < numImages; i++) {
-                syncSemaphoresList[i] = new SyncSemaphores(device);
-            }
+            Arrays.setAll(syncSemaphoresList, i -> new SyncSemaphores(device));
             currentFrame = 0;
         ...
     }

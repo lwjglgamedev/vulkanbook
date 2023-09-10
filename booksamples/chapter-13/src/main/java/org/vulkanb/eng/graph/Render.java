@@ -37,8 +37,8 @@ public class Render {
         surface = new Surface(physicalDevice, window.getWindowHandle());
         graphQueue = new Queue.GraphicsQueue(device, 0);
         presentQueue = new Queue.PresentQueue(device, surface, 0);
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
-                engProps.isvSync());
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
+                presentQueue, new Queue[]{graphQueue});
         commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
         pipelineCache = new PipelineCache(device);
         vulkanModels = new ArrayList<>();
@@ -109,8 +109,8 @@ public class Render {
 
         swapChain.cleanup();
 
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
-                engProps.isvSync());
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
+                presentQueue, new Queue[]{graphQueue});
         geometryRenderActivity.resize(swapChain);
         shadowRenderActivity.resize(swapChain);
         List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());

@@ -6,7 +6,7 @@ import org.tinylog.Logger;
 import org.vulkanb.eng.Window;
 
 import java.nio.*;
-import java.util.Arrays;
+import java.util.*;
 
 import static org.lwjgl.vulkan.VK11.*;
 import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
@@ -22,7 +22,8 @@ public class SwapChain {
 
     private int currentFrame;
 
-    public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync) {
+    public SwapChain(Device device, Surface surface, Window window, int requestedImages, boolean vsync,
+                     Queue.PresentQueue presentationQueue, Queue[] concurrentQueues) {
         Logger.debug("Creating Vulkan SwapChain");
         this.device = device;
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -49,7 +50,6 @@ public class SwapChain {
                     .imageExtent(swapChainExtent)
                     .imageArrayLayers(1)
                     .imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-                    .imageSharingMode(VK_SHARING_MODE_EXCLUSIVE)
                     .preTransform(surfCapabilities.currentTransform())
                     .compositeAlpha(KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
                     .clipped(true);
@@ -58,6 +58,26 @@ public class SwapChain {
             } else {
                 vkSwapchainCreateInfo.presentMode(KHRSurface.VK_PRESENT_MODE_IMMEDIATE_KHR);
             }
+
+            int numQueues = concurrentQueues != null ? concurrentQueues.length : 0;
+            List<Integer> indices = new ArrayList<>();
+            for (int i = 0; i < numQueues; i++) {
+                Queue queue = concurrentQueues[i];
+                if (queue.getQueueFamilyIndex() != presentationQueue.getQueueFamilyIndex()) {
+                    indices.add(queue.getQueueFamilyIndex());
+                }
+            }
+            if (indices.size() > 0) {
+                IntBuffer intBuffer = stack.mallocInt(indices.size() + 1);
+                indices.forEach(i -> intBuffer.put(i));
+                intBuffer.put(presentationQueue.getQueueFamilyIndex()).flip();
+                vkSwapchainCreateInfo.imageSharingMode(VK_SHARING_MODE_CONCURRENT)
+                        .queueFamilyIndexCount(intBuffer.capacity())
+                        .pQueueFamilyIndices(intBuffer);
+            } else {
+                vkSwapchainCreateInfo.imageSharingMode(VK_SHARING_MODE_EXCLUSIVE);
+            }
+
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(KHRSwapchain.vkCreateSwapchainKHR(device.getVkDevice(), vkSwapchainCreateInfo, null, lp),
                     "Failed to create swap chain");
@@ -66,9 +86,7 @@ public class SwapChain {
             imageViews = createImageViews(stack, device, vkSwapChain, surfaceFormat.imageFormat);
             numImages = imageViews.length;
             syncSemaphoresList = new SyncSemaphores[numImages];
-            for (int i = 0; i < numImages; i++) {
-                syncSemaphoresList[i] = new SyncSemaphores(device);
-            }
+            Arrays.setAll(syncSemaphoresList, i -> new SyncSemaphores(device));
             currentFrame = 0;
         }
     }

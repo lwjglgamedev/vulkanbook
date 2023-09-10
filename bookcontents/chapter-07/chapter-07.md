@@ -775,8 +775,8 @@ public class Render {
 
         swapChain.cleanup();
 
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(),
-                engProps.isvSync());
+        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
+                presentQueue, new Queue[]{graphQueue});
         fwdRenderActivity.resize(swapChain);
     }
     ...

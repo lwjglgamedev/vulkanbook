@@ -461,7 +461,7 @@ public class Render {
 }
 ```
 
-We have also modified also the `EngineProperties` class to read a new property to configure the usage of  vsync:
+We have also modified also the `EngineProperties` class to read a new property to configure the usage of vsync:
 
 ```java
 public class EngineProperties {
