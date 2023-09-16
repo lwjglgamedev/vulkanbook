@@ -19,14 +19,16 @@ public class AnimationComputeActivity {
     private static final String ANIM_COMPUTE_SHADER_FILE_GLSL = "resources/shaders/animations_comp.glsl";
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
     private static final int LOCAL_SIZE_X = 32;
-    private final Queue.ComputeQueue computeQueue;
+
     private final Device device;
+    private final MemoryBarrier memoryBarrier;
+    private final Queue.ComputeQueue computeQueue;
     // Key is the entity id
     private final Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
-    private final MemoryBarrier memoryBarrier;
     // Key is the model id
     private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
     private final Scene scene;
+    private final AnimationSpecConstants animationSpecConstants;
 
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
@@ -41,6 +43,7 @@ public class AnimationComputeActivity {
         this.scene = scene;
         device = pipelineCache.getDevice();
         computeQueue = new Queue.ComputeQueue(device, 0);
+        animationSpecConstants = new AnimationSpecConstants();
         createDescriptorPool();
         createDescriptorSets();
         createShaders();
@@ -53,6 +56,7 @@ public class AnimationComputeActivity {
 
     public void cleanup() {
         computePipeline.cleanup();
+        animationSpecConstants.cleanup();
         shaderProgram.cleanup();
         commandBuffer.cleanup();
         descriptorPool.cleanup();
@@ -104,7 +108,8 @@ public class AnimationComputeActivity {
         }
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_COMPUTE_BIT, ANIM_COMPUTE_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_COMPUTE_BIT, ANIM_COMPUTE_SHADER_FILE_SPV,
+                                animationSpecConstants.getSpecInfo()),
                 });
     }
 

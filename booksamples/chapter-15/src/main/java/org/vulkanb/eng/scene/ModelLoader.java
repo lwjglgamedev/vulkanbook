@@ -5,6 +5,7 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.assimp.*;
 import org.lwjgl.system.MemoryStack;
 import org.tinylog.Logger;
+import org.vulkanb.eng.EngineProperties;
 
 import java.io.File;
 import java.lang.Math;
@@ -16,7 +17,6 @@ import static org.vulkanb.eng.EngineUtils.*;
 
 public class ModelLoader {
 
-    public static final int MAX_JOINTS = 150;
     public static final int MAX_WEIGHTS = 4;
     private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
 
@@ -187,6 +187,7 @@ public class ModelLoader {
                                                                Node rootNode, Matrix4f globalInverseTransformation) {
         List<ModelData.Animation> animations = new ArrayList<>();
 
+        int maxJointsMatricesLists = EngineProperties.getInstance().getMaxJointsMatricesLists();
         // Process all animations
         int numAnimations = aiScene.mNumAnimations();
         PointerBuffer aiAnimations = aiScene.mAnimations();
@@ -199,7 +200,7 @@ public class ModelLoader {
             animations.add(animation);
 
             for (int j = 0; j < maxFrames; j++) {
-                Matrix4f[] jointMatrices = new Matrix4f[MAX_JOINTS];
+                Matrix4f[] jointMatrices = new Matrix4f[maxJointsMatricesLists];
                 Arrays.fill(jointMatrices, IDENTITY_MATRIX);
                 ModelData.AnimatedFrame animatedFrame = new ModelData.AnimatedFrame(jointMatrices);
                 buildFrameMatrices(aiAnimation, boneList, animatedFrame, j, rootNode,

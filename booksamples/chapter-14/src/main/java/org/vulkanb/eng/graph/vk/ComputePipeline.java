@@ -33,6 +33,9 @@ public class ComputePipeline {
                     .stage(shaderModule.shaderStage())
                     .module(shaderModule.handle())
                     .pName(main);
+            if (shaderModule.specInfo() != null) {
+                shaderStage.pSpecializationInfo(shaderModule.specInfo());
+            }
 
             DescriptorSetLayout[] descriptorSetLayouts = pipeLineCreationInfo.descriptorSetLayouts();
             int numLayouts = descriptorSetLayouts != null ? descriptorSetLayouts.length : 0;

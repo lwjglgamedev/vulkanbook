@@ -244,13 +244,13 @@ Let’s review the `processAnimations` method, which is defined like this:
 ```java
 public class ModelLoader {
     ...
-    public static final int MAX_JOINTS = 150;
     private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
     ...    
     private static List<ModelData.Animation> processAnimations(AIScene aiScene, List<Bone> boneList,
                                                                Node rootNode, Matrix4f globalInverseTransformation) {
         List<ModelData.Animation> animations = new ArrayList<>();
 
+        int maxJointsMatricesLists = EngineProperties.getInstance().getMaxJointsMatricesLists();
         // Process all animations
         int numAnimations = aiScene.mNumAnimations();
         PointerBuffer aiAnimations = aiScene.mAnimations();
@@ -263,7 +263,7 @@ public class ModelLoader {
             animations.add(animation);
 
             for (int j = 0; j < maxFrames; j++) {
-                Matrix4f[] jointMatrices = new Matrix4f[MAX_JOINTS];
+                Matrix4f[] jointMatrices = new Matrix4f[maxJointsMatricesLists];
                 Arrays.fill(jointMatrices, IDENTITY_MATRIX);
                 ModelData.AnimatedFrame animatedFrame = new ModelData.AnimatedFrame(jointMatrices);
                 buildFrameMatrices(aiAnimation, boneList, animatedFrame, j, rootNode,
@@ -408,7 +408,36 @@ public class ModelLoader {
 }
 ```
 
-All that new information needs to be handled in the `VulkanModel` class so it is loaded into the GPU. This class now defines the following new attribute:
+We needed to add new configuration properties in the `EngineProperties` class to properly establish the size of the descriptors set pool in the `AnimationComputeActivity` class, here are the changes:
+```java
+public class EngineProperties {
+    ...
+    private static final int DEFAULT_MAX_JOINTS_MATRICES_LISTS = 100;
+    private static final int DEFAULT_STORAGES_BUFFERS = 100;
+    ...
+    private int maxJointsMatricesLists;
+    private int maxStorageBuffers;
+    ...
+    private EngineProperties() {
+        ...
+            maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", DEFAULT_STORAGES_BUFFERS).toString());
+            maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", DEFAULT_MAX_JOINTS_MATRICES_LISTS).toString());
+        ...
+    }
+    ...
+    public int getMaxJointsMatricesLists() {
+        return maxJointsMatricesLists;
+    }
+
+    public int getMaxStorageBuffers() {
+        return maxStorageBuffers;
+    }
+    ...
+}
+```
+
+
+All the information processed by `ModelLoader` class needs to be handled in the `VulkanModel` class so it is loaded into the GPU. This class now defines the following new attribute:
 ```java
 public class VulkanModel {
 
@@ -483,6 +512,7 @@ public class VulkanModel {
     ...
 }
 ```
+
 If the model has animations, we create the buffers that will hold the join transformation matrices for each of the frames. As usual, we use staging buffers with temporary CPU accessible buffers that get copied to a GPU only one, so we need to record those transitions. We also create the wights buffer for each of the meshes and store that in the `VulkanModel.VulkanMesh` instance. The `createJointMatricesBuffers` is defined like this:
 ```java
 public class VulkanModel {
@@ -603,7 +633,7 @@ public class ComputePipeline {
 }
 ```
 
-Going back to the `ComputePipeline` constructor, we first initialize the `VkPipelineShaderStageCreateInfo` structure with the compute shader information. In this specific case, we receive a `ShaderProgram` instance through the `ComputePipeline.PipeLineCreationInfo` record. The `ShaderProgram` class is also used for the graphics pipeline creation holding shader modules that refer to vertex and fragment shaders. In our case, we just need a compute shader, so we just need a shader module. We will assume that in the first position of the shader modules we will receive that reference.
+Going back to the `ComputePipeline` constructor, we first initialize the `VkPipelineShaderStageCreateInfo` structure with the compute shader information. In this specific case, we receive a `ShaderProgram` instance through the `ComputePipeline.PipeLineCreationInfo` record. The `ShaderProgram` class is also used for the graphics pipeline creation holding shader modules that refer to vertex and fragment shaders. In our case, we just need a compute shader, so we just need a shader module. We will assume that in the first position of the shader modules we will receive that reference. As in other types of shaders, compute shaders can use specialization constants, so we need to add support for them if `ShaderModule` instance defines them.
 ```java
 public class ComputePipeline {
     ...
@@ -625,6 +655,9 @@ public class ComputePipeline {
                     .stage(shaderModule.shaderStage())
                     .module(shaderModule.handle())
                     .pName(main);
+            if (shaderModule.specInfo() != null) {
+                shaderStage.pSpecializationInfo(shaderModule.specInfo());
+            }
             ...
         }
         ...
@@ -811,19 +844,21 @@ public class AnimationComputeActivity {
     private static final String ANIM_COMPUTE_SHADER_FILE_SPV = ANIM_COMPUTE_SHADER_FILE_GLSL + ".spv";
     private static final int LOCAL_SIZE_X = 32;
 
-    private MemoryBarrier memoryBarrier;
+    private final Device device;
+    private final MemoryBarrier memoryBarrier;
+    private final Queue.ComputeQueue computeQueue;
+    // Key is the entity id
+    private final Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
+    // Key is the model id
+    private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
+    private final Scene scene;
+    private final AnimationSpecConstants animationSpecConstants;
+
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
-    private Queue.ComputeQueue computeQueue;
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
-    private Device device;
-    // Key is the entity id
-    private Map<String, List<EntityAnimationBuffer>> entityAnimationsBuffers;
     private Fence fence;
-    // Key is the model id
-    private Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
-    private Scene scene;
     private ShaderProgram shaderProgram;
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
     private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
@@ -832,6 +867,7 @@ public class AnimationComputeActivity {
         this.scene = scene;
         device = pipelineCache.getDevice();
         computeQueue = new Queue.ComputeQueue(device, 0);
+        animationSpecConstants = new AnimationSpecConstants();
         createDescriptorPool();
         createDescriptorSets();
         createShaders();
@@ -845,12 +881,60 @@ public class AnimationComputeActivity {
 }
 ```
 
-In the `cleanup` method, as usual, we just free the resources:
+We create an instance of `AnimationSpecConstants` which will be used to set specialization constants. Specifically, it will hold the maximum number of joint matrices lists which will be used in the compute shader. It is defined liked this:
+
+```java
+package org.vulkanb.eng.graph.animation;
+
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.vulkan.*;
+import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.vk.GraphConstants;
+
+import java.nio.ByteBuffer;
+
+public class AnimationSpecConstants {
+
+    private final ByteBuffer data;
+    private final VkSpecializationMapEntry.Buffer specEntryMap;
+    private final VkSpecializationInfo specInfo;
+
+    public AnimationSpecConstants() {
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);
+        data.putInt(engineProperties.getMaxJointsMatricesLists());
+        data.flip();
+
+        specEntryMap = VkSpecializationMapEntry.calloc(1);
+        specEntryMap.get(0)
+                .constantID(0)
+                .size(GraphConstants.INT_LENGTH)
+                .offset(0);
+
+        specInfo = VkSpecializationInfo.calloc();
+        specInfo.pData(data)
+                .pMapEntries(specEntryMap);
+    }
+
+    public void cleanup() {
+        MemoryUtil.memFree(specEntryMap);
+        specInfo.free();
+        MemoryUtil.memFree(data);
+    }
+
+    public VkSpecializationInfo getSpecInfo() {
+        return specInfo;
+    }
+}
+```
+
+Back to the `AnimationComputeActivity` class, in the `cleanup` method, as usual, we just free the resources:
 ```java
 public class AnimationComputeActivity {
     ...
     public void cleanup() {
         computePipeline.cleanup();
+        animationSpecConstants.cleanup();
         shaderProgram.cleanup();
         commandBuffer.cleanup();
         descriptorPool.cleanup();
@@ -866,7 +950,7 @@ public class AnimationComputeActivity {
 }
 ```
 
-Now we will review the `createXX` methods called in the constructor. The first one is the `createCommandBuffers`, which creates a command buffer that will be used to record the compute dispatch commands. It also creates a fence to prevent reusing the command buffer while in use. The `createDescriptorPool` method creates a descriptor pool, defining the maximum number of each descriptor type that we are going to use. In our case, we will be using storage descriptor sets for the data that we will use for the animation and uniform buffers that we will use to pass the joint transformation matrices. The `createDescriptorSets` method just creates the layouts of the descriptor sets that we will use in the compute shader. The `createPipeline` method just creates our compute pipeline with the descriptor sets layouts information created previously. Finally, the `createShaders` just creates a shader program, which will contain a shader module which holds the compute shader code. As you can see, they are similar as the ones used in geometry, shadow and lighting phases in previous chapters.
+Now we will review the `createXX` methods called in the `AnimationComputeActivity` class constructor. The first one is the `createCommandBuffers`, which creates a command buffer that will be used to record the compute dispatch commands. It also creates a fence to prevent reusing the command buffer while in use. The `createDescriptorPool` method creates a descriptor pool, defining the maximum number of each descriptor type that we are going to use. In our case, we will be using storage descriptor sets for the data that we will use for the animation and uniform buffers that we will use to pass the joint transformation matrices. The `createDescriptorSets` method just creates the layouts of the descriptor sets that we will use in the compute shader. The `createPipeline` method just creates our compute pipeline with the descriptor sets layouts information created previously. Finally, the `createShaders` just creates a shader program, which will contain a shader module which holds the compute shader code. As you can see, they are similar as the ones used in geometry, shadow and lighting phases in previous chapters.
 ```java
 public class AnimationComputeActivity {
     ...
@@ -911,34 +995,6 @@ public class AnimationComputeActivity {
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_COMPUTE_BIT, ANIM_COMPUTE_SHADER_FILE_SPV),
                 });
-    }
-    ...
-}
-```
-
-We needed to add new configuration properties in the `EngineProperties` class to properly establish the size of the descriptors set pool in the `AnimationComputeActivity` class, here are the changes:
-```java
-public class EngineProperties {
-    ...
-    private static final int DEFAULT_MAX_JOINTS_MATRICES_LISTS = 100;
-    private static final int DEFAULT_STORAGES_BUFFERS = 100;
-    ...
-    private int maxJointsMatricesLists;
-    private int maxStorageBuffers;
-    ...
-    private EngineProperties() {
-        ...
-            maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", DEFAULT_STORAGES_BUFFERS).toString());
-            maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", DEFAULT_MAX_JOINTS_MATRICES_LISTS).toString());
-        ...
-    }
-    ...
-    public int getMaxJointsMatricesLists() {
-        return maxJointsMatricesLists;
-    }
-
-    public int getMaxStorageBuffers() {
-        return maxStorageBuffers;
     }
     ...
 }
@@ -1121,7 +1177,7 @@ The next step is to write the compute shader which performs the calculations. Th
 ```glsl
 #version 450
 
-const int MAX_JOINTS = 150;
+layout (constant_id = 0) const int MAX_JOINTS = 150;
 
 layout (std430, set=0, binding=0) readonly buffer srcBuf {
     float data[];

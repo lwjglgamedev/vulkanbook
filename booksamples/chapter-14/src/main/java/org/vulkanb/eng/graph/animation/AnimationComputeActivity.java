@@ -28,6 +28,7 @@ public class AnimationComputeActivity {
     // Key is the model id
     private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
     private final Scene scene;
+    private final AnimationSpecConstants animationSpecConstants;
 
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
@@ -42,6 +43,7 @@ public class AnimationComputeActivity {
         this.scene = scene;
         device = pipelineCache.getDevice();
         computeQueue = new Queue.ComputeQueue(device, 0);
+        animationSpecConstants = new AnimationSpecConstants();
         createDescriptorPool();
         createDescriptorSets();
         createShaders();
@@ -54,6 +56,7 @@ public class AnimationComputeActivity {
 
     public void cleanup() {
         computePipeline.cleanup();
+        animationSpecConstants.cleanup();
         shaderProgram.cleanup();
         commandBuffer.cleanup();
         descriptorPool.cleanup();
@@ -105,7 +108,8 @@ public class AnimationComputeActivity {
         }
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_COMPUTE_BIT, ANIM_COMPUTE_SHADER_FILE_SPV),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_COMPUTE_BIT, ANIM_COMPUTE_SHADER_FILE_SPV,
+                                animationSpecConstants.getSpecInfo()),
                 });
     }
 

@@ -10,6 +10,7 @@ public class EngineProperties {
     private static final int DEFAULT_JOINT_MATRICES_BUF = 2000000;
     private static final int DEFAULT_MAX_ANIM_WEIGHTS_BUF = 100000;
     private static final int DEFAULT_MAX_INDICES_BUF = 5000000;
+    private static final int DEFAULT_MAX_JOINTS_MATRICES_LISTS = 100;
     private static final int DEFAULT_MAX_MATERIALS = 500;
     private static final int DEFAULT_MAX_VERTICES_BUF = 20000000;
     private static final int DEFAULT_REQUESTED_IMAGES = 3;
@@ -25,6 +26,7 @@ public class EngineProperties {
     private int maxAnimWeightsBuffer;
     private int maxIndicesBuffer;
     private int maxJointMatricesBuffer;
+    private int maxJointsMatricesLists;
     private int maxMaterials;
     private int maxTextures;
     private int maxVerticesBuffer;
@@ -67,6 +69,7 @@ public class EngineProperties {
             maxIndicesBuffer = Integer.parseInt(props.getOrDefault("maxIndicesBuffer", DEFAULT_MAX_INDICES_BUF).toString());
             maxAnimWeightsBuffer = Integer.parseInt(props.getOrDefault("maxAnimWeightsBuffer", DEFAULT_MAX_ANIM_WEIGHTS_BUF).toString());
             maxJointMatricesBuffer = Integer.parseInt(props.getOrDefault("maxJointMatricesBuffer", DEFAULT_JOINT_MATRICES_BUF).toString());
+            maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", DEFAULT_MAX_JOINTS_MATRICES_LISTS).toString());
         } catch (IOException excp) {
             Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -97,6 +100,10 @@ public class EngineProperties {
 
     public int getMaxJointMatricesBuffer() {
         return maxJointMatricesBuffer;
+    }
+
+    public int getMaxJointsMatricesLists() {
+        return maxJointsMatricesLists;
     }
 
     public int getMaxMaterials() {

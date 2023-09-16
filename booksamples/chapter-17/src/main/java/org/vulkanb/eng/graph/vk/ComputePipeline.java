@@ -33,6 +33,9 @@ public class ComputePipeline {
                     .stage(shaderModule.shaderStage())
                     .module(shaderModule.handle())
                     .pName(main);
+            if (shaderModule.specInfo() != null) {
+                shaderStage.pSpecializationInfo(shaderModule.specInfo());
+            }
 
             VkPushConstantRange.Buffer vpcr = null;
             if (pipeLineCreationInfo.pushConstantsSize() > 0) {

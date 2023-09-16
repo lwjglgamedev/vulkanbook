@@ -1907,7 +1907,7 @@ public class AnimationComputeActivity {
     ...
 }
 ```
-Instead of having multiple descriptor sets and buffers per model, we will have all that data in combined storage buffers. Therefore, we need to create the new descriptor sets for them, as storage descriptor sets. Those descriptor sets are created when the animated entities are loaded. This will be done in the `onAnimatedEntitiesLoaded` which will be called from the `Render` instance.
+Instead of having multiple descriptor sets and buffers per model, we will have all that data in combined storage buffers. Therefore, we need to create the new descriptor sets for them, as storage descriptor sets. We will not need also specialization constants since everything will by handled by storage buffers (no more uniforms). Those descriptor sets are created when the animated entities are loaded. This will be done in the `onAnimatedEntitiesLoaded` which will be called from the `Render` instance.
 ```java
 public class AnimationComputeActivity {
     ...

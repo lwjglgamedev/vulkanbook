@@ -1,6 +1,6 @@
 #version 450
 
-const int MAX_JOINTS = 150;
+layout (constant_id = 0) const int MAX_JOINTS = 150;
 
 layout (std430, set=0, binding=0) readonly buffer srcBuf {
     float data[];
