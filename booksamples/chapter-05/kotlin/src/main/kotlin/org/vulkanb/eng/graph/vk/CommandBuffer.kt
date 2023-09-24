@@ -62,7 +62,7 @@ class CommandBuffer(private val commandPool: CommandPool, private val primary: B
     }
 
     fun reset() {
-        vkResetCommandBuffer(vkCommandBuffer, VK10.VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)
+        vkResetCommandBuffer(vkCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)
     }
 
     data class InheritanceInfo(val vkRenderPass: Long, val vkFrameBuffer: Long, val subPass: Int)

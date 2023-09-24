@@ -4,9 +4,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.vulkan.KHRSurface
-import org.lwjgl.vulkan.VK10.VK_NULL_HANDLE
-import org.lwjgl.vulkan.VK10.VK_STRUCTURE_TYPE_SUBMIT_INFO
-import org.lwjgl.vulkan.VK10.VK_TRUE
 import org.lwjgl.vulkan.VK11.*
 import org.lwjgl.vulkan.VkQueue
 import org.lwjgl.vulkan.VkSubmitInfo
