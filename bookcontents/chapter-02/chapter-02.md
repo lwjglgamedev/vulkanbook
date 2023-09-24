@@ -95,9 +95,15 @@ Most of the time these attributes are set to `NULL` and `0` respectively. Since 
 
 ## Layers
 
-Vulkan is a layered API. When you read about the Vulkan core, you can think as the mandatory lowest level layer. On top of that, we there are additional layers that will support useful things like validation and debugging information. As said before, Vulkan is a low overhead API, this means that **the driver assumes that you are using the API correctly and does not waste time in performing validations** (error checking is minimal in the core layer). If you want the driver to perform extensive validation you must enable them through specific layers (validations are handled through extension validation layers). While we are developing it is good advice to turn these validation layers on, to check that we are being compliant with the specification. This can be turned off when our application is ready for delivery.
+Vulkan is a layered API. When you read about the Vulkan core, you can think as the mandatory lowest level layer. On top of that, we there are additional layers that will support useful things like validation and debugging information. As said before, Vulkan is a low overhead API, this means that **the driver assumes that you are using the API correctly and does not waste time in performing validations** (error checking is minimal in the core layer). If you want the driver to perform extensive validation you must enable them through specific layers (validations are handled through extension validation layers). While we are developing it is good advice to turn these validation layers on, to check that we are being compliant with the specification. This can be turned off when our application is ready for delivery. In order to use validation layers you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform, please consult the specific instructions for your platform.
 
-Our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
+**Important note for MacOS**: If you are using MacOS yo need to keep in mind that LWJGL ships with MoltenVK, which is a layer which is the Vulkan implementation for MacOs which uses Apple's Metal framework. Therefore, you will not be able to use validation layers by default even if you have correctly installed Vulkan SDK. To overcome this you need to use the libraries shipped with Vulkan SDK by seeting the following VM parameters:
+
+```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```
+
+The settings above assume the SDK lib files are installed under `/usr/local/lib`, please check that this is the case in your environment. Please also pay attention that these are VM options, not program arguments, so for example, if you are executing the samples in some IDE, make sure that you place those values under VM settings.
+,
+Going back to code, our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
 
 ```java
 public class Instance {
