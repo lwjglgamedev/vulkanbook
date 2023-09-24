@@ -1,12 +1,3 @@
-> [!NOTE]  
-> Highlights information that users should take into account, even when skimming.
-
-> [!IMPORTANT]  
-> Crucial information necessary for users to succeed.
-
-> [!WARNING]  
-> Critical content demanding immediate user attention due to potential risks.
-
 # Vulkan instance
 
 In this chapter we will be having our first taste of Vulkan, we will start by creating a Vulkan instance. This is the very first thing that will be created when dealing with Vulkan. Basically, a Vulkan instance is where all the application state is glued together. In Vulkan there is no global state--all that information is organized around a Vulkan instance.
@@ -109,12 +100,11 @@ Vulkan is a layered API. When you read about the Vulkan core, you can think as t
 > [!NOTE]
 > In order to use validation layers you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform, please consult the specific instructions for your platform.
 
-**Important note for MacOS**: If you are using MacOS yo need to keep in mind that LWJGL ships with MoltenVK, which is a layer which is the Vulkan implementation for MacOs which uses Apple's Metal framework. Therefore, you will not be able to use validation layers by default even if you have correctly installed Vulkan SDK. To overcome this you need to use the libraries shipped with Vulkan SDK by seeting the following VM parameters:
+> [!WARNING]  
+> macOS: After installing the Vulkan SDK you will need to configure lwjgl to use the Vulkan Loader library.
+> This can be done be setting the following VM paramters: ```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```
+> Details about MoltenVK and Vulcan Loader are [here](https://vulkan.lunarg.com/doc/view/1.3.261.1/mac/getting_started.html#moltenvk)
 
-```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```
-
-The settings above assume the SDK lib files are installed under `/usr/local/lib`, please check that this is the case in your environment. Please also pay attention that these are VM options, not program arguments, so for example, if you are executing the samples in some IDE, make sure that you place those values under VM settings (Thanks to [RefuX](https://github.com/RefuX) for reporting this).
-,
 Going back to code, our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
 
 ```java
