@@ -101,11 +101,11 @@ Vulkan is a layered API. When you read about the Vulkan core, you can think as t
 > In order to use validation layers you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform, please consult the specific instructions for your platform.
 
 > [!WARNING]  
-> **macOS** After installing the Vulkan SDK you will need to configure lwjgl to use the Vulkan Loader.  
+> **macOS** To enable validation layers on macOS, after installing the Vulkan SDK, you will need to configure lwjgl to use the Vulkan Loader.  
 > This can be done be setting the following VM paramters: ```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```  
-> Details about MoltenVK and Vulcan Loader are [here](https://vulkan.lunarg.com/doc/view/1.3.261.1/mac/getting_started.html#moltenvk)
+> Details about MoltenVK and Vulcan Loader on macOS are [here](https://vulkan.lunarg.com/doc/view/1.3.261.1/mac/getting_started.html#moltenvk)
 
-Going back to code, our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
+Our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
 
 ```java
 public class Instance {
