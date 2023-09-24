@@ -101,7 +101,7 @@ Vulkan is a layered API. When you read about the Vulkan core, you can think as t
 
 ```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```
 
-The settings above assume the SDK lib files are installed under `/usr/local/lib`, please check that this is the case in your environment. Please also pay attention that these are VM options, not program arguments, so for example, if you are executing the samples in some IDE, make sure that you place those values under VM settings.
+The settings above assume the SDK lib files are installed under `/usr/local/lib`, please check that this is the case in your environment. Please also pay attention that these are VM options, not program arguments, so for example, if you are executing the samples in some IDE, make sure that you place those values under VM settings (Thanks to [RefuX](https://github.com/RefuX) for reporting this).
 ,
 Going back to code, our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
 
