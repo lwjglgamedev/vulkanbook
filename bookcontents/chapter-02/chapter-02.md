@@ -1,3 +1,12 @@
+> [!NOTE]  
+> Highlights information that users should take into account, even when skimming.
+
+> [!IMPORTANT]  
+> Crucial information necessary for users to succeed.
+
+> [!WARNING]  
+> Critical content demanding immediate user attention due to potential risks.
+
 # Vulkan instance
 
 In this chapter we will be having our first taste of Vulkan, we will start by creating a Vulkan instance. This is the very first thing that will be created when dealing with Vulkan. Basically, a Vulkan instance is where all the application state is glued together. In Vulkan there is no global state--all that information is organized around a Vulkan instance.
@@ -95,7 +104,10 @@ Most of the time these attributes are set to `NULL` and `0` respectively. Since 
 
 ## Layers
 
-Vulkan is a layered API. When you read about the Vulkan core, you can think as the mandatory lowest level layer. On top of that, we there are additional layers that will support useful things like validation and debugging information. As said before, Vulkan is a low overhead API, this means that **the driver assumes that you are using the API correctly and does not waste time in performing validations** (error checking is minimal in the core layer). If you want the driver to perform extensive validation you must enable them through specific layers (validations are handled through extension validation layers). While we are developing it is good advice to turn these validation layers on, to check that we are being compliant with the specification. This can be turned off when our application is ready for delivery. In order to use validation layers you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform, please consult the specific instructions for your platform.
+Vulkan is a layered API. When you read about the Vulkan core, you can think as the mandatory lowest level layer. On top of that, we there are additional layers that will support useful things like validation and debugging information. As said before, Vulkan is a low overhead API, this means that **the driver assumes that you are using the API correctly and does not waste time in performing validations** (error checking is minimal in the core layer). If you want the driver to perform extensive validation you must enable them through specific layers (validations are handled through extension validation layers). While we are developing it is good advice to turn these validation layers on, to check that we are being compliant with the specification. This can be turned off when our application is ready for delivery. 
+
+> [!NOTE]
+> In order to use validation layers you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform, please consult the specific instructions for your platform.
 
 **Important note for MacOS**: If you are using MacOS yo need to keep in mind that LWJGL ships with MoltenVK, which is a layer which is the Vulkan implementation for MacOs which uses Apple's Metal framework. Therefore, you will not be able to use validation layers by default even if you have correctly installed Vulkan SDK. To overcome this you need to use the libraries shipped with Vulkan SDK by seeting the following VM parameters:
 
