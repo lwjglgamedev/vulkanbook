@@ -218,7 +218,7 @@ public class VertexBufferStructure extends VertexInputStateInfo {
 }
 ```
 
-At the beginning of the constructor we create several structures required for Vulkan to understand how hour vertices will be used:
+At the beginning of the constructor we create several structures required for Vulkan to understand how our vertices will be used:
 
 - `VkVertexInputAttributeDescription`: It is used to describe each vertex attribute.
 - `VkVertexInputBindingDescription`: It is used to specify if the boundaries of each vertex "package" and how it will consumed (per instance or per vertex).
