@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.codegen.intrinsics.ArrayOf
-
 plugins {
     kotlin("jvm") version "1.9.0"
     application
@@ -42,13 +40,4 @@ dependencies {
     runtimeOnly("org.lwjgl", "lwjgl-stb", classifier = lwjglNatives)
     runtimeOnly("org.lwjgl", "lwjgl-vulkan", classifier = lwjglNatives)
     implementation("org.joml", "joml", jomlVersion)
-}
-
-application {
-    applicationDefaultJvmArgs = listOf(
-        "-XstartOnFirstThread",
-        "-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG",
-        "-Dorg.lwjgl.librarypath=/usr/local/lib",
-        "-Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib")
-    mainClass = "org.vulkanb.Main"
 }
