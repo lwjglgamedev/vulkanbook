@@ -969,7 +969,7 @@ public class Pipeline {
 }
 ```
 
-Now we have all the information required to create the pipeline. We just need to set up a buffer in the `VkGraphicsPipelineCreateInfo` structures. It is a buffer, because can several pipelines with a single call to the the `vkCreateGraphicsPipelines` function. In our case, we will create them one by one:
+Now we have all the information required to create the pipeline. We just need to set up a buffer in the `VkGraphicsPipelineCreateInfo` structures. It is a buffer, because several pipelines can be created with a single call to the the `vkCreateGraphicsPipelines` function. In our case, we will create them one by one:
 
 ```java
 public class Pipeline {
