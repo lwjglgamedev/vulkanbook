@@ -598,7 +598,7 @@ public class Scene {
 }
 ```
 
-As it can be seen, the entities are arranged by their `modelId`. Those entities which share the same `modelId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (suing its identifier) and to get the projection matrix.
+As it can be seen, the entities are arranged by their `modelId`. Those entities which share the same `modelId` will be placed inside a `List` associated to that identifier. This will allow us to organize the rendering later on in an efficient way. Although each entity has different parameters they will share the vertices, textures, etc. defined by the mesh. Organizing the rendering around mesh information will allow us to bind those common resources just once per mesh. The rest of the methods of the `Scene` class, are used to access the entities map, to get and remove specific entities (using its identifier) and to get the projection matrix.
 
 ```java
 public class Scene {
