@@ -218,7 +218,7 @@ public class VertexBufferStructure extends VertexInputStateInfo {
 }
 ```
 
-At the beginning of the constructor we create several structures required for Vulkan to understand how hour vertices will be used:
+At the beginning of the constructor we create several structures required for Vulkan to understand how our vertices will be used:
 
 - `VkVertexInputAttributeDescription`: It is used to describe each vertex attribute.
 - `VkVertexInputBindingDescription`: It is used to specify if the boundaries of each vertex "package" and how it will consumed (per instance or per vertex).
@@ -306,7 +306,7 @@ public class VertexBufferStructure {
 
 ## Loading the data
 
-We have created the the structures that will hold the data for our models (`VulkanBuffer`) and the ones that define their format (`VertexBufferStructure`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that wll be used to actually form the triangles. We will define a new class named `VulkanModel` which will hold the information for 3D models. By now, it will hold the buffers for the different meshes that compose a 3D model. In next chapters it will be extended to support richer structures. At this moment a model is just a collection of meshes which will hold the references to buffers that contain positions data and their indices. This class will also define the methods to populate those structures. The basic structure of this class is quite simple:
+We have created the the structures that will hold the data for our models (`VulkanBuffer`) and the ones that define their format (`VertexBufferStructure`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that wll be used to actually form the triangles. We will define a new class named `VulkanModel` which will hold the information for 3D models. For now, it will hold the buffers for the different meshes that compose a 3D model. In next chapters it will be extended to support richer structures. At this moment a model is just a collection of meshes which will hold the references to buffers that contain positions data and their indices. This class will also define the methods to populate those structures. The basic structure of this class is quite simple:
 
 ```java
 package org.vulkanb.eng.graph.vk;
@@ -729,7 +729,7 @@ public class ShaderCompiler {
 
 ## Pipeline
 
-The next step is to write the code that supports graphic pipelines creation. Prior to talking about pipelines specifically, we will talk about the pipeline cache. As mentioned before, while working with Vulkan, it is very common to have multiple pipelines. Pipelines are almost immutable, so any variant on the setup of the different stage requires a new pipeline instance. In order to speed up pipeline creation Vulkan introduces the concept of the Pipeline cache. The cache allows more efficient pipeline creation by reusing the common parts between them and also between application executions. It is possible, for example, to persist the contents of the cache to disk, and load them at startup time in the next run of our application reducing the time required to create them. In our case, we will limit, at this time, the usage of the pipeline cache. By now we will just use it to speed up pipe line re-creation during application execution. We need to create a new class named `PipelineCache` which is defined like this:
+The next step is to write the code that supports graphic pipelines creation. Prior to talking about pipelines specifically, we will talk about the pipeline cache. As mentioned before, while working with Vulkan, it is very common to have multiple pipelines. Pipelines are almost immutable, so any variant on the setup of the different stage requires a new pipeline instance. In order to speed up pipeline creation Vulkan introduces the concept of the Pipeline cache. The cache allows more efficient pipeline creation by reusing the common parts between them and also between application executions. It is possible, for example, to persist the contents of the cache to disk, and load them at startup time in the next run of our application reducing the time required to create them. In our case, we will limit, at this time, the usage of the pipeline cache. For now we will just use it to speed up pipe line re-creation during application execution. We need to create a new class named `PipelineCache` which is defined like this:
 
 ```java
 package org.vulkanb.eng.graph.vk;
@@ -928,7 +928,7 @@ public class Pipeline {
 }
 ```
 
-We need first to configure the blending options for each of the output attachments through a buffer of `VkPipelineColorBlendAttachmentState` structures. By now, we will not be playing with the settings that support transparencies, we just need to setup the colors that will be enabled for writing by setting the `colorWriteMask` attribute. In our case we simply enable all the color channels. Then we need to group all those configurations on a `VkPipelineColorBlendStateCreateInfo` structure (this structure also defines other parameters to setup global blending settings).
+We need first to configure the blending options for each of the output attachments through a buffer of `VkPipelineColorBlendAttachmentState` structures. For now, we will not be playing with the settings that support transparencies, we just need to setup the colors that will be enabled for writing by setting the `colorWriteMask` attribute. In our case we simply enable all the color channels. Then we need to group all those configurations on a `VkPipelineColorBlendStateCreateInfo` structure (this structure also defines other parameters to setup global blending settings).
 
 We have said before that pipelines are almost immutable, there are only a few things that we can modify once the pipeline has been created. We can change a fixed set of things, such as the view port size, the scissor region size, the blend constants, etc. We need to specify the values that could be changed dynamically. In our case, we do not want to recreate the pipeline if the window is resized, so we need to create a `VkPipelineDynamicStateCreateInfo` structure which sets the dynamic states that will be applied to `VK_DYNAMIC_STATE_VIEWPORT`  and `VK_DYNAMIC_STATE_SCISSOR`. By setting this, the view port and scissor dimensions are not set in the pipeline creation, they need to be set when recording the commands. This is not so efficient at statically defining it in the pipeline, but we avoid re-creating the swap chain when resizing.
 
@@ -969,7 +969,7 @@ public class Pipeline {
 }
 ```
 
-Now we have all the information required to create the pipeline. We just need to set upa buffer if `VkGraphicsPipelineCreateInfo` structures. It is a buffer, because can several pipelines with a single call to the the `vkCreateGraphicsPipelines` function. In our case, we will create them one by one:
+Now we have all the information required to create the pipeline. We just need to set up a buffer in the `VkGraphicsPipelineCreateInfo` structures. It is a buffer, because several pipelines can be created with a single call to the the `vkCreateGraphicsPipelines` function. In our case, we will create them one by one:
 
 ```java
 public class Pipeline {
