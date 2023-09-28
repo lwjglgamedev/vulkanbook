@@ -54,7 +54,7 @@ The `loadModel` method receives an identifier associated to the model, the path 
 
 - `aiProcess_GenSmoothNormals`: This will try to generate smooth normals for all the vertices in the mesh.
 - `aiProcess_JoinIdenticalVertices`: This will try to identify and combine duplicated vertices.
-- `aiProcess_Triangulate`: This will transform each face of the mesh into a triangle (which is why we expect when loading that data into the GPU). If a face is made up of more than three indices, it will split that face into as many triangles as needed.
+- `aiProcess_Triangulate`: This will transform each face of the mesh into a triangle (which is what we expect when loading that data into the GPU). If a face is made up of more than three indices, it will split that face into as many triangles as needed.
 - `aiProcess_FixInfacingNormals`: This tries to identify normals that point inwards and reverse their direction.
 - `aiProcess_CalcTangentSpace`: This calculates the tangents a bitangets for each mesh. We will not use these data immediately, but we will need it when we apply light effects later on.
 - `aiProcess_PreTransformVertices`: This removes the node graph and pre-transforms all vertices with the local transformation matrices of their nodes. Keep in mind that this flag cannot be used with animations.
