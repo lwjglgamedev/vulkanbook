@@ -663,7 +663,7 @@ public class VulkanModel {
 }
 ```
 
-`VulkanModel` class will no longer store a list of meshes but a list of materials (which will hold references to meshes). Therefore, the `vulkanMaterialList` attribute needs to be removed. We need to change also the `transformModels` method to load the textures:
+`VulkanModel` class will no longer store a list of meshes but a list of materials (which will hold references to meshes). Therefore, the `vulkanMeshList` attribute needs to be removed. We need to change also the `transformModels` method to load the textures:
 
 ```java
 public class VulkanModel {
