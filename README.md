@@ -38,4 +38,4 @@ To all the readers that have contributed with corrections, improvements and idea
 - [Kai Burjack](https://github.com/httpdigest)
 - [Mjrlun](https://github.com/Mjrlun)
 - [Rongcui Dong](https://github.com/rongcuid)
-- [Jsmrd Roome](https://github.com/RefuX)
+- [James Roome](https://github.com/RefuX)
