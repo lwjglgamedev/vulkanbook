@@ -550,7 +550,7 @@ public abstract class DescriptorSet {
 
 ## Completing the changes
 
-Now it is time to modify the `ForwardRenderActivity` class. We start be fining new attributes for the descriptors associated to the materials, and a new descriptor set for the uniforms that will hold the view matrices associated to the camera. As it has been described before, the `Pipeline.PipeLineCreationInfo pipeLineCreationInfo` record has also been modified to control if we will use blending or not.
+Now it is time to modify the `ForwardRenderActivity` class. We start by defining new attributes for the descriptors associated to the materials, and a new descriptor set for the uniforms that will hold the view matrices associated to the camera. As it has been described before, the `Pipeline.PipeLineCreationInfo pipeLineCreationInfo` record has also been modified to control if we will use blending or not.
 
 ```java
 public class ForwardRenderActivity {
