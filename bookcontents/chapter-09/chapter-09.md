@@ -458,7 +458,7 @@ public class Camera {
 
 This class, in essence, stores the view matrix, which can be modified by the different methods that it provides to change its position, to apply rotation or to displace around the scene. It uses the JOML library to calculate up and forward vectors to displace.
 
-The camera is part now of the scene:
+The camera is now part of the scene:
 
 ```java
 public class Scene {
