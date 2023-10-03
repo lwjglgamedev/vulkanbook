@@ -481,7 +481,7 @@ We will see later on how to use the camera while recording the render commands.
 
 ## Dynamic uniform buffers
 
-Up to now, we have create the buffers associated to uniforms though descriptor sets of `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` type. There is another type which can use a single buffer and a descriptor set, passing a region of that buffer to the shaders when binding the descriptor sets. These are called dynamic uniform buffers. They can be used to reduce the number of individual buffers an descriptor sets, for example when passing material properties to the shaders. This is the showcase we will use to explain its usage. Therefore, we will start by including the diffuse color in the fragment shader:
+Up to now, we have created the buffers associated to uniforms though descriptor sets of `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` type. There is another type which can use a single buffer and a descriptor set, passing a region of that buffer to the shaders when binding the descriptor sets. These are called dynamic uniform buffers. They can be used to reduce the number of individual buffers an descriptor sets, for example when passing material properties to the shaders. This is the showcase we will use to explain its usage. Therefore, we will start by including the diffuse color in the fragment shader:
 
 ```glsl
 #version 450
