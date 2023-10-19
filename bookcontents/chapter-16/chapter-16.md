@@ -2167,3 +2167,5 @@ public class Main implements IAppLogic {
 The results will be exactly the same as in chapter 14, but now we have the basis of a bind-less pipeline.
 
 <img src="../chapter-14/screen-shot.gif" title="" alt="Screen Shot" data-align="center">
+
+[Next chapter](../chapter-17/chapter-17.md)
