@@ -1,6 +1,6 @@
 # Indirect drawing
 
-Until this chapter, we have rendered the models by binding their material uniforms, their textures, their vertices and indices buffers and submitting one draw command for each of the meshes they are composed. In this chapter, we will start our way to a more efficient wat of rendering, we will begin the implementation of a bind-less render. This type of rendering does not receive a bunch of draw commands to draw the scene, instead they relay on indirect drawing commands. Indirect draw commands are, in essence, draw commands stored in a buffer that obtain the parameters required to perform the operation from a set of global buffers. This is a more efficient way of drawing because:
+Until this chapter, we have rendered the models by binding their material uniforms, their textures, their vertices and indices buffers and submitting one draw command for each of the meshes they are composed. In this chapter, we will start our way to a more efficient way of rendering, we will begin the implementation of a bind-less render. This type of rendering does not receive a bunch of draw commands to draw the scene, instead they relay on indirect drawing commands. Indirect draw commands are, in essence, draw commands stored in a buffer that obtain the parameters required to perform the operation from a set of global buffers. This is a more efficient way of drawing because:
 
 - We remove the need to perform several bind operations before drawing each mesh.
 - We need just to record a single draw call.
