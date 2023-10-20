@@ -885,7 +885,7 @@ public class LightingRenderActivity {
     ...
 ```
 
-The lighting vertex shader (`geometry_vertex.glsl`) has not been modified at all. However, the lighting fragment shader (`geometry_fragment.glsl`) has been heavily changed. It starts like this:
+The lighting vertex shader (`lighting_vertex.glsl`) has not been modified at all. However, the lighting fragment shader (`lighting_fragment.glsl`) has been heavily changed. It starts like this:
 
 ```glsl
 #version 450
