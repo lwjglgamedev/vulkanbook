@@ -1080,7 +1080,7 @@ public class Render {
 }
 ```
 
-Also, since we are discarding semi-transparent objects, we can remove the re-ordering the models which set up ones that have no transparencies first:
+Also, since we are discarding semi-transparent objects, we can remove the re-ordering of the models:
 ```java
 public class Render {
     ...
