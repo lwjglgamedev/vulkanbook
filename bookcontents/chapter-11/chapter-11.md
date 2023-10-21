@@ -885,7 +885,7 @@ public class LightingRenderActivity {
     ...
 ```
 
-The lighting vertex shader (`geometry_vertex.glsl`) has not been modified at all. However, the lighting fragment shader (`geometry_fragment.glsl`) has been heavily changed. It starts like this:
+The lighting vertex shader (`lighting_vertex.glsl`) has not been modified at all. However, the lighting fragment shader (`lighting_fragment.glsl`) has been heavily changed. It starts like this:
 
 ```glsl
 #version 450
@@ -1080,7 +1080,7 @@ public class Render {
 }
 ```
 
-Also, since we are discarding semi-transparent objects, we can remove the re-ordering the models which set up ones that have no transparencies first:
+Also, since we are discarding semi-transparent objects, we can remove the re-ordering of the models:
 ```java
 public class Render {
     ...

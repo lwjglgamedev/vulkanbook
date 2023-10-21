@@ -458,7 +458,7 @@ public class Camera {
 
 This class, in essence, stores the view matrix, which can be modified by the different methods that it provides to change its position, to apply rotation or to displace around the scene. It uses the JOML library to calculate up and forward vectors to displace.
 
-The camera is part now of the scene:
+The camera is now part of the scene:
 
 ```java
 public class Scene {
@@ -481,7 +481,7 @@ We will see later on how to use the camera while recording the render commands.
 
 ## Dynamic uniform buffers
 
-Up to now, we have create the buffers associated to uniforms though descriptor sets of `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` type. There is another type which can use a single buffer and a descriptor set, passing a region of that buffer to the shaders when binding the descriptor sets. These are called dynamic uniform buffers. They can be used to reduce the number of individual buffers an descriptor sets, for example when passing material properties to the shaders. This is the showcase we will use to explain its usage. Therefore, we will start by including the diffuse color in the fragment shader:
+Up to now, we have created the buffers associated to uniforms though descriptor sets of `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER` type. There is another type which can use a single buffer and a descriptor set, passing a region of that buffer to the shaders when binding the descriptor sets. These are called dynamic uniform buffers. They can be used to reduce the number of individual buffers in descriptor sets, for example when passing material properties to the shaders. This is the showcase we will use to explain its usage. Therefore, we will start by including the diffuse color in the fragment shader:
 
 ```glsl
 #version 450
@@ -534,7 +534,7 @@ public abstract class DescriptorSetLayout {
 }
 ```
 
-A dynamic uniform buffer will allow us to create a single buffer which will hold all the data for all the possible materials, while passing a specific window to that buffer to the shaders for the specific material to be used while rendering. These descriptor sets use the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC` type. As you can image we will need also a new descriptor set type that we will use for the materials. We will create a new class named `DynUniformDescriptorSet` which will inherit from `SimpleDescriptorSet`. This class will use the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC` type and will have an extra parameter for the `size`. If you remember from previous descriptor sets, we just used the size of the buffer that holds the uniform values. In this case is different, the buffer will hold the values for all the materials, but this new `size` parameter will not be the size of that large buffer. It will be be the size in bytes of the data associated to a single material. You can think about it as the size of one of the slices of that buffer that we can associate to a uniform. We will see later on how to calculate these slices.
+A dynamic uniform buffer will allow us to create a single buffer which will hold all the data for all the possible materials, while passing a specific window to that buffer to the shaders for the specific material to be used while rendering. These descriptor sets use the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC` type. As you can imagine we will also need a new descriptor set type that we will use for the materials. We will create a new class named `DynUniformDescriptorSet` which will inherit from `SimpleDescriptorSet`. This class will use the `VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC` type and will have an extra parameter for the `size`. If you remember from previous descriptor sets, we just used the size of the buffer that holds the uniform values. In this case is different, the buffer will hold the values for all the materials, but this new `size` parameter will not be the size of that large buffer. It will be be the size in bytes of the data associated to a single material. You can think about it as the size of one of the slices of that buffer that we can associate to a uniform. We will see later on how to calculate these slices.
 ```java
 public abstract class DescriptorSet {
     ...
@@ -550,7 +550,7 @@ public abstract class DescriptorSet {
 
 ## Completing the changes
 
-Now it is the turn to modify the `ForwardRenderActivity` class. We start be fining new attributes for the descriptors associated to the materials, and a new descriptor set for the uniforms that will hold the view matrices associated to the camera. As it has been described before, the `Pipeline.PipeLineCreationInfo pipeLineCreationInfo` record has also been modified to control if we will use blending or not.
+Now it is time to modify the `ForwardRenderActivity` class. We start by defining new attributes for the descriptors associated to the materials, and a new descriptor set for the uniforms that will hold the view matrices associated to the camera. As it has been described before, the `Pipeline.PipeLineCreationInfo pipeLineCreationInfo` record has also been modified to control if we will use blending or not.
 
 ```java
 public class ForwardRenderActivity {

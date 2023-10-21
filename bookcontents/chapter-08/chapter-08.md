@@ -54,7 +54,7 @@ The `loadModel` method receives an identifier associated to the model, the path 
 
 - `aiProcess_GenSmoothNormals`: This will try to generate smooth normals for all the vertices in the mesh.
 - `aiProcess_JoinIdenticalVertices`: This will try to identify and combine duplicated vertices.
-- `aiProcess_Triangulate`: This will transform each face of the mesh into a triangle (which is why we expect when loading that data into the GPU). If a face is made up of more than three indices, it will split that face into as many triangles as needed.
+- `aiProcess_Triangulate`: This will transform each face of the mesh into a triangle (which is what we need when loading the data into the GPU). If a face is made up of more than three indices, it will split that face into as many triangles as needed.
 - `aiProcess_FixInfacingNormals`: This tries to identify normals that point inwards and reverse their direction.
 - `aiProcess_CalcTangentSpace`: This calculates the tangents a bitangets for each mesh. We will not use these data immediately, but we will need it when we apply light effects later on.
 - `aiProcess_PreTransformVertices`: This removes the node graph and pre-transforms all vertices with the local transformation matrices of their nodes. Keep in mind that this flag cannot be used with animations.
@@ -342,7 +342,7 @@ public class Texture {
 }
 ```
 
-The `Texture` class defines the `recordedTransition` attribute to control if the texture has already been recorder to transition to the final layout or not (more on this later). We use the stb function `stbi_load` to load an image file. This function receives as a parameter the path to the file, three `IntBuffer`s to return the width , the height and the  color components of the image. It also receives the desired number of color components (`4` in our case, which represents RGBA). This function returns a `ByteBuffer` with the contents of the image if it has success and fills up the `IntBuffer` used as output parameters. After that, we create a Vulkan buffer which will be used to transfer the contents to the image. Then, we create a Vulkan image. It is interesting to review the usage flags we are using in in this case:
+The `Texture` class defines the `recordedTransition` attribute to control if the texture has already been recorded to transition to the final layout or not (more on this later). We use the stb function `stbi_load` to load an image file. This function receives as a parameter the path to the file, three `IntBuffer`s to return the width , the height and the  color components of the image. It also receives the desired number of color components (`4` in our case, which represents RGBA). This function returns a `ByteBuffer` with the contents of the image if it has success and fills up the `IntBuffer` used as output parameters. After that, we create a Vulkan buffer which will be used to transfer the contents to the image. Then, we create a Vulkan image. It is interesting to review the usage flags we are using in in this case:
 
 - `VK_IMAGE_USAGE_TRANSFER_DST_BIT`: The image can be used as a destination of a transfer command. We need this, because in our case, we will copy from a staging buffer to the image.
 
@@ -663,7 +663,7 @@ public class VulkanModel {
 }
 ```
 
-`VulkanModel` class will no longer store a list of meshes but a list of materials (which will hold references to meshes). Therefore, the `vulkanMaterialList` attribute needs to be removed. We need to change also the `transformModels` method to load the textures:
+`VulkanModel` class will no longer store a list of meshes but a list of materials (which will hold references to meshes). Therefore, the `vulkanMeshList` attribute needs to be removed. We need to change also the `transformModels` method to load the textures:
 
 ```java
 public class VulkanModel {

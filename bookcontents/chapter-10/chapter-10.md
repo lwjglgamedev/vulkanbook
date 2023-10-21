@@ -17,7 +17,7 @@ Hence, with deferred shading we perform two rendering phases. The first one, is 
 
 All that information is stored in attachments, as the depth attachment used in previous chapters.
 
-The second pass is called the lighting phase. This phase takes a shape that fills up all the screen and generates the final color information, using lighting,  for each fragment using as inputs the attachment outputs generated in the previous phase. When are will performing the lighting pass, the depth test in the geometry phase will have already removed all the scene data that is not be seen. Hence, the number of operations to be done are restricted to what will be displayed on the screen.
+The second pass is called the lighting phase. This phase takes a shape that fills up all the screen and generates the final color information, using lighting,  for each fragment using as inputs the attachment outputs generated in the previous phase. When performing the lighting pass, the depth test in the geometry phase will have already removed all the scene data that is not be seen. Hence, the number of operations to be done are restricted to what will be displayed on the screen.
 
 ## Attachments
 
