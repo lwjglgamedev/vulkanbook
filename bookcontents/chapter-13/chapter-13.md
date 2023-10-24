@@ -859,7 +859,7 @@ public class GeometryFrameBuffer {
 }
 ```
 
-We need also to modify the `GeometryRenderActivity` class, because the commands that record the drawing of t he scene will be shared with the shadow render pass. We need to split some of the code to allow that recording and jointly submit the recorded commands. We will first review a new method which will be called to begin the recording:
+We need also to modify the `GeometryRenderActivity` class, because the commands that record the drawing of the scene will be shared with the shadow render pass. We need to split some of the code to allow that recording and jointly submit the recorded commands. We will first review a new method which will be called to begin the recording:
 
 ```java
 public class GeometryRenderActivity {
