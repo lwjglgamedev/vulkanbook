@@ -46,7 +46,7 @@ The next question that may come to your mind may be, Is it Vulkan the right tool
 The answer to this question depends on your skills and interests.
 If you are new to programming or want to obtain a rapid product, Vulkan is not the most adequate solution for you.
 As it has been already said, Vulkan is complex--you will have to invest lots of time understanding all the concepts,
-which can be difficult to understand for even moderate programmers.
+which can be challenging to understand for even moderate programmers.
 It is hard, but there will be a moment where all this complexity will start to fit in your mind and make sense.
 As a result, you will have a deeper knowledge of (and appreciation for) modern graphics applications and how GPUs work.
 
@@ -100,16 +100,16 @@ please be aware that you will need to set the working directory to the root of e
 The resources (such as 3D models, shaders and textures are loaded using relative paths to the working directory).
 
 The maven files support native image generation, through GraalVM, by activating the native profile.
-In order to activate this, you need to properly set up GraalVM in your environment and to install native building tools.
-Please, check GraalVM documentation for that.
-In order to generate native images, you just need to execute `mvn -Pnative clean package`.
+To activate this, you need to properly set up GraalVM in your environment and to install native building tools.
+Please check GraalVM documentation for that.
+To generate native images, you need to execute `mvn -Pnative clean package`.
 
 ## Resources used for writing this book
 
 This book is the result of my self-learning process.
 I do not work on this domain professionally, rather I'm just a hobbyist with an interest in learning new technologies.
 As a result, you may find mistakes/bugs or even explanations that may be plain wrong.
-Please, feel free to contact me about that.
+Please feel free to contact me about that.
 My aim is that this book may help others in learning Vulkan.
 
 There are multiple materials that I've consulted to write this book.
