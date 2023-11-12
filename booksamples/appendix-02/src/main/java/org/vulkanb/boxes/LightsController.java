@@ -17,7 +17,7 @@ public class LightsController {
         scene.getAmbientLight().set(0.4f, 0.4f, 0.4f, 1.0f);
         List<Light> lights = new ArrayList<>();
         directionalLight = new Light();
-        directionalLight.getColor().set(1.0f, 1.0f, 0.5f, 1.0f);
+        directionalLight.getColor().set(1.0f, 1.0f, 0.5f, 0.0f);
         lights.add(directionalLight);
         Light[] lightArr = new Light[lights.size()];
         lightArr = lights.toArray(lightArr);
