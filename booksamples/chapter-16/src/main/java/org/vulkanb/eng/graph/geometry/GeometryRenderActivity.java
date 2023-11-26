@@ -79,7 +79,7 @@ public class GeometryRenderActivity {
         EngineProperties engineProps = EngineProperties.getInstance();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() + 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials() * 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxTextures(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC));
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);

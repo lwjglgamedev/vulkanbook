@@ -75,7 +75,7 @@ public class ShadowRenderActivity {
         EngineProperties engineProps = EngineProperties.getInstance();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(numImages, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxMaterials(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(engineProps.getMaxTextures(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
