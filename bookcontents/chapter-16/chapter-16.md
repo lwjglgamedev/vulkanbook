@@ -1446,8 +1446,6 @@ public class GeometryRenderActivity {
                     .put(2, materialsDescriptorSet.getVkDescriptorSet())
                     .put(3, textureDescriptorSet.getVkDescriptorSet());
 
-            VulkanUtils.copyMatrixToBuffer(viewMatricesBuffer[idx], scene.getCamera().getViewMatrix());
-
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeLine.getVkPipelineLayout(), 0, descriptorSets, null);
 
