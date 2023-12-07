@@ -563,13 +563,13 @@ public class GlobalBuffers {
 
 The process of recording indirect draw command is as follows:
 - For each of the models, we get the entities that are associated to each model.
-- For each model, we get their meshes, and for each mesh we record a draw indirect indexed command.
+- For each model, we get their meshes, and for each mesh we record a draw indirect indexed command to render all the entities that use that mesh.
 - Draw indirect indexed commands are modelled by the `VkDrawIndexedIndirectCommand` structure, which defines the following fields:
   - `indexCount`: The number of indices in the index buffer for the draw call. That is, the number of indices of the mesh.
   - `firstIndex`: The offset of the first index in the index buffer for the draw call. Beware, that this is not an offset in bytes but an offset in indices.
   - `instanceCount`: The number of instances to draw. We can draw several instances that share the same mesh with a single command (instanced rendering).
   - `vertexOffset`: The offset to the vertex buffer for the draw call. Beware, that this is not an offset in bytes but an offset in vertices structures.
-  - `firstInstance`: The instance identifier of the first instance to draw.
+  - `firstInstance`: The instance identifier of the first instance to draw. In our case, we will store per entity, or per instance, associated data such as model matrix and material index in a global buffer. We will use a single indexed indirect command to draw all the entities, or instances, associated to mesh. You can think on this `firstInstance` parameter like a pointer into that per instance structure. It will be used, under the hood, when rendering each entity, to point to the proper slice in that global buffer (it will start from the `firstInstance` position and will be used to point to the proper instance).
 
 As explained above, we need to record the draw indirect indexed commands in a buffer. We will also use staging buffers to copy the data to a CPU accessible buffer and later on to transfer its contents to a GPU only accessible buffer. In addition to that, we need to create a dedicated buffer to hold instance specific data. In this specific example, we will store he model matrix and the associated material identifier (although this last element is shared between all the instances, it makes things easier to store that information in this buffer). The process described above is implemented in the `loadStaticEntities` method, which is defined as follows:
 ```java
