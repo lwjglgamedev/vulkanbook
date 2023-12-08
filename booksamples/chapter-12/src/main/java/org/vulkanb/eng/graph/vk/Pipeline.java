@@ -33,9 +33,6 @@ public class Pipeline {
                         .stage(shaderModule.shaderStage())
                         .module(shaderModule.handle())
                         .pName(main);
-                if (shaderModule.specInfo() != null) {
-                    shaderStages.get(i).pSpecializationInfo(shaderModule.specInfo());
-                }
             }
 
             VkPipelineInputAssemblyStateCreateInfo vkPipelineInputAssemblyStateCreateInfo =

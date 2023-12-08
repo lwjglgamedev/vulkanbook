@@ -64,6 +64,12 @@ public abstract class DescriptorSetLayout {
         }
     }
 
+    public static class StorageDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public StorageDescriptorSetLayout(Device device, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, binding, stage);
+        }
+    }
+
     public static class UniformDescriptorSetLayout extends SimpleDescriptorSetLayout {
         public UniformDescriptorSetLayout(Device device, int binding, int stage) {
             super(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, binding, stage);

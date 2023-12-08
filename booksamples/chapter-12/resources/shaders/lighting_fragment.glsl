@@ -3,7 +3,6 @@
 // developed by Joey de Vries, https://twitter.com/JoeyDeVriez, and licensed under the terms of the CC BY-NC 4.0,
 // https://creativecommons.org/licenses/by-nc/4.0/legalcode
 
-layout (constant_id = 0) const int MAX_LIGHTS = 10;
 const float PI = 3.14159265359;
 
 // color cannot be vec3 due to std140 in GLSL
@@ -20,12 +19,17 @@ layout(set = 0, binding = 0) uniform sampler2D albedoSampler;
 layout(set = 0, binding = 1) uniform sampler2D normalsSampler;
 layout(set = 0, binding = 2) uniform sampler2D pbrSampler;
 layout(set = 0, binding = 3) uniform sampler2D depthSampler;
-layout(set = 1, binding = 0) uniform UBO {
-    vec4 ambientLightColor;
-    uint count;
-    Light lights[MAX_LIGHTS];
+
+layout(set = 1, binding = 0) readonly buffer Lights {
+    Light lights[];
 } lights;
-layout(set = 2, binding = 0) uniform ProjUniform {
+
+layout(set = 2, binding = 0) uniform SceneUniform  {
+    vec4 ambientLightColor;
+    uint numLights;
+} sceneUniform;
+
+layout(set = 3, binding = 0) uniform ProjUniform  {
     mat4 invProjectionMatrix;
 } projUniform;
 
@@ -135,7 +139,7 @@ void main() {
     // Calculate lighting
     vec3 lightColor = vec3(0.0);
     vec3 ambientColor = vec3(0.5);
-    for (uint i = 0U; i < lights.count; i++)
+    for (uint i = 0U; i < sceneUniform.numLights; i++)
     {
         Light light = lights.lights[i];
         if (light.position.w == 0)
@@ -148,7 +152,7 @@ void main() {
         }
     }
 
-    vec3 ambient = lights.ambientLightColor.rgb * albedo * ao;
+    vec3 ambient = sceneUniform.ambientLightColor.rgb * albedo * ao;
 
     outFragColor = vec4(ambient + lightColor, 1.0);
 }

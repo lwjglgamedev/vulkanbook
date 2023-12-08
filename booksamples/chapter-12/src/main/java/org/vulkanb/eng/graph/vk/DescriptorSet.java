@@ -62,6 +62,15 @@ public abstract class DescriptorSet {
         }
     }
 
+    public static class StorageDescriptorSet extends SimpleDescriptorSet {
+
+        public StorageDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
+                                    VulkanBuffer buffer, int binding) {
+            super(descriptorPool, descriptorSetLayout, buffer, binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    buffer.getRequestedSize());
+        }
+    }
+
     public static class UniformDescriptorSet extends SimpleDescriptorSet {
 
         public UniformDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,

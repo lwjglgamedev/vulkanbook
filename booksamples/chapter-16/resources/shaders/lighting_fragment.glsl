@@ -5,11 +5,10 @@
 // Shadows calcuation functions are derived from Vulkan examples from Sascha Willems, and licensed under the MIT License:
 // https://github.com/SaschaWillems/Vulkan/tree/master/examples/shadowmappingcascade
 
-layout (constant_id = 0) const int MAX_LIGHTS = 10;
-layout (constant_id = 1) const int SHADOW_MAP_CASCADE_COUNT = 3;
-layout (constant_id = 2) const int USE_PCF = 0;
-layout (constant_id = 3) const float BIAS = 0.0005;
-layout (constant_id = 4) const int DEBUG_SHADOWS = 0;
+layout (constant_id = 0) const int SHADOW_MAP_CASCADE_COUNT = 3;
+layout (constant_id = 1) const int USE_PCF = 0;
+layout (constant_id = 2) const float BIAS = 0.0005;
+layout (constant_id = 3) const int DEBUG_SHADOWS = 0;
 const float PI = 3.14159265359;
 const float SHADOW_FACTOR = 0.25;
 
@@ -34,19 +33,22 @@ layout(set = 0, binding = 2) uniform sampler2D pbrSampler;
 layout(set = 0, binding = 3) uniform sampler2D depthSampler;
 layout(set = 0, binding = 4) uniform sampler2DArray shadowSampler;
 
-layout(set = 1, binding = 0) uniform UBO {
-    vec4 ambientLightColor;
-    uint count;
-    Light lights[MAX_LIGHTS];
+layout(set = 1, binding = 0) readonly buffer Lights {
+    Light lights[];
 } lights;
 
-layout(set = 2, binding = 0) uniform ProjUniform {
+layout(set = 2, binding = 0) uniform SceneUniform  {
+    vec4 ambientLightColor;
+    uint numLights;
+} sceneUniform;
+
+layout(set = 3, binding = 0) uniform ProjUniform {
     mat4 invProjectionMatrix;
     mat4 invViewMatrix;
 } projUniform;
 
-layout(set = 3, binding = 0) uniform ShadowsUniforms {
-    CascadeShadow cascadeshadows[SHADOW_MAP_CASCADE_COUNT];
+layout(set = 4, binding = 0) readonly buffer ShadowsUniforms {
+    CascadeShadow cascadeshadows[];
 } shadowsUniforms;
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
@@ -216,7 +218,7 @@ void main() {
     // Calculate lighting
     vec3 lightColor = vec3(0.0);
     vec3 ambientColor = vec3(0.5);
-    for (uint i = 0U; i < lights.count; i++) {
+    for (uint i = 0U; i < sceneUniform.numLights; i++) {
         Light light = lights.lights[i];
         if (light.position.w == 0) {
             lightColor += calculateDirectionalLight(light, view_pos, normal, albedo, metallic, roughness);
@@ -225,7 +227,7 @@ void main() {
         }
     }
 
-    vec3 ambient = lights.ambientLightColor.rgb * albedo * ao;
+    vec3 ambient = sceneUniform.ambientLightColor.rgb * albedo * ao;
 
     outFragColor = vec4(ambient * shadowFactor + lightColor * shadowFactor, 1.0);
 

@@ -963,6 +963,86 @@ public class GeometryRenderActivity {
 }
 ```
 
+## Specialization constants
+
+Prior to analyzing the changes in light phase we will introduce Specialization constants. Specialization constants allows us to modify constants used in the shaders at run-time, when the pipeline that uses those shaders is created. We will use those constants in the light shaders and need to be in sync with Java code. We could ree¡member to update Java and GLSL code manually or use specialization constants. If we use specialization constants in the shaders, we can set this value at run-time, keeping always the Java and the shader code perfectly in sync. This will also not impact the performance, since it is resolved when creating the pipeline.
+
+Specialization constants are defined using a `VkSpecializationInfo` structure, which defines the structure of the data that will be used as constants (basically, its size and a numerical identifier associated to each value so we can refer to in the shaders). The `VkSpecializationInfo` structure needs to be associated to the shader that will use it (if any), therefore we need to modify the `ShaderModule` and `ShaderModuleData` records, so that  information is available when creating the pipeline.
+
+```java
+public class ShaderProgram {
+    ...
+    public record ShaderModule(int shaderStage, long handle, VkSpecializationInfo specInfo) {
+    }
+
+    public record ShaderModuleData(int shaderStage, String shaderSpvFile, VkSpecializationInfo specInfo) {
+        public ShaderModuleData(int shaderStage, String shaderSpvFile) {
+            this(shaderStage, shaderSpvFile, null);
+        }
+    }
+}
+```
+In the `ShaderProgram` class constructor, we just transfer the specialization constants set in the `ShaderModuleData`  record (if any) to the `ShaderModule` record (which will be used in the pipeline creation):
+
+```java
+public class ShaderProgram {
+    ...
+    public ShaderProgram(Device device, ShaderModuleData[] shaderModuleData) {
+        try {
+            this.device = device;
+            int numModules = shaderModuleData != null ? shaderModuleData.length : 0;
+            shaderModules = new ShaderModule[numModules];
+            for (int i = 0; i < numModules; i++) {
+                byte[] moduleContents = Files.readAllBytes(new File(shaderModuleData[i].shaderSpvFile()).toPath());
+                long moduleHandle = createShaderModule(moduleContents);
+                shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle,
+                        shaderModuleData[i].specInfo());
+            }
+        } catch (IOException excp) {
+            Logger.error("Error reading shader files", excp);
+            throw new RuntimeException(excp);
+        }
+    }
+    ...
+}
+```
+
+We are ready now to use that information in the `Pipeline` class:
+
+```java
+public class Pipeline {
+    ...
+    public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
+        ...
+            ShaderProgram.ShaderModule[] shaderModules = pipeLineCreationInfo.shaderProgram.getShaderModules();
+            int numModules = shaderModules.length;
+            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.calloc(numModules, stack);
+            for (int i = 0; i < numModules; i++) {
+                ShaderProgram.ShaderModule shaderModule = shaderModules[i];
+                shaderStages.get(i)
+                        .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
+                        .stage(shaderModule.shaderStage())
+                        .module(shaderModule.handle())
+                        .pName(main);
+                if (shaderModule.specInfo() != null) {
+                    shaderStages.get(i).pSpecializationInfo(shaderModule.specInfo());
+                }
+            }
+        ...
+    }
+    ...
+}
+```
+As it is shown, if we define specialization constants for a specific shader, we just initialize the `pSpecializationInfo` with the associated `VkSpecializationInfo` structure.
+
+Using specialization constants in the shaders is pretty simple, here is an example:
+
+```glsl
+layout (constant_id = 0) const int THIS_IS_SPEC_CONSTANT = 33;
+```
+
+We just need to add the `constant_id` parameter. If the specialization constant is not defined, the default value present in the shader will be used. Later on we will see how to to create the `VkSpecializationInfo` structure to use several specialization constants.
+
 ## Changes in light phase
 
 The phase where we apply the lighting needs more changes, we need to put the shadows map into work here. We will start with a pretty straight forward change, we need to modify the `LightingFrameBuffer` class to meet the changes in the `FrameBuffer` class which require us to specify the number of layers:
@@ -990,14 +1070,14 @@ public class LightingFrameBuffer {
 }
 ```
 
-Prior to reviewing the changes in the `LightingRenderActivity` class, we will examine the changes in the shaders so we can better understand the modifications required in that class. The vertex shader (`lighting_vertex.glsl`) does not need to be modified at all, the changes will affect the fragment shader (`lighting_fragment.glsl`). Let's dissect the changes. First, we will define a new set of specialization constants:
+Prior to reviewing the changes in the `LightingRenderActivity` class, we will examine the changes in the shaders so we can better understand the modifications required in that class. The vertex shader (`lighting_vertex.glsl`) does not need to be modified at all, the changes will affect the fragment shader (`lighting_fragment.glsl`). Let's dissect the changes. First, we will define a set of specialization constants:
 
 ```glsl
 ...
-layout (constant_id = 1) const int SHADOW_MAP_CASCADE_COUNT = 3;
-layout (constant_id = 2) const int USE_PCF = 0;
-layout (constant_id = 3) const float BIAS = 0.0005;
-layout (constant_id = 4) const int DEBUG_SHADOWS = 0;
+layout (constant_id = 0) const int SHADOW_MAP_CASCADE_COUNT = 3;
+layout (constant_id = 1) const int USE_PCF = 0;
+layout (constant_id = 2) const float BIAS = 0.0005;
+layout (constant_id = 3) const int DEBUG_SHADOWS = 0;
 ...
 const float SHADOW_FACTOR = 0.25;
 ...
@@ -1019,13 +1099,13 @@ struct CascadeShadow {
     vec4 splitDistance;
 };
 ...
-layout(set = 2, binding = 0) uniform ProjUniform {
+layout(set = 3, binding = 0) uniform ProjUniform {
     mat4 invProjectionMatrix;
     mat4 invViewMatrix;
 } projUniform;
 
-layout(set = 3, binding = 0) uniform ShadowsUniforms {
-    CascadeShadow cascadeshadows[SHADOW_MAP_CASCADE_COUNT];
+layout(set = 4, binding = 0) readonly buffer ShadowsUniforms {
+    CascadeShadow cascadeshadows[];
 } shadowsUniforms;
 ```
 
@@ -1140,16 +1220,82 @@ void main() {
 }
 ```
 
-Now we can examine the changes in the `LightingRenderActivity` class. First, we need a uniform that will hold the inverse projection and view matrices. Previously, we had just one buffer, because it only contained the inverse projection matrix. Since this did not change between frames we just needed one buffer. However, now, it will store also the inverse view matrix. That matrix can change between frame, so to avoid modifying the buffer while rendering, we will have as many buffers as swap chain images. We will need also new buffers, and descriptor sets for the cascade shadow splits data. We will not update that uniform in the constructor, but while recording the commands, therefore the constructor has been changed (no `Scene` instance as a parameter) and the `updateInvProjMatrix` method has been removed. The previous attributes `invProjBuffer` and `invProjMatrixDescriptorSet` have been removed. We need also new uniforms for the data of the cascade splits projection view uniforms and cascade instances). In the `cleanup` method, we just need to free those resources.
+Before examining the changes in the `LightingRenderActivity` class we will create a new class named `LightSpecConstants` which will cerate the required structures that will hold specialization constants information. The class is defined like this:
+
+```java
+package org.vulkanb.eng.graph.lighting;
+
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.vulkan.*;
+import org.vulkanb.eng.EngineProperties;
+import org.vulkanb.eng.graph.vk.GraphConstants;
+
+import java.nio.ByteBuffer;
+
+public class LightSpecConstants {
+
+    private final ByteBuffer data;
+    private final VkSpecializationMapEntry.Buffer specEntryMap;
+    private final VkSpecializationInfo specInfo;
+
+    public LightSpecConstants() {
+        EngineProperties engineProperties = EngineProperties.getInstance();
+        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH * 3 + GraphConstants.FLOAT_LENGTH);
+        data.putInt(GraphConstants.SHADOW_MAP_CASCADE_COUNT);
+        data.putInt(engineProperties.isShadowPcf() ? 1 : 0);
+        data.putFloat(engineProperties.getShadowBias());
+        data.putInt(engineProperties.isShadowDebug() ? 1 : 0);
+        data.flip();
+
+        specEntryMap = VkSpecializationMapEntry.calloc(4);
+        specEntryMap.get(0)
+                .constantID(0)
+                .size(GraphConstants.INT_LENGTH)
+                .offset(0);
+        specEntryMap.get(1)
+                .constantID(1)
+                .size(GraphConstants.INT_LENGTH)
+                .offset(GraphConstants.INT_LENGTH);
+        specEntryMap.get(2)
+                .constantID(2)
+                .size(GraphConstants.FLOAT_LENGTH)
+                .offset(GraphConstants.INT_LENGTH * 2);
+        specEntryMap.get(3)
+                .constantID(3)
+                .size(GraphConstants.INT_LENGTH)
+                .offset(GraphConstants.INT_LENGTH * 2 + GraphConstants.FLOAT_LENGTH);
+
+        specInfo = VkSpecializationInfo.calloc();
+        specInfo.pData(data)
+                .pMapEntries(specEntryMap);
+    }
+
+    public void cleanup() {
+        MemoryUtil.memFree(specEntryMap);
+        specInfo.free();
+        MemoryUtil.memFree(data);
+    }
+
+    public VkSpecializationInfo getSpecInfo() {
+        return specInfo;
+    }
+}
+```
+
+First, we create a buffer that will hold the specialization constants data, which will be the number of cascade shadows, if we will use PCF, the value of shadow bias and teh debug flag. We need to create one `VkSpecializationMapEntry` for each specialization constant. The `VkSpecializationMapEntry` defines  the numerical identifier used by the constant, the size of the data and the offset in the buffer that holds the data for all the constants. With all that information, we create the `VkSpecializationInfo` structure.
+
+Now we can examine the changes in the `LightingRenderActivity` class. First, we will create an atribute to hold an instance for the `LightSpecConstants` class which will be created in the constructor. Also, we need a uniform that will hold the inverse projection and view matrices. Previously, we had just one buffer, because it only contained the inverse projection matrix. Since this did not change between frames we just needed one buffer. However, now, it will store also the inverse view matrix. That matrix can change between frame, so to avoid modifying the buffer while rendering, we will have as many buffers as swap chain images. We will need also new buffers, and descriptor sets for the cascade shadow splits data. We will not update that uniform in the constructor, but while recording the commands, therefore the constructor has been changed (no `Scene` instance as a parameter) and the `updateInvProjMatrix` method has been removed. The previous attributes `invProjBuffer` and `invProjMatrixDescriptorSet` have been removed. We need also new uniforms for the data of the cascade splits projection view uniforms and cascade instances). In the `cleanup` method, we just need to free those resources.
 
 ```java
 public class LightingRenderActivity {
+    ...
+    private final LightSpecConstants lightSpecConstants;
     ...
     private VulkanBuffer[] invMatricesBuffers;
     private DescriptorSet.UniformDescriptorSet[] invMatricesDescriptorSets;
     ...
     private VulkanBuffer[] shadowsMatricesBuffers;
-    private DescriptorSet.UniformDescriptorSet[] shadowsMatricesDescriptorSets;
+    private DescriptorSet.StorageDescriptorSet[] shadowsMatricesDescriptorSets;
     ...
     public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
                                   List<Attachment> attachments, Scene scene) {
@@ -1191,44 +1337,55 @@ public class LightingRenderActivity {
     ...
     private void createDescriptorPool(List<Attachment> attachments) {
         ...
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() * 3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() * 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages() * 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
         ...
     }
 
     private void createDescriptorSets(List<Attachment> attachments, int numImages) {
         attachmentsLayout = new AttachmentsLayout(device, attachments.size());
         uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 attachmentsLayout,
+                storageDescriptorSetLayout,
                 uniformDescriptorSetLayout,
                 uniformDescriptorSetLayout,
-                uniformDescriptorSetLayout,
+                storageDescriptorSetLayout,
         };
 
         attachmentsDescriptorSet = new AttachmentsDescriptorSet(descriptorPool, attachmentsLayout,
                 attachments, 0);
 
-        lightsDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
+        lightsDescriptorSets = new DescriptorSet.StorageDescriptorSet[numImages];
+        sceneDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
         invMatricesDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
-        shadowsMatricesDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
+        shadowsMatricesDescriptorSets = new DescriptorSet.StorageDescriptorSet[numImages];
         for (int i = 0; i < numImages; i++) {
-            lightsDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
+            lightsDescriptorSets[i] = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
                     lightsBuffers[i], 0);
+            sceneDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
+                    sceneBuffers[i], 0);
             invMatricesDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
                     invMatricesBuffers[i], 0);
-            shadowsMatricesDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
+            shadowsMatricesDescriptorSets[i] = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
                     shadowsMatricesBuffers[i], 0);
         }
-    }    
+    }
     ...
     private void createUniforms(int numImages) {
         lightsBuffers = new VulkanBuffer[numImages];
+        sceneBuffers = new VulkanBuffer[numImages];
         invMatricesBuffers = new VulkanBuffer[numImages];
         shadowsMatricesBuffers = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
             lightsBuffers[i] = new VulkanBuffer(device, (long)
                     GraphConstants.INT_LENGTH * 4 + GraphConstants.VEC4_SIZE * 2 * GraphConstants.MAX_LIGHTS +
-                    GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+
+            sceneBuffers[i] = new VulkanBuffer(device, (long)
+                    GraphConstants.VEC4_SIZE * 2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
             invMatricesBuffers[i] = new VulkanBuffer(device, (long)
@@ -1237,7 +1394,7 @@ public class LightingRenderActivity {
 
             shadowsMatricesBuffers[i] = new VulkanBuffer(device, (long)
                     (GraphConstants.MAT4X4_SIZE + GraphConstants.VEC4_SIZE) * GraphConstants.SHADOW_MAP_CASCADE_COUNT,
-                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
     }
@@ -1252,17 +1409,19 @@ public class LightingRenderActivity {
     ...
     public void preRecordCommandBuffer(int idx) {
         ...
-            LongBuffer descriptorSets = stack.mallocLong(4)
+            LongBuffer descriptorSets = stack.mallocLong(5)
                     .put(0, attachmentsDescriptorSet.getVkDescriptorSet())
                     .put(1, lightsDescriptorSets[idx].getVkDescriptorSet())
-                    .put(2, invMatricesDescriptorSets[idx].getVkDescriptorSet())
-                    .put(3, shadowsMatricesDescriptorSets[idx].getVkDescriptorSet());
+                    .put(2, sceneDescriptorSets[idx].getVkDescriptorSet())
+                    .put(3, invMatricesDescriptorSets[idx].getVkDescriptorSet())
+                    .put(4, shadowsMatricesDescriptorSets[idx].getVkDescriptorSet());
         ...
     }
 
     public void prepareCommandBuffer(List<CascadeShadow> cascadeShadows) {
         ...
-        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(), lightsBuffers[idx]);
+        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(),
+                lightsBuffers[idx], sceneBuffers[idx]);
         updateInvMatrices(scene, invMatricesBuffers[idx]);
         updateCascadeShadowMatrices(cascadeShadows, shadowsMatricesBuffers[idx]);
     }    
@@ -1313,74 +1472,6 @@ public class LightingRenderActivity {
         VulkanUtils.copyMatrixToBuffer(invMatricesBuffer, invView, GraphConstants.MAT4X4_SIZE);
     }
     ...
-}
-```
-
-The `LightSpecConstants` class needs also to be updated to pass the values for the `SHADOW_MAP_CASCADE_COUNT`, `USE_PCF`, `BIAS` and `DEBUG_SHADOWS` constants.
-
-```java
-package org.vulkanb.eng.graph.lighting;
-
-import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.vk.GraphConstants;
-
-import java.nio.ByteBuffer;
-
-public class LightSpecConstants {
-
-    private ByteBuffer data;
-
-    private VkSpecializationMapEntry.Buffer specEntryMap;
-    private VkSpecializationInfo specInfo;
-
-    public LightSpecConstants() {
-        EngineProperties engineProperties = EngineProperties.getInstance();
-        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH * 4 + GraphConstants.FLOAT_LENGTH);
-        data.putInt(GraphConstants.MAX_LIGHTS);
-        data.putInt(GraphConstants.SHADOW_MAP_CASCADE_COUNT);
-        data.putInt(engineProperties.isShadowPcf() ? 1 : 0);
-        data.putFloat(engineProperties.getShadowBias());
-        data.putInt(engineProperties.isShadowDebug() ? 1 : 0);
-        data.flip();
-
-        specEntryMap = VkSpecializationMapEntry.calloc(5);
-        specEntryMap.get(0)
-                .constantID(0)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(0);
-        specEntryMap.get(1)
-                .constantID(1)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(GraphConstants.INT_LENGTH);
-        specEntryMap.get(2)
-                .constantID(2)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(GraphConstants.INT_LENGTH * 2);
-        specEntryMap.get(3)
-                .constantID(3)
-                .size(GraphConstants.FLOAT_LENGTH)
-                .offset(GraphConstants.INT_LENGTH * 3);
-        specEntryMap.get(4)
-                .constantID(4)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(GraphConstants.INT_LENGTH * 3 + GraphConstants.FLOAT_LENGTH);
-
-        specInfo = VkSpecializationInfo.calloc();
-        specInfo.pData(data)
-                .pMapEntries(specEntryMap);
-    }
-
-    public void cleanup() {
-        MemoryUtil.memFree(specEntryMap);
-        specInfo.free();
-        MemoryUtil.memFree(data);
-    }
-
-    public VkSpecializationInfo getSpecInfo() {
-        return specInfo;
-    }
 }
 ```
 

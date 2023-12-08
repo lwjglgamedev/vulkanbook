@@ -669,7 +669,8 @@ public class LightingRenderActivity {
         fence.fenceWait();
         fence.reset();
 
-        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(), lightsBuffers[idx]);
+        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(),
+                lightsBuffers[idx], sceneBuffers[idx]);
         updateInvMatrices(invMatricesBuffers[idx]);
         updateCascadeShadowMatrices(cascadeShadows, shadowsMatricesBuffers[idx]);
 
@@ -736,11 +737,12 @@ public class LightingRenderActivity {
                             .y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer descriptorSets = stack.mallocLong(4)
+            LongBuffer descriptorSets = stack.mallocLong(5)
                     .put(0, attachmentsDescriptorSet.getVkDescriptorSet())
                     .put(1, lightsDescriptorSets[idx].getVkDescriptorSet())
-                    .put(2, invMatricesDescriptorSets[idx].getVkDescriptorSet())
-                    .put(3, shadowsMatricesDescriptorSets[idx].getVkDescriptorSet());
+                    .put(2, sceneDescriptorSets[idx].getVkDescriptorSet())
+                    .put(3, invMatricesDescriptorSets[idx].getVkDescriptorSet())
+                    .put(4, shadowsMatricesDescriptorSets[idx].getVkDescriptorSet());
             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 

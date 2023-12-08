@@ -1,7 +1,7 @@
 package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.*;
+import org.lwjgl.vulkan.VkShaderModuleCreateInfo;
 import org.tinylog.Logger;
 
 import java.io.*;
@@ -24,8 +24,7 @@ public class ShaderProgram {
             for (int i = 0; i < numModules; i++) {
                 byte[] moduleContents = Files.readAllBytes(new File(shaderModuleData[i].shaderSpvFile()).toPath());
                 long moduleHandle = createShaderModule(moduleContents);
-                shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle,
-                        shaderModuleData[i].specInfo());
+                shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle);
             }
         } catch (IOException excp) {
             Logger.error("Error reading shader files", excp);
@@ -59,12 +58,9 @@ public class ShaderProgram {
         return shaderModules;
     }
 
-    public record ShaderModule(int shaderStage, long handle, VkSpecializationInfo specInfo) {
+    public record ShaderModule(int shaderStage, long handle) {
     }
 
-    public record ShaderModuleData(int shaderStage, String shaderSpvFile, VkSpecializationInfo specInfo) {
-        public ShaderModuleData(int shaderStage, String shaderSpvFile) {
-            this(shaderStage, shaderSpvFile, null);
-        }
+    public record ShaderModuleData(int shaderStage, String shaderSpvFile) {
     }
 }

@@ -249,7 +249,8 @@ public class VulkanModel {
 }
 ```
 
-Finally, as in the previous cases, we need to update the `GeometryRenderActivity` and `LightingRenderActivity` classes due to the `VulkanBuffer` class constructor modifications. (Changes are self-explanatory)
+As in the previous cases, we need to update the `GeometryRenderActivity` due to the `VulkanBuffer` class constructor modifications. (Changes are self-explanatory).
+
 
 ```java
 public class GeometryRenderActivity {
@@ -273,6 +274,125 @@ public class GeometryRenderActivity {
 }
 ```
 
+## Using storage buffers
+
+Up to now, we have been using an array of uniforms to access light sources in the shaders. That array needs to have a fixed size, at compile time, so we need to maintain two constants, one in Java code and one in shader code, that model the same information, the maximum number of lights. If we forget to update on of these two constants we will be out of sync. Instead of using an array of uniforms, we will be using a storage buffer. Storage buffers are used for large data, and also do not need to know their size in the shader.
+
+
+The way we access those buffers directly is through buffer storage descriptor sets. These descriptor sets are linked directly to a buffer and allow read and write operations. Therefore, we need to define a new descriptor set layout type for them:
+```java
+public abstract class DescriptorSetLayout {
+    ...
+    public static class StorageDescriptorSetLayout extends SimpleDescriptorSetLayout {
+        public StorageDescriptorSetLayout(Device device, int binding, int stage) {
+            super(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, binding, stage);
+        }
+    }
+    ...
+}
+```
+
+After that, we can define a new class that will be used to instantiate the storage buffer descriptor sets. As in previous cases, we just need to define a new class that inherit from `SimpleDescriptorSet` as an inner class of the `DescriptorSet` class, which basically sets is type to the `VK_DESCRIPTOR_TYPE_STORAGE_BUFFER` value:
+```java
+public abstract class DescriptorSet {
+    ...
+    public static class StorageDescriptorSet extends SimpleDescriptorSet {
+
+        public StorageDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
+                                    VulkanBuffer buffer, int binding) {
+            super(descriptorPool, descriptorSetLayout, buffer, binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    buffer.getRequestedSize());
+        }
+    }
+    ...
+}
+```
+
+Let's review now the changes required in the light fragment shader (`lighting_fragment.glsl`):
+
+```glsl
+...
+layout(set = 1, binding = 0) readonly buffer Lights {
+    Light lights[];
+} lights;
+
+layout(set = 2, binding = 0) uniform SceneUniform  {
+    vec4 ambientLightColor;
+    uint numLights;
+} sceneUniform;
+
+layout(set = 3, binding = 0) uniform ProjUniform  {
+    mat4 invProjectionMatrix;
+} projUniform;
+...
+void main() {
+    ...
+    for (uint i = 0U; i < sceneUniform.numLights; i++)
+    {
+        ...
+    }
+    ...
+    vec3 ambient = sceneUniform.ambientLightColor.rgb * albedo * ao;
+    ...    
+}
+```
+
+We have separate light information into two data structures:
+
+- The first one is modelled with an storage buffer and holds only light sources information. You can see that we do not use the `uniform` keyword but `readonly buffer`. You can model the data inside an storage however you want, in our case we will model as chunks of `Light` structures, but it could contain floats, matrices, etc. As you can see we do not need to specify a fixed size.
+- The second one is still an uniform and contains small information which makes no sense to model it using an storage buffer, such as ambient light color and the number of lights.
+
+Since we have created an additional descriptor set, we need to update the `projUniform` set number.
+
+Finally, we need to modify the `LightingRenderActivity` class to hold the changes in these descriptor sets and to populate properly the uniforms and the storage buffer.
+
+```java
+public class LightingRenderActivity {
+    ...
+    private DescriptorSet.StorageDescriptorSet[] lightsDescriptorSets;
+    ...
+    private VulkanBuffer[] sceneBuffers;
+    private DescriptorSet.UniformDescriptorSet[] sceneDescriptorSets;
+    ...
+    private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
+    ...
+    public void cleanup() {
+        storageDescriptorSetLayout.cleanup();
+        ...
+        Arrays.asList(sceneBuffers).forEach(VulkanBuffer::cleanup);
+    }
+    ...
+    private void createDescriptorPool(List<Attachment> attachments) {
+        ...
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(swapChain.getNumImages(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+        ...
+    }
+
+    private void createDescriptorSets(List<Attachment> attachments, int numImages) {
+        ...
+        storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_FRAGMENT_BIT);
+        descriptorSetLayouts = new DescriptorSetLayout[]{
+                attachmentsLayout,
+                storageDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+                uniformDescriptorSetLayout,
+        };
+        ...
+        lightsDescriptorSets = new DescriptorSet.StorageDescriptorSet[numImages];
+        sceneDescriptorSets = new DescriptorSet.UniformDescriptorSet[numImages];
+        for (int i = 0; i < numImages; i++) {
+            lightsDescriptorSets[i] = new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
+                    lightsBuffers[i], 0);
+            sceneDescriptorSets[i] = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
+                    sceneBuffers[i], 0);
+        }
+    }
+    ...
+}
+```
+
+As you can see we need to create new buffers and descriptor sets for the lights and scene light information. We will create as many as swap chain images we have since we can be modifying their values while being rendered. We need to create the new storage descriptor set layout and properly define the number of storage buffers (`VK_DESCRIPTOR_TYPE_STORAGE_BUFFER`) when creating the descriptor pool. In the `createUniforms` method we will create also the storage buffers, please pay attention that the usage flag needs to be set to `VK_BUFFER_USAGE_STORAGE_BUFFER_BIT`.
+
 ```java
 public class LightingRenderActivity {
     ...
@@ -281,10 +401,15 @@ public class LightingRenderActivity {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
 
         lightsBuffers = new VulkanBuffer[numImages];
+        sceneBuffers = new VulkanBuffer[numImages];
         for (int i = 0; i < numImages; i++) {
             lightsBuffers[i] = new VulkanBuffer(device, (long)
                     GraphConstants.INT_LENGTH * 4 + GraphConstants.VEC4_SIZE * 2 * GraphConstants.MAX_LIGHTS +
-                    GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    GraphConstants.VEC4_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+            
+            sceneBuffers[i] = new VulkanBuffer(device, (long)
+                    GraphConstants.VEC4_SIZE * 2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
     }
@@ -292,166 +417,58 @@ public class LightingRenderActivity {
 }
 ```
 
-## Specialization constants
-
-Specialization constants allows us to modify constants used in the shaders at run-time, when the pipeline that uses those shaders is created. For example, by now we have a constant, in the fragment shader of  the lighting phase which defines the maximum number of lights. This is defined also in the Java code, to properly size the buffers that will hold lights information. The problem with this, is that, if we want to change that constant, we need to do it in the Java code and the shader code at the same time. If we use specialization constants, we can set this value at run-time, keeping always the Java and the shader code perfectly in sync. This will also not impact the performance, since it is resolved when creating the pipeline.
-
-Specialization constants are defined using a `VkSpecializationInfo` structure, which defines the structure of the data that will be used as constants (basically, its size and a numerical identifier associated to each value so we can refer to in the shaders). In our case, we will use specialization constants to modify at run-time the maximum number of lights. In order to handle this, we will create a new class named `LightSpecConstants` under the `org.vulkanb.eng.graph.lighting` package (since they will be using in the lighting phase). The class is defined like this:
-
-```java
-package org.vulkanb.eng.graph.lighting;
-
-import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.graph.vk.GraphConstants;
-
-import java.nio.ByteBuffer;
-
-public class LightSpecConstants {
-
-    private ByteBuffer data;
-
-    private VkSpecializationMapEntry.Buffer specEntryMap;
-    private VkSpecializationInfo specInfo;
-
-    public LightSpecConstants() {
-        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);
-        data.putInt(GraphConstants.MAX_LIGHTS);
-        data.flip();
-
-        specEntryMap = VkSpecializationMapEntry.calloc(1);
-        specEntryMap.get(0)
-                .constantID(0)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(0);
-
-        specInfo = VkSpecializationInfo.calloc();
-        specInfo.pData(data)
-                .pMapEntries(specEntryMap);
-    }
-
-    public void cleanup() {
-        MemoryUtil.memFree(specEntryMap);
-        specInfo.free();
-        MemoryUtil.memFree(data);
-    }
-
-    public VkSpecializationInfo getSpecInfo() {
-        return specInfo;
-    }
-}
-```
-
-First, we create a buffer that will hold the specialization constants data, that is, the maximum number of lights. Then we need to create one `VkSpecializationMapEntry` for each specialization constant (only one in our case). The `VkSpecializationMapEntry` defines  the numerical identifier used by the constant, the size of the data and the offset in the buffer that holds the data for all the constants. With all that information, we create the `VkSpecializationInfo` structure.
-
-The `VkSpecializationInfo` structure needs to be associated to the shader that will use it (if any), therefore we need to modify the `ShaderModule` and `ShaderModuleData` records, so that  information is available when creating the pipeline.
-
-```java
-public class ShaderProgram {
-    ...
-    public record ShaderModule(int shaderStage, long handle, VkSpecializationInfo specInfo) {
-    }
-
-    public record ShaderModuleData(int shaderStage, String shaderSpvFile, VkSpecializationInfo specInfo) {
-        public ShaderModuleData(int shaderStage, String shaderSpvFile) {
-            this(shaderStage, shaderSpvFile, null);
-        }
-    }
-}
-```
-
-In the `ShaderProgram` class constructor, we just transfer the specialization constants set in the `ShaderModuleData`  record (if any) to the `ShaderModule` record (which will be used in the pipeline creation):
-
-```java
-public class ShaderProgram {
-    ...
-    public ShaderProgram(Device device, ShaderModuleData[] shaderModuleData) {
-        try {
-            this.device = device;
-            int numModules = shaderModuleData != null ? shaderModuleData.length : 0;
-            shaderModules = new ShaderModule[numModules];
-            for (int i = 0; i < numModules; i++) {
-                byte[] moduleContents = Files.readAllBytes(new File(shaderModuleData[i].shaderSpvFile()).toPath());
-                long moduleHandle = createShaderModule(moduleContents);
-                shaderModules[i] = new ShaderModule(shaderModuleData[i].shaderStage(), moduleHandle,
-                        shaderModuleData[i].specInfo());
-            }
-        } catch (IOException excp) {
-            Logger.error("Error reading shader files", excp);
-            throw new RuntimeException(excp);
-        }
-    }
-    ...
-}
-```
-
-We are ready now to use that information in the `Pipeline` class:
-
-```java
-public class Pipeline {
-    ...
-    public Pipeline(PipelineCache pipelineCache, Pipeline.PipeLineCreationInfo pipeLineCreationInfo) {
-        ...
-            ShaderProgram.ShaderModule[] shaderModules = pipeLineCreationInfo.shaderProgram.getShaderModules();
-            int numModules = shaderModules.length;
-            VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.calloc(numModules, stack);
-            for (int i = 0; i < numModules; i++) {
-                ShaderProgram.ShaderModule shaderModule = shaderModules[i];
-                shaderStages.get(i)
-                        .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
-                        .stage(shaderModule.shaderStage())
-                        .module(shaderModule.handle())
-                        .pName(main);
-                if (shaderModule.specInfo() != null) {
-                    shaderStages.get(i).pSpecializationInfo(shaderModule.specInfo());
-                }
-            }
-        ...
-    }
-    ...
-}
-```
-
-As it is shown, if we define specialization constants for a specific shader, we just initialize the `pSpecializationInfo` with the associated `VkSpecializationInfo` structure.
-
-Using specialization constants in the shaders is pretty simple, we just need to assign the identifier associated to the `VkSpecializationMapEntry` entry  defined when creating the `VkSpecializationInfo` structure. For example, in our case, in the lighting fragment shader, the specialization constant for the maximum number of lights is defined like this:
-
-```glsl
-layout (constant_id = 0) const int MAX_LIGHTS = 10;
-```
-
-We just need to add the `constant_id` parameter. If the specialization constant is not defined, the default value present in the shader will be used.
-
-The final step is to use the `LightSpecConstants` class in the `LightingRenderActivity` class:
+Finally, we need to update the binding of the descriptor sets and properly update the buffers while rendering:
 
 ```java
 public class LightingRenderActivity {
     ...
-    private final LightSpecConstants lightSpecConstants;
-    ...
-    public LightingRenderActivity(SwapChain swapChain, CommandPool commandPool, PipelineCache pipelineCache,
-                                  Attachment[] attachments, Scene scene) {
+    public void preRecordCommandBuffer(int idx) {
         ...
-        lightSpecConstants = new LightSpecConstants();
+            LongBuffer descriptorSets = stack.mallocLong(4)
+                    .put(0, attachmentsDescriptorSet.getVkDescriptorSet())
+                    .put(1, lightsDescriptorSets[idx].getVkDescriptorSet())
+                    .put(2, sceneDescriptorSets[idx].getVkDescriptorSet())
+                    .put(3, invProjMatrixDescriptorSet.getVkDescriptorSet());
         ...
     }
 
-    public void cleanup() {
+    public void prepareCommandBuffer() {
         ...
-        lightSpecConstants.cleanup();
-        ...
+        updateLights(scene.getAmbientLight(), scene.getLights(), scene.getCamera().getViewMatrix(),
+                lightsBuffers[idx], sceneBuffers[idx]);
     }
     ...
-    private void createShaders() {
-        ...
-        shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
-                {
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, LIGHTING_VERTEX_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, LIGHTING_FRAGMENT_SHADER_FILE_SPV,
-                                lightSpecConstants.getSpecInfo()),
-                });
+
+    private void updateLights(Vector4f ambientLight, Light[] lights, Matrix4f viewMatrix,
+                              VulkanBuffer lightsBuffer, VulkanBuffer sceneBuffer) {
+        // Lights
+        long mappedMemory = lightsBuffer.map();
+        ByteBuffer uniformBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) lightsBuffer.getRequestedSize());
+
+        int offset = 0;
+        int numLights = lights != null ? lights.length : 0;
+        for (int i = 0; i < numLights; i++) {
+            Light light = lights[i];
+            auxVec.set(light.getPosition());
+            auxVec.mul(viewMatrix);
+            auxVec.w = light.getPosition().w;
+            auxVec.get(offset, uniformBuffer);
+            offset += GraphConstants.VEC4_SIZE;
+            light.getColor().get(offset, uniformBuffer);
+            offset += GraphConstants.VEC4_SIZE;
+        }
+        lightsBuffer.unMap();
+
+        // Scene Uniform
+        mappedMemory = sceneBuffer.map();
+        uniformBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) sceneBuffer.getRequestedSize());
+
+        ambientLight.get(0, uniformBuffer);
+        offset = GraphConstants.VEC4_SIZE;
+        uniformBuffer.putInt(offset, numLights);
+
+        sceneBuffer.unMap();
     }
-    ...
 }
 ```
 

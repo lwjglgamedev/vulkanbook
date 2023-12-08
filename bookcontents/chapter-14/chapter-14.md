@@ -730,35 +730,6 @@ public class ComputePipeline {
 }
 ```
 
-In the compute shader, we will be accessing buffers, which will hold the bind pose for the animated models. The way we access those buffers directly is through buffer storage descriptor sets. These descriptor sets are linked directly to a buffer and allow read and write operations. Therefore, we need to define a new descriptor set layout type for them:
-```java
-public abstract class DescriptorSetLayout {
-    ...
-    public static class StorageDescriptorSetLayout extends SimpleDescriptorSetLayout {
-        public StorageDescriptorSetLayout(Device device, int binding, int stage) {
-            super(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, binding, stage);
-        }
-    }
-    ...
-}
-```
-
-After that, we can define a new class that will be used to instantiate the storage buffer descriptor sets. As in previous cases, we just need to define a new class that inherit from `SimpleDescriptorSet` as an inner class of the `DescriptorSet` class, which basically sets is type to the `VK_DESCRIPTOR_TYPE_STORAGE_BUFFER` value:
-```java
-public abstract class DescriptorSet {
-    ...
-    public static class StorageDescriptorSet extends SimpleDescriptorSet {
-
-        public StorageDescriptorSet(DescriptorPool descriptorPool, DescriptorSetLayout descriptorSetLayout,
-                                    VulkanBuffer buffer, int binding) {
-            super(descriptorPool, descriptorSetLayout, buffer, binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                    buffer.getRequestedSize());
-        }
-    }
-    ...
-}
-```
-
 The next step is to update the `Queue` class to support the creation of queues that belong to a family that allow the submission of compute commands. In order to do that, we will create a new inner class named `ComputeQueue`, that will create compute queues, and which is defined like this:
 ```java
 public class Queue {
