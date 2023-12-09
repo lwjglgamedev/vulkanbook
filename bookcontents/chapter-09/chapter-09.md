@@ -584,9 +584,18 @@ public class ForwardRenderActivity {
     ...
 }
 ```
+
 This class also defines a new attribute named `materialSize`. This will hold the value of on of the slices of the materials buffer that we mentioned previously. This size, will not be strictly the size of the data contained in the material uniform for one material. Those slices need to be aligned in multiples of a minimum allocation size defined by the `minUniformBufferOffsetAlignment` property of the physical device. Therefore, we have created a new method named `calcMaterialsUniformSize` which calculates that size.
 
-The next step is to modify the `createDescriptorSets` method:
+Additionally, We will need a new constant in the `GraphConstants` class which will hold the size in bytes for a vector of 4 elements:
+```java
+public final class GraphConstants {
+    ...
+    ...
+}
+```
+
+Back to the `ForwardRenderActivity` class, the next step is to modify the `createDescriptorSets` method:
 ```java
 public class ForwardRenderActivity {
     ...
@@ -608,7 +617,7 @@ public class ForwardRenderActivity {
         descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
         descriptorSetMap = new HashMap<>();
-        textureSampler = new TextureSampler(device, 1);
+        textureSampler = new TextureSampler(device, 1, true);
         projMatrixUniform = new VulkanBuffer(device, GraphConstants.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         projMatrixDescriptorSet = new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout, projMatrixUniform, 0);
