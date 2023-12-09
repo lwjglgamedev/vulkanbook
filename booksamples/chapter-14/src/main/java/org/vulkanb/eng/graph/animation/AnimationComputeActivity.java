@@ -28,7 +28,6 @@ public class AnimationComputeActivity {
     // Key is the model id
     private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
     private final Scene scene;
-    private final AnimationSpecConstants animationSpecConstants;
 
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
@@ -37,13 +36,11 @@ public class AnimationComputeActivity {
     private Fence fence;
     private ShaderProgram shaderProgram;
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
-    private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public AnimationComputeActivity(CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.scene = scene;
         device = pipelineCache.getDevice();
         computeQueue = new Queue.ComputeQueue(device, 0);
-        animationSpecConstants = new AnimationSpecConstants();
         createDescriptorPool();
         createDescriptorSets();
         createShaders();
@@ -56,12 +53,10 @@ public class AnimationComputeActivity {
 
     public void cleanup() {
         computePipeline.cleanup();
-        animationSpecConstants.cleanup();
         shaderProgram.cleanup();
         commandBuffer.cleanup();
         descriptorPool.cleanup();
         storageDescriptorSetLayout.cleanup();
-        uniformDescriptorSetLayout.cleanup();
         fence.cleanup();
         for (Map.Entry<String, List<EntityAnimationBuffer>> entry : entityAnimationsBuffers.entrySet()) {
             entry.getValue().forEach(EntityAnimationBuffer::cleanup);
@@ -79,19 +74,17 @@ public class AnimationComputeActivity {
         int maxStorageBuffers = engineProperties.getMaxStorageBuffers();
         int maxJointsMatricesLists = engineProperties.getMaxJointsMatricesLists();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxStorageBuffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxJointsMatricesLists, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxStorageBuffers + maxJointsMatricesLists, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
     private void createDescriptorSets() {
         storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
-        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
-                uniformDescriptorSetLayout,
+                storageDescriptorSetLayout,
         };
     }
 
@@ -108,8 +101,7 @@ public class AnimationComputeActivity {
         }
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_COMPUTE_BIT, ANIM_COMPUTE_SHADER_FILE_SPV,
-                                animationSpecConstants.getSpecInfo()),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_COMPUTE_BIT, ANIM_COMPUTE_SHADER_FILE_SPV),
                 });
     }
 
@@ -199,7 +191,7 @@ public class AnimationComputeActivity {
             for (VulkanModel.VulkanAnimation animation : vulkanModel.getAnimationList()) {
                 List<DescriptorSet> animationFrames = new ArrayList<>();
                 for (VulkanBuffer jointsMatricesBuffer : animation.frameBufferList()) {
-                    animationFrames.add(new DescriptorSet.UniformDescriptorSet(descriptorPool, uniformDescriptorSetLayout,
+                    animationFrames.add(new DescriptorSet.StorageDescriptorSet(descriptorPool, storageDescriptorSetLayout,
                             jointsMatricesBuffer, 0));
                 }
                 jointMatricesBufferDescriptorSets.add(animationFrames);

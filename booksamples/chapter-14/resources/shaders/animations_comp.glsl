@@ -1,7 +1,5 @@
 #version 450
 
-layout (constant_id = 0) const int MAX_JOINTS = 150;
-
 layout (std430, set=0, binding=0) readonly buffer srcBuf {
     float data[];
 } srcVector;
@@ -14,11 +12,11 @@ layout (std430, set=2, binding=0) buffer dstBuf {
     float data[];
 } dstVector;
 
-layout (local_size_x=32, local_size_y=1, local_size_z=1) in;
+layout (std430, set=3, binding=0) readonly buffer jointBuf {
+    mat4 data[];
+} jointMatrices;
 
-layout(set = 3, binding = 0) uniform JointMatricesUniform {
-    mat4 jointMatrices[MAX_JOINTS];
-} jointMatricesUniform;
+layout (local_size_x=32, local_size_y=1, local_size_z=1) in;
 
 void main()
 {
@@ -29,10 +27,10 @@ void main()
     int baseIdxSrcBuf = int(gl_GlobalInvocationID.x) * 14;
     vec4 position = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 1);
     position =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * position +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * position +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * position +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * position;
+    weights.x * jointMatrices.data[joints.x] * position +
+    weights.y * jointMatrices.data[joints.y] * position +
+    weights.z * jointMatrices.data[joints.z] * position +
+    weights.w * jointMatrices.data[joints.w] * position;
     dstVector.data[baseIdxSrcBuf] = position.x / position.w;
     dstVector.data[baseIdxSrcBuf + 1] = position.y / position.w;
     dstVector.data[baseIdxSrcBuf + 2] = position.z / position.w;
@@ -40,10 +38,10 @@ void main()
     baseIdxSrcBuf += 3;
     vec4 normal = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     normal =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * normal +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * normal +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * normal +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * normal;
+    weights.x * jointMatrices.data[joints.x] * normal +
+    weights.y * jointMatrices.data[joints.y] * normal +
+    weights.z * jointMatrices.data[joints.z] * normal +
+    weights.w * jointMatrices.data[joints.w] * normal;
     dstVector.data[baseIdxSrcBuf] = normal.x / normal.w;
     dstVector.data[baseIdxSrcBuf + 1] = normal.y / normal.w;
     dstVector.data[baseIdxSrcBuf + 2] = normal.z / normal.w;
@@ -51,10 +49,10 @@ void main()
     baseIdxSrcBuf += 3;
     vec4 tangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     tangent =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * tangent +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * tangent +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * tangent +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * tangent;
+    weights.x * jointMatrices.data[joints.x] * tangent +
+    weights.y * jointMatrices.data[joints.y] * tangent +
+    weights.z * jointMatrices.data[joints.z] * tangent +
+    weights.w * jointMatrices.data[joints.w] * tangent;
     dstVector.data[baseIdxSrcBuf] = tangent.x / tangent.w;
     dstVector.data[baseIdxSrcBuf + 1] = tangent.y / tangent.w;
     dstVector.data[baseIdxSrcBuf + 2] = tangent.z / tangent.w;
@@ -62,10 +60,10 @@ void main()
     baseIdxSrcBuf += 3;
     vec4 bitangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     bitangent =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * bitangent +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * bitangent +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * bitangent +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * bitangent;
+    weights.x * jointMatrices.data[joints.x] * bitangent +
+    weights.y * jointMatrices.data[joints.y] * bitangent +
+    weights.z * jointMatrices.data[joints.z] * bitangent +
+    weights.w * jointMatrices.data[joints.w] * bitangent;
     dstVector.data[baseIdxSrcBuf] = bitangent.x / bitangent.w;
     dstVector.data[baseIdxSrcBuf + 1] = bitangent.y / bitangent.w;
     dstVector.data[baseIdxSrcBuf + 2] = bitangent.z / bitangent.w;

@@ -1905,7 +1905,7 @@ public class AnimationComputeActivity {
     ...
 }
 ```
-Instead of having multiple descriptor sets and buffers per model, we will have all that data in combined storage buffers. Therefore, we need to create the new descriptor sets for them, as storage descriptor sets. We will not need also specialization constants since everything will by handled by storage buffers (no more uniforms). Those descriptor sets are created when the animated entities are loaded. This will be done in the `onAnimatedEntitiesLoaded` which will be called from the `Render` instance.
+Instead of having multiple descriptor sets and buffers per model, we will have all that data in combined storage buffers. Therefore, we need to create the new descriptor sets for them, as storage descriptor sets. Those descriptor sets are created when the animated entities are loaded. This will be done in the `onAnimatedEntitiesLoaded` which will be called from the `Render` instance.
 ```java
 public class AnimationComputeActivity {
     ...
@@ -1982,10 +1982,6 @@ public class AnimationComputeActivity {
 ```
 In order to access the proper offset in the global buffers, we pass all that information through a push constant structure. This is used in the compute shader which calculates the animations and dumps the results into a buffer.
 ```glsl
-...
-layout (std430, set=3, binding=0) readonly buffer jointBuf {
-    mat4 data[];
-} jointMatrices;
 ...
 layout(push_constant) uniform pushConstants {
     uint srcOffset;

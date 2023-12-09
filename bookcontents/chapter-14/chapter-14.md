@@ -823,7 +823,6 @@ public class AnimationComputeActivity {
     // Key is the model id
     private final Map<String, ModelDescriptorSets> modelDescriptorSetsMap;
     private final Scene scene;
-    private final AnimationSpecConstants animationSpecConstants;
 
     private CommandBuffer commandBuffer;
     private ComputePipeline computePipeline;
@@ -832,13 +831,11 @@ public class AnimationComputeActivity {
     private Fence fence;
     private ShaderProgram shaderProgram;
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
-    private DescriptorSetLayout.UniformDescriptorSetLayout uniformDescriptorSetLayout;
 
     public AnimationComputeActivity(CommandPool commandPool, PipelineCache pipelineCache, Scene scene) {
         this.scene = scene;
         device = pipelineCache.getDevice();
         computeQueue = new Queue.ComputeQueue(device, 0);
-        animationSpecConstants = new AnimationSpecConstants();
         createDescriptorPool();
         createDescriptorSets();
         createShaders();
@@ -852,65 +849,16 @@ public class AnimationComputeActivity {
 }
 ```
 
-We create an instance of `AnimationSpecConstants` which will be used to set specialization constants. Specifically, it will hold the maximum number of joint matrices lists which will be used in the compute shader. It is defined liked this:
-
-```java
-package org.vulkanb.eng.graph.animation;
-
-import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.vk.GraphConstants;
-
-import java.nio.ByteBuffer;
-
-public class AnimationSpecConstants {
-
-    private final ByteBuffer data;
-    private final VkSpecializationMapEntry.Buffer specEntryMap;
-    private final VkSpecializationInfo specInfo;
-
-    public AnimationSpecConstants() {
-        EngineProperties engineProperties = EngineProperties.getInstance();
-        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);
-        data.putInt(engineProperties.getMaxJointsMatricesLists());
-        data.flip();
-
-        specEntryMap = VkSpecializationMapEntry.calloc(1);
-        specEntryMap.get(0)
-                .constantID(0)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(0);
-
-        specInfo = VkSpecializationInfo.calloc();
-        specInfo.pData(data)
-                .pMapEntries(specEntryMap);
-    }
-
-    public void cleanup() {
-        MemoryUtil.memFree(specEntryMap);
-        specInfo.free();
-        MemoryUtil.memFree(data);
-    }
-
-    public VkSpecializationInfo getSpecInfo() {
-        return specInfo;
-    }
-}
-```
-
-Back to the `AnimationComputeActivity` class, in the `cleanup` method, as usual, we just free the resources:
+In the `cleanup` method, as usual, we just free the resources:
 ```java
 public class AnimationComputeActivity {
     ...
     public void cleanup() {
         computePipeline.cleanup();
-        animationSpecConstants.cleanup();
         shaderProgram.cleanup();
         commandBuffer.cleanup();
         descriptorPool.cleanup();
         storageDescriptorSetLayout.cleanup();
-        uniformDescriptorSetLayout.cleanup();
         fence.cleanup();
         for (Map.Entry<String, List<EntityAnimationBuffer>> entry : entityAnimationsBuffers.entrySet()) {
             entry.getValue().forEach(EntityAnimationBuffer::cleanup);
@@ -935,19 +883,17 @@ public class AnimationComputeActivity {
         int maxStorageBuffers = engineProperties.getMaxStorageBuffers();
         int maxJointsMatricesLists = engineProperties.getMaxJointsMatricesLists();
         List<DescriptorPool.DescriptorTypeCount> descriptorTypeCounts = new ArrayList<>();
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxStorageBuffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
-        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxJointsMatricesLists, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+        descriptorTypeCounts.add(new DescriptorPool.DescriptorTypeCount(maxStorageBuffers + maxJointsMatricesLists, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
         descriptorPool = new DescriptorPool(device, descriptorTypeCounts);
     }
 
     private void createDescriptorSets() {
         storageDescriptorSetLayout = new DescriptorSetLayout.StorageDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
-        uniformDescriptorSetLayout = new DescriptorSetLayout.UniformDescriptorSetLayout(device, 0, VK_SHADER_STAGE_COMPUTE_BIT);
         descriptorSetLayouts = new DescriptorSetLayout[]{
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
                 storageDescriptorSetLayout,
-                uniformDescriptorSetLayout,
+                storageDescriptorSetLayout,
         };
     }
 
@@ -1148,8 +1094,6 @@ The next step is to write the compute shader which performs the calculations. Th
 ```glsl
 #version 450
 
-layout (constant_id = 0) const int MAX_JOINTS = 150;
-
 layout (std430, set=0, binding=0) readonly buffer srcBuf {
     float data[];
 } srcVector;
@@ -1162,15 +1106,15 @@ layout (std430, set=2, binding=0) buffer dstBuf {
     float data[];
 } dstVector;
 
-layout (local_size_x=1, local_size_y=1, local_size_z=1) in;
+layout (std430, set=3, binding=0) readonly buffer jointBuf {
+    mat4 data[];
+} jointMatrices;
 
-layout(set = 3, binding = 0) uniform JointMatricesUniform {
-    mat4 jointMatrices[MAX_JOINTS];
-} jointMatricesUniform;
+layout (local_size_x=32, local_size_y=1, local_size_z=1) in;
 ...
 ```
 
-The `srcVector` is the storage buffer that contains binding pose data (positions, texture coordinates, normals, bitangents and tangents). It is a readonly buffer since we will not writing to it. The `weightsVector` is also a readonly buffer that contains the weights associated to each vertex. The `dstVector` is the storage buffer that will hold our results, it will contain the positions, texture coordinates, normals, bitangents and tangents transformed according to the animation. Finally, the `jointMatricesUniform`, holds the list of transformation matrices applicable to each joint for a specific frame. Going back to the shaders, the `main` method starts like this:
+The `srcVector` is the storage buffer that contains binding pose data (positions, texture coordinates, normals, bitangents and tangents). It is a readonly buffer since we will not writing to it. The `weightsVector` is also a readonly buffer that contains the weights associated to each vertex. The `dstVector` is the storage buffer that will hold our results, it will contain the positions, texture coordinates, normals, bitangents and tangents transformed according to the animation. Finally, the `jointMatrices` storage buffer, holds the list of transformation matrices applicable to each joint for a specific frame. Going back to the shaders, the `main` method starts like this:
 ```glsl
 void main()
 {
@@ -1189,38 +1133,21 @@ Now we will examine how the vertex positions are transformed:
 void main()
 {
     ...
-    int baseIdxSrcBuf = int(gl_GlobalInvocationID.x) * 14;
+     int baseIdxSrcBuf = int(gl_GlobalInvocationID.x) * 14;
     vec4 position = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 1);
     position =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * position +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * position +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * position +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * position;
+    weights.x * jointMatrices.data[joints.x] * position +
+    weights.y * jointMatrices.data[joints.y] * position +
+    weights.z * jointMatrices.data[joints.z] * position +
+    weights.w * jointMatrices.data[joints.w] * position;
     dstVector.data[baseIdxSrcBuf] = position.x / position.w;
     dstVector.data[baseIdxSrcBuf + 1] = position.y / position.w;
     dstVector.data[baseIdxSrcBuf + 2] = position.z / position.w;
-    ...
+   ...
 }
 ```
 
 After that, we get the vertex positions form the storage buffer that contains the vertex data for the bind position. That buffer can be split into slices of 14 floats: 3 floats for vertex positions, 3 for normal coordinates, 3 for tangent coordinates, 3 for bitangent coordinates and 2 for texture coordinates. Once we get the vertex position, we modify those coordinates by applying a modulation factor which is derived from multiplying the weight factor by the joint transformation matrix of the associated matrix.
-```glsl
-void main()
-{
-    ...
-    int baseIdxSrcBuf = int(gl_GlobalInvocationID.x) * 14;
-    vec4 position = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 1);
-    position =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * position +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * position +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * position +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * position;
-    dstVector.data[baseIdxSrcBuf] = position.x / position.w;
-    dstVector.data[baseIdxSrcBuf + 1] = position.y / position.w;
-    dstVector.data[baseIdxSrcBuf + 2] = position.z / position.w;
-    ...
-}
-```
 
 The same process is applied to the normal, tangent and bitangent.
 ```glsl
@@ -1230,10 +1157,10 @@ void main()
     baseIdxSrcBuf += 3;
     vec4 normal = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     normal =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * normal +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * normal +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * normal +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * normal;
+    weights.x * jointMatrices.data[joints.x] * normal +
+    weights.y * jointMatrices.data[joints.y] * normal +
+    weights.z * jointMatrices.data[joints.z] * normal +
+    weights.w * jointMatrices.data[joints.w] * normal;
     dstVector.data[baseIdxSrcBuf] = normal.x / normal.w;
     dstVector.data[baseIdxSrcBuf + 1] = normal.y / normal.w;
     dstVector.data[baseIdxSrcBuf + 2] = normal.z / normal.w;
@@ -1241,10 +1168,10 @@ void main()
     baseIdxSrcBuf += 3;
     vec4 tangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     tangent =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * tangent +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * tangent +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * tangent +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * tangent;
+    weights.x * jointMatrices.data[joints.x] * tangent +
+    weights.y * jointMatrices.data[joints.y] * tangent +
+    weights.z * jointMatrices.data[joints.z] * tangent +
+    weights.w * jointMatrices.data[joints.w] * tangent;
     dstVector.data[baseIdxSrcBuf] = tangent.x / tangent.w;
     dstVector.data[baseIdxSrcBuf + 1] = tangent.y / tangent.w;
     dstVector.data[baseIdxSrcBuf + 2] = tangent.z / tangent.w;
@@ -1252,10 +1179,10 @@ void main()
     baseIdxSrcBuf += 3;
     vec4 bitangent = vec4(srcVector.data[baseIdxSrcBuf], srcVector.data[baseIdxSrcBuf + 1], srcVector.data[baseIdxSrcBuf + 2], 0);
     bitangent =
-    weights.x * jointMatricesUniform.jointMatrices[joints.x] * bitangent +
-    weights.y * jointMatricesUniform.jointMatrices[joints.y] * bitangent +
-    weights.z * jointMatricesUniform.jointMatrices[joints.z] * bitangent +
-    weights.w * jointMatricesUniform.jointMatrices[joints.w] * bitangent;
+    weights.x * jointMatrices.data[joints.x] * bitangent +
+    weights.y * jointMatrices.data[joints.y] * bitangent +
+    weights.z * jointMatrices.data[joints.z] * bitangent +
+    weights.w * jointMatrices.data[joints.w] * bitangent;
     dstVector.data[baseIdxSrcBuf] = bitangent.x / bitangent.w;
     dstVector.data[baseIdxSrcBuf + 1] = bitangent.y / bitangent.w;
     dstVector.data[baseIdxSrcBuf + 2] = bitangent.z / bitangent.w;
