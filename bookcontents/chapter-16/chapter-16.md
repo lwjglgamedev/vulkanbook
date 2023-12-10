@@ -1129,23 +1129,17 @@ With all the changes above, the `GeometryRenderActivity` class has been simplifi
 ```java
 public class GeometryRenderActivity {
     ...
-    private final GeometrySpecConstants geometrySpecConstants;
-    ...
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
     ...
     private TextureDescriptorSet textureDescriptorSet;
     ...
     public GeometryRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene, GlobalBuffers globalBuffers) {
         ...
-        geometrySpecConstants = new GeometrySpecConstants(scene);
-        ...
         createDescriptorSets(numImages, globalBuffers);
         ...
     }
 
     public void cleanup() {
-        ...
-        geometrySpecConstants.cleanup();
         ...
         storageDescriptorSetLayout.cleanup();
         ...
@@ -1154,73 +1148,9 @@ public class GeometryRenderActivity {
 }
 ```
 
-The `GeometryRenderActivity` class does not longer have references to command buffer and fences, therefore the `createCommandBuffers` method has been removed. We will not be accessing material information through uniforms but using an storage buffer. Hence, the `calcMaterialsUniformSize` method has also been removed. In addition to that, we will be accessing the textures through and array of textures. Without extensions, the array of textures will need to have a static size in the shaders. Therefore, in order to be able to control the maximum number of textures, we will use a specialization constant, which is modelled in the `GeometrySpecConstants` class.
-```java
-package org.vulkanb.eng.graph.geometry;
+The `GeometryRenderActivity` class does not longer have references to command buffer and fences, therefore the `createCommandBuffers` method has been removed. We will not be accessing material information through uniforms but using an storage buffer. Hence, the `calcMaterialsUniformSize` method has also been removed. I
 
-import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.EngineProperties;
-import org.vulkanb.eng.graph.vk.GraphConstants;
-
-import java.nio.ByteBuffer;
-
-public class GeometrySpecConstants {
-
-    private final ByteBuffer data;
-    private final VkSpecializationMapEntry.Buffer specEntryMap;
-    private final VkSpecializationInfo specInfo;
-
-    public GeometrySpecConstants() {
-        EngineProperties engineProperties = EngineProperties.getInstance();
-        data = MemoryUtil.memAlloc(GraphConstants.INT_LENGTH);
-        data.putInt(engineProperties.getMaxTextures());
-        data.flip();
-
-        specEntryMap = VkSpecializationMapEntry.calloc(1);
-        specEntryMap.get(0)
-                .constantID(0)
-                .size(GraphConstants.INT_LENGTH)
-                .offset(0);
-
-        specInfo = VkSpecializationInfo.calloc();
-        specInfo.pData(data)
-                .pMapEntries(specEntryMap);
-    }
-
-    public void cleanup() {
-        MemoryUtil.memFree(specEntryMap);
-        specInfo.free();
-        MemoryUtil.memFree(data);
-    }
-
-    public VkSpecializationInfo getSpecInfo() {
-        return specInfo;
-    }
-}
-```
-
-Back to the `GeometryRenderActivity` class, this specialization constant needs to be used when creating the shaders.
-```java
-public class GeometryRenderActivity {
-    ...
-    private void createShaders() {
-        EngineProperties engineProperties = EngineProperties.getInstance();
-        if (engineProperties.isShaderRecompilation()) {
-            ShaderCompiler.compileShaderIfChanged(GEOMETRY_VERTEX_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_vertex_shader);
-            ShaderCompiler.compileShaderIfChanged(GEOMETRY_FRAGMENT_SHADER_FILE_GLSL, Shaderc.shaderc_glsl_fragment_shader);
-        }
-        shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
-                {
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, GEOMETRY_VERTEX_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, GEOMETRY_FRAGMENT_SHADER_FILE_SPV,
-                                geometrySpecConstants.getSpecInfo()),
-                });
-    }    ...
-}
-```
-
-The methods that create the descriptor sets need also to be modified.
+The methods that create the descriptor pool an descriptor sets need also to be modified.
 ```java
 public class GeometryRenderActivity {
     ...
@@ -1525,7 +1455,8 @@ The `geometry_fragment.gls` has been updated like this:
 ```glsl
 #version 450
 
-layout (constant_id = 0) const int MAX_TEXTURES = 100;
+// Keep in sync manually with Java code
+const int MAX_TEXTURES = 100;
 
 layout(location = 0) in vec3 inNormal;
 layout(location = 1) in vec3 inTangent;
@@ -1612,7 +1543,6 @@ Besides extracting some of the code previously in the `main` function, we now ac
 ```java
 public class ShadowRenderActivity {
     ...
-    private GeometrySpecConstants geometrySpecConstants;
     private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
     ...
     private DescriptorSetLayout.StorageDescriptorSetLayout storageDescriptorSetLayout;
@@ -1621,15 +1551,11 @@ public class ShadowRenderActivity {
     ...
     public ShadowRenderActivity(SwapChain swapChain, PipelineCache pipelineCache, Scene scene, GlobalBuffers globalBuffers) {
         ...
-        geometrySpecConstants = new GeometrySpecConstants();
-        ...
         createDescriptorSets(numImages, globalBuffers);
         ...
     }
 
     public void cleanup() {
-        ...
-        geometrySpecConstants.cleanup();
         ...
         storageDescriptorSetLayout.cleanup();
         ...
@@ -1672,8 +1598,7 @@ public class ShadowRenderActivity {
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV),
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_GEOMETRY_BIT, SHADOW_GEOMETRY_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV,
-                                geometrySpecConstants.getSpecInfo()),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV),
                 });
     }
     ...
@@ -1825,7 +1750,8 @@ In the shadow fragment shader, `shadow_fragment_shader.glsl` we need to change h
 ```glsl
 #version 450
 
-layout (constant_id = 0) const int MAX_TEXTURES = 100;
+// Keep in sync manually with Java code
+const int MAX_TEXTURES = 100;
 
 struct Material {
     vec4 diffuseColor;

@@ -1,6 +1,7 @@
 #version 450
 
-layout (constant_id = 0) const int MAX_TEXTURES = 100;
+// Keep in sync manually with Java code
+const int MAX_TEXTURES = 100;
 
 layout(location = 0) in vec3 inNormal;
 layout(location = 1) in vec3 inTangent;

@@ -22,7 +22,6 @@ public class GeometryRenderActivity {
 
     private final Device device;
     private final GeometryFrameBuffer geometryFrameBuffer;
-    private final GeometrySpecConstants geometrySpecConstants;
     private final MemoryBarrier memoryBarrier;
     private final PipelineCache pipelineCache;
     private final Scene scene;
@@ -48,7 +47,6 @@ public class GeometryRenderActivity {
         this.pipelineCache = pipelineCache;
         this.scene = scene;
         device = swapChain.getDevice();
-        geometrySpecConstants = new GeometrySpecConstants();
 
         geometryFrameBuffer = new GeometryFrameBuffer(swapChain);
         int numImages = swapChain.getNumImages();
@@ -62,7 +60,6 @@ public class GeometryRenderActivity {
 
     public void cleanup() {
         pipeLine.cleanup();
-        geometrySpecConstants.cleanup();
         Arrays.asList(viewMatricesBuffer).forEach(VulkanBuffer::cleanup);
         projMatrixUniform.cleanup();
         textureSampler.cleanup();
@@ -132,8 +129,7 @@ public class GeometryRenderActivity {
         shaderProgram = new ShaderProgram(device, new ShaderProgram.ShaderModuleData[]
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, GEOMETRY_VERTEX_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, GEOMETRY_FRAGMENT_SHADER_FILE_SPV,
-                                geometrySpecConstants.getSpecInfo()),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, GEOMETRY_FRAGMENT_SHADER_FILE_SPV),
                 });
     }
 

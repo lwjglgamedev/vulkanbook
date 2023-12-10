@@ -5,7 +5,7 @@ import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.EngineProperties;
 import org.vulkanb.eng.graph.*;
-import org.vulkanb.eng.graph.geometry.*;
+import org.vulkanb.eng.graph.geometry.GeometryAttachments;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.Scene;
 
@@ -30,7 +30,6 @@ public class ShadowRenderActivity {
     private DescriptorPool descriptorPool;
     private DescriptorSetLayout[] descriptorSetLayouts;
     private boolean firstRun;
-    private GeometrySpecConstants geometrySpecConstants;
     private DescriptorSet.StorageDescriptorSet materialsDescriptorSet;
     private Pipeline pipeLine;
     private DescriptorSet.UniformDescriptorSet[] projMatrixDescriptorSet;
@@ -48,7 +47,6 @@ public class ShadowRenderActivity {
         this.swapChain = swapChain;
         this.scene = scene;
         device = swapChain.getDevice();
-        geometrySpecConstants = new GeometrySpecConstants();
         int numImages = swapChain.getNumImages();
         shadowsFrameBuffer = new ShadowsFrameBuffer(device);
         createShaders();
@@ -60,7 +58,6 @@ public class ShadowRenderActivity {
 
     public void cleanup() {
         pipeLine.cleanup();
-        geometrySpecConstants.cleanup();
         Arrays.asList(shadowsUniforms).forEach(VulkanBuffer::cleanup);
         uniformDescriptorSetLayout.cleanup();
         textureDescriptorSetLayout.cleanup();
@@ -124,8 +121,7 @@ public class ShadowRenderActivity {
                 {
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_VERTEX_BIT, SHADOW_VERTEX_SHADER_FILE_SPV),
                         new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_GEOMETRY_BIT, SHADOW_GEOMETRY_SHADER_FILE_SPV),
-                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV,
-                                geometrySpecConstants.getSpecInfo()),
+                        new ShaderProgram.ShaderModuleData(VK_SHADER_STAGE_FRAGMENT_BIT, SHADOW_FRAGMENT_SHADER_FILE_SPV),
                 });
     }
 
