@@ -591,6 +591,7 @@ Additionally, We will need a new constant in the `GraphConstants` class which wi
 ```java
 public final class GraphConstants {
     ...
+    public static final int VEC4_SIZE = 4 * FLOAT_LENGTH;
     ...
 }
 ```
