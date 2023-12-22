@@ -181,17 +181,19 @@ public class GeometryRenderPass {
                     .srcSubpass(VK_SUBPASS_EXTERNAL)
                     .dstSubpass(0)
                     .srcStageMask(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
-                    .dstStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+                    .dstStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT)
                     .srcAccessMask(VK_ACCESS_MEMORY_READ_BIT)
-                    .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+                    .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+                            | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
                     .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
 
             subpassDependencies.get(1)
                     .srcSubpass(0)
                     .dstSubpass(VK_SUBPASS_EXTERNAL)
-                    .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+                    .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)
                     .dstStageMask(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
-                    .srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+                    .srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+                            | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
                     .dstAccessMask(VK_ACCESS_MEMORY_READ_BIT)
                     .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
             ...
@@ -203,7 +205,7 @@ public class GeometryRenderPass {
 
 The first dependency, defines an external dependency for the subpass at position `0` (the only subpass that we have). It states that any in-flight command shall reach the `VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT` stage. That is, shall complete its journey through the pipeline when performing read memory accesses (`VK_ACCESS_MEMORY_READ_BIT`). This will block any command reaching the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` pipeline stage for read and write access. This dependency, prevents the geometry rendering phase to write to the output attachments if there are previous commands in-flight, that is, if the lighting render phase commands are still in use.
 
-The second dependency, its used to control the layout transition of the attachments to `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` and `VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL`. These layout transitions must not happen until the in-flight commands have completed the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` stage. Note that we are note preventing the lighting phase to start before the geometry phase has finished with this configuration. We will do this later on.
+The second dependency, its used to control the layout transition of the attachments to `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` and `VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL`. These layout transitions must not happen until the in-flight commands have completed the `VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT` and `VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT` stages. Note that we are note preventing the lighting phase to start before the geometry phase has finished with this configuration. We will do this later on.
 
 With that information we can create the render pass:
 
