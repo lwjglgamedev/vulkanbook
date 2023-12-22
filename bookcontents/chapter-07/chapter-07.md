@@ -408,7 +408,16 @@ public SwapChainRenderPass(SwapChain swapChain, int depthImageFormat) {
                 .colorAttachmentCount(colorReference.remaining())
                 .pColorAttachments(colorReference)
                 .pDepthStencilAttachment(depthReference);
-       ...
+        ...
+        VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
+            subpassDependencies.get(0)
+                    .srcSubpass(VK_SUBPASS_EXTERNAL)
+                    .dstSubpass(0)
+                    .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT)
+                    .dstStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT)
+                    .srcAccessMask(0)
+                    .dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+        ...
     }
 }
 ```
@@ -422,6 +431,8 @@ The constructor, in addition to the swap chain, receives now the format of the i
 - We want also an automatic transition from the initial layout  `VK_IMAGE_LAYOUT_UNDEFINED`) to the final layout (`VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL`).
 
 After that we create a reference to the depth attachment (`VkAttachmentReference`) and set it as a depth stencil attachment (`pDepthStencilAttachment`) in the `VkSubpassDescription` structure.
+
+We need to modify also the sub pass dependency (external dependant) to prevent accessing the depth attachment while it is still being used by another render pass. 
 
 ## Scene changes
 
