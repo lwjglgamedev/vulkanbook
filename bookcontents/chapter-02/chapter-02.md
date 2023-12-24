@@ -1,12 +1,12 @@
 # Vulkan instance
 
-In this chapter we will be having our first taste of Vulkan, we will start by creating a Vulkan instance. This is the very first thing that will be created when dealing with Vulkan. Basically, a Vulkan instance is where all the application state is glued together. In Vulkan there is no global state--all that information is organized around a Vulkan instance.
+In this chapter, we will be having our first taste of Vulkan, we will start by creating a Vulkan instance. This is the very first thing that will be created when dealing with Vulkan. Basically, a Vulkan instance is where all the application state is glued together. In Vulkan, there is no global state--all that information is organized around a Vulkan instance.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-02).
 
 ## Instance first steps
 
-Usually you will have a single Vulkan instance for each application, but the spec allows you to have more. A potential use case for having more than one is if you are using a legacy library that already uses Vulkan (maybe even different version) and do you not want that to interfere with your code. You could then setup a separate instance just for your code. We will start from scratch in this book and, therefore, we will use just a single instance.
+Usually you will have a single Vulkan instance for each application, but the spec allows you to have more. A potential use case for having more than one is if you are using a legacy library that already uses Vulkan (maybe even different version) and do you not want that to interfere with your code. You could then set up a separate instance just for your code. We will start from scratch in this book and, therefore, we will use just a single instance.
 
 This part of the book will show you an integral part of using LWJGL as well as a structure for creating Vulkan objects. The former is the `MemoryStack`, and the latter Vk*Info.
 
@@ -30,9 +30,9 @@ public class Instance {
 
 Before going on, for those who are not familiar with [LWJGL](https://www.lwjgl.org/), we will explain the purpose of the `MemoryStack`. In order to share data with native code, LWJGL uses direct (off-heap) buffers instead of relaying on the [JNI](https://en.wikipedia.org/wiki/Java_Native_Interface) (which would be quite slow). You can think of these buffers as C pointers to a region of memory than can be accessed both by Java and native code. But Java has a major drawback: we cannot allocate objects in the stack, such as in C, even for these direct buffers. This is specially painful for short-lived buffers that may be used to pass some initialization info to native methods.
 
-To solve this, LWJGL comes with the `MemoryStack`, which is basically a direct allocated stack, where we can reserve direct memory when we need to exchange short-lived info with native functions. You can read about all the gory details [here](https://github.com/LWJGL/lwjgl3-wiki/wiki/1.3.-Memory-FAQ). Although is not perfect, it really helps this information sharing, and what is more important, everything allocated in the stack inside a try/catch block is automatically freed (how convenient!) when we exit that block. We will see if [Project Panama](https://openjdk.java.net/projects/panama/) can finally ease the invocation of native code from Java.
+To solve this, LWJGL comes with the `MemoryStack`, which is basically a direct allocated stack, where we can reserve direct memory when we need to exchange short-lived info with native functions. You can read about all the gory details [here](https://github.com/LWJGL/lwjgl3-wiki/wiki/1.3.-Memory-FAQ). Although it is not perfect, it really helps with this information sharing, and what is more important, everything allocated in the stack inside a try/catch block is automatically freed (how convenient!) when we exit that block. We will see if [Project Panama](https://openjdk.java.net/projects/panama/) can finally ease the invocation of native code from Java.
 
-*When initializing something in memory, there are two options to choose from: malloc() and calloc(). malloc __does not__ initialize memory (ie set the bits to 0), while calloc does. Malloc is suggested for performance gains, but sometimes calloc is necessary. When using calloc, we do not need to initialize some information fields.*
+*When initializing something in memory, there are two options to choose from: malloc() and calloc(). malloc __does not__ initialize memory (i.e., set the bits to 0), while calloc does. Malloc is suggested for performance gains, but sometimes calloc is necessary. When using calloc, we do not need to initialize some information fields.*
 
 ### Creating Vulkan Structures
 
@@ -52,13 +52,13 @@ This signals to create a Vulkan object, using some things we will set up later. 
 
 When creating objects, we need to define their structure, sometimes with other structures. All structures inherit these types:
 
-- `sType`: The structure type (required). Although this is required in regular C/C++ Code, LWJGL provides a convenience method to set it automatically, named `sType$Default`. This method does ot require the `sType` field to be set. In this book we will not use this method so you can compare easily with C/C++ code.
+- `sType`: The structure type (required). Although this is required in regular C/C++ Code, LWJGL provides a convenience method to set it automatically, named `sType$Default`. This method does ot require the `sType` field to be set. In this book, we will not use this method, so you can compare easily with C/C++ code.
 - `pNext`: Pointer to an extension-specific structure.
 - `flags`: Often unused, but intended for specific behaviors. 
 
 ##### Vk\*.Buffer & .calloc()
 
-Sometimes Vulkan expects a list of objects, either with a single element or multiple. In these cases, we have to create a Buffer object, which is a subclass of most objects. Either way, we still have to run a `calloc` command in order to create the object. For a singular item, use `calloc(stack)`, and for multiple, use `calloc(x, stack)`, where x is the amount of items in the list.
+Sometimes Vulkan expects a list of objects, either with a single element or multiple. In these cases, we have to create a Buffer object, which is a subclass of most objects. Either way, we still have to run a `calloc` command in order to create the object. For a singular item, use `calloc(stack)`, and for multiple, use `calloc(x, stack)`, where x is the number of items in the list.
 
 Back to the constructor:
 
@@ -82,7 +82,7 @@ public class Instance {
 }
 ```
 
-The structure type parameter sType, which, as its names suggests, defines its type. That is, what information it models from. In this case we are defining our application information with the structure `VkApplicationInfo`. As you can see, we cannot create the usual Java objects, but rather we allocate it through the stack and use the following attributes:
+The structure type parameter sType, which, as its name suggests, defines its type. That is, what information it models from. In this case we are defining our application information with the structure `VkApplicationInfo`. As you can see, we cannot create the usual Java objects, but rather we allocate it through the stack and use the following attributes:
 
 - `sType`: Structure type. In this case: `VK_STRUCTURE_TYPE_APPLICATION_INFO`.
 - `pApplicationName`: It is basically just some text that will identify the application that uses this instance. In this case we use another helper method from the stack class to create a `ByteBuffer` that points to a null-terminated string.
@@ -95,17 +95,17 @@ Most of the time these attributes are set to `NULL` and `0` respectively. Since 
 
 ## Layers
 
-Vulkan is a layered API. When you read about the Vulkan core, you can think as the mandatory lowest level layer. On top of that, we there are additional layers that will support useful things like validation and debugging information. As said before, Vulkan is a low overhead API, this means that **the driver assumes that you are using the API correctly and does not waste time in performing validations** (error checking is minimal in the core layer). If you want the driver to perform extensive validation you must enable them through specific layers (validations are handled through extension validation layers). While we are developing it is good advice to turn these validation layers on, to check that we are being compliant with the specification. This can be turned off when our application is ready for delivery. 
+Vulkan is a layered API. When you read about the Vulkan core, you can think of that as the mandatory lowest level layer. On top of that, we there are additional layers that will support useful things like validation and debugging information. As said before, Vulkan is a low overhead API, this means that **the driver assumes that you are using the API correctly and does not waste time in performing validations** (error checking is minimal in the core layer). If you want the driver to perform extensive validation, you must enable them through specific layers (validations are handled through extension validation layers). While we are developing, it is good advice to turn these validation layers on, to check that we are being compliant with the specification. This can be turned off when our application is ready for delivery. 
 
 > [!NOTE]
-> In order to use validation layers you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform, please consult the specific instructions for your platform.
+> In order to use validation layers, you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform, please consult the specific instructions for your platform.
 
 > [!WARNING]  
 > **macOS** To enable validation layers on macOS, after installing the Vulkan SDK, you will need to configure LWJGL to use the Vulkan Loader.  
 > This can be done be setting the following VM paramters: ```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```  
 > Details about MoltenVK and Vulcan Loader on macOS are [here](https://vulkan.lunarg.com/doc/view/1.3.261.1/mac/getting_started.html#moltenvk)
 
-Our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested we need first to get the ones that are supported by our driver. 
+Our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not. If validation is requested, we first need to get the ones that are supported by our driver. 
 
 ```java
 public class Instance {
@@ -127,7 +127,7 @@ public class Instance {
 }
 ```
 
-We will get the supported validation layers by invoking the `getSupportedValidationLayers`. If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution. In order to use validation layers you need to install the [Vulkan SDK]([Vulkan® SDK - What&#039;s in the SDK - Where to Download](https://www.lunarg.com/vulkan-sdk/)). Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
+We will get the supported validation layers by invoking the `getSupportedValidationLayers`. If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution. In order to use validation layers, you need to install the [Vulkan SDK]([Vulkan® SDK - What&#039;s in the SDK - Where to Download](https://www.lunarg.com/vulkan-sdk/)). Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
 
 ```java
 public class Instance {
@@ -148,9 +148,9 @@ public class Instance {
 We first need to get the number of supported layers, by invoking the `vkEnumerateInstanceLayerProperties` function. This function receives two parameters:
 
 - The number of layers.
-- A pointer to a buffer that will hold all the layers properties.
+- A pointer to a buffer that will hold all the layers' properties.
 
-This function can be used to get the total number of supported layers, and to get their properties. We need first to get the number, so the first parameter is an array to get the number of layers, and the second parameter is `null`. In order to get the properties we will need to perform a second call to the same function, once we get the total size. The next fragment shows how we do retrieve these properties to get their name and store them in a `Set`.
+This function can be used to get the total number of supported layers, and to get their properties. We need first to get the number, so the first parameter is an array to get the number of layers, and the second parameter is `null`. In order to get the properties, we will need to perform a second call to the same function, once we get the total size. The next fragment shows how we do retrieve these properties to get their name and store them in a `Set`.
 
 ```java
 public class Instance {
@@ -174,7 +174,7 @@ public class Instance {
 }
 ```
 
-Once we have the supported layers, we need to select which ones do we want to activate. In order to do so, we construct a checks like this:
+Once we have the supported layers, we need to select which ones we want to activate. In order to do so, we construct a checks like this:
 
 ```java
 public class Instance {
@@ -213,7 +213,7 @@ public class Instance {
 }
 ```
 
-We first try to aim for the `VK_LAYER_KHRONOS_validation` meta layer. A meta layer is basically a collection of layers registered under a single name. Then we go down in our priority list combining other meta layers or selecting a list of single layers. We basically check the presence of these preferred layers (ordered by priority) to get the ones that are supported, and pick those.
+We first try to aim for the `VK_LAYER_KHRONOS_validation` meta layer. A meta-layer is basically a collection of layers registered under a single name. Then we go down in our priority list combining other meta-layers or selecting a list of single layers. We basically check the presence of these preferred layers (ordered by priority) to get the ones that are supported, and pick those.
 
 Let's get back to the constructor. Now we have a list of the names of the supported layers (array of Strings) we need to transform it to a pointer of a list of null terminated Strings:
 ```java
@@ -236,7 +236,7 @@ public class Instance {
 }
 ```
 
-Now that we've setup all the validation layers, we move on to extensions. We will first create a method that will retrieve all the supported extensions named `getInstanceExtensions`:
+Now that we've set up all the validation layers, we move on to extensions. We will first create a method that will retrieve all the supported extensions named `getInstanceExtensions`:
 ```java
 public class Instance {
     ...
@@ -264,7 +264,7 @@ public class Instance {
 ```
 The method, as it will be frequent in many Vulkan API functions, first invoke the `vkEnumerateInstanceExtensionProperties` to get the number of supported extensions. After that, creates a method which will hold the extension properties by invoking the same function again, this time with the number of extensions and the buffer as parameters.
 
-Going back to the `Instance` constructor, because Vulkan is a cross-platform API, links to windowing systems are handled through extensions. In our case we will be using GLFW, which has extensions for Vulkan, so we need to include this as an extension with the following code:
+Going back to the `Instance` constructor, because Vulkan is a cross-platform API, links to windowing systems are handled through extensions. In our case, we will be using GLFW, which has extensions for Vulkan, so we need to include this as an extension with the following code:
 ```java
 public class Instance {
     ...
@@ -281,7 +281,7 @@ public class Instance {
 }
 ```
 
-Depending if we have enabled validation or not we will need to add the extension used for debugging. We will use the `VK_EXT_debug_utils` extension (which should be used instead of older debug extension such as `VK_EXT_debug_report` and `VK_EXT_debug_marker`). In addition to that, if we are on MacOS and the `VK_KHR_portability_enumeration` is available we need to use that extension.
+Depending on if we have enabled validation or not, we will need to add the extension used for debugging. We will use the `VK_EXT_debug_utils` extension (which should be used instead of an older debug extension such as `VK_EXT_debug_report` and `VK_EXT_debug_marker`). In addition to that, if we are on macOS and the `VK_KHR_portability_enumeration` is available we need to use that extension.
 
 ```java
 public class Instance {
@@ -346,7 +346,7 @@ public class VulkanUtils {
 ```
 
 
-Additionally, if we have enabled the debug extension, we will be interested in setting a callback, so we can, for example, log the information reported. We have already enabled the debugging extension, but we need to create it. We also need to pass this extension while creating  the instance to properly log errors while creating and destroying the instance:
+Additionally, if we have enabled the debug extension, we will be interested in setting a callback, so we can, for example, log the information reported. We have already enabled the debugging extension, but we need to create it. We also need to pass this extension while creating the instance to properly log errors while creating and destroying the instance:
 ```java
 public class Instance {
     ...
@@ -398,11 +398,11 @@ public class Instance {
 ```
 In this method, we instantiate a `VkDebugUtilsMessengerCreateInfoEXT` which is defined by the following attributes:
 - `sType`: The type of the structure: `VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT`.
-- `messageSeverity`: This will hold a bit mask with the levels of the messages that we are interested in receiving. In our case, we will receive error and warning messages.
-- `messageType`: This will hold a bit mask with the types of messages that we are interested in receiving. In our case, we will receive validation and performance messages.
+- `messageSeverity`: This will hold a bitmask with the levels of the messages that we are interested in receiving. In our case, we will receive error and warning messages.
+- `messageType`: This will hold a bitmask with the types of messages that we are interested in receiving. In our case, we will receive validation and performance messages.
 - `pfnUserCallback`:  The function that will be invoked when a message matches the criteria established by the `messageSeverity` and `messageType` fields. In our case, we just log the message with the proper logging level according to the `messageSeverity` parameter.
 
-Finally, going back to the constructor, we have everything we need in order to create the Vulkan instance. In order to do so, we need to setup yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
+Finally, going back to the constructor, we have everything we need in order to create the Vulkan instance. In order to do so, we need to set up yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
 
 - Structure type: `VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO`.
 - Next extension: In our case, the debug extension configuration structure or `NULL` if no validation is requested or supported.
@@ -456,7 +456,7 @@ public class Instance {
 }
 ```
 
-Most of the Vulkan functions return an `int` value that is used to check if the call as succeeded or not. To check this, an utility method has been defined in the `VulkanUtils` class that throws a `RuntimeException` if the call does not return `VK_SUCCESS`.
+Most of the Vulkan functions return an `int` value that is used to check if the call as succeeded or not. To check this, a utility method has been defined in the `VulkanUtils` class that throws a `RuntimeException` if the call does not return `VK_SUCCESS`.
 
 ```java
 public class VulkanUtils {
@@ -527,6 +527,6 @@ private EngineProperties() {
     }
 ```
 
-And that's all! As you can see we have to write lots of code just to setup the Vulkan instance. You can see now why Vulkan is considered an explicit API. A whole chapter passed and we can't even clear the screen. So, contain your expectations, since in the next chapters we will continue writing lots of code required to setup everything. It will take some time in order to draw something, so please be patient. The good news is that when everything is set up, adding incremental features to draw more complex models or to support advanced techniques should require less amount of code. And if we do it correctly, we get a good understanding of Vulkan.
+And that's all! As you can see, we have to write lots of code just to set up the Vulkan instance. You can see now why Vulkan is considered an explicit API. A whole chapter passed, and we can't even clear the screen. So, contain your expectations, since in the next chapters we will continue writing lots of code required to set up everything. It will take some time in order to draw something, so please be patient. The good news is that when everything is set up, adding incremental features to draw more complex models or to support advanced techniques should require less amount of code. And if we do it correctly, we get a good understanding of Vulkan.
 
 [Next chapter](../chapter-03/chapter-03.md)
