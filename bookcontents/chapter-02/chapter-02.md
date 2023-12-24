@@ -39,7 +39,7 @@ public class Instance {
 ### Memory Stack
 
 Before going on, for those who are not familiar with [LWJGL](https://www.lwjgl.org/), we will explain the purpose of the `MemoryStack`.
-In order to share data with native code,
+To share data with native code,
 LWJGL uses direct (off-heap) buffers instead of relaying on the [JNI](https://en.wikipedia.org/wiki/Java_Native_Interface)
 (which would be quite slow).
 You can think of these buffers as C pointers to a region of memory than can be accessed both by Java and native code.
@@ -53,9 +53,9 @@ Although it is not perfect, it really helps with this information sharing, and w
 everything allocated in the stack inside a try/catch block is automatically freed (how convenient!) when we exit that block.
 We will see if [Project Panama](https://openjdk.java.net/projects/panama/) can finally ease the invocation of native code from Java.
 
-*When initializing something in memory, there are two options to choose from: malloc() and calloc().
-malloc __does not__ initialize memory (i.e., set the bits to 0), while calloc does.
-Malloc is suggested for performance gains, but sometimes calloc is necessary.
+*When initializing something in memory, there are two options to choose from: `malloc()` and `calloc()`.
+`malloc` __does not__ initialize memory (i.e., set the bits to 0), while calloc does.
+`malloc` is suggested for performance gains, but sometimes calloc is necessary.
 When using calloc, we do not need to initialize some information fields.*
 
 ### Creating Vulkan Structures
@@ -91,7 +91,7 @@ When creating objects, we need to define their structure, sometimes with other s
 
 Sometimes Vulkan expects a list of objects, either with a single element or multiple.
 In these cases, we have to create a Buffer object, which is a subclass of most objects.
-Either way, we still have to run a `calloc` command in order to create the object.
+Either way, we still have to run a `calloc` command to create the object.
 For a singular item, use `calloc(stack)`, and for multiple, use `calloc(x, stack)`, where x is the number of items in the list.
 
 Back to the constructor:
@@ -151,7 +151,7 @@ While we are developing, it is good advice to turn these validation layers on, t
 This can be turned off when our application is ready for delivery. 
 
 > [!NOTE]
-> In order to use validation layers, you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform,
+> to use validation layers, you will need to install [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for your platform,
 > please consult the specific instructions for your platform.
 
 > [!WARNING]  
@@ -184,7 +184,7 @@ public class Instance {
 
 We will get the supported validation layers by invoking the `getSupportedValidationLayers`.
 If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution.
-In order to use validation layers, you need to install the
+To use validation layers, you need to install the
 [Vulkan SDK]([Vulkan® SDK - What&#039;s in the SDK - Where to Download](https://www.lunarg.com/vulkan-sdk/)).
 Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
 
@@ -211,7 +211,7 @@ We first need to get the number of supported layers, by invoking the `vkEnumerat
 
 This function can be used to get the total number of supported layers, and to get their properties.
 We need first to get the number, so the first parameter is an array to get the number of layers, and the second parameter is `null`.
-In order to get the properties, we will need to perform a second call to the same function, once we get the total size.
+To get the properties, we will need to perform a second call to the same function, once we get the total size.
 The next fragment shows how we do retrieve these properties to get their name and store them in a `Set`.
 
 ```java
@@ -236,7 +236,7 @@ public class Instance {
 }
 ```
 
-Once we have the supported layers, we need to select which ones we want to activate. In order to do so, we construct a checks like this:
+Once we have the supported layers, we need to select which ones we want to activate. To do so, we construct a checks like this:
 
 ```java
 public class Instance {
@@ -281,7 +281,7 @@ Then we go down in our priority list combining other meta-layers or selecting a 
 We basically check the presence of these preferred layers (ordered by priority) to get the ones that are supported, and pick those.
 
 Let's get back to the constructor.
-Now we have a list of the names of the supported layers (array of Strings) we need to transform it to a pointer of a list of null terminated Strings:
+Now we have a list of the supported layers' names (array of Strings) we need to transform it to a pointer of null terminated String array:
 ```java
 public class Instance {
     ...
@@ -479,8 +479,8 @@ In this method, we instantiate a `VkDebugUtilsMessengerCreateInfoEXT` which is d
 - `pfnUserCallback`:  The function that will be invoked when a message matches the criteria established by the `messageSeverity` and `messageType` fields.
   In our case, we just log the message with the proper logging level according to the `messageSeverity` parameter.
 
-Finally, going back to the constructor, we have everything we need in order to create the Vulkan instance.
-In order to do so, we need to set up yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
+Finally, going back to the constructor, we have everything we need to create the Vulkan instance.
+To do so, we need to set up yet another structure: `VkInstanceCreateInfo`, which is defined as follows:
 
 - Structure type: `VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO`.
 - Next extension: In our case, the debug extension configuration structure or `NULL` if no validation is requested or supported.
@@ -616,7 +616,7 @@ As you can see, we have to write lots of code just to set up the Vulkan instance
 You can see now why Vulkan is considered an explicit API.
 A whole chapter passed, and we can't even clear the screen.
 So, contain your expectations, since in the next chapters we will continue writing lots of code required to set up everything.
-It will take some time in order to draw something, so please be patient.
+It will take some time to draw something, so please be patient.
 The good news is that when everything is set up,
 adding incremental features to draw more complex models or to support advanced techniques should require less amount of code.
 And if we do it correctly, we get a good understanding of Vulkan.
