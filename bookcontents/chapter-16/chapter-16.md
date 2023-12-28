@@ -1779,6 +1779,19 @@ void main()
 }
 ```
 
+Side Note: You need to keep in sync the size of the array for samplers (sized by the constant `MAX_TEXTURES`) with the vañue used in the Java code. In order to avoid out of sync issues, you can use macros in the shader source code (as in the C). For example instead of defining a constant for the texture sampler array we could use a macro like this:
+```glsl
+#ifndef MAX_TEXTURES
+#define MAX_TEXTURES 100
+#endif
+```
+We can modify the value of that value at runtime using shaderc. We just need to call `shaderc_compile_options_initialize` function for each of the defined values. For example, we could set that value like this:
+```java
+            options = Shaderc.shaderc_compile_options_initialize();
+            Shaderc.shaderc_compile_options_add_macro_definition(options, "MAX_TEXTURES", "50");
+```
+Of course, you should generalize the code above and being able to pass a list of variables. One important thing to remark is that for, this subsuttution to work you need to compile the GLSL code every time, noyt just if the source code changes.
+
 Since most of the work for animations has already been done in the `GlobalBuffers` class, the `AnimationComputeActivity` class has also been simplified a lot.
 ```java
 public class AnimationComputeActivity {
