@@ -1832,7 +1832,7 @@ void main()
 }
 ```
 
-Side Note: You need to keep in sync the size of the array for samplers (sized by the constant `MAX_TEXTURES`) with the vañue used in the Java code. In order to avoid out of sync issues, you can use macros in the shader source code (as in the C). For example instead of defining a constant for the texture sampler array we could use a macro like this:
+Side Note: You need to keep in sync the size of the array for samplers (sized by the constant `MAX_TEXTURES`) with the value used in the Java code. In order to avoid out of sync issues, you can use macros in the shader source code (as in the C). For example instead of defining a constant for the texture sampler array we could use a macro like this:
 ```glsl
 #ifndef MAX_TEXTURES
 #define MAX_TEXTURES 100
