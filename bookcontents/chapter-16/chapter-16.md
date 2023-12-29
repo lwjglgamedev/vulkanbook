@@ -182,11 +182,11 @@ public class GlobalBuffers {
         Device device = commandPool.getDevice();
         CommandBuffer cmd = new CommandBuffer(commandPool, true, true);
 
-        StgBuffer verticesStgBuffer = new StgBuffer(device, verticesBuffer.getRequestedSize());
-        StgBuffer indicesStgBuffer = new StgBuffer(device, indicesBuffer.getRequestedSize());
-        StgBuffer materialsStgBuffer = new StgBuffer(device, materialsBuffer.getRequestedSize());
-        StgBuffer animJointMatricesStgBuffer = new StgBuffer(device, animJointMatricesBuffer.getRequestedSize());
-        StgBuffer animWeightsStgBuffer = new StgBuffer(device, animWeightsBuffer.getRequestedSize());
+        StgIntBuffer verticesStgBuffer = new StgIntBuffer(device, verticesBuffer.getRequestedSize());
+        StgIntBuffer indicesStgBuffer = new StgIntBuffer(device, indicesBuffer.getRequestedSize());
+        StgIntBuffer materialsStgBuffer = new StgIntBuffer(device, materialsBuffer.getRequestedSize());
+        StgIntBuffer animJointMatricesStgBuffer = new StgIntBuffer(device, animJointMatricesBuffer.getRequestedSize());
+        StgIntBuffer animWeightsStgBuffer = new StgIntBuffer(device, animWeightsBuffer.getRequestedSize());
 
         cmd.beginRecording();
 
@@ -199,7 +199,7 @@ public class GlobalBuffers {
 }
 ```
 
-The `loadModels` method starts by creating several `StgBuffer` instances for the vertex data, indices, materials, etc. along with a command buffer to record the transitions. The `StgBuffer` class will manage the creation of a staging buffer, which is accessible by the CPU which contents will later be copied to a GPU only buffer. It also creates a default material which will be used for models which do not define any. One important thing to remark is that we are using a single staging buffer type for all the models (a single one for the vertices, for the indices, etc.). The `loadModels` method continues as follows:
+The `loadModels` method starts by creating several `StgIntBuffer` instances for the vertex data, indices, materials, etc. along with a command buffer to record the transitions. The `StgIntBuffer` class will manage the creation of a staging buffer, which is accessible by the CPU which contents will later be copied to a GPU only buffer. It is backed by an `IntBuffer` although it will contain float and int values. But, why using an `IntBuffer` instead of a more generic `ByteBuffer`? The answer is that if we use a `ByteBuffer`we can only address as many bytes as `Integer.MAX_VALUE` value (around 2 GBytes). If we use an `IntBuffer`, since each element of the buffer is an integer value (that is 4 bytes), we can address four times as much. Therefore, we will use an `IntBUffer`as a transient buffer and will store floats as int values using `Float.floatToRawIntBits` method. We will need also staging buffers backed up by `ByteBuffer`, which will be modeled by the `StgButeBuffer` class. We will see later on their implementation. Going back to the the `loadModels` method, it also creates a default material which will be used for models which do not define any. One important thing to remark is that we are using a single staging buffer type for all the models (a single one for the vertices, for the indices, etc.). The `loadModels` method continues as follows:
 ```java
 public class GlobalBuffers {
     ...
@@ -243,25 +243,21 @@ public class GlobalBuffers {
         textureList.forEach(Texture::cleanupStgBuffer);
 
         return vulkanModelList;
-    }
     ...
 }
 ```
 
 As it can be seen, we iterate over the meshes that are defined for each model, invoking the `loadMeshes` to properly upload the data into the staging buffers. We also call the `loadAnimationData` method to load the animation data for each model (if present). After that, we check if there are mp textures loaded to load a default one (which is required for simplifying the render). Finally, we record the transfer commands from CPU accessible buffers to GPU only buffers and cleanup the staging buffers.
 
-As it has been commented before, the `StgBuffer` class, a `GlobalBuffers` inner class, allows us to use a temporary CPU accessible to a GPU only buffer:
+As it has been commented before, the `StgIntBuffer` and `StgByteBuffer` classes, `GlobalBuffers` inner classes, allows us to use a temporary CPU accessible to a GPU only buffer. They both inherit from an abstract class named `StgBuffer` which is defined like this:
 ```java
 public class GlobalBuffers {
     ...
-    private static class StgBuffer {
-        private final ByteBuffer dataBuffer;
-        private final VulkanBuffer stgVulkanBuffer;
+    private static abstract class StgBuffer {
+        protected final VulkanBuffer stgVulkanBuffer;
 
         public StgBuffer(Device device, long size) {
             stgVulkanBuffer = new VulkanBuffer(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-            long mappedMemory = stgVulkanBuffer.map();
-            dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) stgVulkanBuffer.getRequestedSize());
         }
 
         public void cleanup() {
@@ -269,19 +265,48 @@ public class GlobalBuffers {
             stgVulkanBuffer.cleanup();
         }
 
-        public ByteBuffer getDataBuffer() {
-            return dataBuffer;
-        }
-
-        private void recordTransferCommand(CommandBuffer cmd, VulkanBuffer dstBuffer) {
+        public void recordTransferCommand(CommandBuffer cmd, VulkanBuffer dstBuffer) {
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 VkBufferCopy.Buffer copyRegion = VkBufferCopy.calloc(1, stack)
                         .srcOffset(0).dstOffset(0).size(stgVulkanBuffer.getRequestedSize());
                 vkCmdCopyBuffer(cmd.getVkCommandBuffer(), stgVulkanBuffer.getBuffer(), dstBuffer.getBuffer(), copyRegion);
             }
         }
-    }
+    }    ...
+}
+```
+
+It basically stores a reference to a host visible backed buffer, which will store the data to be uploaded to the GPU and provides the `recordTransferCommand` method to transfer data from the CPU visible buffer to the GPU-only-visible one (`dstBuffer`). This class has two inherited classes, the `StgByteBuffer` which uses a `ByteBuffer` to store the data to be loaded and the `StgIntBuffer` which uses an `IntBuffer`. They are defined like this: 
+```java
+public class GlobalBuffers {
     ...
+    private static class StgByteBuffer extends StgBuffer {
+        private final ByteBuffer dataBuffer;
+
+        public StgByteBuffer(Device device, long size) {
+            super(device, size);
+            long mappedMemory = stgVulkanBuffer.map();
+            dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) stgVulkanBuffer.getRequestedSize());
+        }
+
+        public ByteBuffer getDataBuffer() {
+            return dataBuffer;
+        }
+    }
+
+    private static class StgIntBuffer extends StgBuffer {
+        private final IntBuffer dataBuffer;
+
+        public StgIntBuffer(Device device, long size) {
+            super(device, size);
+            long mappedMemory = stgVulkanBuffer.map();
+            dataBuffer = MemoryUtil.memIntBuffer(mappedMemory, (int) stgVulkanBuffer.getRequestedSize() / INT_LENGTH);
+        }
+
+        public IntBuffer getDataBuffer() {
+            return dataBuffer;
+        }
+    }
 }
 ```
 
@@ -374,16 +399,14 @@ We can now go back to the `GlobalBuffers` class and examine the `loadMaterials` 
 public class GlobalBuffers {
     ...
     // Handle std430 alignment
-    private static final int MATERIAL_PADDING = GraphConstants.FLOAT_LENGTH * 3;
-    private static final int MATERIAL_SIZE = GraphConstants.VEC4_SIZE + GraphConstants.INT_LENGTH * 3 +
-            GraphConstants.FLOAT_LENGTH * 2 + MATERIAL_PADDING;
+    private static final int MATERIAL_PADDING = FLOAT_LENGTH * 3;
+    private static final int MATERIAL_SIZE = VEC4_SIZE + INT_LENGTH * 3 + FLOAT_LENGTH * 2 + MATERIAL_PADDING;
     ...
-    private List<VulkanModel.VulkanMaterial> loadMaterials(Device device, TextureCache textureCache, StgBuffer
-            materialsStgBuffer,
-                                                           List<ModelData.Material> materialList, List<Texture> textureList) {
+    private List<VulkanModel.VulkanMaterial> loadMaterials(Device device, TextureCache textureCache, StgIntBuffer
+            materialsStgBuffer, List<ModelData.Material> materialList, List<Texture> textureList) {
         List<VulkanModel.VulkanMaterial> vulkanMaterialList = new ArrayList<>();
         for (ModelData.Material material : materialList) {
-            ByteBuffer dataBuffer = materialsStgBuffer.getDataBuffer();
+            IntBuffer dataBuffer = materialsStgBuffer.getDataBuffer();
 
             Texture texture = textureCache.createTexture(device, material.texturePath(), VK_FORMAT_R8G8B8A8_SRGB);
             if (texture != null) {
@@ -397,24 +420,26 @@ public class GlobalBuffers {
             }
             int normalMapIdx = textureCache.getPosition(material.normalMapPath());
 
-            texture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_SRGB);
+            texture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_UNORM);
             if (texture != null) {
                 textureList.add(texture);
             }
             int metalRoughMapIdx = textureCache.getPosition(material.metalRoughMap());
 
-            vulkanMaterialList.add(new VulkanModel.VulkanMaterial(dataBuffer.position() / MATERIAL_SIZE));
-            material.diffuseColor().get(dataBuffer);
-            dataBuffer.position(dataBuffer.position() + GraphConstants.VEC4_SIZE);
-            dataBuffer.putInt(textureIdx);
-            dataBuffer.putInt(normalMapIdx);
-            dataBuffer.putInt(metalRoughMapIdx);
-            dataBuffer.putFloat(material.roughnessFactor());
-            dataBuffer.putFloat(material.metallicFactor());
+            vulkanMaterialList.add(new VulkanModel.VulkanMaterial(dataBuffer.position() * INT_LENGTH / MATERIAL_SIZE));
+            dataBuffer.put(Float.floatToRawIntBits(material.diffuseColor().x));
+            dataBuffer.put(Float.floatToRawIntBits(material.diffuseColor().y));
+            dataBuffer.put(Float.floatToRawIntBits(material.diffuseColor().z));
+            dataBuffer.put(Float.floatToRawIntBits(material.diffuseColor().w));
+            dataBuffer.put(textureIdx);
+            dataBuffer.put(normalMapIdx);
+            dataBuffer.put(metalRoughMapIdx);
+            dataBuffer.put(Float.floatToRawIntBits(material.roughnessFactor()));
+            dataBuffer.put(Float.floatToRawIntBits(material.metallicFactor()));
             // Padding due to std430 alignment
-            dataBuffer.putFloat(0.0f);
-            dataBuffer.putFloat(0.0f);
-            dataBuffer.putFloat(0.0f);
+            dataBuffer.put(Float.floatToRawIntBits(0.0f));
+            dataBuffer.put(Float.floatToRawIntBits(0.0f));
+            dataBuffer.put(Float.floatToRawIntBits(0.0f));
         }
 
         return vulkanMaterialList;
@@ -422,16 +447,16 @@ public class GlobalBuffers {
     ...
 }
 ```
-The `loadMaterials` will look familiar to you, the only difference is that we will be storing all that information into a single buffer instead of having separate buffers per material. In order to properly access the data for each material in the shaders, we will assign to each material a unique identifier, which in essence will be used as way to calculate the offset to abe applied to the global global materials buffer to access each specific material. One important thing to highlight is that we are applying a padding at the end of each block of material data. The reason for that is that we will using `std430` layout when accessing the material data in the shaders. This means that the data will be aligned to the nearest 4 bytes.
+The `loadMaterials` will look familiar to you, the only difference is that we will be storing all that information into a single buffer instead of having separate buffers per material. In order to properly access the data for each material in the shaders, we will assign to each material a unique identifier, which in essence will be used as way to calculate the offset to abe applied to the global global materials buffer to access each specific material. One important thing to highlight is that we are applying a padding at the end of each block of material data. The reason for that is that we will using `std430` layout when accessing the material data in the shaders. This means that the data will be aligned to the nearest 4 bytes. Yo will see here how we store floats into the backed `IntBuffer` staging buffer by using the `Float.floatToRawIntBits` method. Pay also special attention that the position of the buffer counts integers, therefore if we want to translate it to byte offsets we need to multiply that value by `INT_LENGTH` (such as when storing the material offset).
 
 The `loadMeshes` is defined like this:
 ```java
 public class GlobalBuffers {
     ...
-    private void loadMeshes(StgBuffer verticesStgBuffer, StgBuffer indicesStgBuffer, StgBuffer animWeightsStgBuffer,
+    private void loadMeshes(StgIntBuffer verticesStgBuffer, StgIntBuffer indicesStgBuffer, StgIntBuffer animWeightsStgBuffer,
                             ModelData modelData, VulkanModel vulkanModel, List<VulkanModel.VulkanMaterial> vulkanMaterialList) {
-        ByteBuffer verticesData = verticesStgBuffer.getDataBuffer();
-        ByteBuffer indicesData = indicesStgBuffer.getDataBuffer();
+        IntBuffer verticesData = verticesStgBuffer.getDataBuffer();
+        IntBuffer indicesData = indicesStgBuffer.getDataBuffer();
         List<ModelData.MeshData> meshDataList = modelData.getMeshDataList();
         int meshCount = 0;
         for (ModelData.MeshData meshData : meshDataList) {
@@ -446,7 +471,7 @@ public class GlobalBuffers {
             int[] indices = meshData.indices();
 
             int numElements = positions.length + normals.length + tangents.length + biTangents.length + textCoords.length;
-            int verticesSize = numElements * GraphConstants.FLOAT_LENGTH;
+            int verticesSize = numElements * FLOAT_LENGTH;
 
             int localMaterialIdx = meshData.materialIdx();
             int globalMaterialIdx = 0;
@@ -454,29 +479,30 @@ public class GlobalBuffers {
                 globalMaterialIdx = vulkanMaterialList.get(localMaterialIdx).globalMaterialIdx();
             }
             vulkanModel.addVulkanMesh(new VulkanModel.VulkanMesh(verticesSize, indices.length,
-                    verticesData.position(), indicesData.position(), globalMaterialIdx, animWeightsStgBuffer.getDataBuffer().position()));
+                    verticesData.position() * INT_LENGTH, indicesData.position() * INT_LENGTH,
+                    globalMaterialIdx, animWeightsStgBuffer.getDataBuffer().position() * INT_LENGTH));
 
             int rows = positions.length / 3;
             for (int row = 0; row < rows; row++) {
                 int startPos = row * 3;
                 int startTextCoord = row * 2;
-                verticesData.putFloat(positions[startPos]);
-                verticesData.putFloat(positions[startPos + 1]);
-                verticesData.putFloat(positions[startPos + 2]);
-                verticesData.putFloat(normals[startPos]);
-                verticesData.putFloat(normals[startPos + 1]);
-                verticesData.putFloat(normals[startPos + 2]);
-                verticesData.putFloat(tangents[startPos]);
-                verticesData.putFloat(tangents[startPos + 1]);
-                verticesData.putFloat(tangents[startPos + 2]);
-                verticesData.putFloat(biTangents[startPos]);
-                verticesData.putFloat(biTangents[startPos + 1]);
-                verticesData.putFloat(biTangents[startPos + 2]);
-                verticesData.putFloat(textCoords[startTextCoord]);
-                verticesData.putFloat(textCoords[startTextCoord + 1]);
+                verticesData.put(Float.floatToRawIntBits(positions[startPos]));
+                verticesData.put(Float.floatToRawIntBits(positions[startPos + 1]));
+                verticesData.put(Float.floatToRawIntBits(positions[startPos + 2]));
+                verticesData.put(Float.floatToRawIntBits(normals[startPos]));
+                verticesData.put(Float.floatToRawIntBits(normals[startPos + 1]));
+                verticesData.put(Float.floatToRawIntBits(normals[startPos + 2]));
+                verticesData.put(Float.floatToRawIntBits(tangents[startPos]));
+                verticesData.put(Float.floatToRawIntBits(tangents[startPos + 1]));
+                verticesData.put(Float.floatToRawIntBits(tangents[startPos + 2]));
+                verticesData.put(Float.floatToRawIntBits(biTangents[startPos]));
+                verticesData.put(Float.floatToRawIntBits(biTangents[startPos + 1]));
+                verticesData.put(Float.floatToRawIntBits(biTangents[startPos + 2]));
+                verticesData.put(Float.floatToRawIntBits(textCoords[startTextCoord]));
+                verticesData.put(Float.floatToRawIntBits(textCoords[startTextCoord + 1]));
             }
 
-            Arrays.stream(indices).forEach(indicesData::putInt);
+            Arrays.stream(indices).forEach(indicesData::put);
 
             loadWeightsBuffer(modelData, animWeightsStgBuffer, meshCount);
             meshCount++;
@@ -491,7 +517,7 @@ While we are copying the vertex data to the buffer, we also check if the model h
 ```java
 public class GlobalBuffers {
     ...
-    private void loadWeightsBuffer(ModelData modelData, StgBuffer animWeightsBuffer, int meshCount) {
+    private void loadWeightsBuffer(ModelData modelData, StgIntBuffer animWeightsBuffer, int meshCount) {
         List<ModelData.AnimMeshData> animMeshDataList = modelData.getAnimMeshDataList();
         if (animMeshDataList == null || animMeshDataList.isEmpty()) {
             return;
@@ -501,19 +527,19 @@ public class GlobalBuffers {
         float[] weights = animMeshData.weights();
         int[] boneIds = animMeshData.boneIds();
 
-        ByteBuffer dataBuffer = animWeightsBuffer.getDataBuffer();
+        IntBuffer dataBuffer = animWeightsBuffer.getDataBuffer();
 
         int rows = weights.length / 4;
         for (int row = 0; row < rows; row++) {
             int startPos = row * 4;
-            dataBuffer.putFloat(weights[startPos]);
-            dataBuffer.putFloat(weights[startPos + 1]);
-            dataBuffer.putFloat(weights[startPos + 2]);
-            dataBuffer.putFloat(weights[startPos + 3]);
-            dataBuffer.putFloat(boneIds[startPos]);
-            dataBuffer.putFloat(boneIds[startPos + 1]);
-            dataBuffer.putFloat(boneIds[startPos + 2]);
-            dataBuffer.putFloat(boneIds[startPos + 3]);
+            dataBuffer.put(Float.floatToRawIntBits(weights[startPos]));
+            dataBuffer.put(Float.floatToRawIntBits(weights[startPos + 1]));
+            dataBuffer.put(Float.floatToRawIntBits(weights[startPos + 2]));
+            dataBuffer.put(Float.floatToRawIntBits(weights[startPos + 3]));
+            dataBuffer.put(Float.floatToRawIntBits(boneIds[startPos]));
+            dataBuffer.put(Float.floatToRawIntBits(boneIds[startPos + 1]));
+            dataBuffer.put(Float.floatToRawIntBits(boneIds[startPos + 2]));
+            dataBuffer.put(Float.floatToRawIntBits(boneIds[startPos + 3]));
         }
     }
     ...
@@ -524,25 +550,51 @@ Finally, to complete the model loading we need to load the data for each animati
 ```java
 public class GlobalBuffers {
     ...
-    private void loadAnimationData(ModelData modelData, VulkanModel vulkanModel, StgBuffer animJointMatricesStgBuffer) {
+    private void loadAnimationData(ModelData modelData, VulkanModel vulkanModel, StgIntBuffer animJointMatricesStgBuffer) {
         List<ModelData.Animation> animationsList = modelData.getAnimationsList();
         if (!modelData.hasAnimations()) {
             return;
         }
-        ByteBuffer dataBuffer = animJointMatricesStgBuffer.getDataBuffer();
+        IntBuffer dataBuffer = animJointMatricesStgBuffer.getDataBuffer();
         for (ModelData.Animation animation : animationsList) {
             VulkanModel.VulkanAnimationData vulkanAnimationData = new VulkanModel.VulkanAnimationData();
             vulkanModel.addVulkanAnimationData(vulkanAnimationData);
             List<ModelData.AnimatedFrame> frameList = animation.frames();
             for (ModelData.AnimatedFrame frame : frameList) {
-                vulkanAnimationData.addVulkanAnimationFrame(new VulkanModel.VulkanAnimationFrame(dataBuffer.position()));
+                vulkanAnimationData.addVulkanAnimationFrame(new VulkanModel.VulkanAnimationFrame(dataBuffer.position() * INT_LENGTH));
                 Matrix4f[] matrices = frame.jointMatrices();
                 for (Matrix4f matrix : matrices) {
-                    matrix.get(dataBuffer);
-                    dataBuffer.position(dataBuffer.position() + GraphConstants.MAT4X4_SIZE);
+                    loadMatIntoIntBuffer(matrix, dataBuffer);
                 }
             }
         }
+    }
+    ...
+}
+```
+
+In this case, since we are using a backed up `InBuffer` staging buffer, we cannot use JOML's method to load a matrix into a + `ByteBUffer`, we need to do it manually in the `loadMatIntoIntBuffer` method:
+
+```java
+public class GlobalBuffers {
+    ...
+    private void loadMatIntoIntBuffer(Matrix4f m, IntBuffer buffer) {
+        buffer.put(Float.floatToRawIntBits(m.m00()));
+        buffer.put(Float.floatToRawIntBits(m.m01()));
+        buffer.put(Float.floatToRawIntBits(m.m02()));
+        buffer.put(Float.floatToRawIntBits(m.m03()));
+        buffer.put(Float.floatToRawIntBits(m.m10()));
+        buffer.put(Float.floatToRawIntBits(m.m11()));
+        buffer.put(Float.floatToRawIntBits(m.m12()));
+        buffer.put(Float.floatToRawIntBits(m.m13()));
+        buffer.put(Float.floatToRawIntBits(m.m20()));
+        buffer.put(Float.floatToRawIntBits(m.m21()));
+        buffer.put(Float.floatToRawIntBits(m.m22()));
+        buffer.put(Float.floatToRawIntBits(m.m23()));
+        buffer.put(Float.floatToRawIntBits(m.m30()));
+        buffer.put(Float.floatToRawIntBits(m.m31()));
+        buffer.put(Float.floatToRawIntBits(m.m32()));
+        buffer.put(Float.floatToRawIntBits(m.m33()));
     }
     ...
 }
@@ -596,7 +648,7 @@ public class GlobalBuffers {
                 for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
                     VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.calloc(stack);
                     indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
-                    indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
+                    indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / INT_LENGTH);
                     indexedIndirectCommand.instanceCount(entities.size());
                     indexedIndirectCommand.vertexOffset(vulkanMesh.verticesOffset() / VertexBufferStructure.SIZE_IN_BYTES);
                     indexedIndirectCommand.firstInstance(firstInstance);
@@ -610,7 +662,7 @@ public class GlobalBuffers {
             if (numIndirectCommands > 0) {
                 cmd.beginRecording();
 
-                StgBuffer indirectStgBuffer = new StgBuffer(device, (long) IND_COMMAND_STRIDE * numIndirectCommands);
+                StgByteBuffer indirectStgBuffer = new StgByteBuffer(device, (long) IND_COMMAND_STRIDE * numIndirectCommands);
                 if (indirectBuffer != null) {
                     indirectBuffer.cleanup();
                 }
@@ -627,7 +679,7 @@ public class GlobalBuffers {
                 }
                 instanceDataBuffers = new VulkanBuffer[numSwapChainImages];
                 for (int i = 0; i < numSwapChainImages; i++) {
-                    instanceDataBuffers[i] = new VulkanBuffer(device, (long) numInstances * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                    instanceDataBuffers[i] = new VulkanBuffer(device, (long) numInstances * (MAT4X4_SIZE + INT_LENGTH),
                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
                 }
 
@@ -640,11 +692,12 @@ public class GlobalBuffers {
             }
         }
     }
+
     ...
 }
 ```
 
-As it can be seen above, the `loadStaticEntities` just record the commands for entities that have no animated models. For animated models, the work is don in the `loadAnimEntities` method. 
+As it can be seen above, the `loadStaticEntities` just record the commands for entities that have no animated models. In this case, we are using a `StgByteBuffer` buffer to record the commands since `VkDrawIndexedIndirectCommand.Buffer` requires a byte buffer. For animated models, the work is don in the `loadAnimEntities` method. 
 ```java
 public class GlobalBuffers {
     ...
@@ -681,7 +734,7 @@ public class GlobalBuffers {
                     for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
                         VkDrawIndexedIndirectCommand indexedIndirectCommand = VkDrawIndexedIndirectCommand.calloc(stack);
                         indexedIndirectCommand.indexCount(vulkanMesh.numIndices());
-                        indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / GraphConstants.INT_LENGTH);
+                        indexedIndirectCommand.firstIndex(vulkanMesh.indicesOffset() / INT_LENGTH);
                         indexedIndirectCommand.instanceCount(1);
                         indexedIndirectCommand.vertexOffset(bufferOffset / VertexBufferStructure.SIZE_IN_BYTES);
                         indexedIndirectCommand.firstInstance(firstInstance);
@@ -703,7 +756,7 @@ public class GlobalBuffers {
             if (numAnimIndirectCommands > 0) {
                 cmd.beginRecording();
 
-                StgBuffer indirectStgBuffer = new StgBuffer(device, (long) IND_COMMAND_STRIDE * numAnimIndirectCommands);
+                StgByteBuffer indirectStgBuffer = new StgByteBuffer(device, (long) IND_COMMAND_STRIDE * numAnimIndirectCommands);
                 if (animIndirectBuffer != null) {
                     animIndirectBuffer.cleanup();
                 }
@@ -721,7 +774,7 @@ public class GlobalBuffers {
                 animInstanceDataBuffers = new VulkanBuffer[numSwapChainImages];
                 for (int i = 0; i < numSwapChainImages; i++) {
                     animInstanceDataBuffers[i] = new VulkanBuffer(device,
-                            (long) numAnimIndirectCommands * (GraphConstants.MAT4X4_SIZE + GraphConstants.INT_LENGTH),
+                            (long) numAnimIndirectCommands * (MAT4X4_SIZE + INT_LENGTH),
                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
                 }
 
@@ -803,9 +856,9 @@ public class GlobalBuffers {
             for (VulkanModel.VulkanMesh vulkanMesh : vulkanModel.getVulkanMeshList()) {
                 for (Entity entity : entities) {
                     entity.getModelMatrix().get(pos, dataBuffer);
-                    pos += GraphConstants.MAT4X4_SIZE;
+                    pos += MAT4X4_SIZE;
                     dataBuffer.putInt(pos, vulkanMesh.globalMaterialIdx());
-                    pos += GraphConstants.INT_LENGTH;
+                    pos += INT_LENGTH;
                 }
             }
         }
