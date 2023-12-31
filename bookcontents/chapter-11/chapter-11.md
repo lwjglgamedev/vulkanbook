@@ -1105,25 +1105,7 @@ public class Main implements IAppLogic {
     private Light directionalLight;
     private float lightAngle;
     ...
-    public void handleInput(Window window, Scene scene, long diffTimeMillis) {
-        ...
-        if (window.isKeyPressed(GLFW_KEY_LEFT)) {
-            angleInc -= 0.05f;
-        } else if (window.isKeyPressed(GLFW_KEY_RIGHT)) {
-            angleInc += 0.05f;
-        } else {
-            angleInc = 0;
-        }
-        ...
-        lightAngle += angleInc;
-        if (lightAngle < 0) {
-            lightAngle = 0;
-        } else if (lightAngle > 180) {
-            lightAngle = 180;
-        }
-        updateDirectionalLight();
-    }
-    ...
+    @Override
     public void init(Window window, Scene scene, Render render) {
         ...
         scene.getAmbientLight().set(0.2f, 0.2f, 0.2f, 1.0f);
@@ -1144,6 +1126,26 @@ public class Main implements IAppLogic {
         scene.setLights(lightArr);
     }
 
+    @Override
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        ...
+        if (window.isKeyPressed(GLFW_KEY_LEFT)) {
+            angleInc -= 0.05f;
+        } else if (window.isKeyPressed(GLFW_KEY_RIGHT)) {
+            angleInc += 0.05f;
+        } else {
+            angleInc = 0;
+        }
+        ...
+        lightAngle += angleInc;
+        if (lightAngle < 0) {
+            lightAngle = 0;
+        } else if (lightAngle > 180) {
+            lightAngle = 180;
+        }
+        updateDirectionalLight();        
+    }
+    ...
     private void updateDirectionalLight() {
         float zValue = (float) Math.cos(Math.toRadians(lightAngle));
         float yValue = (float) Math.sin(Math.toRadians(lightAngle));
