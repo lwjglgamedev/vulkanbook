@@ -184,12 +184,8 @@ public class ForwardRenderActivity {
             int height = swapChainExtent.height();
             int idx = swapChain.getCurrentFrame();
 
-            Fence fence = fences[idx];
             CommandBuffer commandBuffer = commandBuffers[idx];
             FrameBuffer frameBuffer = frameBuffers[idx];
-
-            fence.fenceWait();
-            fence.reset();
 
             commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.calloc(2, stack);
@@ -333,5 +329,12 @@ public class ForwardRenderActivity {
                     texture, textureSampler, 0);
             descriptorSetMap.put(textureFileName, textureDescriptorSet);
         }
+    }
+
+    public void waitForFence() {
+        int idx = swapChain.getCurrentFrame();
+        Fence currentFence = fences[idx];
+        currentFence.fenceWait();
+        currentFence.reset();
     }
 }

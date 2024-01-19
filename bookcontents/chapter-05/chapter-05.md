@@ -412,7 +412,7 @@ public class Semaphore {
 }
 ```
 
-In this case we are modelling what is called a binary semaphore, which can be in two states: signaled and signaled. Usually the GPUs signals the end of operations where other activities are waiting to complete. We say that these activities are waiting for the semaphore to be signaled. Creating a semaphore is easy, just define a `VkSemaphoreCreateInfo`  and call the `vkCreateSemaphore` function. The rest of the methods are the usual ones, one for cleaning up the resources and another one to get the semaphore handle.
+In this case we are modelling what is called a binary semaphore, which can be in two states: signaled and un-signaled. When you create a semaphore is in an un-signaled state. When we submit command we can specify a semaphore to be signaled when the commands complete. If later on, we record some other commands or perform some operation that require those previous commands to be completed, we use the same semaphore to wait. The cycle is like this, the semaphore in the first step is un-signaled, when the operations are completed get signaled and the commands that are waiting can continue (we say that these second step activities are waiting for the semaphore to be signaled). Creating a semaphore is easy, just define a `VkSemaphoreCreateInfo`  and call the `vkCreateSemaphore` function. The rest of the methods are the usual ones, one for cleaning up the resources and another one to get the semaphore handle.
 
 Now it's turn for the `Fence`class:
 
@@ -556,6 +556,8 @@ public class Render {
     }
     ...
     public void render(Window window, Scene scene) {
+        fwdRenderActivity.waitForFence();
+
         swapChain.acquireNextImage();
 
         fwdRenderActivity.submit(graphQueue);
@@ -566,7 +568,7 @@ public class Render {
 }
 ```
 
-As you can see it matches the render loop figure presented above. The `SwapChain` class defines two new methods to acquire and present the used images, there are also changes in the `SwapChain` constructor. Let's review them. As it has been explained above, We can have a single queue to combine graphics and presentation. In that case we would need to check for both graphics and presentation capabilities. However, for some hardware, this could not be the case and we may have different queue families for graphics and presentation. If this is the case, we need to modify how the swap chain access the images. If the queue families used for graphics and presentation are different we may need to access to render results from different queues families, therefore we cannot rely on exclusive access, we need to switch to concurrent access. In order to properly handle that, we will need to modify the `SwapChain` constructor to accept two new parameters:
+The first think that we do is to wait for the fence associated to the swap chain image that we are about to use. We need to wait, prior to performing any other calls for the semaphore which controls the execution finalization of previous commands, used for the same command buffer, to be signaled. That is, previous operations need to have finished. This is don in the `fwdRenderActivity.waitForFence()` method that we will implement later on. After that, we need to acquire the swap chain image that we will use, we submit the commands and finally present the image. In order to achive that, the `SwapChain` class defines two new methods to acquire and present the used images, there are also changes in the `SwapChain` constructor. Let's review them. As it has been explained above, We can have a single queue to combine graphics and presentation. In that case we would need to check for both graphics and presentation capabilities. However, for some hardware, this could not be the case and we may have different queue families for graphics and presentation. If this is the case, we need to modify how the swap chain access the images. If the queue families used for graphics and presentation are different we may need to access to render results from different queues families, therefore we cannot rely on exclusive access, we need to switch to concurrent access. In order to properly handle that, we will need to modify the `SwapChain` constructor to accept two new parameters:
 
 - The queue used for presentation.
 - Other queues which may have concurrent access. If you only use a single queue for everything just leave that parameter as null.
@@ -802,6 +804,22 @@ public class ForwardRenderActivity {
 }
 ```
 
+The `waitForFence` is defined like this:
+
+```java
+public class ForwardRenderActivity {
+    ...
+    public void waitForFence() {
+        int idx = swapChain.getCurrentFrame();
+        Fence currentFence = fences[idx];
+        currentFence.fenceWait();
+        currentFence.reset();
+    }
+    ...
+}
+```
+We just invoke the `fenceWait` and the `reset` on the frame associated to current swap chain image, to prevent acquiring an image, using a semaphore that has not been signaled, that is, previous operations have not finished. 
+
 The definition of the `recordCommandBuffer` is:
 ```java
 public class ForwardRenderActivity {
@@ -835,7 +853,7 @@ The recording is done as follows:
 3. We end the render pass by calling the `vkCmdEndRenderPass`.  In this case we are just clearing the screen. If we were actually rendering something, we should define the graphics commands before this step.
 4. We finish the recording by calling the `endRecording` of the `CommandBuffer` class.
 
-The last method of this class, named `submit`,  is defined like this:
+Finally, the `submit`, is defined like this:
 
 ```java
 public class ForwardRenderActivity {
@@ -845,8 +863,6 @@ public class ForwardRenderActivity {
             int idx = swapChain.getCurrentFrame();
             CommandBuffer commandBuffer = commandBuffers[idx];
             Fence currentFence = fences[idx];
-            currentFence.fenceWait();
-            currentFence.reset();
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
                     stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
@@ -859,7 +875,7 @@ public class ForwardRenderActivity {
 }
 ```
 
-This method, gets the `CommandBuffer` instance that should be used for the frame that we are in (for the image that we are rendering to). It also gets the `Fence`associated to that `CommandBuffer`. We invoke the `fenceWait` and the `reset` one to prevent submitting a `CommandBuffer` which is still been used. Finally, we submit the command to the queue, retrieving also the semaphore that has been used to signal the acquisition of the current swap chain image. This is done by invoking a new method in the `Queue` class, named `submit`. The meaning of the arguments of this method will be explained when we analyzed its definition:
+This method, gets the `CommandBuffer` instance that should be used for the frame that we are in (for the image that we are rendering to). It also gets the `Fence`associated to that `CommandBuffer`. Finally, we submit the command to the queue, retrieving also the semaphore that has been used to signal the acquisition of the current swap chain image. This is done by invoking a new method in the `Queue` class, named `submit`. The meaning of the arguments of this method will be explained when we analyzed its definition:
 
 ```java
 public class Queue {

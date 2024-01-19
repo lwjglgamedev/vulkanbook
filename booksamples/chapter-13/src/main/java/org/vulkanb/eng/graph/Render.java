@@ -81,6 +81,7 @@ public class Render {
         if (window.getWidth() <= 0 && window.getHeight() <= 0) {
             return;
         }
+        geometryRenderActivity.waitForFence();
         if (window.isResized() || swapChain.acquireNextImage()) {
             window.resetResized();
             resize(window);

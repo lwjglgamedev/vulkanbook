@@ -60,6 +60,8 @@ public class Render {
     }
 
     public void render(Window window, Scene scene) {
+        fwdRenderActivity.waitForFence();
+
         swapChain.acquireNextImage();
 
         fwdRenderActivity.recordCommandBuffer(vulkanModels);

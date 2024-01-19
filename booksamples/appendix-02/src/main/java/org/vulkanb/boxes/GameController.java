@@ -68,6 +68,8 @@ public class GameController implements IAppLogic {
     @Override
     public void update(Window window, Scene scene, long diffTimeMillis) {
         animationController.update(scene);
-        gameState.update(scene, gameContext, diffTimeMillis);
+        if (gameState != null) {
+            gameState.update(scene, gameContext, diffTimeMillis);
+        }
     }
 }

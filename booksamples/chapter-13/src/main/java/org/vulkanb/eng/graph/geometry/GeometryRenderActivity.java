@@ -64,16 +64,9 @@ public class GeometryRenderActivity {
 
     public CommandBuffer beginRecording() {
         int idx = swapChain.getCurrentFrame();
-
-        Fence fence = fences[idx];
         CommandBuffer commandBuffer = commandBuffers[idx];
-
-        fence.fenceWait();
-        fence.reset();
-
         commandBuffer.reset();
         commandBuffer.beginRecording();
-
         return commandBuffer;
     }
 
@@ -340,5 +333,12 @@ public class GeometryRenderActivity {
                     texture, textureSampler, 0);
             descriptorSetMap.put(textureFileName, textureDescriptorSet);
         }
+    }
+
+    public void waitForFence() {
+        int idx = swapChain.getCurrentFrame();
+        Fence currentFence = fences[idx];
+        currentFence.fenceWait();
+        currentFence.reset();
     }
 }

@@ -85,12 +85,8 @@ public class ForwardRenderActivity {
             int height = swapChainExtent.height();
             int idx = swapChain.getCurrentFrame();
 
-            Fence fence = fences[idx];
             CommandBuffer commandBuffer = commandBuffers[idx];
             FrameBuffer frameBuffer = frameBuffers[idx];
-
-            fence.fenceWait();
-            fence.reset();
 
             commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.calloc(1, stack);
@@ -155,5 +151,12 @@ public class ForwardRenderActivity {
                     stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
                     stack.longs(syncSemaphores.renderCompleteSemaphore().getVkSemaphore()), currentFence);
         }
+    }
+
+    public void waitForFence() {
+        int idx = swapChain.getCurrentFrame();
+        Fence currentFence = fences[idx];
+        currentFence.fenceWait();
+        currentFence.reset();
     }
 }

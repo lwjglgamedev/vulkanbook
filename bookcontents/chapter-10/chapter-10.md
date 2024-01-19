@@ -541,11 +541,7 @@ public class GeometryRenderActivity {
             int idx = swapChain.getCurrentFrame();
 
             FrameBuffer frameBuffer = geometryFrameBuffer.getFrameBuffer();
-            Fence fence = fences[idx];
             CommandBuffer commandBuffer = commandBuffers[idx];
-
-            fence.fenceWait();
-            fence.reset();
 
             commandBuffer.reset();
             List<Attachment> attachments = geometryFrameBuffer.geometryAttachments().getAttachments();
@@ -644,7 +640,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-This method is almost identical than the one used in the `ForwardRenderActivity`. class in previous chapters. We have just changed a little bit the way we set the clear values to prepare it for the next chapters when we will have more than one color attachment. This class also provides a method to support window resizing, in this case, besides updating the perspective matrix, we just simply call the `resize` method in the `GeometryFrameBuffer` class which recreates the attachments and the frame buffer. This will ensure that the output attachments will match the screen size.
+This method is almost identical than the one used in the `ForwardRenderActivity` class in previous chapters. We have just changed a little bit the way we set the clear values to prepare it for the next chapters when we will have more than one color attachment. This class also provides a method to support window resizing, in this case, besides updating the perspective matrix, we just simply call the `resize` method in the `GeometryFrameBuffer` class which recreates the attachments and the frame buffer. This will ensure that the output attachments will match the screen size.
 
 ```java
 public class GeometryRenderActivity {
@@ -658,7 +654,7 @@ public class GeometryRenderActivity {
 }
 ```
 
-Finally, the `GeometryRenderActivity` also defines a method to submit the recorded commands which is defined like this:
+Finally, the `GeometryRenderActivity` also defines a pair of methods submit the recorded commands and to wait for the current fence (as in the `ForwardRenderActivity` class in previous chapters) which are defined like this:
 
 ```java
 public class GeometryRenderActivity {
@@ -676,6 +672,13 @@ public class GeometryRenderActivity {
         }
     }
     ...
+    public void waitForFence() {
+        int idx = swapChain.getCurrentFrame();
+        Fence currentFence = fences[idx];
+        currentFence.fenceWait();
+        currentFence.reset();
+    }
+    ...    
 }
 ```
 

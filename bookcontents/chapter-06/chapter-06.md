@@ -1073,6 +1073,8 @@ public class Render {
     }
 
     public void render(Window window, Scene scene) {
+        fwdRenderActivity.waitForFence();
+
         swapChain.acquireNextImage();
 
         fwdRenderActivity.recordCommandBuffer(meshList);
@@ -1142,7 +1144,7 @@ private EngineProperties() {
 
 Going back to the `ForwardRenderActivity` constructor, after the code that checks if recompilation is required, we just create a `ShaderProgram` instance with a vertex and a fragment shader modules. As it has been said, in the loop that iterates to create the command buffers, we have removed the pre-recording. The rest is the same. 
 
-We have created a new method named `recordCommandBuffer` which reuses some of the code from the last chapter. We first retrieve the command buffer that should be used for the current swap chain image,  set the clear values, create the render pass begin information and start the recording and the render pass:
+We have created a new method named `recordCommandBuffer` which reuses some of the code from the last chapter. We first retrieve the command buffer that should be used for the current swap chain image, set the clear values, create the render pass begin information and start the recording and the render pass:
 
 ```java
 public class ForwardRenderActivity {
@@ -1154,12 +1156,8 @@ public class ForwardRenderActivity {
             int height = swapChainExtent.height();
             int idx = swapChain.getCurrentFrame();
 
-            Fence fence = fences[idx];
             CommandBuffer commandBuffer = commandBuffers[idx];
             FrameBuffer frameBuffer = frameBuffers[idx];
-
-            fence.fenceWait();
-            fence.reset();
 
             commandBuffer.reset();
             VkClearValue.Buffer clearValues = VkClearValue.calloc(1, stack);
