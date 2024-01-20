@@ -217,7 +217,18 @@ public class ModelLoader {
     ...
 }
 ```
-In that `processBones` method, we first construct a list of bones. Each bone will have an identifier which will be used later on to relate them to the wights to be applied for each vertex. That information is stored in the record `ModelData.AnimMeshData`.
+In that `processBones` method, we first construct a list of bones. Each bone will have an identifier which will be used later on to relate them to the wights to be applied for each vertex. That information is stored in the record `ModelData.AnimMeshData`. The `Bone` and `VertexWeight` data are defined in record classes inside the `ModelLoader` one:
+
+```java
+public class ModelLoader {
+    ...
+    private record Bone(int boneId, String boneName, Matrix4f offsetMatrix) {
+    }
+
+    private record VertexWeight(int boneId, int vertexId, float weight) {
+    }
+}
+```
 
 The `buildNodesTree` method is quite simple, It just traverses the nodes hierarchy starting from the root node constructing a tree of nodes:
 ```java
@@ -336,7 +347,28 @@ We get the transformation associated to the node. Then we check if this node has
 * The transformation matrix for the node.
 * The bone offset matrix.
 
-After that, we iterate over the children nodes, using the node transformation matrix as the parent matrix for those child nodes.
+The `findAIAnimNode` is defined like this:
+```java
+public class ModelLoader {
+    ...
+    private static AINodeAnim findAIAnimNode(AIAnimation aiAnimation, String nodeName) {
+        AINodeAnim result = null;
+        int numAnimNodes = aiAnimation.mNumChannels();
+        PointerBuffer aiChannels = aiAnimation.mChannels();
+        for (int i = 0; i < numAnimNodes; i++) {
+            AINodeAnim aiNodeAnim = AINodeAnim.create(aiChannels.get(i));
+            if (nodeName.equals(aiNodeAnim.mNodeName().dataString())) {
+                result = aiNodeAnim;
+                break;
+            }
+        }
+        return result;
+    }
+    ...
+}
+```
+
+It basically, just iterates over the animation channels list to find the animation node information associated to the id we are looking for. After that, we iterate over the children nodes, using the node transformation matrix as the parent matrix for those child nodes.
 
 Let’s review the `buildNodeTransformationMatrix` method:
 ```java
@@ -846,6 +878,12 @@ public class AnimationComputeActivity {
         memoryBarrier = new MemoryBarrier(0, VK_ACCESS_SHADER_WRITE_BIT);
     }
     ...
+    public record EntityAnimationBuffer(VulkanBuffer verticesBuffer, DescriptorSet descriptorSet) {
+        public void cleanup() {
+            verticesBuffer.cleanup();
+        }
+    }
+    ...    
 }
 ```
 
@@ -1058,7 +1096,7 @@ public class AnimationComputeActivity {
                             vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
                                     computePipeline.getVkPipelineLayout(), 0, descriptorSets, null);
 
-                            vkCmdDispatch(cmdHandle, meshDescriptorSets.numVertices(), 1, 1);
+                            vkCmdDispatch(cmdHandle, meshDescriptorSets.groupSize(), 1, 1);
                         }
                         meshCount++;
                     }
@@ -1421,12 +1459,14 @@ public class Render {
 }
 ```
 
-The last step is to load an animated model in the `Main` class. We just need to load it as in the case of static models, but specifying that it will contain animations. We need also to invoke the `Render` class `loadAnimation` method to register the animation for an entity. In the `inut` method we will use to space bar to pause / resume the animation. In the `update`method we will automatically select the next key frame, when animation is not paused, in each update cycle. 
+The last step is to load an animated model in the `Main` class. We just need to load it as in the case of static models, but specifying that it will contain animations. We need also to invoke the `Render` class `loadAnimation` method to register the animation for an entity. In the `input` method we will use to space bar to pause / resume the animation. In the `update`method we will automatically select the next key frame, when animation is not paused, in each update cycle. 
 ```java
 public class Main implements IAppLogic {
     ...
     private Entity bobEntity;
     ...
+    private int maxFrames = 0;
+    
     public void init(Window window, Scene scene, Render render) {
         ...
         ModelData sponzaModelData = ModelLoader.loadModel(sponzaModelId, "resources/models/sponza/Sponza.gltf",
