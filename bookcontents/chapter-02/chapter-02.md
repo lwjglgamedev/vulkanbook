@@ -611,14 +611,7 @@ private EngineProperties() {
     }
 ```
 
-And that's all!
-As you can see, we have to write lots of code just to set up the Vulkan instance.
-You can see now why Vulkan is considered an explicit API.
-A whole chapter passed, and we can't even clear the screen.
-So, contain your expectations, since in the next chapters we will continue writing lots of code required to set up everything.
-It will take some time to draw something, so please be patient.
-The good news is that when everything is set up,
-adding incremental features to draw more complex models or to support advanced techniques should require less amount of code.
-And if we do it correctly, we get a good understanding of Vulkan.
+And that's all! As you can see, we have to write lots of code just to set up the Vulkan instance.You can see now why Vulkan is considered an explicit API. A whole chapter passed, and we can't even clear the screen. So, contain your expectations, since in the next chapters we will continue writing lots of code required to set up everything.
+It will take some time to draw something, so please be patient. The good news is that when everything is set up, adding incremental features to draw more complex models or to support advanced techniques should require less amount of code. And if we do it correctly, we get a good understanding of Vulkan.
 
 [Next chapter](../chapter-03/chapter-03.md)
