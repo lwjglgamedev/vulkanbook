@@ -813,12 +813,11 @@ public class ForwardRenderActivity {
         int idx = swapChain.getCurrentFrame();
         Fence currentFence = fences[idx];
         currentFence.fenceWait();
-        currentFence.reset();
     }
     ...
 }
 ```
-We just invoke the `fenceWait` and the `reset` on the frame associated to current swap chain image, to prevent acquiring an image, using a semaphore that has not been signaled, that is, previous operations have not finished. 
+We just invoke the `fenceWait` on the frame associated to current swap chain image, to prevent acquiring an image, using a semaphore that has not been signaled, that is, previous operations have not finished. 
 
 The definition of the `recordCommandBuffer` is:
 ```java
@@ -863,6 +862,7 @@ public class ForwardRenderActivity {
             int idx = swapChain.getCurrentFrame();
             CommandBuffer commandBuffer = commandBuffers[idx];
             Fence currentFence = fences[idx];
+            currentFence.reset();
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
                     stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),

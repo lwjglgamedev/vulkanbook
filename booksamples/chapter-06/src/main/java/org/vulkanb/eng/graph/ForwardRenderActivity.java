@@ -145,6 +145,7 @@ public class ForwardRenderActivity {
             int idx = swapChain.getCurrentFrame();
             CommandBuffer commandBuffer = commandBuffers[idx];
             Fence currentFence = fences[idx];
+            currentFence.reset();
             SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
             queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
                     stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
@@ -157,6 +158,5 @@ public class ForwardRenderActivity {
         int idx = swapChain.getCurrentFrame();
         Fence currentFence = fences[idx];
         currentFence.fenceWait();
-        currentFence.reset();
     }
 }
