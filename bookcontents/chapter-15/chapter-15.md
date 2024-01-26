@@ -841,7 +841,14 @@ The final step is to modify the `Main` class to set different GUIs depending on 
 public class Main implements IAppLogic {
     ...
     @Override
-    public void handleInput(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed) {
+    public void init(Window window, Scene scene, Render render) {
+        ...
+        scene.setGuiInstance(new DemoGui());
+        ...
+    }
+
+    @Override
+    public void input(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed) {
         if (inputConsumed) {
             return;
         }
@@ -855,14 +862,30 @@ public class Main implements IAppLogic {
         }
         ...
     }
-
-    @Override
-    public void init(Window window, Scene scene, Render render) {
-        ...
-        scene.setGuiInstance(new DemoGui());
-        ...
-    }
     ...
+    private static class DemoGui implements IGuiInstance {
+        @Override
+        public void drawGui() {
+            ImGui.newFrame();
+            ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
+            ImGui.showDemoWindow();
+            ImGui.endFrame();
+            ImGui.render();
+        }
+    }
+
+    private static class SimpleGui implements IGuiInstance {
+        @Override
+        public void drawGui() {
+            ImGui.newFrame();
+            ImGui.setNextWindowPos(0, 0, ImGuiCond.Always);
+            ImGui.setNextWindowSize(200, 200);
+            ImGui.begin("Test Window");
+            ImGui.end();
+            ImGui.endFrame();
+            ImGui.render();
+        }
+    }
 }
 ```
 
