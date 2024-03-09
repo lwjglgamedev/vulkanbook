@@ -144,7 +144,7 @@
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <native-maven-plugin.version>0.9.25</native-maven-plugin.version>
-        <tinylog.version>2.6.2</tinylog.version>
+        <tinylog.version>2.7.0</tinylog.version>
     </properties>
 
     <profiles>
