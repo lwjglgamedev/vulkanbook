@@ -143,11 +143,12 @@ public class Render {
         if (window.getWidth() <= 0 && window.getHeight() <= 0) {
             return;
         }
-        if (window.isResized() || swapChain.acquireNextImage()) {
+        int imageIndex;
+        if (window.isResized() || (imageIndex = swapChain.acquireNextImage()) < 0) {
             window.resetResized();
             resize(window);
             scene.getProjection().resize(window.getWidth(), window.getHeight());
-            swapChain.acquireNextImage();
+            imageIndex = swapChain.acquireNextImage();
         }
 
         globalBuffers.loadInstanceData(scene, vulkanModels, swapChain.getCurrentFrame());
@@ -168,7 +169,7 @@ public class Render {
         lightingRenderActivity.endRecording(commandBuffer);
         lightingRenderActivity.submit(graphQueue);
 
-        if (swapChain.presentImage(presentQueue)) {
+        if (swapChain.presentImage(presentQueue, imageIndex)) {
             window.setResized(true);
         }
     }

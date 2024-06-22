@@ -91,23 +91,23 @@ public class SwapChain {
         }
     }
 
-    public boolean acquireNextImage() {
-        boolean resize = false;
+    public int acquireNextImage() {
+        int imageIndex;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer ip = stack.mallocInt(1);
             int err = KHRSwapchain.vkAcquireNextImageKHR(device.getVkDevice(), vkSwapChain, ~0L,
                     syncSemaphoresList[currentFrame].imgAcquisitionSemaphore().getVkSemaphore(), MemoryUtil.NULL, ip);
             if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
-                resize = true;
+                return -1;
             } else if (err == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
                 // Not optimal but swapchain can still be used
             } else if (err != VK_SUCCESS) {
                 throw new RuntimeException("Failed to acquire image: " + err);
             }
-            currentFrame = ip.get(0);
+            imageIndex = ip.get(0);
         }
 
-        return resize;
+        return imageIndex;
     }
 
     private int calcNumImages(VkSurfaceCapabilitiesKHR surfCapabilities, int requestedImages) {
@@ -236,7 +236,7 @@ public class SwapChain {
         return vkSwapChain;
     }
 
-    public boolean presentImage(Queue queue) {
+    public boolean presentImage(Queue queue, int imageIndex) {
         boolean resize = false;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkPresentInfoKHR present = VkPresentInfoKHR.calloc(stack)
@@ -245,7 +245,7 @@ public class SwapChain {
                             syncSemaphoresList[currentFrame].renderCompleteSemaphore().getVkSemaphore()))
                     .swapchainCount(1)
                     .pSwapchains(stack.longs(vkSwapChain))
-                    .pImageIndices(stack.ints(currentFrame));
+                    .pImageIndices(stack.ints(imageIndex));
 
             int err = KHRSwapchain.vkQueuePresentKHR(queue.getVkQueue(), present);
             if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {

@@ -558,17 +558,20 @@ public class Render {
     public void render(Window window, Scene scene) {
         fwdRenderActivity.waitForFence();
 
-        swapChain.acquireNextImage();
+        int imageIndex = swapChain.acquireNextImage();
+        if (imageIndex < 0 ) {
+            return;
+        }
 
         fwdRenderActivity.submit(graphQueue);
 
-        swapChain.presentImage(presentQueue);
+        swapChain.presentImage(presentQueue, imageIndex);
     }
     ...
 }
 ```
 
-The first think that we do is to wait for the fence associated to the swap chain image that we are about to use. We need to wait, prior to performing any other calls for the semaphore which controls the execution finalization of previous commands, used for the same command buffer, to be signaled. That is, previous operations need to have finished. This is don in the `fwdRenderActivity.waitForFence()` method that we will implement later on. After that, we need to acquire the swap chain image that we will use, we submit the commands and finally present the image. In order to achive that, the `SwapChain` class defines two new methods to acquire and present the used images, there are also changes in the `SwapChain` constructor. Let's review them. As it has been explained above, We can have a single queue to combine graphics and presentation. In that case we would need to check for both graphics and presentation capabilities. However, for some hardware, this could not be the case and we may have different queue families for graphics and presentation. If this is the case, we need to modify how the swap chain access the images. If the queue families used for graphics and presentation are different we may need to access to render results from different queues families, therefore we cannot rely on exclusive access, we need to switch to concurrent access. In order to properly handle that, we will need to modify the `SwapChain` constructor to accept two new parameters:
+The first think that we do is to wait for the fence associated to the swap chain image that we are about to use. We need to wait, prior to performing any other calls for the semaphore which controls the execution finalization of previous commands, used for the same command buffer, to be signaled. That is, previous operations need to have finished. This is don in the `fwdRenderActivity.waitForFence()` method that we will implement later on. After that, we need to acquire the swap chain image that we will use, we submit the commands and finally present the image. In order to achieve that, the `SwapChain` class defines two new methods to acquire and present the used images, there are also changes in the `SwapChain` constructor. Let's review them. As it has been explained above, We can have a single queue to combine graphics and presentation. In that case we would need to check for both graphics and presentation capabilities. However, for some hardware, this could not be the case and we may have different queue families for graphics and presentation. If this is the case, we need to modify how the swap chain access the images. If the queue families used for graphics and presentation are different we may need to access to render results from different queues families, therefore we cannot rely on exclusive access, we need to switch to concurrent access. In order to properly handle that, we will need to modify the `SwapChain` constructor to accept two new parameters:
 
 - The queue used for presentation.
 - Other queues which may have concurrent access. If you only use a single queue for everything just leave that parameter as null.
@@ -668,29 +671,26 @@ public class SwapChain {
 }
 ```
 
-But, why we need one semaphore per swap chain image? Because we need to be properly signaled when an image is freed an not being presented. Besides that, we have defined a new attribute named `currentFrame` that will be used to store the image index that should be used for acquisition. When acquired it should be read as the image index currently acquired. Let's review the new method for image acquisition named `acquireNextImage`:
+But, why we need one semaphore per swap chain image? Because we need to be properly signaled when an image is freed an not being presented. Besides that, we have defined a new attribute named `currentFrame` that will be used to be able to manage sync elements (semaphores, fences) and per frame resources that we will use for each frame render. Let's review the new method for image acquisition named `acquireNextImage`:
   
 ```java
 public class SwapChain {
     ...
-    public boolean acquireNextImage() {
-        boolean resize = false;
+    public int acquireNextImage() {
+        int imageIndex;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer ip = stack.mallocInt(1);
             int err = KHRSwapchain.vkAcquireNextImageKHR(device.getVkDevice(), vkSwapChain, ~0L,
                     syncSemaphoresList[currentFrame].imgAcquisitionSemaphore().getVkSemaphore(), MemoryUtil.NULL, ip);
             if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
-                resize = true;
+                return -1;
             } else if (err == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
                 // Not optimal but swapchain can still be used
             } else if (err != VK_SUCCESS) {
                 throw new RuntimeException("Failed to acquire image: " + err);
             }
-            currentFrame = ip.get(0);
+            imageIndex = ip.get(0);
         }
-
-        return resize;
-    }
     ...
 }
 ```
@@ -701,15 +701,15 @@ In order to acquire a image we need to call the function `vkAcquireNextImageKHR`
 - `timeout`: It specifies the maximum time to get blocked in this call (in nanoseconds). If the value is greater than `0` and we are not able to get an image in that time, we will get a `VK_TIMEOUT` error. In our case, we just want to block indefinitely. 
 - `semaphore`: If it is not a null handle (`VK_NULL_HANDLE`) it must point to a valid semaphore. The semaphore will be signaled when the GPU is done with the acquired image.
 - `fence`: The purpose is the same as in the `semaphore` attribute but using a `Fence`.  In our case we do not need this type of synchronization so we just pass a null.
-- `pImageIndex`: It is a return value attribute, It contains the index of the image acquired.
+- `pImageIndex`: It is a return value attribute, It contains the index of the image acquired. It is important to note that the driver may not return always the next image in the set of swap chain images. This is the reason the `acquireNextImage` method returns the image index that has been acquired.
 
-The function can return different error values, but we are interested in a specific value: `VK_ERROR_OUT_OF_DATE_KHR`. If this value is returned, it means that the window has been resized. If so, we need to handle that and recreate some resources. By now, we will not be defining the code for detecting that event, and we will return if resizing is required in the `acquireNextImage` method.
+The function can return different error values, but we are interested in a specific value: `VK_ERROR_OUT_OF_DATE_KHR`. If this value is returned, it means that the window has been resized. If so, we need to handle that and recreate some resources. By now, we will not be defining the code for detecting that event, and we will return if resizing is required in the `acquireNextImage` method. If we cannot acquire an image we just return a negative value.
 
 Let's review the new method for image presentation named `presentImage`:
 ```java
 public class SwapChain {
     ...
-    public boolean presentImage(Queue queue) {
+    public boolean presentImage(Queue queue, int imageIndex) {
         boolean resize = false;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkPresentInfoKHR present = VkPresentInfoKHR.calloc(stack)
@@ -718,7 +718,7 @@ public class SwapChain {
                             syncSemaphoresList[currentFrame].renderCompleteSemaphore().getVkSemaphore()))
                     .swapchainCount(1)
                     .pSwapchains(stack.longs(vkSwapChain))
-                    .pImageIndices(stack.ints(currentFrame));
+                    .pImageIndices(stack.ints(imageIndex));
 
             int err = KHRSwapchain.vkQueuePresentKHR(queue.getVkQueue(), present);
             if (err == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
@@ -741,7 +741,7 @@ In order to present an image we need to call the `vkQueuePresentKHR` which recei
 - `queue`: The queue to be used to enqueue the image to the presentation engine.
 - `pPresentInfo`: A `VkPresentInfoKHR` structure with the information for presenting the image.
 
-The `VkPresentInfoKHR` structure can be used to present more than one image. In this case we will be presenting just once at a time. The `pWaitSemaphores` will hold the list of semaphores that will be used to wait to present the images. Remember that this structure can refer to more than one image. In our case, is the same semaphore that we used for acquiring the image. The rest of attributes refer to the swap chain Vulkan handle and the indices of the images to be presented. As in the case of acquiring the image, if the window has been resize we will get an error: `VK_ERROR_OUT_OF_DATE_KHR`. By now, we just return true if the window has been resized. At the end of the `presentImage`, we advance the index of the next image to be acquired. 
+The `VkPresentInfoKHR` structure can be used to present more than one image. In this case we will be presenting just once at a time. The `pWaitSemaphores` will hold the list of semaphores that will be used to wait to present the images. Remember that this structure can refer to more than one image. In our case, is the same semaphore that we used for acquiring the image. The rest of attributes refer to the swap chain Vulkan handle and the indices of the images to be presented (the `imageIndex` parameter in the method). As in the case of acquiring the image, if the window has been resize we will get an error: `VK_ERROR_OUT_OF_DATE_KHR`. By now, we just return true if the window has been resized. At the end of the `presentImage`, we advance the index of the next frame. 
 
 We are almost there, I promise, it is turn now to review code of the `ForwardRenderActivity` class. Let's start with its constructor:
 

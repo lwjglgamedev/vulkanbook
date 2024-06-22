@@ -1513,7 +1513,7 @@ public class Render {
         lightingRenderActivity.prepareCommandBuffer(shadowRenderActivity.getShadowCascades());
         lightingRenderActivity.submit(graphQueue);
 
-        if (swapChain.presentImage(presentQueue)) {
+        if (swapChain.presentImage(presentQueue, imageIndex)) {
             window.setResized(true);
         }
     }

@@ -76,11 +76,12 @@ public class Render {
             return;
         }
         geometryRenderActivity.waitForFence();
-        if (window.isResized() || swapChain.acquireNextImage()) {
+        int imageIndex;
+        if (window.isResized() || (imageIndex = swapChain.acquireNextImage()) < 0 ) {
             window.resetResized();
             resize(window);
             scene.getProjection().resize(window.getWidth(), window.getHeight());
-            swapChain.acquireNextImage();
+            imageIndex = swapChain.acquireNextImage();
         }
 
         geometryRenderActivity.recordCommandBuffer(vulkanModels);
@@ -88,7 +89,7 @@ public class Render {
         lightingRenderActivity.prepareCommandBuffer();
         lightingRenderActivity.submit(graphQueue);
 
-        if (swapChain.presentImage(presentQueue)) {
+        if (swapChain.presentImage(presentQueue, imageIndex)) {
             window.setResized(true);
         }
     }

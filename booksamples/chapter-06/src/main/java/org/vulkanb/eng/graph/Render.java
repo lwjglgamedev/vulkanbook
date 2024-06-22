@@ -62,11 +62,14 @@ public class Render {
     public void render(Window window, Scene scene) {
         fwdRenderActivity.waitForFence();
 
-        swapChain.acquireNextImage();
+        int imageIndex = swapChain.acquireNextImage();
+        if (imageIndex < 0 ) {
+            return;
+        }
 
         fwdRenderActivity.recordCommandBuffer(vulkanModels);
         fwdRenderActivity.submit(graphQueue);
 
-        swapChain.presentImage(presentQueue);
+        swapChain.presentImage(presentQueue, imageIndex);
     }
 }
