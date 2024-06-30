@@ -1,6 +1,6 @@
 # Vulkan Memory Allocator and specialization constants
 
-This will be a short chapter where we will introduce the VMA library which will help us with Vulkan memory allocation. Additionally, we will also introduce specialization constants, which will allow us to modify constants in shaders at run time.
+This will be a short chapter where we will introduce the VMA library which will help us with Vulkan memory allocation. Additionally, we will also introduce storage buffers.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-12).
 
