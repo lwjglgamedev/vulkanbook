@@ -432,7 +432,7 @@ public class MouseInput {
     public void input() {
         displVec.x = 0;
         displVec.y = 0;
-        if (previousPos.x > 0 && previousPos.y > 0 && inWindow) {
+        if (previousPos.x >= 0 && previousPos.y >= 0 && inWindow) {
             double deltax = currentPos.x - previousPos.x;
             double deltay = currentPos.y - previousPos.y;
             boolean rotateX = deltax != 0;
@@ -458,8 +458,9 @@ public class MouseInput {
 }
 ```
 
-How you want to handle user input is largely up to you.
-In order to get them, you can the pass a `GLFWKeyCallbackI` callback, use the `glfwSet*Callback()` or invoke the `isKeyPressed` method.
+The `input` method, just tries to calculate the displacement made by mouse from previous call and stores that in `displVec` attribute. If previous positions are negative, this means that mouse cursor is out of the window, which is also controlled by the `inWindow` attribute, in this situation we are not interested in calculating any displacement. Why having to ways of controlling the same? We need to wait until previous position is in the range of the window to calculate displacement to calculate proper displacement between calls that cursor position are both inside the window. 
+
+How you want to handle user input is largely up to you. In order to get them, you can the pass a `GLFWKeyCallbackI` callback, use the `glfwSet*Callback()` or invoke the `isKeyPressed` method.
 
 If you run the sample, you will get a nice black window that you can resize, move and close.
 With that, this chapter comes to its end.
