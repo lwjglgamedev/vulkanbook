@@ -18,6 +18,7 @@ input-files:
   - ./chapter-14/chapter-14.md
   - ./chapter-15/chapter-15.md
   - ./chapter-16/chapter-16.md
+  - ./chapter-17/chapter-17.md
   - ./appendix-01/appendix-01.md
   - ./appendix-02/appendix-02.md
 epub-cover-image: pandoc/cover.png

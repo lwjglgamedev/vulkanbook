@@ -18,7 +18,7 @@ The source code of the samples of this book is in [GitHub](https://github.com/lw
 
 ## EPUB version
 
-An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents/vulkanbook-epub).
+An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents/vulkanbook.epub).
 
 ## Support
 
