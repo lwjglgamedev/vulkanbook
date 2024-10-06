@@ -973,7 +973,7 @@ public abstract class DescriptorSetLayout {
 }
 ```
 
-# Render process changes
+## Render process changes
 
 We will examine now the changes that are required in the render process to support the new features. The first major change is that we will store all the indirect drawing commands in the buffer when loading the entities. In addition to that, We can also pre-record the rest of the drawing commands if the window is not resized or no new entities are added or removed. In order to be able to track the last condition we will add a timestamp to the `Scene` class:
 ```java

@@ -1,4 +1,4 @@
-# Chapter 06 -Drawing a triangle
+# Chapter 06 - Drawing a triangle
 
 In this chapter we will be finally rendering a shape, developing the required classes to load data to the GPU and using the graphics pipeline. We will start, as in the previous chapters, by explaining the elements that we will need later on to use together to draw something to the screen.
 
