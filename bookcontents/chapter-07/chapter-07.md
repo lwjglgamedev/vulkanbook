@@ -1,4 +1,4 @@
-# Going 3D
+# Chapter 07 - Going 3D
 
 In this chapter we will be rendering a 3D model, a spinning cube. Although our models did already have a z-coordinate, the output attachments we are using only deal with colors, depth values were not handled at all. We need to define a new attachment to store depth information, a depth image. In addition to that, we will add support for window resizing.
 You can find the complete source code for this chapter [here](../../booksamples/chapter-07).
@@ -1088,6 +1088,6 @@ void main()
 
 With all those changes we can now see a nice spinning cube in a window that can be resized.
 
-<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="rc07-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-08/chapter-08.md)

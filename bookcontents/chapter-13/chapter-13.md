@@ -1,4 +1,4 @@
-# Cascade Shadows
+# Chapter 13 - Cascade Shadows
 
 In this chapter, we will add shadows to the scene applying Cascaded Shadow Maps (CSM). This chapter applies the techniques shown by Sascha Willems in his Vulkan examples. Specifically, it uses part of the source code for the examples related to [cascaded shadow mapping](https://github.com/SaschaWillems/Vulkan/blob/master/examples/shadowmappingcascade) and [deferred shadow mapping(https://github.com/SaschaWillems/Vulkan/blob/master/examples/deferredshadows). I cannot stress enough how good are the examples provided by Sascha Willems, you should carefully have a look at them.
 
@@ -8,7 +8,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 In order to render shadows, we just need to render the scene from the light point of view creating a depth map. Later on, when rendering the scene, we transform the coordinates of the fragment being rendered to the light view space and check its depth. If its depth is lower than the depth stored in the depth map for those coordinates, it will mean that the fragment is not in shadows. In our case, we will be calculating shadows for a single directional light, so when rendering the depth map we will be using an orthographic projection (you can think about directional light as a source which casts parallel rays from the infinity. Those rays do not converge at a focal point).
 
-<img src="light-projection.svg" title="" alt="Light projection" data-align="center">
+<img src="rc13-light-projection.svg" title="" alt="Light projection" data-align="center">
 
 The problem with shadow depth maps is their resolution, we need to cover a wide area, and in order to get high quality visuals we would need huge images to store that information. One possible solution for that are cascade shadow maps. It is based on the fact that, shadows of objects that are closer to the camera need to have a higher quality than shadows for distant objects. The approach that Cascaded Shadow Maps (CSMs) use is to divide the view frustum into several splits. Splits closer to the camera cover a smaller amount of space whilst distant regions cover much wider regions. CSMs use one depth map per split. For each of these splits, the depth map is rendered, adjusting the light view and projection matrices to cover each split.
 
@@ -1698,10 +1698,10 @@ public class Device {
 
 We are now done with the changes, you should now be able to see the scene with shadows applied, as in the following screenshot (you can move also light direction with left and right arrows):
 
-<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="rc13-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 As a bonus, you can try to activate the cascade shadow debug to show the cascade splits (parameters have been tweaked to better show the splits):
 
-<img src="screen-shot-debug.png" title="" alt="Screen Shot (Debug)" data-align="center">
+<img src="rc13-screen-shot-debug.png" title="" alt="Screen Shot (Debug)" data-align="center">
 
 [Next chapter](../chapter-14/chapter-14.md)

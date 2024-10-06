@@ -1,4 +1,4 @@
-# Troubleshooting device loss error
+# Appendix 01 - Troubleshooting device loss error
 
 In this appendix we will provide some insights on how to troubleshoot Vulkan device loss errors. The root cause of device loss errors may be hard to track, therefore, Vulkan provides some debugging extensions to help developers track down these errors.
 

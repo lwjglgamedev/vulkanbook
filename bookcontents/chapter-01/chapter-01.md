@@ -1,4 +1,4 @@
-# Setting Up The Basics
+# Chapter 01 - Setting Up The Basics
 
 In this chapter, we will set up all the base code required to define a basic rendering loop.
 This game loop will have these responsibilities: constantly render new frames; get user inputs; and update the game or application state.

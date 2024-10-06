@@ -1,4 +1,4 @@
-# Deferred rendering (II)
+# Chapter 11 - Deferred rendering (II)
 
 In this chapter we will complete deferred shading example by adding support for lights and PBR (Physically based rendering) to improve the visuals.
 
@@ -682,11 +682,11 @@ This shader defines two new output attachments, one for the normals and the othe
 
 The main block gets the albedo color as in the previous chapter, but, after that, we discard fragments with an alpha value below a certain threshold. This is a trick to avoid apply lighting to transparent fragments. It is quick trick to improve the visuals, although the proper way is to render transparent objects separately (we are not doing this right now to simplify). If we were not doing this, we would get strange artifacts in transparent regions. The next figure shows in the left a region of the scene which contains transparent  objects discarding the ones below a threshold and on the right, the same region without discarding them. You can see, in the right side, that transparent fragments get somehow highlighted. Again, this is not the proper way to handle this, it is a quite hack to keep the examples simple.
 
-<img src="transparencies.png" title="" alt="Transparencies" data-align="center">
+<img src="rc11-transparencies.png" title="" alt="Transparencies" data-align="center">
 
 The normal, once updated, is converted to be in the range [0, 1] since it is going to be stored in an image with the format `VK_FORMAT_A2B10G10R10_UNORM_PACK32` (`U` means unsigned). The we try to get the ambient occlusion (`ao`), roughness and metallic factors either from the respective texture maps or from the material uniform. We are using gltf models, and ambient occlusion is not present in the roughness metallic map and cannot be extracted via assimp properties, so we leave it fixed by this moment. Albedo, normals and PBR factors are stored in their respective output attachments. The following picture shows how the output attachments look like (including depth attachment) when the geometry phase finishes.
 
-<img src="attachments.png" title="" alt="Attachments" data-align="center">
+<img src="rc11-attachments.png" title="" alt="Attachments" data-align="center">
 
 ## Lighting phase modifications
 
@@ -1160,6 +1160,6 @@ public class Main implements IAppLogic {
 
 With all these changes, you will get something  like this:
 
-<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="rc11-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-12/chapter-12.md)

@@ -1,4 +1,4 @@
-# Vulkan instance
+# Chapter 02 - Vulkan Instance
 
 In this chapter, we will be having our first taste of Vulkan, we will start by creating a Vulkan instance.
 This is the very first thing that will be created when dealing with Vulkan.

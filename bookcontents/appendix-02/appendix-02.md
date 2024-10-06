@@ -1,4 +1,4 @@
-# A sample 3D game
+# Appendix 02 - A sample 3D game
 
 In this appendix we will provide a ample 3D game to show how everything fits together. I will not explain the whole set of source code, instead, I will just highlight some changes made to the core source code base and some remarks.
 
@@ -196,4 +196,4 @@ ImGui.popFont();
 
 A sample screenshot of the main screen is shown below.
 
-<img src="../appendix-02/screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="../appendix-02/rap02-screen-shot.png" title="" alt="Screen Shot" data-align="center">

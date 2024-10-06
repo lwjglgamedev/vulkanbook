@@ -1,4 +1,4 @@
-# Animation
+# Chapter 14 - Animation
 
 In this chapter we will add support for skeletal animations using compte shaders to perform the required transformations to animate a model. By doing so, we will handle static and animated models in the geometry and shadow phases exactly the same way. The compute shader will perform the required transformations and wil dump the results in a buffer. By doing that way, we will not need to change a line of our shaders, we will just be accessing buffers that have vertex information with the same layout. Please keep in mind that, in order to keep this example as simple as possible, we will simplify the animation mechanism, for example, we will not be interpolating between animation key frames and we will not control animation duration.
 
@@ -1511,6 +1511,6 @@ public class Main implements IAppLogic {
 
 We are now done with the changes, you should now be able to see the scene with shadows applied, as in the following screenshot:
 
-<img src="screen-shot.gif" title="" alt="Screen Shot" data-align="center">
+<img src="rc14-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-15/chapter-15.md)

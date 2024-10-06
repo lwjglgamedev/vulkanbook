@@ -1,4 +1,4 @@
-# Swap chain
+# Chapter 04 - Swap chain
 
 In this chapter we will continue our road to render on the screen. We will describe in detail a concept that has been mentioned in previous chapters, the swap chain.
 
@@ -10,7 +10,7 @@ If you recall from previous chapters, rendering to the screen is an optional fea
 
 Swap chain creation will be encapsulated in a class named `SwapChain`.
 
-![UML Diagram](yuml-01.svg)
+![UML Diagram](rc04-yuml-01.svg)
 
 Let's start with its attributes and the constructor:
 
@@ -60,7 +60,7 @@ public class SwapChain {
 
 We will be identifying the purpose of the different attributes while we go through the code. The first thing we do to calculate the number of images that our swap chain will have. You may be wondering why do we need more than one image? The answer is to increase performance, while an image is being presented, we may be using another one to render the results of the next frame. We need to have several in order to parallelize the tasks and use both the CPU and GPU at their maximum capacity. The most common use cases employ two images (double buffering) or three (triple buffering), as in the figure below.
 
-![Swap chain images](swapchain.svg)
+![Swap chain images](rc04-swapchain.svg)
 
 The figure above represents the triple buffer case. While image #1 is used for presentation we have ready another one, image #2, ready to be presented. In parallel, we are using image #3 for rendering. Triple buffering is commonly used to avoid frame rate dropout, when we cannot guarantee that a frame will be ready between v-syncs (You can read more about this [here](https://github.com/KhronosGroup/Vulkan-Samples/blob/master/samples/performance/swapchain_images/swapchain_images_tutorial.md)).
 
@@ -263,7 +263,7 @@ The next step is to retrieve the images of the Swap chain. We will use them when
 - An `Image`  which basically defines the metadata associated to the `Buffer`. That is, the image format, its dimensions, etc.
 - An `Image View` , which specifies how we are going to use it., which parts of that image can be accessed, etc.  Well, it is just a view over the image. As it has been said before, the images for our swap chain have already been created, we just need to create the associated image views.
 
-![UML Diagram](yuml-02.svg)
+![UML Diagram](rc04-yuml-02.svg)
 
 This is done at the end of the constructor y calling the `createImageViews`method:
 

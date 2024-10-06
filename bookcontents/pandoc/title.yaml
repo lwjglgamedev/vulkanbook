@@ -1,0 +1,14 @@
+---
+title: Vulkan graphics programming in Java
+author: Antonio Hernández Bejarano
+rights: MIT License Copyright (c) 2024 Antonio Hernández Bejarano
+header-includes:
+  - \usepackage{listings}
+  - \lstset{
+      breaklines=true,        % Enable line wrapping
+      basicstyle=\ttfamily,   % Use a monospaced font for code
+      frame=single,           % Add a frame around code blocks
+      columns=flexible,       % Adjust column width for better wrapping
+      keepspaces=true         % Keep spaces in the code
+    }
+...

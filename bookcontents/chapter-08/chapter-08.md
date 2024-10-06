@@ -1,4 +1,4 @@
-# Complex models and textures
+# Chapter 08 - Complex models and textures
 
 In this chapter we will add support for loading complex 3D models which may include textures.
 
@@ -1530,6 +1530,6 @@ public class Main implements IAppLogic {
 
 With all of these changes you will be able to see a nice rotating cube with a texture:
 
-<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="rc08-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-09/chapter-09.md)

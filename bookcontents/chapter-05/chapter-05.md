@@ -1,4 +1,4 @@
-# Clearing the screen
+# Chapter 05 - Clearing the screen
 
 In this chapter we will introduce new concepts that are required to render a scene to the screen. We will finally combine all these new concepts with the elements described in previous chapters to clear the screen. Therefore, it is crucial to understand all of them and how are they related in order to be able to progress in the book.
 
@@ -122,7 +122,7 @@ public class SwapChainRenderPass {
 }
 ```
 
-![Render Pass](yuml-01.svg)
+![Render Pass](rc05-yuml-01.svg)
 
 ## Framebuffer
 
@@ -175,7 +175,7 @@ public class FrameBuffer {
 
 In the constructor, we setup an initialization structure named `VkFramebufferCreateInfo`, in which we set the height and with of the attachments and the attachments themselves. We will see later on, but these attachments will hold the handles of the `SwapChain` images. We also need to include a reference to the render pass. This is how the render pass and the real attachments are linked together. The class is completed with a `cleanup` method to release resources and another one to get the Framebuffer handle.
 
-![FrameBuffer](yuml-02.svg)
+![FrameBuffer](rc05-yuml-02.svg)
 
 ## Command Buffers
 
@@ -363,7 +363,7 @@ public class CommandBuffer {
 
 The `CommandBuffer` class is now complete, but, one very important concept to remember is that any recorded draw operation can only happen inside a render pass. We will see later on how this can be done. However, this fact is another reason to use secondary command buffers, they can be recorded independently of any render pass, and thus, the can be reused in multiple primary command buffers.
 
-![CommandBuffer](yuml-03.svg)
+![CommandBuffer](rc05-yuml-03.svg)
 
 ## Synchronization
 
@@ -467,13 +467,13 @@ public class Fence {
 
 As in the `Semaphore` class, the `Fence` class is also very simple. We also need to fill up an initialization structure named `VkFenceCreateInfo`. In this case, we can set (through a constructor argument), if the fence should be already signaled when created or not. Besides the cleaning method and the one for getting the handle we have one method called `fenceWait` which waits waits for the fence to be signaled (waits in the CPU the signal raised by the GPU). We have another one named `reset` which resets the fence to unsignaled state by calling the `vkResetFences` function.
 
-![Synchronization](yuml-04.svg)
+![Synchronization](rc05-yuml-04.svg)
 
 ## Putting it all up together
 
 The next figure shows how a typical render loop looks like.
 
-![Render loop](yuml-05.svg)
+![Render loop](rc05-yuml-05.svg)
 
 The first step is optional, depending on your case you can pre-record your commands once and use them in your render loop. However, if your scene is complex and the commands may change, it is acceptable to record them in the render loop (you can optimize this by reusing secondary command buffers or using several threads). Then, we need to acquire the swap chain image that we are going to use, submit the previous recorded commands and finally present the image. To encapsulate the forward rendering tasks we will create a new class named `ForwardRenderActivity`. This class will handle the commands required to perform forward rendering and the frame buffer management. Before, going into this class definition let's see how the `Render` class should be modified to start using all the concepts defined above, specially and how the render loop will look like.
 
@@ -982,7 +982,7 @@ I hope that the explanations above clarify the purpose of this dependency. To be
 
 We have finished by now! With all that code we are no able to see a wonderful empty  screen with the clear color specified like this:
 
-![Clear Screen](clear_screen.png)
+![Clear Screen](rc05-clear_screen.png)
 
 This chapter is a little bit long, but I think is important to present all these concepts together. Now you are really starting to understand why Vulkan is called an explicit API.  The good news is that, in my opinion, the elements presented here are the harder to get. Although we still need to define some important topics, such as pipelines or data buffers, I think they will be easier to understand once you have made your head around this.
 

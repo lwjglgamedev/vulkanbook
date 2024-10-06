@@ -1,4 +1,4 @@
-# Visual improvements and camera support
+# Chapter 09 - Visual improvements and camera support
 
 This is transition chapter. We will add small improvements and present some new concepts to prepare more relevant changes in the next chapters (therefore, it will be a shorter chapter). We will improve the visuals by adding support for transparent objects and mipmaps. We will also add support for a camera to move inside the 3D scene. Finally, we will complement the usage of descriptors by showing how to use dynamic uniforms.
 
@@ -59,7 +59,7 @@ You can try different factors and operations to better match your needs, but, in
 
 However, if you rendered a scene with just these changes, you may experience strange artifacts. Depending on the order that objects are rendering, you may have a transparent object, closer to the camera that gets rendered first than objects that are behind. This will make that the transparent object gets blended with the background, because the distant objects will be discarded in the depth test. The next figure shows this effect.
 
-<img src="transparent-artifact.png" title="" alt="Screen Shot" data-align="center">
+<img src="rc09-transparent-artifact.png" title="" alt="Screen Shot" data-align="center">
 
 In order to solve that, we are going to apply an easy fix, we will first draw non transparent objects to force transparent objects to blend with non transparent ones. This method still can make some artifacts (if we have may transparent objects that overlap between them), but it is simple enough and produces good results. In order to apply that, we need first to have a way to check if an object is transparent or not. We will add this support in the `Texture` class. We will add a new attribute named `hasTransparencies` that will hold `true` if the texture has transparent values. We will set up this attribute in the constructor by calling a new method named `setHasTransparencies`.
 
@@ -905,6 +905,6 @@ public class Main implements IAppLogic {
 
 With all of these changes you will be able to see the Sponza model. You will be able to move around the scene, and you can check that transparent objects are properly rendered.
 
-<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="rc09-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-10/chapter-10.md)

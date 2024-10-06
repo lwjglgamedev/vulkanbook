@@ -1,4 +1,4 @@
-# Drawing a triangle
+# Chapter 06 -Drawing a triangle
 
 In this chapter we will be finally rendering a shape, developing the required classes to load data to the GPU and using the graphics pipeline. We will start, as in the previous chapters, by explaining the elements that we will need later on to use together to draw something to the screen.
 
@@ -539,7 +539,7 @@ We firs define a copy region, by filling up a `VkBufferCopy` buffer,  which will
 
 A graphics pipeline is a model which describes the sets required to render a scene into a screen. In Vulkan this is modeled using a data structure. This structure defines several parameters to control the certain steps (fixed  steps) allowing setting up programs (called shaders) to control the  execution of other steps (programmable steps). The following picture depicts Vulkan graphics pipeline.
 
-![Graphics pipeline](yuml-01.svg)
+![Graphics pipeline](rc06-yuml-01.svg)
 
 Description of the stages (NOTE: graphics pipeline in Vulkan can also work in mesh shading mode, in this case we are referring to primitive shading mode. More information in the Vulkan [specification]((https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#pipelines):
 
@@ -1216,7 +1216,7 @@ public class ForwardRenderActivity {
 ```
 
 We first call to the `vkCmdBindPipeline` function. Once bound, the next commands that are recorded will be affected by this pipeline. The `VK_PIPELINE_BIND_POINT_GRAPHICS` specifies that this refers to graphics binding point. Graphic commands will be affected by this biding, but compute commands are only affected by pipelines bound using the `VK_PIPELINE_BIND_POINT_COMPUTE` binding point. Then we define the view port. The `x` and `y` values define the screen coordinates of upper left corner of the view port, which dimensions are completed by specifying its `width` and `height`. The `minDepth` and `maxDepth` values define the range of valid depth values for the view port (any depth value outside that range will be discarded). You may have noted something weird about the view port definition. The upper left corner uses a negative value for the y-axis and the height value is also negative. This is because in Vulkan the origin of coordinates is at the top left and the y axis points downwards (the opposite of OpenGL). Personally, I'm used to the OpenGL coordinates system, the shaders, the models that I use are "adapted" to that coordinate system. This is why I prefer to flip the view port to keep on using models that assume that the y -axis point upwards. You can find more details [here](https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport/).
-![Coordinates](coordinates.svg)
+![Coordinates](rc06-coordinates.svg)
 Another important thing to keep in mind is that the `minDepth` and `maxDepth` values shall be in the range `[0.0,1.0]` unless the extension `VK_EXT_depth_range_unrestricted` is enabled. (This should be addressed when dealing with projection matrices).
 
 After that, we define the scissor, which dimensions are set to the size of the full screen. In this case we do not need to flip anything, the coordinates and dimensions are relative to the view port. After that we can record the rendering of the models:
@@ -1303,6 +1303,6 @@ By now, we just return a red color.
 
 With all these changes, after many chapters, we are now able to see a nice triangle on the screen:
 
-<img src="screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="rc06-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-07/chapter-07.md)

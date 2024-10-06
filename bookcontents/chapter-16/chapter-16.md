@@ -1,4 +1,4 @@
-# Indirect drawing
+# Chapter 16 - Indirect drawing
 
 Until this chapter, we have rendered the models by binding their material uniforms, their textures, their vertices and indices buffers and submitting one draw command for each of the meshes they are composed. In this chapter, we will start our way to a more efficient way of rendering, we will begin the implementation of a bind-less render. This type of rendering does not receive a bunch of draw commands to draw the scene, instead they relay on indirect drawing commands. Indirect draw commands are, in essence, draw commands stored in a buffer that obtain the parameters required to perform the operation from a set of global buffers. This is a more efficient way of drawing because:
 
@@ -14,7 +14,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 As it has been introduced, we will construct a bind-less render pipeline that will use a buffer to store indirect drawing commands to render a scene with a single draw call. Basically, we will store in a buffer `VkDrawIndexedIndirectCommand` structures, which will contain offsets to the buffers that will hold vertex information, the indices, materials and per instance data (such as model matrices, etc.). This will avoid to constantly record binding operators to per-model buffers, send data through push constants and record per-mesh drawing commands. In order to be able to handle textures, we will use a texture array, that will hold all the textures loaded. Our materials will just simply have an attribute for the index to that array so we can apply textures to models. 
 
-![Overview](indirect-drawing.svg)
+![Overview](rc16-indirect-drawing.svg)
 
 ## Global Buffers
 
@@ -2152,6 +2152,6 @@ public class Main implements IAppLogic {
 
 The results will be exactly the same as in chapter 14, but now we have the basis of a bind-less pipeline.
 
-<img src="../chapter-14/screen-shot.gif" title="" alt="Screen Shot" data-align="center">
+<img src="../chapter-14/rc14-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 [Next chapter](../chapter-17/chapter-17.md)

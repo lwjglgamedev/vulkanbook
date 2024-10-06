@@ -1,4 +1,4 @@
-# Physical device
+# Chapter 03 - Physical device
 
 In this chapter we will progress in the definition of the Vulkan structures required to render a 3D scene. Specifically, we will setup the Physical device and a Surface.
 
@@ -8,7 +8,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 A physical device represents any piece of hardware that provides a complete implementation of the Vulkan interface (usually a physical GPU). You can have several Vulkan capable physical devices (you may have more than one GPU), but you will usually just use one (we will not be dealing with multi-GPU rendering here). A side note, as we progress through this book, we will define many concepts. In order to help you in understanding the  relationship between all of them, we will be filling up a class diagram. Here you can find the ones that shows up the elements described so far.
 
-![UML Diagram](yuml-01.svg)
+![UML Diagram](rc03-yuml-01.svg)
 
 So let's go back to coding and start by encapsulating all the code for selecting and creating a physical device in a new class named `Physdevice` (in the package `org.vulkanb.eng.graph.vk`). As it has been said before, we may have more than one Vulkan physical devices in our host machine. In order to get the most appropriate one, this class provides a `static` method to do that selection and construct the associated object for us. This method method, named `createPhysicalDevice`, iterates over all the available devices and picks the most suitable one. The method starts like this:
 
@@ -289,7 +289,7 @@ Now that we have a physical device we can start with the logical device. Vulkan 
 
 In case you wonder, you may create more than one logical device, it is another layer of abstraction over our GPU (the physical device) that allows us to manage the resources. In any case,  here we will stick just with one instance.  The next picture shows the class diagram updated.
 
-![UML Diagram](yuml-02.svg)
+![UML Diagram](rc03-yuml-02.svg)
 
 As in our previous samples, we will create a new class, named `Device` to wrap device creation and some utility methods around it. So let's update our class diagram. The `Device` class starts like this:
 
@@ -494,7 +494,7 @@ Once that we have defined the `PhysicalDevice` it is time to create a surface to
 
 In order to create the surface we will create a new class named `Surface`. The following picture updates all the concepts viewed up to now with this new class.
 
-![UML Diagram](yuml-03.svg)
+![UML Diagram](rc03-yuml-03.svg)
 
 The source code of the `Surface` class is defined like this:
 
@@ -541,7 +541,7 @@ As you can see we just use the method `glfwCreateWindowSurface` from the `GLFWVu
 
 As it was introduced before, the way to submit work to our GPU is by submitting command buffers to queues. These command buffers contain the instructions that will be executed when that job is executed. An important concept to stress out when examining the instructions for commands, is that this will not be executed immediately, we are just recording the commands. It is critical to keep this in mind when dealing with resources, we cannot record a command and modify those resources while the command is queued or even being executed.
 
-![UML Diagram](yuml-04.svg)
+![UML Diagram](rc03-yuml-04.svg)
 
 Again, we will create a new class which models queue retrieval, named `Queue`. The `Queue` class itself is also very simple:
 

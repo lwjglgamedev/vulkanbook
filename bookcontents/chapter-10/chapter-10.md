@@ -1,4 +1,4 @@
-# Deferred shading (I)
+# Chapter 10 - Deferred shading (I)
 
 In this chapter we will setup the basis to implement deferred shading. We will split the rendering into two phases, one to render the geometry and relevant parameters of the scene and another one to apply lighting. In this chapter we will only setup the basis, leaving the changes required to apply lighting for the next chapter. We will not be introducing new Vulkan concepts, just combine the ones we have described previously to support deferred shading. Therefore, you will see larger chunks of code with an explanatory overview, focusing on the key concepts of Vulkan that need to be applied to implement deferred shading.
 
@@ -1161,11 +1161,11 @@ public class LightingRenderActivity {
 
 How are we going to render in the lighting phase? We have mentioned it briefly before, we are going to draw a shape that fills the whole screen, for example a quad or two triangles whose coordinates math the vertices of the screen. Therefore, let's create a mesh for a quad with the proper coordinates and that's it, right? Not so fast, we can do it even better. We can achieve the same result drawing a single triangle with the following position coordinates (z coordinates have been omitted since they will be constant):
 
-![Triangle coordinates](triangle-pos.svg)
+![Triangle coordinates](rc10-triangle-pos.svg)
 
 As you can see in the triangle covers the whole screen (represented as a dashed square in the range [-1, 1], [1, -1]. The texture coordinates for each of the vertices of that triangle will be (0, 0), (2, 0) and (0, 2), which will result in the quad that forms the screen to have the coordinates in the range [0, 0] and [1, 1] (Remember that upper left corner has coordinates (0,0) in texture space).
 
-![Triangle coordinates](triangle-text.svg)
+![Triangle coordinates](rc10-triangle-text.svg)
 
 Let's view the `preRecordCommandBuffer` method:
 
@@ -1400,7 +1400,7 @@ public class Render {
 
 With all these changes, you will get something  like this:
 
-<img src="../chapter-09/screen-shot.png" title="" alt="Screen Shot" data-align="center">
+<img src="../chapter-09/rc09-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 
 Do not despair, it is exactly the same result as in the previous chapter, you will see in next chapter how we will dramatically improve the visuals. In this chapter we have just set the basis for deferred rendering.
 

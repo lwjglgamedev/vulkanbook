@@ -6,7 +6,7 @@ This [online book](bookcontents/) will introduce the main concepts required to w
 
 We will use [LWJGL](http://www.lwjgl.org/) as the Java library which provides the required bindings to use Vulkan and any other required APIs. This book is the result of my self learning language, that I think it may help the community.
 
-![Sample screen shot](./bookcontents/chapter-13/screen-shot.png)
+![Sample screen shot](./bookcontents/chapter-13/rc13-screen-shot.png)
 
 ## Book Code
 
@@ -15,6 +15,10 @@ The book itself is also hosted in [GitHub](https://github.com/lwjglgamedev/vulka
 ## Source Code
 
 The source code of the samples of this book is in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples).
+
+## EPUB version
+
+An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents/vulkanbook-epub).
 
 ## Support
 
