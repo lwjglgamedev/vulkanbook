@@ -185,7 +185,7 @@ public class Instance {
 We will get the supported validation layers by invoking the `getSupportedValidationLayers`.
 If we have requested validation, but we have not found any layer that can help on this, we log a warning but continue the execution.
 To use validation layers, you need to install the
-[Vulkan SDK]([Vulkan® SDK - What&#039;s in the SDK - Where to Download](https://www.lunarg.com/vulkan-sdk/)).
+[Vulkan SDK]([Vulkan® SDK - What&#039;s in the SDK - Where to Download](https://www.lunarg.com/vulkan-sdk/).
 Let's move out of the constructor code and check the contents of the `getSupportedValidationLayers`:
 
 ```java
