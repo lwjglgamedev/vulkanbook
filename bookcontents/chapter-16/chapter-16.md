@@ -412,19 +412,22 @@ public class GlobalBuffers {
             if (texture != null) {
                 textureList.add(texture);
             }
-            int textureIdx = textureCache.getPosition(material.texturePath());
+            boolean hasTexture = material.texturePath() != null && !material.texturePath().trim().isEmpty();
+            int textureIdx = hasTexture ? textureCache.getPosition(material.texturePath()) : -1;
 
             texture = textureCache.createTexture(device, material.normalMapPath(), VK_FORMAT_R8G8B8A8_UNORM);
             if (texture != null) {
                 textureList.add(texture);
             }
-            int normalMapIdx = textureCache.getPosition(material.normalMapPath());
+            boolean hasNormalMap = material.normalMapPath() != null && !material.normalMapPath().trim().isEmpty();
+            int normalMapIdx = hasNormalMap ? textureCache.getPosition(material.normalMapPath()) : -1;
 
             texture = textureCache.createTexture(device, material.metalRoughMap(), VK_FORMAT_R8G8B8A8_UNORM);
             if (texture != null) {
                 textureList.add(texture);
             }
-            int metalRoughMapIdx = textureCache.getPosition(material.metalRoughMap());
+            boolean hasRoughMap = material.metalRoughMap() != null && !material.metalRoughMap().trim().isEmpty();
+            int metalRoughMapIdx = hasRoughMap ? textureCache.getPosition(material.metalRoughMap()) : -1;
 
             vulkanMaterialList.add(new VulkanModel.VulkanMaterial(dataBuffer.position() * INT_LENGTH / MATERIAL_SIZE));
             dataBuffer.put(Float.floatToRawIntBits(material.diffuseColor().x));

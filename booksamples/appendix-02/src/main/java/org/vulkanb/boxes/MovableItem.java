@@ -53,10 +53,8 @@ public class MovableItem {
             moveDir = MoveDir.RIGHT;
         } else if (row < this.row) {
             moveDir = MoveDir.UP;
-            System.err.println("#### UP");
         } else if (row > this.row) {
             moveDir = MoveDir.DOWN;
-            System.err.println("#### DOWN");
         }
 
         this.col = col;
