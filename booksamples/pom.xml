@@ -138,7 +138,7 @@
         <java.version>17</java.version>	
         <joml.version>1.10.8</joml.version>
         <json.version>20240303</json.version>
-        <lwjgl.version>3.3.5</lwjgl.version>
+        <lwjgl.version>3.3.6</lwjgl.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-dependency-plugin.version>3.7.0</maven-dependency-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
