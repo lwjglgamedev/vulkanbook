@@ -39,7 +39,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add vulkanbook.epub
-          git commit -m "Add generated EPUIB: vulkanbook.epub" || echo "No changes to commit"
+          git commit -m "Add generated EPUB: vulkanbook.epub" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
