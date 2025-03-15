@@ -5,48 +5,46 @@ import org.lwjgl.vulkan.VkSamplerCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class TextureSampler {
 
     private static final int MAX_ANISOTROPY = 16;
 
-    private final Device device;
     private final long vkSampler;
 
-    public TextureSampler(Device device, int mipLevels, boolean anisotropyEnable) {
-        this.device = device;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSamplerCreateInfo samplerInfo = VkSamplerCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO)
-                    .magFilter(VK_FILTER_LINEAR)
-                    .minFilter(VK_FILTER_LINEAR)
-                    .addressModeU(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-                    .addressModeV(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-                    .addressModeW(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-                    .borderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
+    public TextureSampler(VkCtx vkCtx, TextureSamplerInfo textureSamplerInfo) {
+        try (var stack = MemoryStack.stackPush()) {
+            var samplerInfo = VkSamplerCreateInfo.calloc(stack)
+                    .sType$Default()
+                    .magFilter(VK_FILTER_NEAREST)
+                    .minFilter(VK_FILTER_NEAREST)
+                    .addressModeU(textureSamplerInfo.addressMode())
+                    .addressModeV(textureSamplerInfo.addressMode())
+                    .addressModeW(textureSamplerInfo.addressMode())
+                    .borderColor(textureSamplerInfo.borderColor())
                     .unnormalizedCoordinates(false)
                     .compareEnable(false)
-                    .compareOp(VK_COMPARE_OP_ALWAYS)
-                    .mipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
+                    .compareOp(VK_COMPARE_OP_NEVER)
+                    .mipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST)
                     .minLod(0.0f)
-                    .maxLod(mipLevels)
+                    .maxLod(textureSamplerInfo.mipLevels())
                     .mipLodBias(0.0f);
-            if (anisotropyEnable && device.isSamplerAnisotropy()) {
+            if (textureSamplerInfo.anisotropy() && vkCtx.getDevice().isSamplerAnisotropy()) {
                 samplerInfo
                         .anisotropyEnable(true)
                         .maxAnisotropy(MAX_ANISOTROPY);
             }
 
             LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateSampler(device.getVkDevice(), samplerInfo, null, lp), "Failed to create sampler");
+            vkCheck(vkCreateSampler(vkCtx.getDevice().getVkDevice(), samplerInfo, null, lp), "Failed to create sampler");
             vkSampler = lp.get(0);
         }
     }
 
-    public void cleanup() {
-        vkDestroySampler(device.getVkDevice(), vkSampler, null);
+    public void cleanup(VkCtx vkCtx) {
+        vkDestroySampler(vkCtx.getDevice().getVkDevice(), vkSampler, null);
     }
 
     public long getVkSampler() {

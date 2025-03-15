@@ -3,12 +3,12 @@ package org.vulkanb;
 import org.joml.Vector3f;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
-import org.vulkanb.eng.graph.Render;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.model.*;
+import org.vulkanb.eng.scene.Entity;
 
 import java.util.*;
 
-public class Main implements IAppLogic {
+public class Main implements IGameLogic {
 
     private final Vector3f rotatingAngle = new Vector3f(1, 1, 1);
     private float angle = 0;
@@ -16,9 +16,9 @@ public class Main implements IAppLogic {
 
     public static void main(String[] args) {
         Logger.info("Starting application");
-
-        Engine engine = new Engine("Vulkan Book", new Main());
-        engine.start();
+        var engine = new Engine("Vulkan Book", new Main());
+        Logger.info("Started application");
+        engine.run();
     }
 
     @Override
@@ -27,7 +27,7 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void init(Window window, Scene scene, Render render) {
+    public InitData init(EngCtx engCtx) {
         float[] positions = new float[]{
                 -0.5f, 0.5f, 0.5f,
                 -0.5f, -0.5f, 0.5f,
@@ -63,27 +63,27 @@ public class Main implements IAppLogic {
                 7, 6, 4, 7, 4, 5,
         };
 
-        String modelId = "CubeModel";
-        ModelData.MeshData meshData = new ModelData.MeshData(positions, textCoords, indices);
-        List<ModelData.MeshData> meshDataList = new ArrayList<>();
+        var modelId = "CubeModel";
+        MeshData meshData = new MeshData("cube-mesh", positions, textCoords, indices);
+        List<MeshData> meshDataList = new ArrayList<>();
         meshDataList.add(meshData);
         ModelData modelData = new ModelData(modelId, meshDataList);
-        List<ModelData> modelDataList = new ArrayList<>();
-        modelDataList.add(modelData);
-        render.loadModels(modelDataList);
+        List<ModelData> models = new ArrayList<>();
+        models.add(modelData);
 
-        cubeEntity = new Entity("CubeEntity", modelId, new Vector3f(0.0f, 0.0f, 0.0f));
-        cubeEntity.setPosition(0, 0, -2);
-        scene.addEntity(cubeEntity);
+        cubeEntity = new Entity("CubeEntity", modelId, new Vector3f(0.0f, 0.0f, -2.0f));
+        engCtx.scene().addEntity(cubeEntity);
+
+        return new InitData(models);
     }
 
     @Override
-    public void input(Window window, Scene scene, long diffTimeMillis) {
+    public void input(EngCtx engCtx, long diffTimeMillis) {
         // To be implemented
     }
 
     @Override
-    public void update(Window window, Scene scene, long diffTimeMillis) {
+    public void update(EngCtx engCtx, long diffTimeMillis) {
         angle += 1.0f;
         if (angle >= 360) {
             angle = angle - 360;

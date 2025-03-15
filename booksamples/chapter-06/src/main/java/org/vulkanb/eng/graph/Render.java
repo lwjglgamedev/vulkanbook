@@ -1,75 +1,136 @@
 package org.vulkanb.eng.graph;
 
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
+import org.vulkanb.eng.graph.scn.ScnRender;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.model.ModelData;
 
 import java.util.*;
 
+import static org.lwjgl.vulkan.VK13.*;
+
 public class Render {
 
-    private final CommandPool commandPool;
-    private final Device device;
-    private final ForwardRenderActivity fwdRenderActivity;
+    private final CmdBuffer[] cmdBuffers;
+    private final CmdPool[] cmdPools;
+    private final Fence[] fences;
     private final Queue.GraphicsQueue graphQueue;
-    private final Instance instance;
-    private final PhysicalDevice physicalDevice;
-    private final PipelineCache pipelineCache;
+    private final Semaphore[] imageAqSemphs;
     private final Queue.PresentQueue presentQueue;
-    private final Surface surface;
-    private final SwapChain swapChain;
-    private final List<VulkanModel> vulkanModels;
+    private final Semaphore[] renderCompleteSemphs;
+    private final ScnRender scnRender;
+    private final VkCtx vkCtx;
+    private int currentFrame;
+    private ModelsCache modelsCache;
 
-    public Render(Window window, Scene scene) {
-        EngineProperties engProps = EngineProperties.getInstance();
-        instance = new Instance(engProps.isValidate());
-        physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
-        device = new Device(physicalDevice);
-        surface = new Surface(physicalDevice, window.getWindowHandle());
-        graphQueue = new Queue.GraphicsQueue(device, 0);
-        presentQueue = new Queue.PresentQueue(device, surface, 0);
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
-                presentQueue, new Queue[]{graphQueue});
-        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
-        pipelineCache = new PipelineCache(device);
-        fwdRenderActivity = new ForwardRenderActivity(swapChain, commandPool, pipelineCache);
-        vulkanModels = new ArrayList<>();
+    public Render(EngCtx engCtx) {
+        vkCtx = new VkCtx(engCtx.window());
+        currentFrame = 0;
+
+        graphQueue = new Queue.GraphicsQueue(vkCtx, 0);
+        presentQueue = new Queue.PresentQueue(vkCtx, 0);
+
+        cmdPools = new CmdPool[VkUtils.MAX_IN_FLIGHT];
+        cmdBuffers = new CmdBuffer[VkUtils.MAX_IN_FLIGHT];
+        fences = new Fence[VkUtils.MAX_IN_FLIGHT];
+        imageAqSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        renderCompleteSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
+            cmdPools[i] = new CmdPool(vkCtx, graphQueue.getQueueFamilyIndex(), false);
+            cmdBuffers[i] = new CmdBuffer(vkCtx, cmdPools[i], true, true);
+            fences[i] = new Fence(vkCtx, true);
+            imageAqSemphs[i] = new Semaphore(vkCtx);
+            renderCompleteSemphs[i] = new Semaphore(vkCtx);
+        }
+        scnRender = new ScnRender(vkCtx);
+        modelsCache = new ModelsCache();
     }
 
     public void cleanup() {
-        presentQueue.waitIdle();
-        graphQueue.waitIdle();
-        device.waitIdle();
-        vulkanModels.forEach(VulkanModel::cleanup);
-        pipelineCache.cleanup();
-        fwdRenderActivity.cleanup();
-        commandPool.cleanup();
-        swapChain.cleanup();
-        surface.cleanup();
-        device.cleanup();
-        physicalDevice.cleanup();
-        instance.cleanup();
+        vkCtx.getDevice().waitIdle();
+
+        scnRender.cleanup(vkCtx);
+
+        modelsCache.cleanup(vkCtx);
+
+        Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(fences).forEach(i -> i.cleanup(vkCtx));
+        for (int i = 0; i < cmdPools.length; i++) {
+            cmdBuffers[i].cleanup(vkCtx, cmdPools[i]);
+            cmdPools[i].cleanup(vkCtx);
+        }
+
+        vkCtx.cleanup();
     }
 
-    public void loadModels(List<ModelData> modelDataList) {
-        Logger.debug("Loading {} model(s)", modelDataList.size());
-        vulkanModels.addAll(VulkanModel.transformModels(modelDataList, commandPool, graphQueue));
-        Logger.debug("Loaded {} model(s)", modelDataList.size());
+    public void init(InitData initData) {
+        List<ModelData> models = initData.models();
+        Logger.debug("Loading {} model(s)", models.size());
+        modelsCache.loadModels(vkCtx, models, cmdPools[0], graphQueue);
+        Logger.debug("Loaded {} model(s)", models.size());
     }
 
-    public void render(Window window, Scene scene) {
-        fwdRenderActivity.waitForFence();
+    private void recordingStart(CmdPool cmdPool, CmdBuffer cmdBuffer) {
+        cmdPool.reset(vkCtx);
+        cmdBuffer.beginRecording();
+    }
 
-        int imageIndex = swapChain.acquireNextImage();
-        if (imageIndex < 0 ) {
+    private void recordingStop(CmdBuffer cmdBuffer) {
+        cmdBuffer.endRecording();
+    }
+
+    public void render(EngCtx engCtx) {
+        SwapChain swapChain = vkCtx.getSwapChain();
+
+        waitForFence(currentFrame);
+
+        int imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame]);
+        if (imageIndex < 0) {
             return;
         }
 
-        fwdRenderActivity.recordCommandBuffer(vulkanModels);
-        fwdRenderActivity.submit(graphQueue);
+        var cmdPool = cmdPools[currentFrame];
+        var cmdBuffer = cmdBuffers[currentFrame];
 
-        swapChain.presentImage(presentQueue, imageIndex);
+        recordingStart(cmdPool, cmdBuffer);
+
+        scnRender.render(vkCtx, cmdBuffer, modelsCache, imageIndex);
+
+        recordingStop(cmdBuffer);
+
+        submit(cmdBuffer, currentFrame);
+
+        swapChain.presentImage(presentQueue, renderCompleteSemphs[currentFrame], imageIndex);
+
+        currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
+    }
+
+    private void submit(CmdBuffer cmdBuff, int currentFrame) {
+        try (var stack = MemoryStack.stackPush()) {
+            var fence = fences[currentFrame];
+            fence.reset(vkCtx);
+            var cmds = VkCommandBufferSubmitInfo.calloc(1, stack)
+                    .sType$Default()
+                    .commandBuffer(cmdBuff.getVkCommandBuffer());
+            VkSemaphoreSubmitInfo.Buffer waitSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
+                    .sType$Default()
+                    .stageMask(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
+                    .semaphore(imageAqSemphs[currentFrame].getVkSemaphore());
+            VkSemaphoreSubmitInfo.Buffer signalSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
+                    .sType$Default()
+                    .stageMask(VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT)
+                    .semaphore(renderCompleteSemphs[currentFrame].getVkSemaphore());
+            graphQueue.submit(cmds, waitSemphs, signalSemphs, fence);
+        }
+    }
+
+    private void waitForFence(int currentFrame) {
+        var fence = fences[currentFrame];
+        fence.fenceWait(vkCtx);
     }
 }

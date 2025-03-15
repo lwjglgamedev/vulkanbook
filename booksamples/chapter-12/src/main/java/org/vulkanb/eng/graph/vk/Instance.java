@@ -10,8 +10,8 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.EXTDebugUtils.*;
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class Instance {
 
@@ -20,25 +20,25 @@ public class Instance {
     public static final int MESSAGE_TYPE_BITMASK = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    private static final String DBG_CALL_BACK_PREF = "VkDebugUtilsCallback, {}";
     private static final String PORTABILITY_EXTENSION = "VK_KHR_portability_enumeration";
 
     private final VkInstance vkInstance;
-
     private VkDebugUtilsMessengerCreateInfoEXT debugUtils;
     private long vkDebugHandle;
 
     public Instance(boolean validate) {
         Logger.debug("Creating Vulkan instance");
-        try (MemoryStack stack = MemoryStack.stackPush()) {
+        try (var stack = MemoryStack.stackPush()) {
             // Create application information
             ByteBuffer appShortName = stack.UTF8("VulkanBook");
-            VkApplicationInfo appInfo = VkApplicationInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
+            var appInfo = VkApplicationInfo.calloc(stack)
+                    .sType$Default()
                     .pApplicationName(appShortName)
                     .applicationVersion(1)
                     .pEngineName(appShortName)
                     .engineVersion(0)
-                    .apiVersion(VK_API_VERSION_1_1);
+                    .apiVersion(VK_API_VERSION_1_3);
 
             // Validation layers
             List<String> validationLayers = getSupportedValidationLayers();
@@ -61,32 +61,27 @@ public class Instance {
             }
 
             Set<String> instanceExtensions = getInstanceExtensions();
-
+            boolean usePortability = instanceExtensions.contains(PORTABILITY_EXTENSION) &&
+                    VkUtils.getOS() == VkUtils.OSType.MACOS;
+            
             // GLFW Extension
             PointerBuffer glfwExtensions = GLFWVulkan.glfwGetRequiredInstanceExtensions();
             if (glfwExtensions == null) {
                 throw new RuntimeException("Failed to find the GLFW platform surface extensions");
             }
-
-            PointerBuffer requiredExtensions;
-
-            boolean usePortability = instanceExtensions.contains(PORTABILITY_EXTENSION) &&
-                    VulkanUtils.getOS() == VulkanUtils.OSType.MACOS;
+            var additionalExtensions = new ArrayList<ByteBuffer>();
             if (supportsValidation) {
-                ByteBuffer vkDebugUtilsExtension = stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-                int numExtensions = usePortability ? glfwExtensions.remaining() + 2 : glfwExtensions.remaining() + 1;
-                requiredExtensions = stack.mallocPointer(numExtensions);
-                requiredExtensions.put(glfwExtensions).put(vkDebugUtilsExtension);
-                if (usePortability) {
-                    requiredExtensions.put(stack.UTF8(PORTABILITY_EXTENSION));
-                }
-            } else {
-                int numExtensions = usePortability ? glfwExtensions.remaining() + 1 : glfwExtensions.remaining();
-                requiredExtensions = stack.mallocPointer(numExtensions);
-                requiredExtensions.put(glfwExtensions);
-                if (usePortability) {
-                    requiredExtensions.put(stack.UTF8(KHRPortabilitySubset.VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
-                }
+                additionalExtensions.add(stack.UTF8(EXTDebugUtils.VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
+            }
+            if (usePortability) {
+                additionalExtensions.add(stack.UTF8(PORTABILITY_EXTENSION));
+            }
+            int numAdditionalExtensions = additionalExtensions.size();
+
+            PointerBuffer requiredExtensions = stack.mallocPointer(glfwExtensions.remaining() + numAdditionalExtensions);
+            requiredExtensions.put(glfwExtensions);
+            for (int i = 0; i < numAdditionalExtensions; i++) {
+                requiredExtensions.put(additionalExtensions.get(i));
             }
             requiredExtensions.flip();
 
@@ -97,8 +92,8 @@ public class Instance {
             }
 
             // Create instance info
-            VkInstanceCreateInfo instanceInfo = VkInstanceCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
+            var instanceInfo = VkInstanceCreateInfo.calloc(stack)
+                    .sType$Default()
                     .pNext(extension)
                     .pApplicationInfo(appInfo)
                     .ppEnabledLayerNames(requiredLayers)
@@ -123,22 +118,69 @@ public class Instance {
     private static VkDebugUtilsMessengerCreateInfoEXT createDebugCallBack() {
         return VkDebugUtilsMessengerCreateInfoEXT
                 .calloc()
-                .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
+                .sType$Default()
                 .messageSeverity(MESSAGE_SEVERITY_BITMASK)
                 .messageType(MESSAGE_TYPE_BITMASK)
                 .pfnUserCallback((messageSeverity, messageTypes, pCallbackData, pUserData) -> {
                     VkDebugUtilsMessengerCallbackDataEXT callbackData = VkDebugUtilsMessengerCallbackDataEXT.create(pCallbackData);
                     if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0) {
-                        Logger.info("VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                        Logger.info(DBG_CALL_BACK_PREF, callbackData.pMessageString());
                     } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0) {
-                        Logger.warn("VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                        Logger.warn(DBG_CALL_BACK_PREF, callbackData.pMessageString());
                     } else if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
-                        Logger.error("VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                        Logger.error(DBG_CALL_BACK_PREF, callbackData.pMessageString());
                     } else {
-                        Logger.debug("VkDebugUtilsCallback, {}", callbackData.pMessageString());
+                        Logger.debug(DBG_CALL_BACK_PREF, callbackData.pMessageString());
                     }
                     return VK_FALSE;
                 });
+    }
+
+    private static Set<String> getInstanceExtensions() {
+        Set<String> instanceExtensions = new HashSet<>();
+        try (var stack = MemoryStack.stackPush()) {
+            IntBuffer numExtensionsBuf = stack.callocInt(1);
+            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, null);
+            int numExtensions = numExtensionsBuf.get(0);
+            Logger.trace("Instance supports [{}] extensions", numExtensions);
+
+            var instanceExtensionsProps = VkExtensionProperties.calloc(numExtensions, stack);
+            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, instanceExtensionsProps);
+            for (int i = 0; i < numExtensions; i++) {
+                VkExtensionProperties props = instanceExtensionsProps.get(i);
+                String extensionName = props.extensionNameString();
+                instanceExtensions.add(extensionName);
+                Logger.trace("Supported instance extension [{}]", extensionName);
+            }
+        }
+        return instanceExtensions;
+    }
+
+    private static List<String> getSupportedValidationLayers() {
+        try (var stack = MemoryStack.stackPush()) {
+            IntBuffer numLayersArr = stack.callocInt(1);
+            vkEnumerateInstanceLayerProperties(numLayersArr, null);
+            int numLayers = numLayersArr.get(0);
+            Logger.debug("Instance supports [{}] layers", numLayers);
+
+            var propsBuf = VkLayerProperties.calloc(numLayers, stack);
+            vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
+            List<String> supportedLayers = new ArrayList<>();
+            for (int i = 0; i < numLayers; i++) {
+                VkLayerProperties props = propsBuf.get(i);
+                String layerName = props.layerNameString();
+                supportedLayers.add(layerName);
+                Logger.trace("Supported layer [{}]", layerName);
+            }
+
+            // Main validation layer
+            List<String> layersToUse = new ArrayList<>();
+            if (supportedLayers.contains("VK_LAYER_KHRONOS_validation")) {
+                layersToUse.add("VK_LAYER_KHRONOS_validation");
+            }
+
+            return layersToUse;
+        }
     }
 
     public void cleanup() {
@@ -150,69 +192,6 @@ public class Instance {
         if (debugUtils != null) {
             debugUtils.pfnUserCallback().free();
             debugUtils.free();
-        }
-    }
-
-    private Set<String> getInstanceExtensions() {
-        Set<String> instanceExtensions = new HashSet<>();
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer numExtensionsBuf = stack.callocInt(1);
-            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, null);
-            int numExtensions = numExtensionsBuf.get(0);
-            Logger.debug("Instance supports [{}] extensions", numExtensions);
-
-            VkExtensionProperties.Buffer instanceExtensionsProps = VkExtensionProperties.calloc(numExtensions, stack);
-            vkEnumerateInstanceExtensionProperties((String) null, numExtensionsBuf, instanceExtensionsProps);
-            for (int i = 0; i < numExtensions; i++) {
-                VkExtensionProperties props = instanceExtensionsProps.get(i);
-                String extensionName = props.extensionNameString();
-                instanceExtensions.add(extensionName);
-                Logger.debug("Supported instance extension [{}]", extensionName);
-            }
-        }
-        return instanceExtensions;
-    }
-
-    private List<String> getSupportedValidationLayers() {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer numLayersArr = stack.callocInt(1);
-            vkEnumerateInstanceLayerProperties(numLayersArr, null);
-            int numLayers = numLayersArr.get(0);
-            Logger.debug("Instance supports [{}] layers", numLayers);
-
-            VkLayerProperties.Buffer propsBuf = VkLayerProperties.calloc(numLayers, stack);
-            vkEnumerateInstanceLayerProperties(numLayersArr, propsBuf);
-            List<String> supportedLayers = new ArrayList<>();
-            for (int i = 0; i < numLayers; i++) {
-                VkLayerProperties props = propsBuf.get(i);
-                String layerName = props.layerNameString();
-                supportedLayers.add(layerName);
-                Logger.debug("Supported layer [{}]", layerName);
-            }
-
-            List<String> layersToUse = new ArrayList<>();
-
-            // Main validation layer
-            if (supportedLayers.contains("VK_LAYER_KHRONOS_validation")) {
-                layersToUse.add("VK_LAYER_KHRONOS_validation");
-                return layersToUse;
-            }
-
-            // Fallback 1
-            if (supportedLayers.contains("VK_LAYER_LUNARG_standard_validation")) {
-                layersToUse.add("VK_LAYER_LUNARG_standard_validation");
-                return layersToUse;
-            }
-
-            // Fallback 2 (set)
-            List<String> requestedLayers = new ArrayList<>();
-            requestedLayers.add("VK_LAYER_GOOGLE_threading");
-            requestedLayers.add("VK_LAYER_LUNARG_parameter_validation");
-            requestedLayers.add("VK_LAYER_LUNARG_object_tracker");
-            requestedLayers.add("VK_LAYER_LUNARG_core_validation");
-            requestedLayers.add("VK_LAYER_GOOGLE_unique_objects");
-
-            return requestedLayers.stream().filter(supportedLayers::contains).toList();
         }
     }
 

@@ -1,0 +1,262 @@
+[
+  {
+    "id": "Sponza-mat-0",
+    "texture_path": "resources\\models\\sponza\\5061699253647017043.png",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-1",
+    "texture_path": "resources\\models\\sponza\\8006627369776289000.png",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-2",
+    "texture_path": "resources\\models\\sponza\\7268504077753552595.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-3",
+    "texture_path": "resources\\models\\sponza\\8750083169368950601.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-4",
+    "texture_path": "resources\\models\\sponza\\5792855332885324923.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-5",
+    "texture_path": "resources\\models\\sponza\\14650633544276105767.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-6",
+    "texture_path": "resources\\models\\sponza\\15295713303328085182.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-7",
+    "texture_path": "resources\\models\\sponza\\6047387724914829168.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-8",
+    "texture_path": "resources\\models\\sponza\\5823059166183034438.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-9",
+    "texture_path": "resources\\models\\sponza\\7441062115984513793.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-10",
+    "texture_path": "resources\\models\\sponza\\11490520546946913238.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-11",
+    "texture_path": "resources\\models\\sponza\\6151467286084645207.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-12",
+    "texture_path": "resources\\models\\sponza\\white.png",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-13",
+    "texture_path": "resources\\models\\sponza\\4975155472559461469.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-14",
+    "texture_path": "resources\\models\\sponza\\4675343432951571524.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-15",
+    "texture_path": "resources\\models\\sponza\\2775690330959970771.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-16",
+    "texture_path": "resources\\models\\sponza\\2185409758123873465.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-17",
+    "texture_path": "resources\\models\\sponza\\17876391417123941155.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-18",
+    "texture_path": "resources\\models\\sponza\\11474523244911310074.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-19",
+    "texture_path": "resources\\models\\sponza\\9288698199695299068.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-20",
+    "texture_path": "resources\\models\\sponza\\16275776544635328252.png",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-21",
+    "texture_path": "resources\\models\\sponza\\755318871556304029.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-22",
+    "texture_path": "resources\\models\\sponza\\8481240838833932244.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-23",
+    "texture_path": "resources\\models\\sponza\\6772804448157695701.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-24",
+    "texture_path": "resources\\models\\sponza\\2969916736137545357.jpg",
+    "diffuse_color": {
+      "x": 0.588,
+      "y": 0.588,
+      "z": 0.588,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "Sponza-mat-25",
+    "texture_path": "",
+    "diffuse_color": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0,
+      "w": 1.0
+    }
+  }
+]

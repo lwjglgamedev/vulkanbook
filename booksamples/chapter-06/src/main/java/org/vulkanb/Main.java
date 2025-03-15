@@ -2,18 +2,17 @@ package org.vulkanb;
 
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
-import org.vulkanb.eng.graph.Render;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.model.*;
 
 import java.util.*;
 
-public class Main implements IAppLogic {
+public class Main implements IGameLogic {
 
     public static void main(String[] args) {
         Logger.info("Starting application");
-
-        Engine engine = new Engine("Vulkan Book", new Main());
-        engine.start();
+        var engine = new Engine("Vulkan Book", new Main());
+        Logger.info("Started application");
+        engine.run();
     }
 
     @Override
@@ -22,28 +21,29 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void init(Window window, Scene scene, Render render) {
-        String modelId = "TriangleModel";
-        ModelData.MeshData meshData = new ModelData.MeshData(new float[]{
+    public InitData init(EngCtx engCtx) {
+        var modelId = "TriangleModel";
+        MeshData meshData = new MeshData("triangle-mesh", new float[]{
                 -0.5f, -0.5f, 0.0f,
                 0.0f, 0.5f, 0.0f,
                 0.5f, -0.5f, 0.0f},
                 new int[]{0, 1, 2});
-        List<ModelData.MeshData> meshDataList = new ArrayList<>();
+        List<MeshData> meshDataList = new ArrayList<>();
         meshDataList.add(meshData);
         ModelData modelData = new ModelData(modelId, meshDataList);
-        List<ModelData> modelDataList = new ArrayList<>();
-        modelDataList.add(modelData);
-        render.loadModels(modelDataList);
+        List<ModelData> models = new ArrayList<>();
+        models.add(modelData);
+
+        return new InitData(models);
     }
 
     @Override
-    public void input(Window window, Scene scene, long diffTimeMillis) {
+    public void input(EngCtx engCtx, long diffTimeMillis) {
         // To be implemented
     }
 
     @Override
-    public void update(Window window, Scene scene, long diffTimeMillis) {
+    public void update(EngCtx engCtx, long diffTimeMillis) {
         // To be implemented
     }
 }

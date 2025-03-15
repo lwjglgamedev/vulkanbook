@@ -1,23 +1,23 @@
 package org.vulkanb.eng.graph;
 
-import org.vulkanb.eng.*;
-import org.vulkanb.eng.graph.vk.Instance;
+import org.vulkanb.eng.EngCtx;
+import org.vulkanb.eng.graph.vk.VkCtx;
+import org.vulkanb.eng.wnd.Window;
 import org.vulkanb.eng.scene.Scene;
 
 public class Render {
 
-    private final Instance instance;
+    private final VkCtx vkCtx;
 
-    public Render(Window window, Scene scene) {
-        EngineProperties engProps = EngineProperties.getInstance();
-        instance = new Instance(engProps.isValidate());
+    public Render(EngCtx engCtx) {
+        vkCtx = new VkCtx();
     }
 
     public void cleanup() {
-        instance.cleanup();
+        vkCtx.cleanup();
     }
 
-    public void render(Window window, Scene scene) {
+    public void render(EngCtx engCtx) {
         // To be implemented
     }
 }

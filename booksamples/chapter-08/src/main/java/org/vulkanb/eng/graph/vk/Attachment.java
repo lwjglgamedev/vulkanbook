@@ -1,19 +1,17 @@
 package org.vulkanb.eng.graph.vk;
 
-import static org.lwjgl.vulkan.VK11.*;
+import static org.lwjgl.vulkan.VK13.*;
 
 public class Attachment {
 
     private final Image image;
     private final ImageView imageView;
-
     private boolean depthAttachment;
 
-    public Attachment(Device device, int width, int height, int format, int usage) {
-        Image.ImageData imageData = new Image.ImageData().width(width).height(height).
-                usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+    public Attachment(VkCtx vkCtx, int width, int height, int format, int usage) {
+        var imageData = new Image.ImageData().width(width).height(height).usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
                 format(format);
-        image = new Image(device, imageData);
+        image = new Image(vkCtx, imageData);
 
         int aspectMask = 0;
         if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
@@ -25,13 +23,13 @@ public class Attachment {
             depthAttachment = true;
         }
 
-        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
-        imageView = new ImageView(device, image.getVkImage(), imageViewData);
+        var imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
+        imageView = new ImageView(vkCtx.getDevice(), image.getVkImage(), imageViewData, depthAttachment);
     }
 
-    public void cleanup() {
-        imageView.cleanup();
-        image.cleanup();
+    public void cleanup(VkCtx vkCtx) {
+        imageView.cleanup(vkCtx.getDevice());
+        image.cleanup(vkCtx);
     }
 
     public Image getImage() {

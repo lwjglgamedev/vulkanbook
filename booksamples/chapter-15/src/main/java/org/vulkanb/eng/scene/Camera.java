@@ -4,13 +4,12 @@ import org.joml.*;
 
 public class Camera {
 
-    private Vector3f direction;
-    private boolean hasMoved;
-    private Vector3f position;
-    private Vector3f right;
-    private Vector2f rotation;
-    private Vector3f up;
-    private Matrix4f viewMatrix;
+    private final Vector3f direction;
+    private final Vector3f position;
+    private final Vector3f right;
+    private final Vector2f rotation;
+    private final Vector3f up;
+    private final Matrix4f viewMatrix;
 
     public Camera() {
         direction = new Vector3f();
@@ -32,10 +31,6 @@ public class Camera {
 
     public Matrix4f getViewMatrix() {
         return viewMatrix;
-    }
-
-    public boolean isHasMoved() {
-        return hasMoved;
     }
 
     public void moveBackwards(float inc) {
@@ -75,15 +70,10 @@ public class Camera {
     }
 
     private void recalculate() {
-        hasMoved = true;
         viewMatrix.identity()
                 .rotateX(rotation.x)
                 .rotateY(rotation.y)
                 .translate(-position.x, -position.y, -position.z);
-    }
-
-    public void setHasMoved(boolean hasMoved) {
-        this.hasMoved = hasMoved;
     }
 
     public void setPosition(float x, float y, float z) {

@@ -1,207 +1,223 @@
 package org.vulkanb.eng.graph;
 
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
-import org.vulkanb.eng.graph.animation.AnimationComputeActivity;
-import org.vulkanb.eng.graph.geometry.GeometryRenderActivity;
-import org.vulkanb.eng.graph.gui.GuiRenderActivity;
-import org.vulkanb.eng.graph.lighting.LightingRenderActivity;
-import org.vulkanb.eng.graph.shadows.ShadowRenderActivity;
+import org.vulkanb.eng.graph.gui.GuiRender;
+import org.vulkanb.eng.graph.light.LightRender;
+import org.vulkanb.eng.graph.post.PostRender;
+import org.vulkanb.eng.graph.scn.ScnRender;
+import org.vulkanb.eng.graph.shadow.ShadowRender;
+import org.vulkanb.eng.graph.swap.SwapChainRender;
 import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.*;
+import org.vulkanb.eng.model.*;
+import org.vulkanb.eng.wnd.Window;
 
 import java.util.*;
 
-import static org.lwjgl.vulkan.VK11.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+import static org.lwjgl.vulkan.VK13.*;
 
 public class Render {
 
-    private final AnimationComputeActivity animationComputeActivity;
-    private final CommandPool commandPool;
-    private final Device device;
-    private final GeometryRenderActivity geometryRenderActivity;
-    private final GlobalBuffers globalBuffers;
+    private final CmdBuffer[] cmdBuffers;
+    private final CmdPool[] cmdPools;
+    private final Fence[] fences;
     private final Queue.GraphicsQueue graphQueue;
-    private final GuiRenderActivity guiRenderActivity;
-    private final Instance instance;
-    private final LightingRenderActivity lightingRenderActivity;
-    private final PhysicalDevice physicalDevice;
-    private final PipelineCache pipelineCache;
+    private final GuiRender guiRender;
+    private final Semaphore[] imageAqSemphs;
+    private final LightRender lightRender;
+    private final MaterialsCache materialsCache;
+    private final ModelsCache modelsCache;
+    private final PostRender postRender;
     private final Queue.PresentQueue presentQueue;
-    private final ShadowRenderActivity shadowRenderActivity;
-    private final Surface surface;
+    private final Semaphore[] renderCompleteSemphs;
+    private final ScnRender scnRender;
+    private final ShadowRender shadowRender;
+    private final SwapChainRender swapChainRender;
     private final TextureCache textureCache;
-    private final List<VulkanModel> vulkanModels;
-    private CommandBuffer[] commandBuffers;
-    private long entitiesLoadedTimeStamp;
-    private Fence[] fences;
-    private SwapChain swapChain;
+    private final VkCtx vkCtx;
+    private int currentFrame;
+    private boolean resize;
 
-    public Render(Window window, Scene scene) {
-        EngineProperties engProps = EngineProperties.getInstance();
-        instance = new Instance(engProps.isValidate());
-        physicalDevice = PhysicalDevice.createPhysicalDevice(instance, engProps.getPhysDeviceName());
-        device = new Device(instance, physicalDevice);
-        surface = new Surface(physicalDevice, window.getWindowHandle());
-        graphQueue = new Queue.GraphicsQueue(device, 0);
-        presentQueue = new Queue.PresentQueue(device, surface, 0);
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
-                presentQueue, new Queue[]{graphQueue});
-        commandPool = new CommandPool(device, graphQueue.getQueueFamilyIndex());
-        pipelineCache = new PipelineCache(device);
-        vulkanModels = new ArrayList<>();
+    public Render(EngCtx engCtx) {
+        vkCtx = new VkCtx(engCtx.window());
+        currentFrame = 0;
+
+        graphQueue = new Queue.GraphicsQueue(vkCtx, 0);
+        presentQueue = new Queue.PresentQueue(vkCtx, 0);
+
+        cmdPools = new CmdPool[VkUtils.MAX_IN_FLIGHT];
+        cmdBuffers = new CmdBuffer[VkUtils.MAX_IN_FLIGHT];
+        fences = new Fence[VkUtils.MAX_IN_FLIGHT];
+        imageAqSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        renderCompleteSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
+            cmdPools[i] = new CmdPool(vkCtx, graphQueue.getQueueFamilyIndex(), false);
+            cmdBuffers[i] = new CmdBuffer(vkCtx, cmdPools[i], true, true);
+            fences[i] = new Fence(vkCtx, true);
+            imageAqSemphs[i] = new Semaphore(vkCtx);
+            renderCompleteSemphs[i] = new Semaphore(vkCtx);
+        }
+        resize = false;
+        scnRender = new ScnRender(vkCtx, engCtx);
+        shadowRender = new ShadowRender(vkCtx);
+        List<Attachment> attachments = new ArrayList<>(scnRender.getMrtAttachments().getColorAttachments());
+        attachments.add(shadowRender.getDepthAttachment());
+        lightRender = new LightRender(vkCtx, attachments);
+        postRender = new PostRender(vkCtx, lightRender.getAttachment());
+        guiRender = new GuiRender(engCtx, vkCtx, graphQueue, postRender.getAttachment());
+        swapChainRender = new SwapChainRender(vkCtx, postRender.getAttachment());
+        modelsCache = new ModelsCache();
         textureCache = new TextureCache();
-        globalBuffers = new GlobalBuffers(device);
-        geometryRenderActivity = new GeometryRenderActivity(swapChain, pipelineCache, scene, globalBuffers);
-        shadowRenderActivity = new ShadowRenderActivity(swapChain, pipelineCache, scene, globalBuffers);
-        List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
-        attachments.add(shadowRenderActivity.getDepthAttachment());
-        lightingRenderActivity = new LightingRenderActivity(swapChain, commandPool, pipelineCache, attachments, scene);
-        animationComputeActivity = new AnimationComputeActivity(commandPool, pipelineCache);
-        guiRenderActivity = new GuiRenderActivity(swapChain, commandPool, graphQueue, pipelineCache,
-                lightingRenderActivity.getLightingFrameBuffer().getLightingRenderPass().getVkRenderPass());
-        entitiesLoadedTimeStamp = 0;
-        createCommandBuffers();
-    }
-
-    private CommandBuffer acquireCurrentCommandBuffer() {
-        int idx = swapChain.getCurrentFrame();
-
-        Fence fence = fences[idx];
-        CommandBuffer commandBuffer = commandBuffers[idx];
-
-        fence.fenceWait();
-        fence.reset();
-
-        return commandBuffer;
+        materialsCache = new MaterialsCache();
     }
 
     public void cleanup() {
-        presentQueue.waitIdle();
-        graphQueue.waitIdle();
-        device.waitIdle();
-        textureCache.cleanup();
-        pipelineCache.cleanup();
-        guiRenderActivity.cleanup();
-        lightingRenderActivity.cleanup();
-        animationComputeActivity.cleanup();
-        shadowRenderActivity.cleanup();
-        geometryRenderActivity.cleanup();
-        Arrays.asList(commandBuffers).forEach(CommandBuffer::cleanup);
-        Arrays.asList(fences).forEach(Fence::cleanup);
-        commandPool.cleanup();
-        swapChain.cleanup();
-        surface.cleanup();
-        globalBuffers.cleanup();
-        device.cleanup();
-        physicalDevice.cleanup();
-        instance.cleanup();
-    }
+        vkCtx.getDevice().waitIdle();
 
-    private void createCommandBuffers() {
-        int numImages = swapChain.getNumImages();
-        commandBuffers = new CommandBuffer[numImages];
-        fences = new Fence[numImages];
+        scnRender.cleanup(vkCtx);
+        postRender.cleanup(vkCtx);
+        lightRender.cleanup(vkCtx);
+        guiRender.cleanup(vkCtx);
+        shadowRender.cleanup(vkCtx);
+        swapChainRender.cleanup(vkCtx);
 
-        for (int i = 0; i < numImages; i++) {
-            commandBuffers[i] = new CommandBuffer(commandPool, true, false);
-            fences[i] = new Fence(device, true);
+        modelsCache.cleanup(vkCtx);
+        textureCache.cleanup(vkCtx);
+        materialsCache.cleanup(vkCtx);
+
+        Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(fences).forEach(i -> i.cleanup(vkCtx));
+        for (int i = 0; i < cmdPools.length; i++) {
+            cmdBuffers[i].cleanup(vkCtx, cmdPools[i]);
+            cmdPools[i].cleanup(vkCtx);
         }
+
+        vkCtx.cleanup();
     }
 
-    public void loadModels(List<ModelData> modelDataList) {
-        Logger.debug("Loading {} model(s)", modelDataList.size());
-        vulkanModels.addAll(globalBuffers.loadModels(modelDataList, textureCache, commandPool, graphQueue));
-        Logger.debug("Loaded {} model(s)", modelDataList.size());
+    public void init(InitData initData) {
+        List<MaterialData> materials = initData.materials();
+        Logger.debug("Loading {} material(s)", materials.size());
+        materialsCache.loadMaterials(vkCtx, materials, textureCache, cmdPools[0], graphQueue);
+        Logger.debug("Loaded {} material(s)", materials.size());
 
-        geometryRenderActivity.loadModels(textureCache);
-        shadowRenderActivity.loadModels(textureCache);
-    }
-
-    private void recordCommands() {
-        int idx = 0;
-        for (CommandBuffer commandBuffer : commandBuffers) {
-            commandBuffer.reset();
-            commandBuffer.beginRecording();
-            geometryRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, idx);
-            shadowRenderActivity.recordCommandBuffer(commandBuffer, globalBuffers, idx);
-            commandBuffer.endRecording();
-            idx++;
+        List<GuiTexture> guiTextures = initData.guiTextures();
+        if (guiTextures != null) {
+            initData.guiTextures().forEach(e -> textureCache.addTexture(vkCtx, e.texturePath(), e.texturePath(),
+                    VK_FORMAT_R8G8B8A8_SRGB));
         }
+
+        Logger.debug("Transitioning textures");
+        textureCache.transitionTexts(vkCtx, cmdPools[0], graphQueue);
+        Logger.debug("Textures transitioned");
+
+        List<ModelData> models = initData.models();
+        Logger.debug("Loading {} model(s)", models.size());
+        modelsCache.loadModels(vkCtx, models, cmdPools[0], graphQueue);
+        Logger.debug("Loaded {} model(s)", models.size());
+
+        scnRender.loadMaterials(vkCtx, materialsCache, textureCache);
+        shadowRender.loadMaterials(vkCtx, materialsCache, textureCache);
+        guiRender.loadTextures(vkCtx, initData.guiTextures(), textureCache);
     }
 
-    public void render(Window window, Scene scene) {
-        if (entitiesLoadedTimeStamp < scene.getEntitiesLoadedTimeStamp()) {
-            entitiesLoadedTimeStamp = scene.getEntitiesLoadedTimeStamp();
-            device.waitIdle();
-            globalBuffers.loadEntities(vulkanModels, scene, commandPool, graphQueue, swapChain.getNumImages());
-            animationComputeActivity.onAnimatedEntitiesLoaded(globalBuffers);
-            recordCommands();
-        }
-        if (window.getWidth() <= 0 && window.getHeight() <= 0) {
+    private void recordingStart(CmdPool cmdPool, CmdBuffer cmdBuffer) {
+        cmdPool.reset(vkCtx);
+        cmdBuffer.beginRecording();
+    }
+
+    private void recordingStop(CmdBuffer cmdBuffer) {
+        cmdBuffer.endRecording();
+    }
+
+    public void render(EngCtx engCtx) {
+        SwapChain swapChain = vkCtx.getSwapChain();
+
+        waitForFence(currentFrame);
+
+        var cmdPool = cmdPools[currentFrame];
+        var cmdBuffer = cmdBuffers[currentFrame];
+
+        recordingStart(cmdPool, cmdBuffer);
+
+        scnRender.render(engCtx, vkCtx, cmdBuffer, modelsCache, materialsCache, currentFrame);
+        shadowRender.render(engCtx, vkCtx, cmdBuffer, modelsCache, materialsCache, currentFrame);
+        lightRender.render(engCtx, vkCtx, cmdBuffer, scnRender.getMrtAttachments(), shadowRender.getDepthAttachment(),
+                shadowRender.getCascadeShadows(currentFrame), currentFrame);
+        postRender.render(vkCtx, cmdBuffer, lightRender.getAttachment());
+        guiRender.render(vkCtx, cmdBuffer, currentFrame, postRender.getAttachment());
+
+        int imageIndex;
+        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
+            resize(engCtx);
             return;
         }
-        int imageIndex;
-        if (window.isResized() || (imageIndex = swapChain.acquireNextImage()) < 0) {
-            window.resetResized();
-            resize(window);
-            scene.getProjection().resize(window.getWidth(), window.getHeight());
-            imageIndex = swapChain.acquireNextImage();
+
+        swapChainRender.render(vkCtx, cmdBuffer, postRender.getAttachment(), imageIndex);
+
+        recordingStop(cmdBuffer);
+
+        submit(cmdBuffer, currentFrame);
+
+        resize = swapChain.presentImage(presentQueue, renderCompleteSemphs[currentFrame], imageIndex);
+
+        currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
+    }
+
+    private void resize(EngCtx engCtx) {
+        Window window = engCtx.window();
+        if (window.getWidth() == 0 && window.getHeight() == 0) {
+            return;
+        }
+        resize = false;
+        vkCtx.getDevice().waitIdle();
+
+        vkCtx.resize(window);
+
+        Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
+        for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
+            imageAqSemphs[i] = new Semaphore(vkCtx);
+            renderCompleteSemphs[i] = new Semaphore(vkCtx);
         }
 
-        globalBuffers.loadInstanceData(scene, vulkanModels, swapChain.getCurrentFrame());
+        VkExtent2D extent = vkCtx.getSwapChain().getSwapChainExtent();
+        engCtx.scene().getProjection().resize(extent.width(), extent.height());
 
-        if (globalBuffers.getAnimVerticesBuffer() != null) {
-            animationComputeActivity.recordCommandBuffer(globalBuffers);
-            animationComputeActivity.submit();
-        }
+        scnRender.resize(engCtx, vkCtx);
+        List<Attachment> attachments = new ArrayList<>(scnRender.getMrtAttachments().getColorAttachments());
+        attachments.add(shadowRender.getDepthAttachment());
+        lightRender.resize(vkCtx, attachments);
+        postRender.resize(vkCtx, lightRender.getAttachment());
+        guiRender.resize(vkCtx, postRender.getAttachment());
+        swapChainRender.resize(vkCtx, postRender.getAttachment());
+    }
 
-        CommandBuffer commandBuffer = acquireCurrentCommandBuffer();
-        geometryRenderActivity.render();
-        shadowRenderActivity.render();
-        submitSceneCommand(graphQueue, commandBuffer);
-
-        commandBuffer = lightingRenderActivity.beginRecording(shadowRenderActivity.getShadowCascades());
-        lightingRenderActivity.recordCommandBuffer(commandBuffer);
-        guiRenderActivity.recordCommandBuffer(scene, commandBuffer);
-        lightingRenderActivity.endRecording(commandBuffer);
-        lightingRenderActivity.submit(graphQueue);
-
-        if (swapChain.presentImage(presentQueue, imageIndex)) {
-            window.setResized(true);
+    private void submit(CmdBuffer cmdBuff, int currentFrame) {
+        try (var stack = MemoryStack.stackPush()) {
+            var fence = fences[currentFrame];
+            fence.reset(vkCtx);
+            var cmds = VkCommandBufferSubmitInfo.calloc(1, stack)
+                    .sType$Default()
+                    .commandBuffer(cmdBuff.getVkCommandBuffer());
+            VkSemaphoreSubmitInfo.Buffer waitSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
+                    .sType$Default()
+                    .stageMask(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
+                    .semaphore(imageAqSemphs[currentFrame].getVkSemaphore());
+            VkSemaphoreSubmitInfo.Buffer signalSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
+                    .sType$Default()
+                    .stageMask(VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT)
+                    .semaphore(renderCompleteSemphs[currentFrame].getVkSemaphore());
+            graphQueue.submit(cmds, waitSemphs, signalSemphs, fence);
         }
     }
 
-    private void resize(Window window) {
-        EngineProperties engProps = EngineProperties.getInstance();
-
-        device.waitIdle();
-        graphQueue.waitIdle();
-
-        swapChain.cleanup();
-
-        swapChain = new SwapChain(device, surface, window, engProps.getRequestedImages(), engProps.isvSync(),
-                presentQueue, new Queue[]{graphQueue});
-        geometryRenderActivity.resize(swapChain);
-        shadowRenderActivity.resize(swapChain);
-        recordCommands();
-        List<Attachment> attachments = new ArrayList<>(geometryRenderActivity.getAttachments());
-        attachments.add(shadowRenderActivity.getDepthAttachment());
-        lightingRenderActivity.resize(swapChain, attachments);
-        guiRenderActivity.resize(swapChain);
-    }
-
-    public void submitSceneCommand(Queue queue, CommandBuffer commandBuffer) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            int idx = swapChain.getCurrentFrame();
-            Fence currentFence = fences[idx];
-            SwapChain.SyncSemaphores syncSemaphores = swapChain.getSyncSemaphoresList()[idx];
-            queue.submit(stack.pointers(commandBuffer.getVkCommandBuffer()),
-                    stack.longs(syncSemaphores.imgAcquisitionSemaphore().getVkSemaphore()),
-                    stack.ints(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-                    stack.longs(syncSemaphores.geometryCompleteSemaphore().getVkSemaphore()), currentFence);
-        }
+    private void waitForFence(int currentFrame) {
+        var fence = fences[currentFrame];
+        fence.fenceWait(vkCtx);
     }
 }

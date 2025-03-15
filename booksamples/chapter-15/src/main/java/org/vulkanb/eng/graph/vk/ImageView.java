@@ -5,24 +5,27 @@ import org.lwjgl.vulkan.VkImageViewCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class ImageView {
 
     private final int aspectMask;
-    private final Device device;
+    private final boolean depthImage;
     private final int mipLevels;
+    private final long vkImage;
     private final long vkImageView;
 
-    public ImageView(Device device, long vkImage, ImageViewData imageViewData) {
-        this.device = device;
+    public ImageView(Device device, long vkImage, ImageViewData imageViewData, boolean depthImage) {
         this.aspectMask = imageViewData.aspectMask;
         this.mipLevels = imageViewData.mipLevels;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
+        this.vkImage = vkImage;
+        this.depthImage = depthImage;
+
+        try (var stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
-            VkImageViewCreateInfo viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
+            var viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
+                    .sType$Default()
                     .image(vkImage)
                     .viewType(imageViewData.viewType)
                     .format(imageViewData.format)
@@ -39,7 +42,7 @@ public class ImageView {
         }
     }
 
-    public void cleanup() {
+    public void cleanup(Device device) {
         vkDestroyImageView(device.getVkDevice(), vkImageView, null);
     }
 
@@ -51,8 +54,16 @@ public class ImageView {
         return mipLevels;
     }
 
+    public long getVkImage() {
+        return vkImage;
+    }
+
     public long getVkImageView() {
         return vkImageView;
+    }
+
+    public boolean isDepthImage() {
+        return depthImage;
     }
 
     public static class ImageViewData {

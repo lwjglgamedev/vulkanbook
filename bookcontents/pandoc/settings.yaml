@@ -19,6 +19,7 @@ input-files:
   - ./chapter-15/chapter-15.md
   - ./chapter-16/chapter-16.md
   - ./chapter-17/chapter-17.md
+  - ./chapter-18/chapter-18.md
   - ./appendix-01/appendix-01.md
   - ./appendix-02/appendix-02.md
 epub-cover-image: pandoc/cover.png
@@ -44,6 +45,7 @@ resource-path:
   - chapter-15  
   - chapter-16
   - chapter-17
+  - chapter-18
   - appendix-01
   - appendix-02
 toc: true

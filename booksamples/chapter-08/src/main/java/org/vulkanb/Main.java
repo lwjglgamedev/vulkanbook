@@ -3,12 +3,12 @@ package org.vulkanb;
 import org.joml.Vector3f;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
-import org.vulkanb.eng.graph.Render;
+import org.vulkanb.eng.model.*;
 import org.vulkanb.eng.scene.*;
 
 import java.util.*;
 
-public class Main implements IAppLogic {
+public class Main implements IGameLogic {
 
     private final Vector3f rotatingAngle = new Vector3f(1, 1, 1);
     private float angle = 0;
@@ -16,9 +16,9 @@ public class Main implements IAppLogic {
 
     public static void main(String[] args) {
         Logger.info("Starting application");
-
-        Engine engine = new Engine("Vulkan Book", new Main());
-        engine.start();
+        var engine = new Engine("Vulkan Book", new Main());
+        Logger.info("Started application");
+        engine.run();
     }
 
     @Override
@@ -27,27 +27,27 @@ public class Main implements IAppLogic {
     }
 
     @Override
-    public void init(Window window, Scene scene, Render render) {
-        List<ModelData> modelDataList = new ArrayList<>();
+    public InitData init(EngCtx engCtx) {
+        Scene scene = engCtx.scene();
+        List<ModelData> models = new ArrayList<>();
 
-        String modelId = "CubeModel";
-        ModelData modelData = ModelLoader.loadModel(modelId, "resources/models/cube/cube.obj",
-                "resources/models/cube");
-        modelDataList.add(modelData);
-        cubeEntity = new Entity("CubeEntity", modelId, new Vector3f(0.0f, 0.0f, 0.0f));
-        cubeEntity.setPosition(0, 0, -2);
+        ModelData cubeModel = ModelLoader.loadModel("resources/models/cube/cube.json");
+        models.add(cubeModel);
+        cubeEntity = new Entity("CubeEntity", cubeModel.id(), new Vector3f(0.0f, 0.0f, -2.0f));
         scene.addEntity(cubeEntity);
 
-        render.loadModels(modelDataList);
+        List<MaterialData> materials = new ArrayList<>(ModelLoader.loadMaterials("resources/models/cube/cube_mat.json"));
+
+        return new InitData(models, materials);
     }
 
     @Override
-    public void input(Window window, Scene scene, long diffTimeMillis) {
+    public void input(EngCtx engCtx, long diffTimeMillis) {
         // To be implemented
     }
 
     @Override
-    public void update(Window window, Scene scene, long diffTimeMillis) {
+    public void update(EngCtx engCtx, long diffTimeMillis) {
         angle += 1.0f;
         if (angle >= 360) {
             angle = angle - 360;

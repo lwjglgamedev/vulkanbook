@@ -1,82 +1,59 @@
 package org.vulkanb.eng;
 
-import imgui.*;
-import org.joml.Vector2f;
 import org.vulkanb.eng.graph.Render;
-import org.vulkanb.eng.graph.gui.GuiRenderActivity;
 import org.vulkanb.eng.scene.Scene;
+import org.vulkanb.eng.sound.SoundManager;
+import org.vulkanb.eng.wnd.Window;
 
 public class Engine {
 
-    private final IAppLogic appLogic;
+    private final EngCtx engCtx;
+    private final IGameLogic gameLogic;
     private final Render render;
-    private final Scene scene;
-    private final Window window;
-    private boolean running;
 
-    public Engine(String windowTitle, IAppLogic appLogic) {
-        this.appLogic = appLogic;
-        window = new Window(windowTitle, new GuiRenderActivity.KeyCallback(), new GuiRenderActivity.CharCallBack());
-        scene = new Scene(window);
-        render = new Render(window, scene);
-        appLogic.init(window, scene, render);
+    public Engine(String windowTitle, IGameLogic appLogic) {
+        this.gameLogic = appLogic;
+        var window = new Window(windowTitle);
+        engCtx = new EngCtx(window, new Scene(window), new SoundManager());
+        render = new Render(engCtx);
+        InitData initData = gameLogic.init(engCtx);
+        render.init(engCtx, initData);
     }
 
     private void cleanup() {
-        appLogic.cleanup();
+        gameLogic.cleanup();
         render.cleanup();
-        window.cleanup();
-    }
-
-    private boolean handleInputGui() {
-        ImGuiIO imGuiIO = ImGui.getIO();
-        MouseInput mouseInput = window.getMouseInput();
-        Vector2f mousePos = mouseInput.getCurrentPos();
-        imGuiIO.addMousePosEvent(mousePos.x, mousePos.y);
-        imGuiIO.addMouseButtonEvent(0, mouseInput.isLeftButtonPressed());
-        imGuiIO.addMouseButtonEvent(1, mouseInput.isRightButtonPressed());
-
-        return imGuiIO.getWantCaptureMouse() || imGuiIO.getWantCaptureKeyboard();
+        engCtx.cleanup();
     }
 
     public void run() {
-        EngineProperties engineProperties = EngineProperties.getInstance();
+        EngCfg engineProperties = EngCfg.getInstance();
         long initialTime = System.currentTimeMillis();
         float timeU = 1000.0f / engineProperties.getUps();
         double deltaUpdate = 0;
 
         long updateTime = initialTime;
-        while (running && !window.shouldClose()) {
-            scene.getCamera().setHasMoved(false);
-            window.pollEvents();
-
+        Window window = engCtx.window();
+        while (!window.shouldClose()) {
             long now = System.currentTimeMillis();
             deltaUpdate += (now - initialTime) / timeU;
 
-            boolean inputConsumed = handleInputGui();
-            appLogic.input(window, scene, now - initialTime, inputConsumed);
+            window.pollEvents();
+            gameLogic.input(engCtx, now - initialTime);
+            window.resetInput();
 
             if (deltaUpdate >= 1) {
                 long diffTimeMilis = now - updateTime;
-                appLogic.update(window, scene, diffTimeMilis);
+                gameLogic.update(engCtx, diffTimeMilis);
                 updateTime = now;
                 deltaUpdate--;
             }
 
-            render.render(window, scene);
+            render.render(engCtx);
 
             initialTime = now;
         }
 
         cleanup();
-    }
-
-    public void start() {
-        running = true;
-        run();
-    }
-
-    public void stop() {
-        running = false;
     }
 }

@@ -62,6 +62,16 @@
             <artifactId>joml</artifactId>
             <version>${joml.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.jcommander</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>${jcommander.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
 
         <!-- Natives -->
         <dependency>

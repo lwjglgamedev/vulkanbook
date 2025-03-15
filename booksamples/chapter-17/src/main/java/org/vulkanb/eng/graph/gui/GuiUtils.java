@@ -1,6 +1,8 @@
 package org.vulkanb.eng.graph.gui;
 
+import imgui.*;
 import imgui.flag.ImGuiKey;
+import org.lwjgl.glfw.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -9,7 +11,7 @@ public class GuiUtils {
         // Utility class
     }
 
-    static int getImKey(int key) {
+    private static int getImKey(int key) {
         return switch (key) {
             case GLFW_KEY_TAB -> ImGuiKey.Tab;
             case GLFW_KEY_LEFT -> ImGuiKey.LeftArrow;
@@ -118,5 +120,32 @@ public class GuiUtils {
             case GLFW_KEY_F12 -> ImGuiKey.F12;
             default -> ImGuiKey.None;
         };
+    }
+
+
+    public static class CharCallBack implements GLFWCharCallbackI {
+        @Override
+        public void invoke(long windowHandle, int c) {
+            ImGuiIO io = ImGui.getIO();
+            if (!io.getWantCaptureKeyboard()) {
+                return;
+            }
+            io.addInputCharacter(c);
+        }
+    }
+
+    public static class KeyCallback implements GLFWKeyCallbackI {
+        @Override
+        public void invoke(long windowHandle, int key, int scancode, int action, int mods) {
+            ImGuiIO io = ImGui.getIO();
+            if (!io.getWantCaptureKeyboard()) {
+                return;
+            }
+            if (action == GLFW_PRESS) {
+                io.addKeyEvent(getImKey(key), true);
+            } else if (action == GLFW_RELEASE) {
+                io.addKeyEvent(getImKey(key), false);
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 package org.vulkanb.eng.scene;
 
-import org.vulkanb.eng.Window;
+import org.vulkanb.eng.wnd.Window;
 
 public class Scene {
 

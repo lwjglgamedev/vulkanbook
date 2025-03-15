@@ -1,11 +1,12 @@
 package org.vulkanb.eng.graph;
 
-import org.vulkanb.eng.Window;
+import org.vulkanb.eng.EngCtx;
+import org.vulkanb.eng.wnd.Window;
 import org.vulkanb.eng.scene.Scene;
 
 public class Render {
 
-    public Render(Window window, Scene scene) {
+    public Render(EngCtx engCtx) {
         // To be implemented
     }
 
@@ -13,7 +14,7 @@ public class Render {
         // To be implemented
     }
 
-    public void render(Window window, Scene scene) {
+    public void render(EngCtx engCtx) {
         // To be implemented
     }
 }

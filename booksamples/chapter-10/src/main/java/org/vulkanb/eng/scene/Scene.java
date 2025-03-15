@@ -1,28 +1,25 @@
 package org.vulkanb.eng.scene;
 
-import org.vulkanb.eng.Window;
+import org.vulkanb.eng.EngCfg;
+import org.vulkanb.eng.wnd.Window;
 
 import java.util.*;
 
 public class Scene {
 
-    private Camera camera;
-    private Map<String, List<Entity>> entitiesMap;
-    private Projection projection;
+    private final Camera camera;
+    private final List<Entity> entities;
+    private final Projection projection;
 
     public Scene(Window window) {
-        entitiesMap = new HashMap<>();
-        projection = new Projection();
-        projection.resize(window.getWidth(), window.getHeight());
+        entities = new ArrayList<>();
+        var engCfg = EngCfg.getInstance();
+        projection = new Projection(engCfg.getFov(), engCfg.getZNear(), engCfg.getZFar(), window.getWidth(),
+                window.getHeight());
         camera = new Camera();
     }
 
     public void addEntity(Entity entity) {
-        List<Entity> entities = entitiesMap.get(entity.getModelId());
-        if (entities == null) {
-            entities = new ArrayList<>();
-            entitiesMap.put(entity.getModelId(), entities);
-        }
         entities.add(entity);
     }
 
@@ -30,12 +27,8 @@ public class Scene {
         return camera;
     }
 
-    public List<Entity> getEntitiesByModelId(String modelId) {
-        return entitiesMap.get(modelId);
-    }
-
-    public Map<String, List<Entity>> getEntitiesMap() {
-        return entitiesMap;
+    public List<Entity> getEntities() {
+        return entities;
     }
 
     public Projection getProjection() {
@@ -43,13 +36,10 @@ public class Scene {
     }
 
     public void removeAllEntities() {
-        entitiesMap.clear();
+        entities.clear();
     }
 
     public void removeEntity(Entity entity) {
-        List<Entity> entities = entitiesMap.get(entity.getModelId());
-        if (entities != null) {
-            entities.removeIf(e -> e.getId().equals(entity.getId()));
-        }
+        entities.removeIf(entity1 -> entity1.getId().equals(entity.getId()));
     }
 }

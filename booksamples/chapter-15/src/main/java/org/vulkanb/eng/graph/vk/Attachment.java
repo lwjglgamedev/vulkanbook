@@ -1,46 +1,38 @@
 package org.vulkanb.eng.graph.vk;
 
-import static org.lwjgl.vulkan.VK11.*;
+import static org.lwjgl.vulkan.VK13.*;
 
 public class Attachment {
 
-    private final boolean depthAttachment;
     private final Image image;
     private final ImageView imageView;
 
-    public Attachment(Image image, ImageView imageView, boolean depthAttachment) {
-        this.image = image;
-        this.imageView = imageView;
-        this.depthAttachment = depthAttachment;
-    }
+    private boolean depthAttachment;
 
-    public Attachment(Device device, int width, int height, int format, int usage) {
-        Image.ImageData imageData = new Image.ImageData().width(width).height(height).
-                usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+    public Attachment(VkCtx vkCtx, int width, int height, int format, int usage) {
+        var imageData = new Image.ImageData().width(width).height(height).
                 format(format);
-        image = new Image(device, imageData);
 
-        int aspectMask = calcAspectMask(usage);
-        depthAttachment = aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;
-
-        ImageView.ImageViewData imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
-        imageView = new ImageView(device, image.getVkImage(), imageViewData);
-    }
-
-    public static int calcAspectMask(int usage) {
         int aspectMask = 0;
         if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            imageData.usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            depthAttachment = false;
         }
         if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) {
+            imageData.usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT);
             aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            depthAttachment = true;
         }
-        return aspectMask;
+        image = new Image(vkCtx, imageData);
+
+        var imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
+        imageView = new ImageView(vkCtx.getDevice(), image.getVkImage(), imageViewData, depthAttachment);
     }
 
-    public void cleanup() {
-        imageView.cleanup();
-        image.cleanup();
+    public void cleanup(VkCtx vkCtx) {
+        imageView.cleanup(vkCtx.getDevice());
+        image.cleanup(vkCtx);
     }
 
     public Image getImage() {

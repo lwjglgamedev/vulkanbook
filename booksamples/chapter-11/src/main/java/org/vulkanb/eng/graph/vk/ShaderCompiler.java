@@ -2,6 +2,7 @@ package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.util.shaderc.Shaderc;
 import org.tinylog.Logger;
+import org.vulkanb.eng.EngCfg;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -21,7 +22,12 @@ public class ShaderCompiler {
         try {
             compiler = Shaderc.shaderc_compiler_initialize();
             options = Shaderc.shaderc_compile_options_initialize();
-
+            if (EngCfg.getInstance().isDebugShaders()) {
+                Shaderc.shaderc_compile_options_set_generate_debug_info(options);
+                Shaderc.shaderc_compile_options_set_optimization_level(options, 0);
+                Shaderc.shaderc_compile_options_set_source_language(options, Shaderc.shaderc_source_language_glsl);
+            }
+            
             long result = Shaderc.shaderc_compile_into_spv(
                     compiler,
                     shaderCode,
@@ -49,11 +55,11 @@ public class ShaderCompiler {
     public static void compileShaderIfChanged(String glsShaderFile, int shaderType) {
         byte[] compiledShader;
         try {
-            File glslFile = new File(glsShaderFile);
-            File spvFile = new File(glsShaderFile + ".spv");
+            var glslFile = new File(glsShaderFile);
+            var spvFile = new File(glsShaderFile + ".spv");
             if (!spvFile.exists() || glslFile.lastModified() > spvFile.lastModified()) {
                 Logger.debug("Compiling [{}] to [{}]", glslFile.getPath(), spvFile.getPath());
-                String shaderCode = new String(Files.readAllBytes(glslFile.toPath()));
+                var shaderCode = new String(Files.readAllBytes(glslFile.toPath()));
 
                 compiledShader = compileShader(shaderCode, shaderType);
                 Files.write(spvFile.toPath(), compiledShader);

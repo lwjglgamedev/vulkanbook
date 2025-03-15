@@ -5,21 +5,29 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 
-import static org.lwjgl.vulkan.VK11.*;
+import java.nio.IntBuffer;
+
+import static org.lwjgl.vulkan.VK13.*;
 
 public class Queue {
 
+    private final int queueFamilyIndex;
     private final VkQueue vkQueue;
 
-    public Queue(Device device, int queueFamilyIndex, int queueIndex) {
+    public Queue(VkCtx vkCtx, int queueFamilyIndex, int queueIndex) {
         Logger.debug("Creating queue");
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
+        this.queueFamilyIndex = queueFamilyIndex;
+        try (var stack = MemoryStack.stackPush()) {
             PointerBuffer pQueue = stack.mallocPointer(1);
-            vkGetDeviceQueue(device.getVkDevice(), queueFamilyIndex, queueIndex, pQueue);
+            vkGetDeviceQueue(vkCtx.getDevice().getVkDevice(), queueFamilyIndex, queueIndex, pQueue);
             long queue = pQueue.get(0);
-            vkQueue = new VkQueue(queue, device.getVkDevice());
+            vkQueue = new VkQueue(queue, vkCtx.getDevice().getVkDevice());
         }
+    }
+
+    public int getQueueFamilyIndex() {
+        return queueFamilyIndex;
     }
 
     public VkQueue getVkQueue() {
@@ -32,14 +40,13 @@ public class Queue {
 
     public static class GraphicsQueue extends Queue {
 
-        public GraphicsQueue(Device device, int queueIndex) {
-            super(device, getGraphicsQueueFamilyIndex(device), queueIndex);
+        public GraphicsQueue(VkCtx vkCtx, int queueIndex) {
+            super(vkCtx, getGraphicsQueueFamilyIndex(vkCtx), queueIndex);
         }
 
-        private static int getGraphicsQueueFamilyIndex(Device device) {
+        private static int getGraphicsQueueFamilyIndex(VkCtx vkCtx) {
             int index = -1;
-            PhysicalDevice physicalDevice = device.getPhysicalDevice();
-            VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
+            var queuePropsBuff = vkCtx.getPhysDevice().getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
             for (int i = 0; i < numQueuesFamilies; i++) {
                 VkQueueFamilyProperties props = queuePropsBuff.get(i);
@@ -52,6 +59,36 @@ public class Queue {
 
             if (index < 0) {
                 throw new RuntimeException("Failed to get graphics Queue family index");
+            }
+            return index;
+        }
+    }
+
+    public static class PresentQueue extends Queue {
+
+        public PresentQueue(VkCtx vkCtx, int queueIndex) {
+            super(vkCtx, getPresentQueueFamilyIndex(vkCtx), queueIndex);
+        }
+
+        private static int getPresentQueueFamilyIndex(VkCtx vkCtx) {
+            int index = -1;
+            try (var stack = MemoryStack.stackPush()) {
+                var queuePropsBuff = vkCtx.getPhysDevice().getVkQueueFamilyProps();
+                int numQueuesFamilies = queuePropsBuff.capacity();
+                IntBuffer intBuff = stack.mallocInt(1);
+                for (int i = 0; i < numQueuesFamilies; i++) {
+                    KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR(vkCtx.getPhysDevice().getVkPhysicalDevice(),
+                            i, vkCtx.getSurface().getVkSurface(), intBuff);
+                    boolean supportsPresentation = intBuff.get(0) == VK_TRUE;
+                    if (supportsPresentation) {
+                        index = i;
+                        break;
+                    }
+                }
+            }
+
+            if (index < 0) {
+                throw new RuntimeException("Failed to get Presentation Queue family index");
             }
             return index;
         }

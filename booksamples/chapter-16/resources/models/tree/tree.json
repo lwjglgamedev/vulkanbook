@@ -1,0 +1,23 @@
+{
+  "id": "tree",
+  "meshes": [
+    {
+      "id": "trunk_0",
+      "material_id": "tree-mat-1",
+      "offset_vtx": 0,
+      "vtx_size": 571648,
+      "offset_idx": 0,
+      "idx_size": 157920
+    },
+    {
+      "id": "leaf_maple_1",
+      "material_id": "tree-mat-2",
+      "offset_vtx": 571648,
+      "vtx_size": 1112832,
+      "offset_idx": 157920,
+      "idx_size": 119232
+    }
+  ],
+  "vtx_path": "resources/models/tree/tree.vtx",
+  "idx_path": "resources/models/tree/tree.idx"
+}

@@ -1,29 +1,30 @@
 package org.vulkanb.eng.graph.vk;
 
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.*;
+import org.lwjgl.util.vma.VmaAllocationCreateInfo;
+import org.lwjgl.vulkan.VkImageCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.util.vma.Vma.*;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class Image {
 
-    private final Device device;
+    private final long allocation;
     private final int format;
     private final int mipLevels;
     private final long vkImage;
-    private final long vkMemory;
 
-    public Image(Device device, ImageData imageData) {
-        this.device = device;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
+    public Image(VkCtx vkCtx, ImageData imageData) {
+        try (var stack = MemoryStack.stackPush()) {
             this.format = imageData.format;
             this.mipLevels = imageData.mipLevels;
 
             VkImageCreateInfo imageCreateInfo = VkImageCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
+                    .sType$Default()
                     .imageType(VK_IMAGE_TYPE_2D)
                     .format(format)
                     .extent(it -> it
@@ -39,34 +40,23 @@ public class Image {
                     .tiling(VK_IMAGE_TILING_OPTIMAL)
                     .usage(imageData.usage);
 
+            VmaAllocationCreateInfo allocCreateInfo = VmaAllocationCreateInfo.calloc(1, stack)
+                    .get(0)
+                    .usage(VMA_MEMORY_USAGE_AUTO)
+                    .flags(imageData.memUsage)
+                    .priority(1.0f);
+
+            PointerBuffer pAllocation = stack.callocPointer(1);
             LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateImage(device.getVkDevice(), imageCreateInfo, null, lp), "Failed to create image");
+            vkCheck(vmaCreateImage(vkCtx.getMemAlloc().getVmaAlloc(), imageCreateInfo, allocCreateInfo, lp, pAllocation, null),
+                    "Failed to create image");
             vkImage = lp.get(0);
-
-            // Get memory requirements for this object
-            VkMemoryRequirements memReqs = VkMemoryRequirements.calloc(stack);
-            vkGetImageMemoryRequirements(device.getVkDevice(), vkImage, memReqs);
-
-            // Select memory size and type
-            VkMemoryAllocateInfo memAlloc = VkMemoryAllocateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
-                    .allocationSize(memReqs.size())
-                    .memoryTypeIndex(VulkanUtils.memoryTypeFromProperties(device.getPhysicalDevice(),
-                            memReqs.memoryTypeBits(), 0));
-
-            // Allocate memory
-            vkCheck(vkAllocateMemory(device.getVkDevice(), memAlloc, null, lp), "Failed to allocate memory");
-            vkMemory = lp.get(0);
-
-            // Bind memory
-            vkCheck(vkBindImageMemory(device.getVkDevice(), vkImage, vkMemory, 0),
-                    "Failed to bind image memory");
+            allocation = pAllocation.get(0);
         }
     }
 
-    public void cleanup() {
-        vkDestroyImage(device.getVkDevice(), vkImage, null);
-        vkFreeMemory(device.getVkDevice(), vkMemory, null);
+    public void cleanup(VkCtx vkCtx) {
+        vmaDestroyImage(vkCtx.getMemAlloc().getVmaAlloc(), vkImage, allocation);
     }
 
     public int getFormat() {
@@ -81,24 +71,22 @@ public class Image {
         return vkImage;
     }
 
-    public long getVkMemory() {
-        return vkMemory;
-    }
-
     public static class ImageData {
         private int arrayLayers;
         private int format;
         private int height;
+        private int memUsage;
         private int mipLevels;
         private int sampleCount;
         private int usage;
         private int width;
 
         public ImageData() {
-            this.format = VK_FORMAT_R8G8B8A8_SRGB;
-            this.mipLevels = 1;
-            this.sampleCount = 1;
-            this.arrayLayers = 1;
+            format = VK_FORMAT_R8G8B8A8_SRGB;
+            mipLevels = 1;
+            sampleCount = 1;
+            arrayLayers = 1;
+            memUsage = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
         }
 
         public ImageData arrayLayers(int arrayLayers) {
@@ -113,6 +101,11 @@ public class Image {
 
         public ImageData height(int height) {
             this.height = height;
+            return this;
+        }
+
+        public ImageData memUsage(int memUsage) {
+            this.memUsage = memUsage;
             return this;
         }
 

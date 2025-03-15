@@ -1,24 +1,40 @@
 package org.vulkanb.eng.scene;
 
 import org.joml.Matrix4f;
-import org.vulkanb.eng.EngineProperties;
 
 public class Projection {
 
-    private Matrix4f projectionMatrix;
+    private final float fov;
+    private final Matrix4f projectionMatrix;
+    private final float zFar;
+    private final float zNear;
 
-    public Projection() {
+    public Projection(float fov, float zNear, float zFar, int width, int height) {
+        this.fov = fov;
+        this.zNear = zNear;
+        this.zFar = zFar;
         projectionMatrix = new Matrix4f();
+        resize(width, height);
+    }
+
+    public float getFov() {
+        return fov;
     }
 
     public Matrix4f getProjectionMatrix() {
         return projectionMatrix;
     }
 
+    public float getZFar() {
+        return zFar;
+    }
+
+    public float getZNear() {
+        return zNear;
+    }
+
     public void resize(int width, int height) {
-        EngineProperties engProps = EngineProperties.getInstance();
         projectionMatrix.identity();
-        projectionMatrix.perspective(engProps.getFov(), (float) width / (float) height,
-                engProps.getZNear(), engProps.getZFar(), true);
+        projectionMatrix.perspective(fov, (float) width / (float) height, zNear, zFar, true);
     }
 }

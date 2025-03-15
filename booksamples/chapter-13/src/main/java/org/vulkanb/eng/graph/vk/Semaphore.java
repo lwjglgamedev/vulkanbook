@@ -5,29 +5,26 @@ import org.lwjgl.vulkan.VkSemaphoreCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class Semaphore {
 
-    private final Device device;
     private final long vkSemaphore;
 
-    public Semaphore(Device device) {
-        this.device = device;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSemaphoreCreateInfo semaphoreCreateInfo = VkSemaphoreCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO);
+    public Semaphore(VkCtx vkCtx) {
+        try (var stack = MemoryStack.stackPush()) {
+            var semaphoreCreateInfo = VkSemaphoreCreateInfo.calloc(stack).sType$Default();
 
             LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateSemaphore(device.getVkDevice(), semaphoreCreateInfo, null, lp),
+            vkCheck(vkCreateSemaphore(vkCtx.getDevice().getVkDevice(), semaphoreCreateInfo, null, lp),
                     "Failed to create semaphore");
             vkSemaphore = lp.get(0);
         }
     }
 
-    public void cleanup() {
-        vkDestroySemaphore(device.getVkDevice(), vkSemaphore, null);
+    public void cleanup(VkCtx vkCtx) {
+        vkDestroySemaphore(vkCtx.getDevice().getVkDevice(), vkSemaphore, null);
     }
 
     public long getVkSemaphore() {

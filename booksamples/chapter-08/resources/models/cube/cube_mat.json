@@ -1,0 +1,22 @@
+[
+  {
+    "id": "cube-mat-0",
+    "texture_path": "",
+    "diffuse_color": {
+      "x": 0.6,
+      "y": 0.6,
+      "z": 0.6,
+      "w": 1.0
+    }
+  },
+  {
+    "id": "cube-mat-1",
+    "texture_path": "resources\\models\\cube\\cube.png",
+    "diffuse_color": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "w": 1.0
+    }
+  }
+]

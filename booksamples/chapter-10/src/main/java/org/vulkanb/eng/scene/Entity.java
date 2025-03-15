@@ -4,11 +4,11 @@ import org.joml.*;
 
 public class Entity {
 
-    private String id;
-    private String modelId;
-    private Matrix4f modelMatrix;
-    private Vector3f position;
-    private Quaternionf rotation;
+    private final String id;
+    private final String modelId;
+    private final Matrix4f modelMatrix;
+    private final Vector3f position;
+    private final Quaternionf rotation;
     private float scale;
 
     public Entity(String id, String modelId, Vector3f position) {

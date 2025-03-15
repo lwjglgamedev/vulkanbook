@@ -7,23 +7,23 @@ import org.tinylog.Logger;
 
 import java.nio.*;
 
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class Queue {
 
     private final int queueFamilyIndex;
     private final VkQueue vkQueue;
 
-    public Queue(Device device, int queueFamilyIndex, int queueIndex) {
+    public Queue(VkCtx vkCtx, int queueFamilyIndex, int queueIndex) {
         Logger.debug("Creating queue");
 
         this.queueFamilyIndex = queueFamilyIndex;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
+        try (var stack = MemoryStack.stackPush()) {
             PointerBuffer pQueue = stack.mallocPointer(1);
-            vkGetDeviceQueue(device.getVkDevice(), queueFamilyIndex, queueIndex, pQueue);
+            vkGetDeviceQueue(vkCtx.getDevice().getVkDevice(), queueFamilyIndex, queueIndex, pQueue);
             long queue = pQueue.get(0);
-            vkQueue = new VkQueue(queue, device.getVkDevice());
+            vkQueue = new VkQueue(queue, vkCtx.getDevice().getVkDevice());
         }
     }
 
@@ -35,23 +35,19 @@ public class Queue {
         return vkQueue;
     }
 
-    public void submit(PointerBuffer commandBuffers, LongBuffer waitSemaphores, IntBuffer dstStageMasks,
-                       LongBuffer signalSemaphores, Fence fence) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkSubmitInfo submitInfo = VkSubmitInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_SUBMIT_INFO)
-                    .pCommandBuffers(commandBuffers)
-                    .pSignalSemaphores(signalSemaphores);
+    public void submit(VkCommandBufferSubmitInfo.Buffer commandBuffers, VkSemaphoreSubmitInfo.Buffer waitSemaphores,
+                       VkSemaphoreSubmitInfo.Buffer signalSemaphores, Fence fence) {
+        try (var stack = MemoryStack.stackPush()) {
+            var submitInfo = VkSubmitInfo2.calloc(1, stack)
+                    .sType$Default()
+                    .pCommandBufferInfos(commandBuffers)
+                    .pSignalSemaphoreInfos(signalSemaphores);
             if (waitSemaphores != null) {
-                submitInfo.waitSemaphoreCount(waitSemaphores.capacity())
-                        .pWaitSemaphores(waitSemaphores)
-                        .pWaitDstStageMask(dstStageMasks);
-            } else {
-                submitInfo.waitSemaphoreCount(0);
+                submitInfo.pWaitSemaphoreInfos(waitSemaphores);
             }
             long fenceHandle = fence != null ? fence.getVkFence() : VK_NULL_HANDLE;
 
-            vkCheck(vkQueueSubmit(vkQueue, submitInfo, fenceHandle),
+            vkCheck(vkQueueSubmit2(vkQueue, submitInfo, fenceHandle),
                     "Failed to submit command to queue");
         }
     }
@@ -62,14 +58,13 @@ public class Queue {
 
     public static class GraphicsQueue extends Queue {
 
-        public GraphicsQueue(Device device, int queueIndex) {
-            super(device, getGraphicsQueueFamilyIndex(device), queueIndex);
+        public GraphicsQueue(VkCtx vkCtx, int queueIndex) {
+            super(vkCtx, getGraphicsQueueFamilyIndex(vkCtx), queueIndex);
         }
 
-        private static int getGraphicsQueueFamilyIndex(Device device) {
+        private static int getGraphicsQueueFamilyIndex(VkCtx vkCtx) {
             int index = -1;
-            PhysicalDevice physicalDevice = device.getPhysicalDevice();
-            VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
+            var queuePropsBuff = vkCtx.getPhysDevice().getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
             for (int i = 0; i < numQueuesFamilies; i++) {
                 VkQueueFamilyProperties props = queuePropsBuff.get(i);
@@ -89,20 +84,19 @@ public class Queue {
 
     public static class PresentQueue extends Queue {
 
-        public PresentQueue(Device device, Surface surface, int queueIndex) {
-            super(device, getPresentQueueFamilyIndex(device, surface), queueIndex);
+        public PresentQueue(VkCtx vkCtx, int queueIndex) {
+            super(vkCtx, getPresentQueueFamilyIndex(vkCtx), queueIndex);
         }
 
-        private static int getPresentQueueFamilyIndex(Device device, Surface surface) {
+        private static int getPresentQueueFamilyIndex(VkCtx vkCtx) {
             int index = -1;
-            try (MemoryStack stack = MemoryStack.stackPush()) {
-                PhysicalDevice physicalDevice = device.getPhysicalDevice();
-                VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
+            try (var stack = MemoryStack.stackPush()) {
+                var queuePropsBuff = vkCtx.getPhysDevice().getVkQueueFamilyProps();
                 int numQueuesFamilies = queuePropsBuff.capacity();
                 IntBuffer intBuff = stack.mallocInt(1);
                 for (int i = 0; i < numQueuesFamilies; i++) {
-                    KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.getVkPhysicalDevice(),
-                            i, surface.getVkSurface(), intBuff);
+                    KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR(vkCtx.getPhysDevice().getVkPhysicalDevice(),
+                            i, vkCtx.getSurface().getVkSurface(), intBuff);
                     boolean supportsPresentation = intBuff.get(0) == VK_TRUE;
                     if (supportsPresentation) {
                         index = i;

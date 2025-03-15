@@ -1,0 +1,27 @@
+#version 450
+
+layout(location = 0) in vec3 inPos;
+layout(location = 1) in vec2 inTextCoords;
+
+layout(location = 0) out vec2 outTextCoords;
+layout(location = 1) out flat uint outMaterialIdx;
+
+layout(set = 0, binding = 0) uniform ProjUniform {
+    mat4 matrix;
+} projUniform;
+layout(set = 1, binding = 0) uniform ViewUniform {
+    mat4 matrix;
+} viewUniform;
+
+layout(push_constant) uniform matrices {
+    mat4 modelMatrix;
+    uint materialIdx;
+} push_constants;
+
+void main()
+{
+    gl_Position    = projUniform.matrix * viewUniform.matrix * push_constants.modelMatrix * vec4(inPos, 1);
+    outTextCoords  = inTextCoords;
+    outMaterialIdx = push_constants.materialIdx;
+}
+

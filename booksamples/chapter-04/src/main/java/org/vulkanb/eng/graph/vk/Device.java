@@ -9,86 +9,88 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.vulkan.KHRPortabilitySubset.VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME;
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class Device {
-
-    private final PhysicalDevice physicalDevice;
     private final VkDevice vkDevice;
 
-    public Device(PhysicalDevice physicalDevice) {
+    public Device(PhysDevice physDevice) {
         Logger.debug("Creating device");
 
-        this.physicalDevice = physicalDevice;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-
-            // Define required extensions
-            Set<String> deviceExtensions = getDeviceExtensions();
-            boolean usePortability = deviceExtensions.contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) && VulkanUtils.getOS() == VulkanUtils.OSType.MACOS;
-            int numExtensions = usePortability ? 2 : 1;
-            PointerBuffer requiredExtensions = stack.mallocPointer(numExtensions);
-            requiredExtensions.put(stack.ASCII(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME));
-            if (usePortability) {
-                requiredExtensions.put(stack.ASCII(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
-            }
-            requiredExtensions.flip();
+        try (var stack = MemoryStack.stackPush()) {
+            PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
             // Set up required features
-            VkPhysicalDeviceFeatures features = VkPhysicalDeviceFeatures.calloc(stack);
+            var features = VkPhysicalDeviceFeatures.calloc(stack);
 
             // Enable all the queue families
-            VkQueueFamilyProperties.Buffer queuePropsBuff = physicalDevice.getVkQueueFamilyProps();
+            var queuePropsBuff = physDevice.getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
-            VkDeviceQueueCreateInfo.Buffer queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
+            var queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
             for (int i = 0; i < numQueuesFamilies; i++) {
                 FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
                 queueCreationInfoBuf.get(i)
-                        .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
+                        .sType$Default()
                         .queueFamilyIndex(i)
                         .pQueuePriorities(priorities);
             }
 
-            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
-                    .ppEnabledExtensionNames(requiredExtensions)
+            var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
+                    .sType$Default()
+                    .ppEnabledExtensionNames(reqExtensions)
                     .pEnabledFeatures(features)
                     .pQueueCreateInfos(queueCreationInfoBuf);
 
             PointerBuffer pp = stack.mallocPointer(1);
-            vkCheck(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),
+            vkCheck(vkCreateDevice(physDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),
                     "Failed to create device");
-            vkDevice = new VkDevice(pp.get(0), physicalDevice.getVkPhysicalDevice(), deviceCreateInfo);
+            vkDevice = new VkDevice(pp.get(0), physDevice.getVkPhysicalDevice(), deviceCreateInfo);
         }
     }
 
-    public void cleanup() {
-        Logger.debug("Destroying Vulkan device");
-        vkDestroyDevice(vkDevice, null);
+    private static PointerBuffer createReqExtensions(PhysDevice physDevice, MemoryStack stack) {
+        Set<String> deviceExtensions = getDeviceExtensions(physDevice);
+        boolean usePortability = deviceExtensions.contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) && VkUtils.getOS() == VkUtils.OSType.MACOS;
+
+        var extsList = new ArrayList<ByteBuffer>();
+        for (String extension : PhysDevice.REQUIRED_EXTENSIONS) {
+            extsList.add(stack.ASCII(extension));
+        }
+        if (usePortability) {
+            extsList.add(stack.ASCII(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME));
+        }
+
+        PointerBuffer requiredExtensions = stack.mallocPointer(extsList.size());
+        extsList.forEach(requiredExtensions::put);
+        requiredExtensions.flip();
+
+        return requiredExtensions;
     }
 
-    private Set<String> getDeviceExtensions() {
+    private static Set<String> getDeviceExtensions(PhysDevice physDevice) {
         Set<String> deviceExtensions = new HashSet<>();
-        try (MemoryStack stack = MemoryStack.stackPush()) {
+        try (var stack = MemoryStack.stackPush()) {
             IntBuffer numExtensionsBuf = stack.callocInt(1);
-            vkEnumerateDeviceExtensionProperties(physicalDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, null);
+            vkEnumerateDeviceExtensionProperties(physDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, null);
             int numExtensions = numExtensionsBuf.get(0);
-            Logger.debug("Device supports [{}] extensions", numExtensions);
+            Logger.trace("Device supports [{}] extensions", numExtensions);
 
-            VkExtensionProperties.Buffer propsBuff = VkExtensionProperties.calloc(numExtensions, stack);
-            vkEnumerateDeviceExtensionProperties(physicalDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
+            var propsBuff = VkExtensionProperties.calloc(numExtensions, stack);
+            vkEnumerateDeviceExtensionProperties(physDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
             for (int i = 0; i < numExtensions; i++) {
                 VkExtensionProperties props = propsBuff.get(i);
                 String extensionName = props.extensionNameString();
                 deviceExtensions.add(extensionName);
-                Logger.debug("Supported device extension [{}]", extensionName);
+                Logger.trace("Supported device extension [{}]", extensionName);
             }
         }
         return deviceExtensions;
     }
 
-    public PhysicalDevice getPhysicalDevice() {
-        return physicalDevice;
+    public void cleanup() {
+        Logger.debug("Destroying Vulkan device");
+        vkDestroyDevice(vkDevice, null);
     }
 
     public VkDevice getVkDevice() {

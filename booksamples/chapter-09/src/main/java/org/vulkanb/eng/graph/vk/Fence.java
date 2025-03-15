@@ -5,42 +5,39 @@ import org.lwjgl.vulkan.VkFenceCreateInfo;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class Fence {
 
-    private final Device device;
     private final long vkFence;
 
-    public Fence(Device device, boolean signaled) {
-        this.device = device;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkFenceCreateInfo fenceCreateInfo = VkFenceCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
+    public Fence(VkCtx vkCtx, boolean signaled) {
+        try (var stack = MemoryStack.stackPush()) {
+           var fenceCreateInfo = VkFenceCreateInfo.calloc(stack)
+                    .sType$Default()
                     .flags(signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0);
 
             LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateFence(device.getVkDevice(), fenceCreateInfo, null, lp),
+            vkCheck(vkCreateFence(vkCtx.getDevice().getVkDevice(), fenceCreateInfo, null, lp),
                     "Failed to create semaphore");
             vkFence = lp.get(0);
         }
     }
 
-    public void cleanup() {
-        vkDestroyFence(device.getVkDevice(), vkFence, null);
+    public void cleanup(VkCtx vkCtx) {
+        vkDestroyFence(vkCtx.getDevice().getVkDevice(), vkFence, null);
     }
 
-    public void fenceWait() {
-        vkWaitForFences(device.getVkDevice(), vkFence, true, Long.MAX_VALUE);
+    public void fenceWait(VkCtx vkCtx) {
+        vkWaitForFences(vkCtx.getDevice().getVkDevice(), vkFence, true, Long.MAX_VALUE);
     }
 
     public long getVkFence() {
         return vkFence;
     }
 
-    public void reset() {
-        vkResetFences(device.getVkDevice(), vkFence);
+    public void reset(VkCtx vkCtx) {
+        vkResetFences(vkCtx.getDevice().getVkDevice(), vkFence);
     }
-
 }

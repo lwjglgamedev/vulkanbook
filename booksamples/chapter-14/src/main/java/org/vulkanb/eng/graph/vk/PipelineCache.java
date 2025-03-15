@@ -6,20 +6,16 @@ import org.tinylog.Logger;
 
 import java.nio.LongBuffer;
 
-import static org.lwjgl.vulkan.VK11.*;
-import static org.vulkanb.eng.graph.vk.VulkanUtils.vkCheck;
+import static org.lwjgl.vulkan.VK13.*;
+import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class PipelineCache {
-
-    private final Device device;
     private final long vkPipelineCache;
 
     public PipelineCache(Device device) {
         Logger.debug("Creating pipeline cache");
-        this.device = device;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkPipelineCacheCreateInfo createInfo = VkPipelineCacheCreateInfo.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
+        try (var stack = MemoryStack.stackPush()) {
+            var createInfo = VkPipelineCacheCreateInfo.calloc(stack).sType$Default();
 
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreatePipelineCache(device.getVkDevice(), createInfo, null, lp),
@@ -28,13 +24,9 @@ public class PipelineCache {
         }
     }
 
-    public void cleanup() {
+    public void cleanup(Device device) {
         Logger.debug("Destroying pipeline cache");
         vkDestroyPipelineCache(device.getVkDevice(), vkPipelineCache, null);
-    }
-
-    public Device getDevice() {
-        return device;
     }
 
     public long getVkPipelineCache() {
