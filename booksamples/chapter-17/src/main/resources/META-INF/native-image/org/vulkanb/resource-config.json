@@ -1,0 +1,10 @@
+{
+  "resources":{
+  "includes":[
+    { "pattern":"\\Qeng.properties\\E" },
+	{ "pattern":"\\Qtinylog.properties\\E" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/(lwjgl.dll|liblwjgl.so|liblwjgl.dylib)$" },
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/glfw/(glfw.dll|libglfw.so|libglfw.dylib)$" }
+	]},
+  "bundles":[]
+}
