@@ -16,6 +16,8 @@ The book itself is also hosted in [GitHub](https://github.com/lwjglgamedev/vulka
 
 The source code of the samples of this book is in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples).
 
+> [!NOTE] A new version is on the way, you can check now source code in this [branch](https://github.com/lwjglgamedev/vulkanbook/tree/test/booksamples). It uses dynamic render, contains major changes in several areas such as materials, descriptor sets, and overall architecture and adds new examples for ray tracing. Code will change and documentation is not started yet, however it may be worth it to have a look at it.
+
 ## EPUB version
 
 An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents/vulkanbook.epub).
