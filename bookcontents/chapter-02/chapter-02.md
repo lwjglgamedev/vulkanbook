@@ -26,7 +26,7 @@ So let's start by coding the constructor, which starts like this:
 public class Instance {
     ...
     public Instance(boolean validate) {
-        LOGGER.debug("Creating Vulkan instance");
+        Logger.debug("Creating Vulkan instance");
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ...
         }
