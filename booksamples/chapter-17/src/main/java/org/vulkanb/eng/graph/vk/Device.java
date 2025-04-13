@@ -25,7 +25,9 @@ public class Device {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
             // Set up required features
-            var features = VkPhysicalDeviceFeatures.calloc(stack);
+            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
+            var features = features2.features();
+
             VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
             samplerAnisotropy = supportedFeatures.samplerAnisotropy();
             if (samplerAnisotropy) {
@@ -47,25 +49,22 @@ public class Device {
                         .pQueuePriorities(priorities);
             }
 
-            VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendFeature = VkPhysicalDeviceDynamicRenderingFeaturesKHR.calloc(stack)
+            var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
                     .sType$Default()
-                    .dynamicRendering(true);
+                    .scalarBlockLayout(true);
 
-            VkPhysicalDeviceSynchronization2Features sync2Feature = VkPhysicalDeviceSynchronization2Features.calloc(stack)
+            var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
                     .sType$Default()
+                    .dynamicRendering(true)
                     .synchronization2(true);
 
-            VkPhysicalDeviceScalarBlockLayoutFeatures scalarBlockFeature = VkPhysicalDeviceScalarBlockLayoutFeatures.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES)
-                    .scalarBlockLayout(true);
+            features2.pNext(features12.address());
+            features12.pNext(features13.address());
 
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()
-                    .pNext(dynRendFeature)
-                    .pNext(sync2Feature)
-                    .pNext(scalarBlockFeature)
+                    .pNext(features2.address())
                     .ppEnabledExtensionNames(reqExtensions)
-                    .pEnabledFeatures(features)
                     .pQueueCreateInfos(queueCreationInfoBuf);
 
             PointerBuffer pp = stack.mallocPointer(1);

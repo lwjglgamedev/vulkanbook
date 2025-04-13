@@ -4,12 +4,15 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
+import org.vulkanb.eng.graph.anim.AnimRender;
 import org.vulkanb.eng.graph.gui.GuiRender;
+import org.vulkanb.eng.graph.light.LightRender;
 import org.vulkanb.eng.graph.post.PostRender;
-import org.vulkanb.eng.graph.ray.RtRender;
+import org.vulkanb.eng.graph.scn.ScnRender;
+import org.vulkanb.eng.graph.shadow.ShadowRender;
 import org.vulkanb.eng.graph.swap.SwapChainRender;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.*;
 import org.vulkanb.eng.wnd.Window;
 
@@ -19,18 +22,23 @@ import static org.lwjgl.vulkan.VK13.*;
 
 public class Render {
 
+    private final AnimRender animRender;
+    private final AnimationsCache animationsCache;
     private final CmdBuffer[] cmdBuffers;
     private final CmdPool[] cmdPools;
     private final Fence[] fences;
+    private final GlobalBuffers globalBuffers;
     private final Queue.GraphicsQueue graphQueue;
     private final GuiRender guiRender;
     private final Semaphore[] imageAqSemphs;
+    private final LightRender lightRender;
     private final MaterialsCache materialsCache;
     private final ModelsCache modelsCache;
     private final PostRender postRender;
     private final Queue.PresentQueue presentQueue;
     private final Semaphore[] renderCompleteSemphs;
-    private final RtRender rtRender;
+    private final ScnRender scnRender;
+    private final ShadowRender shadowRender;
     private final SwapChainRender swapChainRender;
     private final TextureCache textureCache;
     private final VkCtx vkCtx;
@@ -57,26 +65,38 @@ public class Render {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         resize = false;
-        rtRender = new RtRender(vkCtx, engCtx.scene());
-        postRender = new PostRender(vkCtx, rtRender.getAttColor());
+        scnRender = new ScnRender(vkCtx, engCtx);
+        shadowRender = new ShadowRender(vkCtx);
+        List<Attachment> attachments = new ArrayList<>(scnRender.getMrtAttachments().getColorAttachments());
+        attachments.add(shadowRender.getDepthAttachment());
+        lightRender = new LightRender(vkCtx, attachments);
+        postRender = new PostRender(vkCtx, lightRender.getAttachment());
         guiRender = new GuiRender(engCtx, vkCtx, graphQueue, postRender.getAttachment());
         swapChainRender = new SwapChainRender(vkCtx, postRender.getAttachment());
+        animRender = new AnimRender(vkCtx);
         modelsCache = new ModelsCache();
         textureCache = new TextureCache();
         materialsCache = new MaterialsCache();
+        animationsCache = new AnimationsCache();
+        globalBuffers = new GlobalBuffers();
     }
 
     public void cleanup() {
         vkCtx.getDevice().waitIdle();
 
+        globalBuffers.cleanup(vkCtx);
+        animRender.cleanup(vkCtx);
+        scnRender.cleanup(vkCtx);
         postRender.cleanup(vkCtx);
-        rtRender.cleanup(vkCtx);
+        lightRender.cleanup(vkCtx);
         guiRender.cleanup(vkCtx);
+        shadowRender.cleanup(vkCtx);
         swapChainRender.cleanup(vkCtx);
 
         modelsCache.cleanup(vkCtx);
         textureCache.cleanup(vkCtx);
         materialsCache.cleanup(vkCtx);
+        animationsCache.cleanup(vkCtx);
 
         Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
         Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
@@ -110,9 +130,13 @@ public class Render {
         modelsCache.loadModels(vkCtx, models, cmdPools[0], graphQueue);
         Logger.debug("Loaded {} model(s)", models.size());
 
-        rtRender.loadModels(engCtx, vkCtx, modelsCache, materialsCache, cmdPools[0], graphQueue);
-        rtRender.loadMaterials(vkCtx, materialsCache, textureCache);
+        scnRender.loadMaterials(vkCtx, materialsCache, textureCache);
+        shadowRender.loadMaterials(vkCtx, materialsCache, textureCache);
         guiRender.loadTextures(vkCtx, initData.guiTextures(), textureCache);
+        animationsCache.loadAnimations(vkCtx, engCtx.scene().getEntities(), modelsCache);
+        animRender.loadModels(vkCtx, modelsCache, engCtx.scene().getEntities(), animationsCache);
+
+        globalBuffers.loadEntities(vkCtx, engCtx.scene(), modelsCache, animationsCache);
     }
 
     private void recordingStart(CmdPool cmdPool, CmdBuffer cmdBuffer) {
@@ -132,10 +156,17 @@ public class Render {
         var cmdPool = cmdPools[currentFrame];
         var cmdBuffer = cmdBuffers[currentFrame];
 
+        animRender.render(engCtx, vkCtx, modelsCache);
+
         recordingStart(cmdPool, cmdBuffer);
 
-        rtRender.render(engCtx, vkCtx, cmdPool, graphQueue, cmdBuffer, currentFrame);
-        postRender.render(vkCtx, cmdBuffer, rtRender.getAttColor());
+        globalBuffers.update(vkCtx, engCtx.scene(), modelsCache, materialsCache, animationsCache, currentFrame);
+
+        scnRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentFrame);
+        shadowRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentFrame);
+        lightRender.render(engCtx, vkCtx, cmdBuffer, scnRender.getMrtAttachments(), shadowRender.getDepthAttachment(),
+                shadowRender.getCascadeShadows(currentFrame), currentFrame);
+        postRender.render(vkCtx, cmdBuffer, lightRender.getAttachment());
         guiRender.render(vkCtx, cmdBuffer, currentFrame, postRender.getAttachment());
 
         int imageIndex;
@@ -155,7 +186,6 @@ public class Render {
         currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
     }
 
-    // TODO: Resize RT render
     private void resize(EngCtx engCtx) {
         Window window = engCtx.window();
         if (window.getWidth() == 0 && window.getHeight() == 0) {
@@ -176,8 +206,11 @@ public class Render {
         VkExtent2D extent = vkCtx.getSwapChain().getSwapChainExtent();
         engCtx.scene().getProjection().resize(extent.width(), extent.height());
 
-        rtRender.resize(vkCtx, engCtx);
-        postRender.resize(vkCtx, rtRender.getAttColor());
+        scnRender.resize(engCtx, vkCtx);
+        List<Attachment> attachments = new ArrayList<>(scnRender.getMrtAttachments().getColorAttachments());
+        attachments.add(shadowRender.getDepthAttachment());
+        lightRender.resize(vkCtx, attachments);
+        postRender.resize(vkCtx, lightRender.getAttachment());
         guiRender.resize(vkCtx, postRender.getAttachment());
         swapChainRender.resize(vkCtx, postRender.getAttachment());
     }

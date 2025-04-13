@@ -14,7 +14,6 @@ public class ImageView {
     private final boolean depthImage;
     private final int layerCount;
     private final int mipLevels;
-    private final int usage;
     private final long vkImage;
     private final long vkImageView;
 
@@ -24,7 +23,6 @@ public class ImageView {
         this.vkImage = vkImage;
         this.depthImage = depthImage;
         this.layerCount = imageViewData.layerCount;
-        this.usage = imageViewData.usage;
 
         try (var stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
@@ -62,10 +60,6 @@ public class ImageView {
         return mipLevels;
     }
 
-    public int getUsage() {
-        return usage;
-    }
-
     public long getVkImage() {
         return vkImage;
     }
@@ -84,7 +78,6 @@ public class ImageView {
         private int format;
         private int layerCount;
         private int mipLevels;
-        private int usage;
         private int viewType;
 
         public ImageViewData() {
@@ -92,7 +85,6 @@ public class ImageView {
             this.layerCount = 1;
             this.mipLevels = 1;
             this.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            this.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         }
 
         public ImageView.ImageViewData aspectMask(int aspectMask) {
@@ -117,11 +109,6 @@ public class ImageView {
 
         public ImageView.ImageViewData mipLevels(int mipLevels) {
             this.mipLevels = mipLevels;
-            return this;
-        }
-
-        public ImageView.ImageViewData usage(int usage) {
-            this.usage = usage;
             return this;
         }
 

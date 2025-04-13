@@ -6,7 +6,11 @@ This [online book](bookcontents/) will introduce the main concepts required to w
 
 We will use [LWJGL](http://www.lwjgl.org/) as the Java library which provides the required bindings to use Vulkan and any other required APIs. This book is the result of my self learning language, that I think it may help the community.
 
-![Sample screen shot](./bookcontents/chapter-13/screen-shot.png)
+![Sample screen shot](./bookcontents/chapter-13/rc13-screen-shot.png)
+
+> [!NOTE]
+> This is a new version which tries to use modern Vulkan features, such us dynamic rendering, BDA, ray tracing, etc. Therfore, Vulkan 1.3 is requiered. If you want ato access previous version,
+> just go the [legacy branch](TBD).
 
 ## Book Code
 
@@ -16,9 +20,13 @@ The book itself is also hosted in [GitHub](https://github.com/lwjglgamedev/vulka
 
 The source code of the samples of this book is in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples).
 
+## EPUB version
+
+An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents/vulkanbook.epub).
+
 ## Support
 
-If you like the book please rate it with a start and share it. If you want to contribute with a donation you can do a donation: [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5MH9AA9TPQQBN)
+If you like the book you can become a [sponsor](https://github.com/sponsors/lwjglgamedev)
 
 ## Comments are welcome
 
@@ -39,3 +47,4 @@ To all the readers that have contributed with corrections, improvements and idea
 - [Mjrlun](https://github.com/Mjrlun)
 - [Rongcui Dong](https://github.com/rongcuid)
 - [James Roome](https://github.com/RefuX)
+- [Illithidek](https://github.com/Illithidek)

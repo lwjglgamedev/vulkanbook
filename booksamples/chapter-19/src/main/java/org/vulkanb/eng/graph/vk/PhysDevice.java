@@ -8,9 +8,6 @@ import org.tinylog.Logger;
 import java.nio.IntBuffer;
 import java.util.*;
 
-import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
-import static org.lwjgl.vulkan.KHRDeferredHostOperations.VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME;
-import static org.lwjgl.vulkan.KHRRayTracingPipeline.VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME;
 import static org.lwjgl.vulkan.VK13.*;
 import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
@@ -20,13 +17,8 @@ public class PhysDevice {
     static {
         REQUIRED_EXTENSIONS = new HashSet<>();
         REQUIRED_EXTENSIONS.add(KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-        REQUIRED_EXTENSIONS.add(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-        REQUIRED_EXTENSIONS.add(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-        REQUIRED_EXTENSIONS.add(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
     }
 
-    private final VkPhysicalDeviceAccelerationStructurePropertiesKHR accelerationProperties;
-    private final VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingProperties;
     private final VkExtensionProperties.Buffer vkDeviceExtensions;
     private final VkPhysicalDeviceMemoryProperties vkMemoryProperties;
     private final VkPhysicalDevice vkPhysicalDevice;
@@ -41,14 +33,7 @@ public class PhysDevice {
             IntBuffer intBuffer = stack.mallocInt(1);
 
             // Get device properties
-            rayTracingProperties = VkPhysicalDeviceRayTracingPipelinePropertiesKHR
-                    .calloc()
-                    .sType$Default();
-            accelerationProperties = VkPhysicalDeviceAccelerationStructurePropertiesKHR.calloc()
-                    .sType$Default();
-            vkPhysicalDeviceProperties = VkPhysicalDeviceProperties2.calloc().sType$Default()
-                    .pNext(rayTracingProperties)
-                    .pNext(accelerationProperties);
+            vkPhysicalDeviceProperties = VkPhysicalDeviceProperties2.calloc().sType$Default();
             vkGetPhysicalDeviceProperties2(vkPhysicalDevice, vkPhysicalDeviceProperties);
 
             // Get device extensions
@@ -147,21 +132,11 @@ public class PhysDevice {
         vkPhysicalDeviceFeatures.free();
         vkQueueFamilyProps.free();
         vkDeviceExtensions.free();
-        rayTracingProperties.free();
         vkPhysicalDeviceProperties.free();
-        accelerationProperties.free();
-    }
-
-    public VkPhysicalDeviceAccelerationStructurePropertiesKHR getAccelerationProperties() {
-        return accelerationProperties;
     }
 
     public String getDeviceName() {
         return vkPhysicalDeviceProperties.properties().deviceNameString();
-    }
-
-    public VkPhysicalDeviceRayTracingPipelinePropertiesKHR getRayTracingProperties() {
-        return rayTracingProperties;
     }
 
     public VkPhysicalDeviceMemoryProperties getVkMemoryProperties() {

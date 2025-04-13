@@ -6,8 +6,8 @@ import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 import org.vulkanb.eng.EngCfg;
 import org.vulkanb.eng.graph.scn.VtxBuffStruct;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.*;
 import org.vulkanb.eng.scene.*;
 
@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.function.Predicate;
 
 import static org.lwjgl.util.vma.Vma.*;
-import static org.lwjgl.vulkan.VK11.*;
+import static org.lwjgl.vulkan.VK13.*;
 import static org.vulkanb.eng.graph.vk.VkUtils.*;
 
 // TODO: Check if we can use Models cache
@@ -162,47 +162,45 @@ public class GlobalBuffers {
                     }
                 }
             }
-            if (bufferOffset == 0) {
+            numAnimIndirectCommands = indexedIndirectCommandList.size();
+            if (bufferOffset == 0 || numAnimIndirectCommands == 0) {
                 return;
             }
             animVerticesBuffer = new VkBuffer(vkCtx, bufferOffset,
                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                     VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
 
-            numAnimIndirectCommands = indexedIndirectCommandList.size();
-            if (numAnimIndirectCommands > 0) {
-                cmd.beginRecording();
+            cmd.beginRecording();
 
-                var indirectStgBuffer = new StgByteBuffer(vkCtx, (long) IND_COMMAND_STRIDE * numAnimIndirectCommands);
-                if (animIndirectBuffer != null) {
-                    animIndirectBuffer.cleanup(vkCtx);
-                }
-                animIndirectBuffer = new VkBuffer(vkCtx, indirectStgBuffer.stgVkBuffer.getRequestedSize(),
-                        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                        VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
-                ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
-                VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
-
-                indexedIndirectCommandList.forEach(indCommandBuffer::put);
-
-                if (animInstanceDataBuffers != null) {
-                    Arrays.asList(animInstanceDataBuffers).forEach(b -> b.cleanup(vkCtx));
-                }
-                animInstanceDataBuffers = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
-                for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
-                    animInstanceDataBuffers[i] = new VkBuffer(vkCtx,
-                            (long) numAnimIndirectCommands * (MAT4X4_SIZE + INT_SIZE), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                            VMA_MEMORY_USAGE_AUTO,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-                }
-
-                indirectStgBuffer.recordTransferCommand(cmd, animIndirectBuffer);
-
-                cmd.endRecording();
-                cmd.submitAndWait(vkCtx, queue);
-                cmd.cleanup(vkCtx, cmdPool);
-                indirectStgBuffer.cleanup(vkCtx);
+            var indirectStgBuffer = new StgByteBuffer(vkCtx, (long) IND_COMMAND_STRIDE * numAnimIndirectCommands);
+            if (animIndirectBuffer != null) {
+                animIndirectBuffer.cleanup(vkCtx);
             }
+            animIndirectBuffer = new VkBuffer(vkCtx, indirectStgBuffer.stgVkBuffer.getRequestedSize(),
+                    VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+            ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
+            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
+
+            indexedIndirectCommandList.forEach(indCommandBuffer::put);
+
+            if (animInstanceDataBuffers != null) {
+                Arrays.asList(animInstanceDataBuffers).forEach(b -> b.cleanup(vkCtx));
+            }
+            animInstanceDataBuffers = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
+            for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
+                animInstanceDataBuffers[i] = new VkBuffer(vkCtx,
+                        (long) numAnimIndirectCommands * (MAT4X4_SIZE + INT_SIZE), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        VMA_MEMORY_USAGE_AUTO,
+                        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            }
+
+            indirectStgBuffer.recordTransferCommand(cmd, animIndirectBuffer);
+
+            cmd.endRecording();
+            cmd.submitAndWait(vkCtx, queue);
+            cmd.cleanup(vkCtx, cmdPool);
+            indirectStgBuffer.cleanup(vkCtx);
         }
     }
 
@@ -415,38 +413,39 @@ public class GlobalBuffers {
                     numInstances += entities.size();
                 }
             }
-            if (numIndirectCommands > 0) {
-                cmd.beginRecording();
-
-                var indirectStgBuffer = new StgByteBuffer(vkCtx, (long) IND_COMMAND_STRIDE * numIndirectCommands);
-                if (indirectBuffer != null) {
-                    indirectBuffer.cleanup(vkCtx);
-                }
-                indirectBuffer = new VkBuffer(vkCtx, indirectStgBuffer.stgVkBuffer.getRequestedSize(),
-                        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                        VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
-                ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
-                VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
-
-                indexedIndirectCommandList.forEach(indCommandBuffer::put);
-
-                if (instanceDataBuffers != null) {
-                    Arrays.asList(instanceDataBuffers).forEach(b -> b.cleanup(vkCtx));
-                }
-                instanceDataBuffers = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
-                for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
-                    instanceDataBuffers[i] = new VkBuffer(vkCtx, (long) numInstances * (MAT4X4_SIZE + INT_SIZE),
-                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-                }
-
-                indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
-
-                cmd.endRecording();
-                cmd.submitAndWait(vkCtx, queue);
-                cmd.cleanup(vkCtx, cmdPool);
-                indirectStgBuffer.cleanup(vkCtx);
+            if (numIndirectCommands == 0) {
+                return;
             }
+            cmd.beginRecording();
+
+            var indirectStgBuffer = new StgByteBuffer(vkCtx, (long) IND_COMMAND_STRIDE * numIndirectCommands);
+            if (indirectBuffer != null) {
+                indirectBuffer.cleanup(vkCtx);
+            }
+            indirectBuffer = new VkBuffer(vkCtx, indirectStgBuffer.stgVkBuffer.getRequestedSize(),
+                    VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+            ByteBuffer dataBuffer = indirectStgBuffer.getDataBuffer();
+            VkDrawIndexedIndirectCommand.Buffer indCommandBuffer = new VkDrawIndexedIndirectCommand.Buffer(dataBuffer);
+
+            indexedIndirectCommandList.forEach(indCommandBuffer::put);
+
+            if (instanceDataBuffers != null) {
+                Arrays.asList(instanceDataBuffers).forEach(b -> b.cleanup(vkCtx));
+            }
+            instanceDataBuffers = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
+            for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
+                instanceDataBuffers[i] = new VkBuffer(vkCtx, (long) numInstances * (MAT4X4_SIZE + INT_SIZE),
+                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            }
+
+            indirectStgBuffer.recordTransferCommand(cmd, indirectBuffer);
+
+            cmd.endRecording();
+            cmd.submitAndWait(vkCtx, queue);
+            cmd.cleanup(vkCtx, cmdPool);
+            indirectStgBuffer.cleanup(vkCtx);
         }
     }
 

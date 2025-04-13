@@ -25,16 +25,38 @@ public class Device {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
             // Set up required features
-            var features = VkPhysicalDeviceFeatures.calloc(stack);
             VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
             samplerAnisotropy = supportedFeatures.samplerAnisotropy();
+
+            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
+            var features = features2.features();
             if (samplerAnisotropy) {
                 features.samplerAnisotropy(true);
             }
             features.geometryShader(true);
             depthClamp = supportedFeatures.depthClamp();
             features.depthClamp(depthClamp);
+            features.multiDrawIndirect(true);
             features.shaderInt64(true);
+
+            var features11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
+                    .sType$Default()
+                    .shaderDrawParameters(true);
+
+            var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
+                    .sType$Default()
+                    .bufferDeviceAddress(true)
+                    .runtimeDescriptorArray(true)
+                    .scalarBlockLayout(true);
+
+            var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
+                    .sType$Default()
+                    .dynamicRendering(true)
+                    .synchronization2(true);
+
+            features2.pNext(features11.address());
+            features11.pNext(features12.address());
+            features12.pNext(features13.address());
 
             // Enable all the queue families
             var queuePropsBuff = physDevice.getVkQueueFamilyProps();
@@ -48,38 +70,11 @@ public class Device {
                         .pQueuePriorities(priorities);
             }
 
-            VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendFeature = VkPhysicalDeviceDynamicRenderingFeaturesKHR.calloc(stack)
-                    .sType$Default()
-                    .dynamicRendering(true);
-
-            VkPhysicalDeviceSynchronization2Features sync2Feature = VkPhysicalDeviceSynchronization2Features.calloc(stack)
-                    .sType$Default()
-                    .synchronization2(true);
-
-            VkPhysicalDeviceScalarBlockLayoutFeatures scalarBlockFeature = VkPhysicalDeviceScalarBlockLayoutFeatures.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES)
-                    .scalarBlockLayout(true);
-
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()
-                    .pNext(dynRendFeature)
-                    .pNext(sync2Feature)
-                    .pNext(scalarBlockFeature)
+                    .pNext(features2.address())
                     .ppEnabledExtensionNames(reqExtensions)
-                    .pEnabledFeatures(features)
-                    .pQueueCreateInfos(queueCreationInfoBuf)
-                    .pNext(VkPhysicalDeviceRayTracingPipelineFeaturesKHR
-                            .calloc(stack)
-                            .sType$Default()
-                            .rayTracingPipeline(true))
-                    .pNext(VkPhysicalDeviceAccelerationStructureFeaturesKHR
-                            .calloc(stack)
-                            .sType$Default()
-                            .accelerationStructure(true))
-                    .pNext(VkPhysicalDeviceBufferDeviceAddressFeaturesKHR
-                            .calloc(stack)
-                            .sType$Default()
-                            .bufferDeviceAddress(true));
+                    .pQueueCreateInfos(queueCreationInfoBuf);
 
             PointerBuffer pp = stack.mallocPointer(1);
             vkCheck(vkCreateDevice(physDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),

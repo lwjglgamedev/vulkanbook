@@ -21,12 +21,12 @@ public class Main implements IGameLogic {
     }
 
     @Override
-    public void input(EngCtx engCtx, long diffTimeMillis) {
+    public void init(EngCtx engCtx) {
         // To be implemented
     }
 
     @Override
-    public void init(EngCtx engCtx) {
+    public void input(EngCtx engCtx, long diffTimeMillis) {
         // To be implemented
     }
 

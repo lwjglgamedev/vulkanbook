@@ -6,7 +6,6 @@ import org.vulkanb.eng.EngCfg;
 
 import java.util.*;
 
-import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class DescAllocator {
@@ -29,12 +28,8 @@ public class DescAllocator {
         VkPhysicalDeviceLimits limits = physDevice.getVkPhysicalDeviceProperties().properties().limits();
         Map<Integer, Integer> descLimits = new HashMap<>();
         descLimits.put(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Math.min(maxDescs, limits.maxDescriptorSetUniformBuffers()));
-        descLimits.put(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Math.min(maxDescs, limits.maxDescriptorSetUniformBuffers()));
         descLimits.put(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Math.min(maxDescs, limits.maxDescriptorSetSamplers()));
         descLimits.put(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, Math.min(maxDescs, limits.maxDescriptorSetStorageBuffers()));
-        descLimits.put(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, Math.min(maxDescs, limits.maxPerStageDescriptorStorageImages()));
-        descLimits.put(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, Math.min(maxDescs,
-                physDevice.getAccelerationProperties().maxDescriptorSetAccelerationStructures()));
         return descLimits;
     }
 

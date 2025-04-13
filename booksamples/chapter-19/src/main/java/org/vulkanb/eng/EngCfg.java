@@ -6,6 +6,7 @@ import java.io.*;
 import java.util.Properties;
 
 public class EngCfg {
+    public static final int MAX_WEIGHTS = 4;
     private static final int DEFAULT_UPS = 30;
     private static final String FILENAME = "eng.properties";
     private static EngCfg instance;
@@ -18,7 +19,6 @@ public class EngCfg {
     private int maxJointsMatricesLists;
     private int maxMaterials;
     private int maxStorageBuffers;
-    private int maxTextures;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -58,7 +58,6 @@ public class EngCfg {
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
             maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", 100).toString());
             maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", 100).toString());
-            maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", 100).toString());
         } catch (IOException excp) {
             Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -93,10 +92,6 @@ public class EngCfg {
 
     public int getMaxStorageBuffers() {
         return maxStorageBuffers;
-    }
-
-    public int getMaxTextures() {
-        return maxTextures;
     }
 
     public String getPhysDeviceName() {

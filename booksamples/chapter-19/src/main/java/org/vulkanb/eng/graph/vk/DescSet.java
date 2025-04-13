@@ -68,15 +68,11 @@ public class DescSet {
             for (int i = 0; i < numImages; i++) {
                 ImageView iv = imgViews.get(i);
                 var imageInfo = VkDescriptorImageInfo.calloc(1, stack)
-                        .imageView(iv.getVkImageView());
-                if (textureSampler != null) {
-                    imageInfo.sampler(textureSampler.getVkSampler());
-                }
+                        .imageView(iv.getVkImageView())
+                        .sampler(textureSampler.getVkSampler());
 
                 if (iv.isDepthImage()) {
                     imageInfo.imageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-                } else if ((iv.getUsage() & VK_IMAGE_USAGE_STORAGE_BIT) > 0) {
-                    imageInfo.imageLayout(VK_IMAGE_LAYOUT_GENERAL);
                 } else {
                     imageInfo.imageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
@@ -85,8 +81,7 @@ public class DescSet {
                         .sType$Default()
                         .dstSet(vkDescriptorSet)
                         .dstBinding(baseBinding + i)
-                        .descriptorType(textureSampler == null ?
-                                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE : VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                        .descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                         .descriptorCount(1)
                         .pImageInfo(imageInfo);
             }
@@ -121,27 +116,6 @@ public class DescSet {
                     .descriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                     .descriptorCount(numImages)
                     .pImageInfo(imageInfos);
-            vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
-        }
-    }
-
-    public void setTLAS(Device device, int binding, int type, TLAS tlas) {
-        try (var stack = MemoryStack.stackPush()) {
-            var accelSt = VkWriteDescriptorSetAccelerationStructureKHR
-                    .calloc(stack)
-                    .sType$Default()
-                    .pAccelerationStructures(stack.longs(tlas.getHandle()));
-
-            var descrBuffer = VkWriteDescriptorSet.calloc(1, stack);
-
-            descrBuffer.get(0)
-                    .sType$Default()
-                    .dstSet(vkDescriptorSet)
-                    .dstBinding(binding)
-                    .descriptorType(type)
-                    .descriptorCount(1)
-                    .pNext(accelSt);
-
             vkUpdateDescriptorSets(device.getVkDevice(), descrBuffer, null);
         }
     }

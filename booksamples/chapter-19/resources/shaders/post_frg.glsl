@@ -2,7 +2,7 @@
 
 layout (constant_id = 0) const int USE_FXAA = 0;
 
-const float GAMMA = 2.2;
+const float GAMMA_CONST = 0.4545;
 const float SPAN_MAX = 8.0;
 const float REDUCE_MIN = 1.0/128.0;
 const float REDUCE_MUL = 1.0/32.0;
@@ -16,7 +16,7 @@ layout (set = 1, binding = 0) uniform ScreenSize {
 } screenSize;
 
 vec4 gamma(vec4 color) {
-    return color = vec4(pow(color.rgb, vec3(1.0 / GAMMA)), color.a);
+    return color = vec4(pow(color.rgb, vec3(GAMMA_CONST)), color.a);
 }
 
 // Credit: https://mini.gmshaders.com/p/gm-shaders-mini-fxaa

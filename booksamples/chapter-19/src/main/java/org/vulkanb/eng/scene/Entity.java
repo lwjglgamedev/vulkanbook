@@ -11,7 +11,6 @@ public class Entity {
     private final Quaternionf rotation;
     private EntityAnimation entityAnimation;
     private float scale;
-    private long updateTime;
 
     public Entity(String id, String modelId, Vector3f position) {
         this.id = id;
@@ -51,10 +50,6 @@ public class Entity {
         return scale;
     }
 
-    public long getUpdateTime() {
-        return updateTime;
-    }
-
     public void resetRotation() {
         rotation.x = 0.0f;
         rotation.y = 0.0f;
@@ -80,6 +75,5 @@ public class Entity {
 
     public void updateModelMatrix() {
         modelMatrix.translationRotateScale(position, rotation, scale);
-        updateTime = System.nanoTime();
     }
 }

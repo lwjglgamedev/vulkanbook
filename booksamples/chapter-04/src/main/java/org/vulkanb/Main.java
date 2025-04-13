@@ -2,9 +2,6 @@ package org.vulkanb;
 
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
-import org.vulkanb.eng.graph.Render;
-import org.vulkanb.eng.scene.Scene;
-import org.vulkanb.eng.wnd.Window;
 
 public class Main implements IGameLogic {
 
@@ -21,12 +18,12 @@ public class Main implements IGameLogic {
     }
 
     @Override
-    public void input(EngCtx engCtx, long diffTimeMillis) {
+    public void init(EngCtx engCtx) {
         // To be implemented
     }
 
     @Override
-    public void init(EngCtx engCtx) {
+    public void input(EngCtx engCtx, long diffTimeMillis) {
         // To be implemented
     }
 

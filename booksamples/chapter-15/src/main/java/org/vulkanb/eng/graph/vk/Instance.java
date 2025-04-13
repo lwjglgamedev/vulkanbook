@@ -22,6 +22,7 @@ public class Instance {
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     private static final String DBG_CALL_BACK_PREF = "VkDebugUtilsCallback, {}";
     private static final String PORTABILITY_EXTENSION = "VK_KHR_portability_enumeration";
+    private static final String VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 
     private final VkInstance vkInstance;
     private VkDebugUtilsMessengerCreateInfoEXT debugUtils;
@@ -63,7 +64,7 @@ public class Instance {
             Set<String> instanceExtensions = getInstanceExtensions();
             boolean usePortability = instanceExtensions.contains(PORTABILITY_EXTENSION) &&
                     VkUtils.getOS() == VkUtils.OSType.MACOS;
-            
+
             // GLFW Extension
             PointerBuffer glfwExtensions = GLFWVulkan.glfwGetRequiredInstanceExtensions();
             if (glfwExtensions == null) {
@@ -175,8 +176,8 @@ public class Instance {
 
             // Main validation layer
             List<String> layersToUse = new ArrayList<>();
-            if (supportedLayers.contains("VK_LAYER_KHRONOS_validation")) {
-                layersToUse.add("VK_LAYER_KHRONOS_validation");
+            if (supportedLayers.contains(VALIDATION_LAYER)) {
+                layersToUse.add(VALIDATION_LAYER);
             }
 
             return layersToUse;

@@ -36,7 +36,5 @@ public class Projection {
     public void resize(int width, int height) {
         projectionMatrix.identity();
         projectionMatrix.perspective(fov, (float) width / (float) height, zNear, zFar, true);
-        // Flip y coordinates
-        projectionMatrix.m11(-projectionMatrix.m11());
     }
 }

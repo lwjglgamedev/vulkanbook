@@ -5,199 +5,199 @@
       "id": "meshes[0]-53_0",
       "material_id": "Sponza-mat-0",
       "offset_vtx": 0,
-      "vtx_size": 771520,
+      "vtx_size": 1350160,
       "offset_idx": 0,
       "idx_size": 377232
     },
     {
       "id": "meshes[0]-93_1",
       "material_id": "Sponza-mat-1",
-      "offset_vtx": 771520,
-      "vtx_size": 125824,
+      "offset_vtx": 1350160,
+      "vtx_size": 220192,
       "offset_idx": 377232,
       "idx_size": 41664
     },
     {
       "id": "meshes[0]-94_2",
       "material_id": "Sponza-mat-2",
-      "offset_vtx": 897344,
-      "vtx_size": 314880,
+      "offset_vtx": 1570352,
+      "vtx_size": 551040,
       "offset_idx": 418896,
       "idx_size": 212256
     },
     {
       "id": "meshes[0]-99_3",
       "material_id": "Sponza-mat-3",
-      "offset_vtx": 1212224,
-      "vtx_size": 71712,
+      "offset_vtx": 2121392,
+      "vtx_size": 125496,
       "offset_idx": 631152,
       "idx_size": 49032
     },
     {
       "id": "meshes[0]-102_4",
       "material_id": "Sponza-mat-4",
-      "offset_vtx": 1283936,
-      "vtx_size": 33696,
+      "offset_vtx": 2246888,
+      "vtx_size": 58968,
       "offset_idx": 680184,
       "idx_size": 9552
     },
     {
       "id": "meshes[0]-48_5",
       "material_id": "Sponza-mat-5",
-      "offset_vtx": 1317632,
-      "vtx_size": 309728,
+      "offset_vtx": 2305856,
+      "vtx_size": 542024,
       "offset_idx": 689736,
       "idx_size": 122016
     },
     {
       "id": "meshes[0]-33_6",
       "material_id": "Sponza-mat-6",
-      "offset_vtx": 1627360,
-      "vtx_size": 159936,
+      "offset_vtx": 2847880,
+      "vtx_size": 279888,
       "offset_idx": 811752,
       "idx_size": 70512
     },
     {
       "id": "meshes[0]-47_7",
       "material_id": "Sponza-mat-7",
-      "offset_vtx": 1787296,
-      "vtx_size": 99968,
+      "offset_vtx": 3127768,
+      "vtx_size": 174944,
       "offset_idx": 882264,
       "idx_size": 33792
     },
     {
       "id": "meshes[0]-46_8",
       "material_id": "Sponza-mat-8",
-      "offset_vtx": 1887264,
-      "vtx_size": 736,
+      "offset_vtx": 3302712,
+      "vtx_size": 1288,
       "offset_idx": 916056,
       "idx_size": 252
     },
     {
       "id": "meshes[0]-44_9",
       "material_id": "Sponza-mat-9",
-      "offset_vtx": 1888000,
-      "vtx_size": 378240,
+      "offset_vtx": 3304000,
+      "vtx_size": 661920,
       "offset_idx": 916308,
       "idx_size": 85056
     },
     {
       "id": "meshes[0]-42_10",
       "material_id": "Sponza-mat-10",
-      "offset_vtx": 2266240,
-      "vtx_size": 35136,
+      "offset_vtx": 3965920,
+      "vtx_size": 61488,
       "offset_idx": 1001364,
       "idx_size": 10560
     },
     {
       "id": "meshes[0]-49_11",
       "material_id": "Sponza-mat-11",
-      "offset_vtx": 2301376,
-      "vtx_size": 730240,
+      "offset_vtx": 4027408,
+      "vtx_size": 1277920,
       "offset_idx": 1011924,
       "idx_size": 278496
     },
     {
       "id": "meshes[0]-50_12",
       "material_id": "Sponza-mat-12",
-      "offset_vtx": 3031616,
-      "vtx_size": 1152,
+      "offset_vtx": 5305328,
+      "vtx_size": 2016,
       "offset_idx": 1290420,
       "idx_size": 216
     },
     {
       "id": "meshes[0]-62_13",
       "material_id": "Sponza-mat-13",
-      "offset_vtx": 3032768,
-      "vtx_size": 389184,
+      "offset_vtx": 5307344,
+      "vtx_size": 681072,
       "offset_idx": 1290636,
       "idx_size": 197952
     },
     {
       "id": "meshes[0]-59_14",
       "material_id": "Sponza-mat-14",
-      "offset_vtx": 3421952,
-      "vtx_size": 292032,
+      "offset_vtx": 5988416,
+      "vtx_size": 511056,
       "offset_idx": 1488588,
       "idx_size": 198144
     },
     {
       "id": "meshes[0]-61_15",
       "material_id": "Sponza-mat-15",
-      "offset_vtx": 3713984,
-      "vtx_size": 292032,
+      "offset_vtx": 6499472,
+      "vtx_size": 511056,
       "offset_idx": 1686732,
       "idx_size": 198144
     },
     {
       "id": "meshes[0]-60_16",
       "material_id": "Sponza-mat-16",
-      "offset_vtx": 4006016,
-      "vtx_size": 194688,
+      "offset_vtx": 7010528,
+      "vtx_size": 340704,
       "offset_idx": 1884876,
       "idx_size": 132096
     },
     {
       "id": "meshes[0]-72_17",
       "material_id": "Sponza-mat-17",
-      "offset_vtx": 4200704,
-      "vtx_size": 236736,
+      "offset_vtx": 7351232,
+      "vtx_size": 414288,
       "offset_idx": 2016972,
       "idx_size": 172032
     },
     {
       "id": "meshes[0]-71_18",
       "material_id": "Sponza-mat-18",
-      "offset_vtx": 4437440,
-      "vtx_size": 316928,
+      "offset_vtx": 7765520,
+      "vtx_size": 554624,
       "offset_idx": 2189004,
       "idx_size": 227328
     },
     {
       "id": "meshes[0]-70_19",
       "material_id": "Sponza-mat-19",
-      "offset_vtx": 4754368,
-      "vtx_size": 236736,
+      "offset_vtx": 8320144,
+      "vtx_size": 414288,
       "offset_idx": 2416332,
       "idx_size": 172032
     },
     {
       "id": "meshes[0]-79_20",
       "material_id": "Sponza-mat-20",
-      "offset_vtx": 4991104,
-      "vtx_size": 2048,
+      "offset_vtx": 8734432,
+      "vtx_size": 3584,
       "offset_idx": 2588364,
       "idx_size": 384
     },
     {
       "id": "meshes[0]-80_21",
       "material_id": "Sponza-mat-21",
-      "offset_vtx": 4993152,
-      "vtx_size": 333184,
+      "offset_vtx": 8738016,
+      "vtx_size": 583072,
       "offset_idx": 2588748,
       "idx_size": 237936
     },
     {
       "id": "meshes[0]-95_22",
       "material_id": "Sponza-mat-22",
-      "offset_vtx": 5326336,
-      "vtx_size": 169856,
+      "offset_vtx": 9321088,
+      "vtx_size": 297248,
       "offset_idx": 2826684,
       "idx_size": 110208
     },
     {
       "id": "meshes[0]-98_23",
       "material_id": "Sponza-mat-23",
-      "offset_vtx": 5496192,
-      "vtx_size": 55296,
+      "offset_vtx": 9618336,
+      "vtx_size": 96768,
       "offset_idx": 2936892,
       "idx_size": 36504
     },
     {
       "id": "meshes[0]-101_24",
       "material_id": "Sponza-mat-24",
-      "offset_vtx": 5551488,
-      "vtx_size": 349376,
+      "offset_vtx": 9715104,
+      "vtx_size": 611408,
       "offset_idx": 2973396,
       "idx_size": 173808
     }

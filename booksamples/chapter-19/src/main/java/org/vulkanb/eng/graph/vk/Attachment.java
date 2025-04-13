@@ -15,29 +15,21 @@ public class Attachment {
 
         int aspectMask = 0;
         if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0) {
-            usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            imageData.usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
             depthAttachment = false;
         }
         if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) {
-            usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT;
+            imageData.usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT);
             aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             depthAttachment = true;
         }
-        if ((usage & VK_IMAGE_USAGE_STORAGE_BIT) > 0) {
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT;
-            depthAttachment = false;
-        }
-        imageData.usage(usage);
-
         if (layers > 0) {
             imageData.arrayLayers(layers);
         }
         image = new Image(vkCtx, imageData);
 
-        var imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask)
-                .usage(usage);
+        var imageViewData = new ImageView.ImageViewData().format(image.getFormat()).aspectMask(aspectMask);
         if (layers > 1) {
             imageViewData.viewType(VK_IMAGE_VIEW_TYPE_2D_ARRAY);
             imageViewData.layerCount(layers);

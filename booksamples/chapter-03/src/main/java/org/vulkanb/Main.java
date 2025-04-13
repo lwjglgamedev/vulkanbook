@@ -14,19 +14,19 @@ public class Main implements IGameLogic {
         Logger.info("Started application");
         engine.run();
     }
-
+    
     @Override
     public void cleanup() {
         // To be implemented
     }
 
     @Override
-    public void input(EngCtx engCtx, long diffTimeMillis) {
+    public void init(EngCtx engCtx) {
         // To be implemented
     }
 
     @Override
-    public void init(EngCtx engCtx) {
+    public void input(EngCtx engCtx, long diffTimeMillis) {
         // To be implemented
     }
 

@@ -79,7 +79,10 @@ public class GuiRender {
         var vtxBuffStruct = new GuiVtxBuffStruct();
         var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(),
                 new int[]{PostRender.COLOR_FORMAT})
-                .setPushConstRanges(new PushConstRange[]{new PushConstRange(VK_SHADER_STAGE_VERTEX_BIT, 0, VkUtils.VEC2_SIZE)})
+                .setPushConstRanges(
+                        new PushConstRange[]{
+                                new PushConstRange(VK_SHADER_STAGE_VERTEX_BIT, 0, VkUtils.VEC2_SIZE)
+                        })
                 .setDescSetLayouts(descSetLayouts)
                 .setUseBlend(true);
         var pipeline = new Pipeline(vkCtx, buildInfo);

@@ -8,9 +8,6 @@ import org.tinylog.Logger;
 import java.nio.IntBuffer;
 import java.util.*;
 
-import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
-import static org.lwjgl.vulkan.KHRDeferredHostOperations.VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME;
-import static org.lwjgl.vulkan.KHRRayTracingPipeline.VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME;
 import static org.lwjgl.vulkan.VK13.*;
 import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 

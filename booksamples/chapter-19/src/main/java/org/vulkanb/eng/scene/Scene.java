@@ -9,6 +9,7 @@ import java.util.*;
 public class Scene {
 
     public static final int MAX_LIGHTS = 10;
+    public static final int SHADOW_MAP_CASCADE_COUNT = 3;
 
     private final Vector3f ambientLight;
     private final Camera camera;
@@ -47,6 +48,18 @@ public class Scene {
 
     public Projection getProjection() {
         return projection;
+    }
+
+    public void removeAllEntities() {
+        entities.clear();
+    }
+
+    public void removeEntity(Entity entity) {
+        entities.removeIf(entity1 -> entity1.getId().equals(entity.getId()));
+    }
+
+    public void removeEntity(String entityId) {
+        entities.removeIf(entity1 -> entity1.getId().equals(entityId));
     }
 
     public void setLights(Light[] lights) {

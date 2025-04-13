@@ -3,13 +3,12 @@ package org.vulkanb.eng.graph.post;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.*;
+import org.vulkanb.eng.EngCfg;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.*;
 import java.util.Arrays;
 
-import static org.lwjgl.vulkan.KHRRayTracingPipeline.VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK13.*;
 
@@ -148,9 +147,9 @@ public class PostRender {
             VkCommandBuffer cmdHandle = cmdBuffer.getVkCommandBuffer();
 
             VkUtils.imageBarrier(stack, cmdHandle, srcAttachment.getImage().getVkImage(),
-                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
-                    VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_ACCESS_2_SHADER_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
                     VK_IMAGE_ASPECT_COLOR_BIT);
 
             VkUtils.imageBarrier(stack, cmdHandle, colorAttachment.getImage().getVkImage(),
@@ -197,7 +196,6 @@ public class PostRender {
         renderInfo.free();
         colorAttachment.cleanup(vkCtx);
         colorAttachmentInfo.free();
-        
         colorAttachment = createColorAttachment(vkCtx);
         colorAttachmentInfo = createColorAttachmentInfo(colorAttachment, clrValueColor);
         renderInfo = createRenderInfo(colorAttachment, colorAttachmentInfo);

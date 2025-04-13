@@ -77,14 +77,36 @@ public class MaterialsCache {
             materialsMap.put(vulkanMaterial.id(), vulkanMaterial);
 
             material.diffuseColor().get(offset, data);
-            data.putInt(offset + VkUtils.VEC4_SIZE, hasTexture ? 1 : 0);
-            data.putInt(offset + VkUtils.VEC4_SIZE + VkUtils.INT_SIZE, textureCache.getPosition(texturePath));
+            offset += VkUtils.VEC4_SIZE;
+            data.putInt(offset, hasTexture ? 1 : 0);
+            offset += VkUtils.INT_SIZE;
+            data.putInt(offset, textureCache.getPosition(texturePath));
+            offset += VkUtils.INT_SIZE;
 
-            // Padding
-            data.putInt(offset + VkUtils.VEC4_SIZE + VkUtils.INT_SIZE * 2, 0);
-            data.putInt(offset + VkUtils.VEC4_SIZE + VkUtils.INT_SIZE * 3, 0);
+            String normalMapPath = material.normalMapPath();
+            boolean hasNormalMap = normalMapPath != null && !normalMapPath.isEmpty();
+            if (hasNormalMap) {
+                textureCache.addTexture(vkCtx, normalMapPath, normalMapPath, VK_FORMAT_R8G8B8A8_UNORM);
+            }
+            data.putInt(offset, hasNormalMap ? 1 : 0);
+            offset += VkUtils.INT_SIZE;
+            data.putInt(offset, textureCache.getPosition(normalMapPath));
+            offset += VkUtils.INT_SIZE;
 
-            offset += MATERIAL_SIZE;
+            String roughMapPath = material.metalRoughMap();
+            boolean hasRoughMap = roughMapPath != null && !roughMapPath.isEmpty();
+            if (hasRoughMap) {
+                textureCache.addTexture(vkCtx, roughMapPath, roughMapPath, VK_FORMAT_R8G8B8A8_UNORM);
+            }
+            data.putInt(offset, hasRoughMap ? 1 : 0);
+            offset += VkUtils.INT_SIZE;
+            data.putInt(offset, textureCache.getPosition(roughMapPath));
+            offset += VkUtils.INT_SIZE;
+
+            data.putFloat(offset, material.roughnessFactor());
+            offset += VkUtils.FLOAT_SIZE;
+            data.putFloat(offset, material.metallicFactor());
+            offset += VkUtils.FLOAT_SIZE;
         }
         srcBuffer.unMap(vkCtx);
 

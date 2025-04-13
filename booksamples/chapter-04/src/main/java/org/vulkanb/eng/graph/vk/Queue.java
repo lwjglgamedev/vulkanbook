@@ -63,34 +63,4 @@ public class Queue {
             return index;
         }
     }
-
-    public static class PresentQueue extends Queue {
-
-        public PresentQueue(VkCtx vkCtx, int queueIndex) {
-            super(vkCtx, getPresentQueueFamilyIndex(vkCtx), queueIndex);
-        }
-
-        private static int getPresentQueueFamilyIndex(VkCtx vkCtx) {
-            int index = -1;
-            try (var stack = MemoryStack.stackPush()) {
-                var queuePropsBuff = vkCtx.getPhysDevice().getVkQueueFamilyProps();
-                int numQueuesFamilies = queuePropsBuff.capacity();
-                IntBuffer intBuff = stack.mallocInt(1);
-                for (int i = 0; i < numQueuesFamilies; i++) {
-                    KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR(vkCtx.getPhysDevice().getVkPhysicalDevice(),
-                            i, vkCtx.getSurface().getVkSurface(), intBuff);
-                    boolean supportsPresentation = intBuff.get(0) == VK_TRUE;
-                    if (supportsPresentation) {
-                        index = i;
-                        break;
-                    }
-                }
-            }
-
-            if (index < 0) {
-                throw new RuntimeException("Failed to get Presentation Queue family index");
-            }
-            return index;
-        }
-    }
 }

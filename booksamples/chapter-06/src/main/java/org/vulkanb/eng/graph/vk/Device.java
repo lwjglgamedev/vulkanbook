@@ -22,7 +22,7 @@ public class Device {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
             // Set up required features
-            var features = VkPhysicalDeviceFeatures.calloc(stack);
+            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
 
             // Enable all the queue families
             var queuePropsBuff = physDevice.getVkQueueFamilyProps();
@@ -36,20 +36,17 @@ public class Device {
                         .pQueuePriorities(priorities);
             }
 
-            VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendFeature = VkPhysicalDeviceDynamicRenderingFeaturesKHR.calloc(stack)
+            var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
                     .sType$Default()
-                    .dynamicRendering(true);
-
-            VkPhysicalDeviceSynchronization2Features sync2Feature = VkPhysicalDeviceSynchronization2Features.calloc(stack)
-                    .sType$Default()
+                    .dynamicRendering(true)
                     .synchronization2(true);
+
+            features2.pNext(features13.address());
 
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()
-                    .pNext(dynRendFeature)
-                    .pNext(sync2Feature)
+                    .pNext(features2.address())
                     .ppEnabledExtensionNames(reqExtensions)
-                    .pEnabledFeatures(features)
                     .pQueueCreateInfos(queueCreationInfoBuf);
 
             PointerBuffer pp = stack.mallocPointer(1);

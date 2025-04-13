@@ -23,14 +23,14 @@ public class SwapChain {
         try (var stack = MemoryStack.stackPush()) {
             VkSurfaceCapabilitiesKHR surfaceCaps = surface.getSurfaceCaps();
 
-            numImages = calcNumImages(surfaceCaps, requestedImages);
+            int reqImages = calcNumImages(surfaceCaps, requestedImages);
             swapChainExtent = calcSwapChainExtent(window, surfaceCaps);
 
             Surface.SurfaceFormat surfaceFormat = surface.getSurfaceFormat();
             var vkSwapchainCreateInfo = VkSwapchainCreateInfoKHR.calloc(stack)
                     .sType$Default()
                     .surface(surface.getVkSurface())
-                    .minImageCount(numImages)
+                    .minImageCount(reqImages)
                     .imageFormat(surfaceFormat.imageFormat())
                     .imageColorSpace(surfaceFormat.colorSpace())
                     .imageExtent(swapChainExtent)
@@ -51,6 +51,7 @@ public class SwapChain {
             vkSwapChain = lp.get(0);
 
             imageViews = createImageViews(stack, device, vkSwapChain, surfaceFormat.imageFormat());
+            numImages = imageViews.length;
         }
     }
 
@@ -69,7 +70,7 @@ public class SwapChain {
     }
 
     private static VkExtent2D calcSwapChainExtent(Window window, VkSurfaceCapabilitiesKHR surfCapabilities) {
-        VkExtent2D result = VkExtent2D.calloc();
+        var result = VkExtent2D.calloc();
         if (surfCapabilities.currentExtent().width() == 0xFFFFFFFF) {
             // Surface size undefined. Set to the window size if within bounds
             int width = Math.min(window.getWidth(), surfCapabilities.maxImageExtent().width());
@@ -88,8 +89,6 @@ public class SwapChain {
     }
 
     private static ImageView[] createImageViews(MemoryStack stack, Device device, long swapChain, int format) {
-        ImageView[] result;
-
         IntBuffer ip = stack.mallocInt(1);
         vkCheck(KHRSwapchain.vkGetSwapchainImagesKHR(device.getVkDevice(), swapChain, ip, null),
                 "Failed to get number of surface images");
@@ -99,7 +98,7 @@ public class SwapChain {
         vkCheck(KHRSwapchain.vkGetSwapchainImagesKHR(device.getVkDevice(), swapChain, ip, swapChainImages),
                 "Failed to get surface images");
 
-        result = new ImageView[numImages];
+        var result = new ImageView[numImages];
         var imageViewData = new ImageView.ImageViewData().format(format).aspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
         for (int i = 0; i < numImages; i++) {
             result[i] = new ImageView(device, swapChainImages.get(i), imageViewData);
