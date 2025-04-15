@@ -1,0 +1,1 @@
+(Wait for Fence)->(Record commands A)->(Acquire image)->(Record commands B)->(Submit commands)->(Present Image)

@@ -21,9 +21,6 @@ public class Device {
         try (var stack = MemoryStack.stackPush()) {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
-            // Set up required features
-            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
-
             // Enable all the queue families
             var queuePropsBuff = physDevice.getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
@@ -36,11 +33,13 @@ public class Device {
                         .pQueuePriorities(priorities);
             }
 
+            // Set up required features
             var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
                     .sType$Default()
                     .dynamicRendering(true)
                     .synchronization2(true);
 
+            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
             features2.pNext(features13.address());
 
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)

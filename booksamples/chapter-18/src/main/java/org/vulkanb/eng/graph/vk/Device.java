@@ -24,7 +24,28 @@ public class Device {
         try (var stack = MemoryStack.stackPush()) {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
+            // Enable all the queue families
+            var queuePropsBuff = physDevice.getVkQueueFamilyProps();
+            int numQueuesFamilies = queuePropsBuff.capacity();
+            var queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
+            for (int i = 0; i < numQueuesFamilies; i++) {
+                FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
+                queueCreationInfoBuf.get(i)
+                        .sType$Default()
+                        .queueFamilyIndex(i)
+                        .pQueuePriorities(priorities);
+            }
+
             // Set up required features
+            var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
+                    .sType$Default()
+                    .scalarBlockLayout(true);
+
+            var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
+                    .sType$Default()
+                    .dynamicRendering(true)
+                    .synchronization2(true);
+
             var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
             var features = features2.features();
 
@@ -40,28 +61,6 @@ public class Device {
                 throw new RuntimeException("Multi draw Indirect not supported");
             }
             features.multiDrawIndirect(true);
-            
-            // Enable all the queue families
-            var queuePropsBuff = physDevice.getVkQueueFamilyProps();
-            int numQueuesFamilies = queuePropsBuff.capacity();
-            var queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
-            for (int i = 0; i < numQueuesFamilies; i++) {
-                FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
-                queueCreationInfoBuf.get(i)
-                        .sType$Default()
-                        .queueFamilyIndex(i)
-                        .pQueuePriorities(priorities);
-            }
-
-            var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
-                    .sType$Default()
-                    .scalarBlockLayout(true);
-
-            var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
-                    .sType$Default()
-                    .dynamicRendering(true)
-                    .synchronization2(true);
-
             features2.pNext(features12.address());
             features12.pNext(features13.address());
 

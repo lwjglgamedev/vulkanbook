@@ -24,19 +24,6 @@ public class Device {
         try (var stack = MemoryStack.stackPush()) {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
-            // Set up required features
-            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
-            var features = features2.features();
-
-            VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
-            samplerAnisotropy = supportedFeatures.samplerAnisotropy();
-            if (samplerAnisotropy) {
-                features.samplerAnisotropy(true);
-            }
-            features.geometryShader(true);
-            depthClamp = supportedFeatures.depthClamp();
-            features.depthClamp(depthClamp);
-
             // Enable all the queue families
             var queuePropsBuff = physDevice.getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
@@ -49,6 +36,7 @@ public class Device {
                         .pQueuePriorities(priorities);
             }
 
+            // Set up required features
             var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
                     .sType$Default()
                     .scalarBlockLayout(true);
@@ -58,6 +46,17 @@ public class Device {
                     .dynamicRendering(true)
                     .synchronization2(true);
 
+            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
+            var features = features2.features();
+
+            VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
+            samplerAnisotropy = supportedFeatures.samplerAnisotropy();
+            if (samplerAnisotropy) {
+                features.samplerAnisotropy(true);
+            }
+            features.geometryShader(true);
+            depthClamp = supportedFeatures.depthClamp();
+            features.depthClamp(depthClamp);
             features2.pNext(features12.address());
             features12.pNext(features13.address());
 

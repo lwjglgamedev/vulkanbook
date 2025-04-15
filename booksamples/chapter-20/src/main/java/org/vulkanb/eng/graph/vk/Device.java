@@ -24,6 +24,18 @@ public class Device {
         try (var stack = MemoryStack.stackPush()) {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
+            // Enable all the queue families
+            var queuePropsBuff = physDevice.getVkQueueFamilyProps();
+            int numQueuesFamilies = queuePropsBuff.capacity();
+            var queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
+            for (int i = 0; i < numQueuesFamilies; i++) {
+                FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
+                queueCreationInfoBuf.get(i)
+                        .sType$Default()
+                        .queueFamilyIndex(i)
+                        .pQueuePriorities(priorities);
+            }
+
             // Set up required features
             VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
             samplerAnisotropy = supportedFeatures.samplerAnisotropy();
@@ -56,18 +68,6 @@ public class Device {
             features2.pNext(features11.address());
             features11.pNext(features12.address());
             features12.pNext(features13.address());
-
-            // Enable all the queue families
-            var queuePropsBuff = physDevice.getVkQueueFamilyProps();
-            int numQueuesFamilies = queuePropsBuff.capacity();
-            var queueCreationInfoBuf = VkDeviceQueueCreateInfo.calloc(numQueuesFamilies, stack);
-            for (int i = 0; i < numQueuesFamilies; i++) {
-                FloatBuffer priorities = stack.callocFloat(queuePropsBuff.get(i).queueCount());
-                queueCreationInfoBuf.get(i)
-                        .sType$Default()
-                        .queueFamilyIndex(i)
-                        .pQueuePriorities(priorities);
-            }
 
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()

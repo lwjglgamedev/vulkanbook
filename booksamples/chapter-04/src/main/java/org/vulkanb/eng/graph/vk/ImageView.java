@@ -12,11 +12,13 @@ public class ImageView {
 
     private final int aspectMask;
     private final int mipLevels;
+    private final long vkImage;
     private final long vkImageView;
 
     public ImageView(Device device, long vkImage, ImageViewData imageViewData) {
         this.aspectMask = imageViewData.aspectMask;
         this.mipLevels = imageViewData.mipLevels;
+        this.vkImage = vkImage;
         try (var stack = MemoryStack.stackPush()) {
             LongBuffer lp = stack.mallocLong(1);
             var viewCreateInfo = VkImageViewCreateInfo.calloc(stack)
@@ -47,6 +49,10 @@ public class ImageView {
 
     public int getMipLevels() {
         return mipLevels;
+    }
+
+    public long getVkImage() {
+        return vkImage;
     }
 
     public long getVkImageView() {

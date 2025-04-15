@@ -75,16 +75,15 @@ public class Render {
 
         waitForFence(currentFrame);
 
-        int imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame]);
-        if (imageIndex < 0) {
-            return;
-        }
-
         var cmdPool = cmdPools[currentFrame];
         var cmdBuffer = cmdBuffers[currentFrame];
 
         recordingStart(cmdPool, cmdBuffer);
 
+        int imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame]);
+        if (imageIndex < 0) {
+            return;
+        }
         scnRender.render(vkCtx, cmdBuffer, imageIndex);
 
         recordingStop(cmdBuffer);

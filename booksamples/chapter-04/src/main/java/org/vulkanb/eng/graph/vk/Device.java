@@ -21,9 +21,6 @@ public class Device {
         try (var stack = MemoryStack.stackPush()) {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
-            // Set up required features
-            var features = VkPhysicalDeviceFeatures.calloc(stack);
-
             // Enable all the queue families
             var queuePropsBuff = physDevice.getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
@@ -39,7 +36,6 @@ public class Device {
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()
                     .ppEnabledExtensionNames(reqExtensions)
-                    .pEnabledFeatures(features)
                     .pQueueCreateInfos(queueCreationInfoBuf);
 
             PointerBuffer pp = stack.mallocPointer(1);

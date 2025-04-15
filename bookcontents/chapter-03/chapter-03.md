@@ -341,10 +341,6 @@ public class Device {
         try (var stack = MemoryStack.stackPush()) {
             PointerBuffer reqExtensions = createReqExtensions(physDevice, stack);
 
-            // Set up required features
-            var features = VkPhysicalDeviceFeatures.calloc(stack);
-            ...
-
             // Enable all the queue families
             var queuePropsBuff = physDevice.getVkQueueFamilyProps();
             int numQueuesFamilies = queuePropsBuff.capacity();
@@ -360,7 +356,6 @@ public class Device {
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()
                     .ppEnabledExtensionNames(reqExtensions)
-                    .pEnabledFeatures(features)
                     .pQueueCreateInfos(queueCreationInfoBuf);
 
             PointerBuffer pp = stack.mallocPointer(1);
@@ -373,9 +368,7 @@ public class Device {
 }
 ```
 
-The Vulkan structure `VkDevice` is the one that will hold or Vulkan logical device. We will use that structure for the creation of the resources we will need later on. In the constructor we start the familiar try/catch block to allocate short-lived objects in the LWJGL stack and start by allocating the required extension which will be return by the `createReqExtensions` method (we will see this later). After that, we need set the features that we want to use. Features are certain capabilities which can be present or not in your physical device. For the ones that are present we can choose which ones to enable for our logical device. Some features control if compressed textures are enabled or not, if 64 bit floats are supported, etc. We could just simple use the set of features already supported by our physical device but doing this we may affect performance. By now we will not be enabling any feature, so we just allocate an empty structure.
-
-Then we need to enable the queues families that this logical device will use. Later on, when we create queues, we will need to specify the queue family which it belongs to. If that queue family has been not be enabled for the logical device we will get an error.  In this case we will opt for enabling all the supported queues families (which is an structure that we obtained while creating the physical device).
+The Vulkan structure `VkDevice` is the one that will hold or Vulkan logical device. We will use that structure for the creation of the resources we will need later on. In the constructor we start the familiar try/catch block to allocate short-lived objects in the LWJGL stack and start by allocating the required extension which will be return by the `createReqExtensions` method (we will see this later). Then we need to enable the queues families that this logical device will use. Later on, when we create queues, we will need to specify the queue family which it belongs to. If that queue family has been not be enabled for the logical device we will get an error.  In this case we will opt for enabling all the supported queues families (which is an structure that we obtained while creating the physical device).
 
 We basically create a `Buffer` of `VkDeviceQueueCreateInfo` structures which will hold the index of each queue family and its priority. The priority is mechanism that allows us to instruct the driver to prioritize the work submitted by using the priorities assigned to each queue family. However, this is prioritization mechanism is not mandated in the specification. Drivers are free to apply the algorithms they consider in order to balance the work. Therefore, in our case we will just set priorities to a fixed value of `0.0` (which is the default value  for the lowest priority, we simply don't care).
 

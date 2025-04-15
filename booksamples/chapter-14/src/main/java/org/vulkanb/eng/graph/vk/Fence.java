@@ -14,13 +14,12 @@ public class Fence {
 
     public Fence(VkCtx vkCtx, boolean signaled) {
         try (var stack = MemoryStack.stackPush()) {
-           var fenceCreateInfo = VkFenceCreateInfo.calloc(stack)
+            var fenceCreateInfo = VkFenceCreateInfo.calloc(stack)
                     .sType$Default()
                     .flags(signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0);
 
             LongBuffer lp = stack.mallocLong(1);
-            vkCheck(vkCreateFence(vkCtx.getDevice().getVkDevice(), fenceCreateInfo, null, lp),
-                    "Failed to create semaphore");
+            vkCheck(vkCreateFence(vkCtx.getDevice().getVkDevice(), fenceCreateInfo, null, lp), "Failed to create fence");
             vkFence = lp.get(0);
         }
     }

@@ -64,7 +64,6 @@ public class CmdBuffer {
                         .sType$Default()
                         .pNext(renderingInfo);
                 cmdBufInfo.pInheritanceInfo(vkInheritanceInfo);
-                cmdBufInfo.flags(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT);
             }
             vkCheck(vkBeginCommandBuffer(vkCommandBuffer, cmdBufInfo), "Failed to begin command buffer");
         }
