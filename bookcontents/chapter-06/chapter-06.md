@@ -533,11 +533,11 @@ public class VulkanModel {
     ...
 }
 ```
-We firs define a copy region, by filling up a `VkBufferCopy` buffer,  which will have the whole size of the staging buffer. Then we record the copy command, the `vkCmdCopyBuffer` function.
+We first define a copy region, by filling up a `VkBufferCopy` buffer,  which will have the whole size of the staging buffer. Then we record the copy command, the `vkCmdCopyBuffer` function.
 
 ## Graphics pipeline overview
 
-A graphics pipeline is a model which describes the sets required to render a scene into a screen. In Vulkan this is modeled using a data structure. This structure defines several parameters to control the certain steps (fixed  steps) allowing setting up programs (called shaders) to control the  execution of other steps (programmable steps). The following picture depicts Vulkan graphics pipeline.
+A graphics pipeline is a model which describes the steps required to render a scene into a screen. In Vulkan this is modeled using a data structure. This structure defines several parameters to control the certain steps (fixed  steps) allowing setting up programs (called shaders) to control the  execution of other steps (programmable steps). The following picture depicts Vulkan graphics pipeline.
 
 ![Graphics pipeline](rc06-yuml-01.svg)
 
@@ -550,7 +550,7 @@ Description of the stages (NOTE: graphics pipeline in Vulkan can also work in me
 - Fragment shader: Processes the fragments from the rasterization stage determining the values that will be written into the frame buffer output attachments. This is also a programmable stage which usually outputs the color for each pixel.
 - Blending: Controls how different fragments can be mixed over the same pixel handling aspects such as transparencies and color mixing.
 
-One important topic to understand when working with Vulkan pipelines is  that they are almost immutable. Unlike OpenGL, we can't modify at run time the properties of a graphics pipeline. Almost any change that we want to make implies the creation of a new pipeline. In OpenGL it is common to modify ay runtime certain parameters that control how transparencies are handled (blending) or if the depth-testing is enabled. We can modify those parameters at run time with no restrictions. (The reality is that under the hood, our driver is switching between pipelines definitions that meet those settings). In Vulkan, however, we will need to define multiple pipelines if we ant to change those settings while rendering ans switch between them manually. 
+One important topic to understand when working with Vulkan pipelines is  that they are almost immutable. Unlike OpenGL, we can't modify at run time the properties of a graphics pipeline. Almost any change that we want to make implies the creation of a new pipeline. In OpenGL it is common to modify ay runtime certain parameters that control how transparencies are handled (blending) or if the depth-testing is enabled. We can modify those parameters at run time with no restrictions. (The reality is that under the hood, our driver is switching between pipelines definitions that meet those settings). In Vulkan, however, we will need to define multiple pipelines if we want to change those settings while rendering and switch between them manually. 
 
 ## Shaders
 
@@ -684,7 +684,7 @@ public class ShaderCompiler {
 }
 ```
 
-The method receives, through the `glsShaderFile` parameter, the path to the GLSL file and the type of shader. In this case, the `shaderType` parameter should be one of the defined by the `org.lwjgl.util.shaderc.Shaderc` class. This method checks if the GLSL file has changed (by comparing the date of the SPIR-V file vs the GLSL file) and compiles it by calling the `compileShader` method and writes the result to a file constructed with the same path bad adding the `.spv` extension. 
+The method receives, through the `glsShaderFile` parameter, the path to the GLSL file and the type of shader. In this case, the `shaderType` parameter should be one of the defined by the `org.lwjgl.util.shaderc.Shaderc` class. This method checks if the GLSL file has changed (by comparing the date of the SPIR-V file vs the GLSL file) and compiles it by calling the `compileShader` method and writes the result to a file constructed with the same path but adding the `.spv` extension. 
 
 The `compileShader` method just invokes the `shaderc_result_get_compilation_status` from the `Shaderc` compiler binding provided by LWJGL.
 
