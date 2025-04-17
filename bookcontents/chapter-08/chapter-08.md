@@ -105,7 +105,7 @@ public class ModelLoader {
 }
 ```
 
-We first check if the path to the 3D model and the texture directory exist. After that, we import the 3D model by invoking the `aiImportFile` Assimp function which will return an `AIScene` structure. Then, we use the `AIScene` structure to load the 3D models materials. We get the total number of materials allocating as many structures of `AIMaterial` as needed. The material will hold information related to the textures and colors for each mesh. For each of the materials we extract the values that we will need by calling the `processMaterial` method. The next step is to load the meshes data by calling the `processMesh` method. As in the case of materials, we get the total number of meshes that the `AIScene` contains and allocate as many `AIMesh` structure as needed. Once we have finished processing the model we just release the `AIScene` and return the array of the meshes present in the model. Let's analyze first the  `processMaterial` method:
+We first check if the path to the 3D model and the texture directory exists. After that, we import the 3D model by invoking the `aiImportFile` Assimp function which will return an `AIScene` structure. Then, we use the `AIScene` structure to load the 3D models materials. We get the total number of materials allocating as many structures of `AIMaterial` as needed. The material will hold information related to the textures and colors for each mesh. For each of the materials we extract the values that we will need by calling the `processMaterial` method. The next step is to load the meshes data by calling the `processMesh` method. As in the case of materials, we get the total number of meshes that the `AIScene` contains and allocate as many `AIMesh` structure as needed. Once we have finished processing the model we just release the `AIScene` and return the array of the meshes present in the model. Let's analyze first the  `processMaterial` method:
 
 ```java
 public class ModelLoader {
@@ -198,7 +198,7 @@ public class ModelData {
     ...
 ```
 
-Going back to the `ModelLoader`class, the remaining methods are quite simple, we just extract the position and texture coordinates and the indices:
+Going back to the `ModelLoader` class, the remaining methods are quite simple, we just extract the position and texture coordinates and the indices:
 
 ```java
 public class ModelLoader {
@@ -398,7 +398,7 @@ public class Texture {
 }
 ```
 
-In order for Vulkan to correctly use the image, we need to transition it to the correct layout an copy the staging buffer contents to the image.This is done in the `recordTextureTransition` method.
+In order for Vulkan to correctly use the image, we need to transition it to the correct layout an copy the staging buffer contents to the image. This is done in the `recordTextureTransition` method.
 
 ```java
 public class Texture {
@@ -503,7 +503,7 @@ In the second case, the second `if` condition will be executed. We use the `VK_A
 
 Once the conditions has been set we record the image pipeline barrier by invoking the `vkCmdPipelineBarrier` function.
 
-The only missing method in t he `Texture` class is the `recordCopyBuffer`:
+The only missing method in the `Texture` class is the `recordCopyBuffer`:
 
 ```java
 public class Texture {
@@ -590,7 +590,7 @@ public class EngineProperties {
 }
 ```
 
-Back to the `TextureCache`  class, the rest of the methods are the classical `cleanup` method to free the images and the `getTexture` method to be able to retrieve one already created `Texture` using is file path and through their position.
+Back to the `TextureCache` class, the rest of the methods are the classical `cleanup` method to free the images and the `getTexture` method to be able to retrieve one already created `Texture` using is file path and through their position.
 
 ```java
 public class TextureCache {
@@ -833,7 +833,7 @@ public class DescriptorPool {
 }
 ```
 
-The format of each descriptor set must me defined by a descriptor set layout. The layout will be something very dependent on the specific data structures that we will use in our shaders. However, we will create an abstract class to avoid repeating the cleanup method and to store its handle:
+The format of each descriptor set must be defined by a descriptor set layout. The layout will be something very dependent on the specific data structures that we will use in our shaders. However, we will create an abstract class to avoid repeating the cleanup method and to store its handle:
 
 ```java
 package org.vulkanb.eng.graph.vk;
@@ -993,7 +993,7 @@ public class TextureSampler {
 In order to create a sampler, we need to invoke the `vkCreateSampler` function which requires a `VkSamplerCreateInfo` structure, defined by the following fields:
 
 - `sType`: The type of the structure: `VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO`.
-- `magFilter` and `minFilter`: control how magnification and magnification filter work while performing a texture lookup. In this case, we are using a `VK_FILTER_LINEAR` filter, which is the value for a liner filter (for a 2D texture, it combines for values of four pixels weighted). You can use `VK_FILTER_NEAREST` to pickup just the closest value in the lookup or `VK_FILTER_CUBIC_EXT` to apply cubic filtering (it uses 16 values for 2D textures).
+- `magFilter` and `minFilter`: control how magnification and magnification filter work while performing a texture lookup. In this case, we are using a `VK_FILTER_LINEAR` filter, which is the value for a linear filter (for a 2D texture, it combines for values of four pixels weighted). You can use `VK_FILTER_NEAREST` to pickup just the closest value in the lookup or `VK_FILTER_CUBIC_EXT` to apply cubic filtering (it uses 16 values for 2D textures).
 - `addressModeU`, `addressModeV` and `addressModeW`: This will control what will be returned for a texture lookup when the coordinates lay out of the texture size. The `U`, `V` and `W` refer to the `x`, `y` and `z` axis (for 3D images). In this case, we specify the `VK_SAMPLER_ADDRESS_MODE_REPEAT` which means that the texture is repeated endlessly over all the axis. There are some other values such as `VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT` or `VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE` which are similar as the ones used in OpenGL.
 - `borderColor`: This sets the color for the border that will be used for texture lookups beyond bounds when `VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER` is used in the `addressModeX` attributes.
 - `unnormalizedCoordinates`: Texture coordinates cover the [0, 1] range. When this parameter is set to `true` the coordinates will cover the ranges [0, width], [0, height].
@@ -1175,7 +1175,7 @@ public abstract class DescriptorSet {
     ...
 }
 ```
-The code is similar as the descriptor set used for textures, with the following exception, ee use a `VkDescriptorBufferInfo` to link the descriptor with the buffer that will hold the descriptor set values. Now we can create another class, specifically for uniforms, which extends the `SimpleDescriptorSet` class, named `UniformDescriptorSet`:
+The code is similar as the descriptor set used for textures, with the following exception, we use a `VkDescriptorBufferInfo` to link the descriptor with the buffer that will hold the descriptor set values. Now we can create another class, specifically for uniforms, which extends the `SimpleDescriptorSet` class, named `UniformDescriptorSet`:
 ```java
 public abstract class DescriptorSet {
     ...
