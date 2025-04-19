@@ -43,6 +43,8 @@ public class VkUtils {
                 .dstStageMask(dstStage)
                 .srcAccessMask(srcAccess)
                 .dstAccessMask(dstAccess)
+                .srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+                .dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
                 .subresourceRange(it -> it
                         .aspectMask(aspectMask)
                         .baseMipLevel(0)

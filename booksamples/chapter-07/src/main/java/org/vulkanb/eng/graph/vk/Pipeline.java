@@ -111,8 +111,9 @@ public class Pipeline {
                     "Failed to create pipeline layout");
             vkPipelineLayout = lp.get(0);
 
-            var pipeline = VkGraphicsPipelineCreateInfo.calloc(1, stack)
+            var createInfo = VkGraphicsPipelineCreateInfo.calloc(1, stack)
                     .sType$Default()
+                    .renderPass(VK_NULL_HANDLE)
                     .pStages(shaderStages)
                     .pVertexInputState(buildInfo.getVi())
                     .pInputAssemblyState(assemblyStateCreateInfo)
@@ -124,10 +125,10 @@ public class Pipeline {
                     .layout(vkPipelineLayout)
                     .pNext(rendCreateInfo);
             if (ds != null) {
-                pipeline.pDepthStencilState(ds);
+                createInfo.pDepthStencilState(ds);
             }
 
-            vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), vkCtx.getPipelineCache().getVkPipelineCache(), pipeline, null, lp),
+            vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), vkCtx.getPipelineCache().getVkPipelineCache(), createInfo, null, lp),
                     "Error creating graphics pipeline");
             vkPipeline = lp.get(0);
         }

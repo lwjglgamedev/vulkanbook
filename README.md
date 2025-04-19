@@ -9,20 +9,26 @@ We will use [LWJGL](http://www.lwjgl.org/) as the Java library which provides th
 ![Sample screen shot](./bookcontents/chapter-13/rc13-screen-shot.png)
 
 > [!NOTE]
-> This is a new version which tries to use modern Vulkan features, such us dynamic rendering, BDA, ray tracing, etc. Therfore, Vulkan 1.3 is requiered. If you want ato access previous version,
-> just go the [legacy branch](TBD).
+> This is a new version which tries to use modern Vulkan features, such us:
+> - Dynamic rendering
+> - BDA
+> - Ray tracing
+> - New Vulkan functions (1.3)
+> - ...
+>
+> Therefore, Vulkan 1.3 is required. If you want to access previous version, just go the [legacy branch](https://github.com/lwjglgamedev/vulkanbook/tree/master).
 
 ## Book Code
 
-The book itself is also hosted in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents).
+The book itself is also hosted in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/test/bookcontents).
 
 ## Source Code
 
-The source code of the samples of this book is in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples).
+The source code of the samples of this book is in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/test/booksamples).
 
 ## EPUB version
 
-An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents/vulkanbook.epub).
+An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/test/vulkanbook.epub).
 
 ## Support
 

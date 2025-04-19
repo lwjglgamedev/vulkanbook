@@ -6,11 +6,10 @@ import org.vulkanb.eng.graph.vk.VkUtils;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class VtxBuffStruct {
-
     private static final int NUMBER_OF_ATTRIBUTES = 1;
     private static final int POSITION_COMPONENTS = 3;
-    private final VkPipelineVertexInputStateCreateInfo vi;
 
+    private final VkPipelineVertexInputStateCreateInfo vi;
     private final VkVertexInputAttributeDescription.Buffer viAttrs;
     private final VkVertexInputBindingDescription.Buffer viBindings;
 

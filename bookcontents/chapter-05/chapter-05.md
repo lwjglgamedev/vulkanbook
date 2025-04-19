@@ -703,14 +703,14 @@ import static org.lwjgl.vulkan.VK13.*;
 public class ScnRender {
 
     private final VkClearValue clrValueColor;
-    private VkRenderingAttachmentInfo.Buffer[] attachments;
+    private VkRenderingAttachmentInfo.Buffer[] attInfoColor;
     private VkRenderingInfo[] renderInfo;
 
     public ScnRender(VkCtx vkCtx) {
         clrValueColor = VkClearValue.calloc().color(
                 c -> c.float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1.0f));
-        attachments = createAttachments(vkCtx, clrValueColor);
-        renderInfo = createRenderInfo(vkCtx, attachments);
+        attInfoColor = createColorAttachmentsInfo(vkCtx, clrValueColor);
+        renderInfo = createRenderInfo(vkCtx, attInfoColor);
     }
     ...
 }
@@ -718,29 +718,28 @@ public class ScnRender {
 
 As class attributes we see the following:
 - An instance of the `VkClearValue` which will be used to clear the screen with a color.
-- An array of attachments (VkRenderingAttachmentInfo.Buffer[]), which models which will be the target image views that we can render to.
+- An array of color attachments (VkRenderingAttachmentInfo.Buffer[]), which models which will be the target image views that we can render to.
 - An array of `VkRenderingInfo` structures, which will be used to setup dynamic render information.
 
-All this attributes are initialized in the constructor. Let's start by defining the `createAttachments` method:
+All this attributes are initialized in the constructor. Let's start by defining the `createColorAttachmentsInfo` method:
 
 ```java
 public class ScnRender {
     ...
-    private static VkRenderingAttachmentInfo.Buffer[] createAttachments(VkCtx vkCtx, VkClearValue clearValue) {
+    private static VkRenderingAttachmentInfo.Buffer[] createColorAttachmentsInfo(VkCtx vkCtx, VkClearValue clearValue) {
         SwapChain swapChain = vkCtx.getSwapChain();
         int numImages = swapChain.getNumImages();
         var result = new VkRenderingAttachmentInfo.Buffer[numImages];
 
         for (int i = 0; i < numImages; ++i) {
-            VkRenderingAttachmentInfo.Buffer colorAttach = VkRenderingAttachmentInfo.calloc(1)
+            var attachments = VkRenderingAttachmentInfo.calloc(1)
                     .sType$Default()
                     .imageView(swapChain.getImageView(i).getVkImageView())
                     .imageLayout(VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR)
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
                     .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
-                    .resolveMode(VK_RESOLVE_MODE_NONE)
                     .clearValue(clearValue);
-            result[i] = colorAttach;
+            result[i] = attachments;
         }
         return result;
     }
@@ -757,15 +756,13 @@ like the "mode" into which an image is in in order to read/write data to/from it
 - `loadOp`: Specifies what will happen to the contents of this attachment when the render starts. In our case we want to clear the contents so we use the `VK_ATTACHMENT_LOAD_OP_CLEAR` value. Other possible values are `VK_ATTACHMENT_LOAD_OP_LOAD` to preserve the contents of the attachment (from a previous pass) or `VK_ATTACHMENT_LOAD_OP_DONT_CARE` if just simply don't care (for example, we may be sure that we are going to fill up again the attachment contents and we do not want to waste time in clearing it).
 - `storeOp`: Which specify what we will do the contents of the attachment once we have finished rendering. In this case we use `VK_ATTACHMENT_STORE_OP_STORE` which states
 that the contents of the attachment will be stored in memory. We want to preserve the contents to be presented on the screen. Another option is to use the `VK_ATTACHMENT_STORE_OP_DONT_CARE` value if we just simply don`t care.
-- `resolveMode`: Which specifies the transformation to apply to the data written to the attachment. In our case we will use `VK_RESOLVE_MODE_NONE` which states that no resolve
-operation will be applied.
 
 Let's review the `createRenderInfo` method:
 
 ```java
 public class ScnRender {
     ...
-    private static VkRenderingInfo[] createRenderInfo(VkCtx vkCtx, VkRenderingAttachmentInfo.Buffer[] attachments) {
+    private static VkRenderingInfo[] createRenderInfo(VkCtx vkCtx, VkRenderingAttachmentInfo.Buffer[] colorAttachments) {
         SwapChain swapChain = vkCtx.getSwapChain();
         int numImages = swapChain.getNumImages();
         var result = new VkRenderingInfo[numImages];
@@ -779,7 +776,7 @@ public class ScnRender {
                         .sType$Default()
                         .renderArea(renderArea)
                         .layerCount(1)
-                        .pColorAttachments(attachments[i]);
+                        .pColorAttachments(colorAttachments[i]);
                 result[i] = renderingInfo;
             }
         }
@@ -803,7 +800,7 @@ public class ScnRender {
     ...
     public void cleanup() {
         Arrays.asList(renderInfo).forEach(VkRenderingInfo::free);
-        Arrays.asList(attachments).forEach(VkRenderingAttachmentInfo.Buffer::free);
+        Arrays.asList(attInfoColor).forEach(VkRenderingAttachmentInfo.Buffer::free);
         clrValueColor.free();
     }    
     ...

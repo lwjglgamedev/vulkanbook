@@ -1,5 +1,6 @@
 package org.vulkanb.eng.graph.vk;
 
+import static org.lwjgl.util.vma.Vma.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class Attachment {
@@ -11,7 +12,8 @@ public class Attachment {
     public Attachment(VkCtx vkCtx, int width, int height, int format, int usage) {
         var imageData = new Image.ImageData().width(width).height(height).
                 usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
-                format(format);
+                format(format)
+                .memUsage(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
         image = new Image(vkCtx, imageData);
 
         int aspectMask = 0;

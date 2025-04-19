@@ -40,7 +40,7 @@ public class Image {
                     .tiling(VK_IMAGE_TILING_OPTIMAL)
                     .usage(imageData.usage);
 
-            VmaAllocationCreateInfo allocCreateInfo = VmaAllocationCreateInfo.calloc(1, stack)
+            var allocCreateInfo = VmaAllocationCreateInfo.calloc(1, stack)
                     .get(0)
                     .usage(VMA_MEMORY_USAGE_AUTO)
                     .flags(imageData.memUsage)
@@ -86,7 +86,7 @@ public class Image {
             mipLevels = 1;
             sampleCount = 1;
             arrayLayers = 1;
-            memUsage = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+            memUsage = 0;
         }
 
         public ImageData arrayLayers(int arrayLayers) {

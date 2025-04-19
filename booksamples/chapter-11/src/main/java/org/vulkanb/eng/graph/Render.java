@@ -7,8 +7,8 @@ import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.post.PostRender;
 import org.vulkanb.eng.graph.scn.ScnRender;
 import org.vulkanb.eng.graph.swap.SwapChainRender;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.*;
 import org.vulkanb.eng.wnd.Window;
 
@@ -55,7 +55,7 @@ public class Render {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         resize = false;
-        scnRender = new ScnRender(vkCtx, engCtx.scene());
+        scnRender = new ScnRender(vkCtx, engCtx);
         postRender = new PostRender(vkCtx, scnRender.getAttColor());
         swapChainRender = new SwapChainRender(vkCtx, postRender.getAttachment());
         modelsCache = new ModelsCache();

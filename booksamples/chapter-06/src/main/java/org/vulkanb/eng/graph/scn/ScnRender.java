@@ -23,14 +23,14 @@ public class ScnRender {
 
     private final VkClearValue clrValueColor;
     private final Pipeline pipeline;
-    private VkRenderingAttachmentInfo.Buffer[] colorAttachmentsInfo;
+    private VkRenderingAttachmentInfo.Buffer[] attInfoColor;
     private VkRenderingInfo[] renderInfo;
 
     public ScnRender(VkCtx vkCtx) {
         clrValueColor = VkClearValue.calloc().color(
                 c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
-        colorAttachmentsInfo = createColorAttachments(vkCtx, clrValueColor);
-        renderInfo = createRenderInfo(vkCtx, colorAttachmentsInfo);
+        attInfoColor = createColorAttachmentsInfo(vkCtx, clrValueColor);
+        renderInfo = createRenderInfo(vkCtx, attInfoColor);
 
         ShaderModule[] shaderModules = createShaderModules(vkCtx);
 
@@ -38,7 +38,7 @@ public class ScnRender {
         Arrays.asList(shaderModules).forEach(s -> s.cleanup(vkCtx));
     }
 
-    private static VkRenderingAttachmentInfo.Buffer[] createColorAttachments(VkCtx vkCtx, VkClearValue clearValue) {
+    private static VkRenderingAttachmentInfo.Buffer[] createColorAttachmentsInfo(VkCtx vkCtx, VkClearValue clearValue) {
         SwapChain swapChain = vkCtx.getSwapChain();
         int numImages = swapChain.getNumImages();
         var result = new VkRenderingAttachmentInfo.Buffer[numImages];
@@ -100,7 +100,7 @@ public class ScnRender {
     public void cleanup(VkCtx vkCtx) {
         pipeline.cleanup(vkCtx);
         Arrays.asList(renderInfo).forEach(VkRenderingInfo::free);
-        Arrays.asList(colorAttachmentsInfo).forEach(VkRenderingAttachmentInfo.Buffer::free);
+        Arrays.asList(attInfoColor).forEach(VkRenderingAttachmentInfo.Buffer::free);
         clrValueColor.free();
     }
 
@@ -137,8 +137,7 @@ public class ScnRender {
                     .offset(it -> it.x(0).y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer offsets = stack.mallocLong(1);
-            offsets.put(0, 0L);
+            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
             LongBuffer vertexBuffer = stack.mallocLong(1);
             var vulkanModels = modelsCache.getModelsMap().values();
             for (VulkanModel vulkanModel : vulkanModels) {

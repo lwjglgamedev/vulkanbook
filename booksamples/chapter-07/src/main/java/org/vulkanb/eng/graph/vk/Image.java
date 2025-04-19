@@ -72,6 +72,10 @@ public class Image {
         return format;
     }
 
+    public int getMipLevels() {
+        return mipLevels;
+    }
+
     public long getVkImage() {
         return vkImage;
     }

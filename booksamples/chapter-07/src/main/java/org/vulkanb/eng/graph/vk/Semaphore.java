@@ -14,7 +14,7 @@ public class Semaphore {
 
     public Semaphore(VkCtx vkCtx) {
         try (var stack = MemoryStack.stackPush()) {
-             var semaphoreCreateInfo = VkSemaphoreCreateInfo.calloc(stack).sType$Default();
+            var semaphoreCreateInfo = VkSemaphoreCreateInfo.calloc(stack).sType$Default();
 
             LongBuffer lp = stack.mallocLong(1);
             vkCheck(vkCreateSemaphore(vkCtx.getDevice().getVkDevice(), semaphoreCreateInfo, null, lp),

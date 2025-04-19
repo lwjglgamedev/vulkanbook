@@ -9,8 +9,7 @@ public class Attachment {
     private boolean depthAttachment;
 
     public Attachment(VkCtx vkCtx, int width, int height, int format, int usage) {
-        var imageData = new Image.ImageData().width(width).height(height).
-                usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
+        var imageData = new Image.ImageData().width(width).height(height).usage(usage | VK_IMAGE_USAGE_SAMPLED_BIT).
                 format(format);
         image = new Image(vkCtx, imageData);
 

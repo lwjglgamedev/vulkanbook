@@ -29,29 +29,26 @@ public class ScnRender {
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/scn_vtx.glsl";
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
 
+    private final VkBuffer buffProjMatrix;
+    private final VkBuffer[] buffViewMatrices;
     private final VkClearValue clrValueColor;
     private final VkClearValue clrValueDepth;
     private final DescSetLayout descLayoutFrgStorage;
+    private final DescSetLayout descLayoutTexture;
     private final DescSetLayout descLayoutVtxUniform;
     private final Pipeline pipeline;
-    private final VkBuffer projMatrixBuff;
     private final ByteBuffer pushConstBuff;
-    private final DescSetLayout textDescSetLayout;
     private final TextureSampler textureSampler;
-    private final VkBuffer[] viewMatricesBuffer;
     private Attachment attColor;
     private Attachment attDepth;
     private VkRenderingAttachmentInfo.Buffer attInfoColor;
     private VkRenderingAttachmentInfo attInfoDepth;
     private VkRenderingInfo renderInfo;
 
-    public ScnRender(VkCtx vkCtx, Scene scene) {
-        clrValueColor = VkClearValue.calloc();
-        clrValueColor.color(c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
-        clrValueDepth = VkClearValue.calloc();
-        clrValueDepth.color(c -> c.float32(0, 1.0f));
-        pushConstBuff = MemoryUtil.memAlloc(PUSH_CONSTANTS_SIZE);
-
+    public ScnRender(VkCtx vkCtx, EngCtx engCtx) {
+        clrValueColor = VkClearValue.calloc().color(
+                c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
+        clrValueDepth = VkClearValue.calloc().color(c -> c.float32(0, 1.0f));
         attColor = createColorAttachment(vkCtx);
         attDepth = createDepthAttachment(vkCtx);
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);
@@ -60,13 +57,15 @@ public class ScnRender {
 
         ShaderModule[] shaderModules = createShaderModules(vkCtx);
 
+        pushConstBuff = MemoryUtil.memAlloc(PUSH_CONSTANTS_SIZE);
+
         descLayoutVtxUniform = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 0, 1, VK_SHADER_STAGE_VERTEX_BIT));
-        projMatrixBuff = VkUtils.createHostVisibleBuff(vkCtx, VkUtils.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        buffProjMatrix = VkUtils.createHostVisibleBuff(vkCtx, VkUtils.MAT4X4_SIZE, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 DESC_ID_PRJ, descLayoutVtxUniform);
-        VkUtils.copyMatrixToBuffer(vkCtx, projMatrixBuff, scene.getProjection().getProjectionMatrix(), 0);
+        VkUtils.copyMatrixToBuffer(vkCtx, buffProjMatrix, engCtx.scene().getProjection().getProjectionMatrix(), 0);
 
-        viewMatricesBuffer = VkUtils.createHostVisibleBuffs(vkCtx, VkUtils.MAT4X4_SIZE, VkUtils.MAX_IN_FLIGHT,
+        buffViewMatrices = VkUtils.createHostVisibleBuffs(vkCtx, VkUtils.MAT4X4_SIZE, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_VIEW, descLayoutVtxUniform);
 
         descLayoutFrgStorage = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -75,11 +74,11 @@ public class ScnRender {
         var textureSamplerInfo = new TextureSamplerInfo(VK_SAMPLER_ADDRESS_MODE_REPEAT,
                 VK_BORDER_COLOR_INT_OPAQUE_BLACK, 1, true);
         textureSampler = new TextureSampler(vkCtx, textureSamplerInfo);
-        textDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        descLayoutTexture = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 0, TextureCache.MAX_TEXTURES, VK_SHADER_STAGE_FRAGMENT_BIT));
 
         pipeline = createPipeline(vkCtx, shaderModules, new DescSetLayout[]{descLayoutVtxUniform, descLayoutVtxUniform,
-                descLayoutFrgStorage, textDescSetLayout});
+                descLayoutFrgStorage, descLayoutTexture});
         Arrays.asList(shaderModules).forEach(s -> s.cleanup(vkCtx));
     }
 
@@ -165,11 +164,11 @@ public class ScnRender {
 
     public void cleanup(VkCtx vkCtx) {
         pipeline.cleanup(vkCtx);
-        Arrays.asList(viewMatricesBuffer).forEach(b -> b.cleanup(vkCtx));
+        Arrays.asList(buffViewMatrices).forEach(b -> b.cleanup(vkCtx));
         descLayoutFrgStorage.cleanup(vkCtx);
-        textDescSetLayout.cleanup(vkCtx);
+        descLayoutTexture.cleanup(vkCtx);
         textureSampler.cleanup(vkCtx);
-        projMatrixBuff.cleanup(vkCtx);
+        buffProjMatrix.cleanup(vkCtx);
         descLayoutVtxUniform.cleanup(vkCtx);
         renderInfo.free();
         attInfoDepth.free();
@@ -194,7 +193,7 @@ public class ScnRender {
         descSet.setBuffer(device, buffer, buffer.getRequestedSize(), layoutInfo.binding(), layoutInfo.descType());
 
         List<ImageView> imageViews = textureCache.getAsList().stream().map(Texture::getImageView).toList();
-        descSet = vkCtx.getDescAllocator().addDescSet(device, DESC_ID_TEXT, textDescSetLayout);
+        descSet = vkCtx.getDescAllocator().addDescSet(device, DESC_ID_TEXT, descLayoutTexture);
         descSet.setImagesArr(device, imageViews, textureSampler, 0);
     }
 
@@ -236,7 +235,7 @@ public class ScnRender {
                     .offset(it -> it.x(0).y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            VkUtils.copyMatrixToBuffer(vkCtx, viewMatricesBuffer[currentFrame], engCtx.scene().getCamera().getViewMatrix(), 0);
+            VkUtils.copyMatrixToBuffer(vkCtx, buffViewMatrices[currentFrame], engCtx.scene().getCamera().getViewMatrix(), 0);
             DescAllocator descAllocator = vkCtx.getDescAllocator();
             LongBuffer descriptorSets = stack.mallocLong(4)
                     .put(0, descAllocator.getDescSet(DESC_ID_PRJ).getVkDescriptorSet())
@@ -301,7 +300,7 @@ public class ScnRender {
         attInfoDepth = createDepthAttachmentInfo(attDepth, clrValueDepth);
         renderInfo = createRenderInfo(attColor, attInfoColor, attInfoDepth);
 
-        VkUtils.copyMatrixToBuffer(vkCtx, projMatrixBuff, engCtx.scene().getProjection().getProjectionMatrix(), 0);
+        VkUtils.copyMatrixToBuffer(vkCtx, buffProjMatrix, engCtx.scene().getProjection().getProjectionMatrix(), 0);
     }
 
     private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f modelMatrix, int materialIdx) {

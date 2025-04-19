@@ -192,35 +192,15 @@ public class Texture {
         vkCmdPipelineBarrier2(cmd.getVkCommandBuffer(), depInfo);
     }
 
-    private void recordImageTransition(MemoryStack stack, CmdBuffer cmd) {
-        var imageBarrier = VkImageMemoryBarrier2.calloc(1, stack)
-                .sType$Default()
-                .oldLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-                .newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                .srcStageMask(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
-                .dstStageMask(VK_PIPELINE_STAGE_TRANSFER_BIT)
-                .srcAccessMask(0)
-                .dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                .subresourceRange(it -> it
-                        .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                        .baseMipLevel(0)
-                        .levelCount(image.getMipLevels())
-                        .baseArrayLayer(0)
-                        .layerCount(1))
-                .image(image.getVkImage());
-
-        VkDependencyInfo depInfo = VkDependencyInfo.calloc(stack)
-                .sType$Default()
-                .pImageMemoryBarriers(imageBarrier);
-
-        vkCmdPipelineBarrier2(cmd.getVkCommandBuffer(), depInfo);
-    }
-
     public void recordTextureTransition(CmdBuffer cmd) {
         if (stgBuffer != null && !recordedTransition) {
             recordedTransition = true;
             try (var stack = MemoryStack.stackPush()) {
-                recordImageTransition(stack, cmd);
+                VkUtils.imageBarrier(stack, cmd.getVkCommandBuffer(), image.getVkImage(),
+                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_ACCESS_2_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
+                        VK_IMAGE_ASPECT_COLOR_BIT);
                 recordCopyBuffer(stack, cmd, stgBuffer);
                 recordGenerateMipMaps(stack, cmd);
             }

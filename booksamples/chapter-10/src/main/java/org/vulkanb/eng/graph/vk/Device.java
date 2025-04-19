@@ -43,6 +43,7 @@ public class Device {
 
             var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
             var features = features2.features();
+
             VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
             samplerAnisotropy = supportedFeatures.samplerAnisotropy();
             if (samplerAnisotropy) {

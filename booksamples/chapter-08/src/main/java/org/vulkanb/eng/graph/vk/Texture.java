@@ -1,7 +1,7 @@
 package org.vulkanb.eng.graph.vk;
 
 import org.lwjgl.system.*;
-import org.lwjgl.vulkan.*;
+import org.lwjgl.vulkan.VkBufferImageCopy;
 
 import java.nio.ByteBuffer;
 
@@ -93,63 +93,21 @@ public class Texture {
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, region);
     }
 
-    private void recordImageTransition(MemoryStack stack, CmdBuffer cmd) {
-        var imageBarrier = VkImageMemoryBarrier2.calloc(1, stack)
-                .sType$Default()
-                .oldLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-                .newLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                .srcStageMask(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
-                .dstStageMask(VK_PIPELINE_STAGE_TRANSFER_BIT)
-                .srcAccessMask(0)
-                .dstAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                .subresourceRange(it -> it
-                        .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                        .baseMipLevel(0)
-                        .levelCount(image.getMipLevels())
-                        .baseArrayLayer(0)
-                        .layerCount(1))
-                .image(image.getVkImage());
-
-        VkDependencyInfo depInfo = VkDependencyInfo.calloc(stack)
-                .sType$Default()
-                .pImageMemoryBarriers(imageBarrier);
-
-        vkCmdPipelineBarrier2(cmd.getVkCommandBuffer(), depInfo);
-    }
-
-    private void recordLayoutTransition(MemoryStack stack, CmdBuffer cmd) {
-        VkImageSubresourceRange subResourceRange = VkImageSubresourceRange.calloc(stack)
-                .aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-                .baseArrayLayer(0)
-                .levelCount(1)
-                .layerCount(1);
-
-        VkImageMemoryBarrier.Buffer barrier = VkImageMemoryBarrier.calloc(1, stack)
-                .sType$Default()
-                .image(image.getVkImage())
-                .srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                .dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                .subresourceRange(subResourceRange);
-
-        barrier.subresourceRange(it -> it
-                        .baseMipLevel(0))
-                .oldLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                .newLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-                .srcAccessMask(VK_ACCESS_TRANSFER_WRITE_BIT)
-                .dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
-
-        vkCmdPipelineBarrier(cmd.getVkCommandBuffer(),
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                null, null, barrier);
-    }
-
     public void recordTextureTransition(CmdBuffer cmd) {
         if (stgBuffer != null && !recordedTransition) {
             recordedTransition = true;
             try (var stack = MemoryStack.stackPush()) {
-                recordImageTransition(stack, cmd);
+                VkUtils.imageBarrier(stack, cmd.getVkCommandBuffer(), image.getVkImage(),
+                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_ACCESS_2_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
+                        VK_IMAGE_ASPECT_COLOR_BIT);
                 recordCopyBuffer(stack, cmd, stgBuffer);
-                recordLayoutTransition(stack, cmd);
+                VkUtils.imageBarrier(stack, cmd.getVkCommandBuffer(), image.getVkImage(),
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                        VK_IMAGE_ASPECT_COLOR_BIT);
             }
         }
     }

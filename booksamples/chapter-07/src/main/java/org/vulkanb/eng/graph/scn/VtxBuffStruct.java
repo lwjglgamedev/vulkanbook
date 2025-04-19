@@ -35,7 +35,7 @@ public class VtxBuffStruct {
                 .binding(0)
                 .location(i)
                 .format(VK_FORMAT_R32G32_SFLOAT)
-                .offset(POSITION_COMPONENTS * VkUtils.FLOAT_SIZE);
+                .offset(offset);
 
         int stride = offset + TEXT_COORD_COMPONENTS * VkUtils.FLOAT_SIZE;
         viBindings.get(0)

@@ -4,7 +4,6 @@
 const int MAX_TEXTURES = 100;
 
 layout(location = 0) in vec2 inTextCoords;
-layout(location = 1) in flat uint inMaterialIdx;
 
 layout(location = 0) out vec4 outFragColor;
 
@@ -21,13 +20,16 @@ layout(set = 2, binding = 0) readonly buffer MaterialUniform {
 
 layout(set = 3, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
 
+layout(push_constant) uniform pc {
+    layout(offset = 64) uint materialIdx;
+} push_constants;
+
 void main()
 {
-    Material material = matUniform.materials[inMaterialIdx];
+    Material material = matUniform.materials[push_constants.materialIdx];
     if (material.hasTexture == 1) {
         outFragColor = texture(textSampler[material.textureIdx], inTextCoords);
     } else {
         outFragColor = material.diffuseColor;
     }
 }
-

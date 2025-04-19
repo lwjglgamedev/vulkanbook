@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph;
 
 import org.lwjgl.system.MemoryUtil;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.*;
 
 import java.nio.*;
@@ -76,6 +76,10 @@ public class ModelsCache {
 
     public VulkanModel getModel(String modelName) {
         return modelsMap.get(modelName);
+    }
+
+    public Map<String, VulkanModel> getModelsMap() {
+        return modelsMap;
     }
 
     public void loadModels(VkCtx vkCtx, List<ModelData> models, CmdPool cmdPool, Queue queue) {

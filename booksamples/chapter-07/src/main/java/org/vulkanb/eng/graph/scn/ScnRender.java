@@ -28,19 +28,19 @@ public class ScnRender {
     private final VkClearValue clrValueDepth;
     private final Pipeline pipeline;
     private final ByteBuffer pushConstBuff;
-    private VkRenderingAttachmentInfo.Buffer[] colorAttachmentsInfo;
-    private Attachment[] depthAttachments;
-    private VkRenderingAttachmentInfo[] depthAttachmentsInfo;
+    private Attachment[] attDepth;
+    private VkRenderingAttachmentInfo.Buffer[] attInfoColor;
+    private VkRenderingAttachmentInfo[] attInfoDepth;
     private VkRenderingInfo[] renderInfo;
 
     public ScnRender(VkCtx vkCtx) {
         clrValueColor = VkClearValue.calloc().color(
                 c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
         clrValueDepth = VkClearValue.calloc().color(c -> c.float32(0, 1.0f));
-        depthAttachments = createDepthAttachments(vkCtx);
-        colorAttachmentsInfo = createColorAttachmentsInfo(vkCtx, clrValueColor);
-        depthAttachmentsInfo = createDepthAttachmentsInfo(vkCtx, depthAttachments, clrValueDepth);
-        renderInfo = createRenderInfo(vkCtx, colorAttachmentsInfo, depthAttachmentsInfo);
+        attDepth = createDepthAttachments(vkCtx);
+        attInfoColor = createColorAttachmentsInfo(vkCtx, clrValueColor);
+        attInfoDepth = createDepthAttachmentsInfo(vkCtx, attDepth, clrValueDepth);
+        renderInfo = createRenderInfo(vkCtx, attInfoColor, attInfoDepth);
 
         ShaderModule[] shaderModules = createShaderModules(vkCtx);
 
@@ -56,8 +56,7 @@ public class ScnRender {
         var result = new VkRenderingAttachmentInfo.Buffer[numImages];
 
         for (int i = 0; i < numImages; ++i) {
-            var attachments = VkRenderingAttachmentInfo.calloc(1);
-            attachments.get(0)
+            var attachments = VkRenderingAttachmentInfo.calloc(1)
                     .sType$Default()
                     .imageView(swapChain.getImageView(i).getVkImageView())
                     .imageLayout(VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR)
@@ -151,9 +150,9 @@ public class ScnRender {
     public void cleanup(VkCtx vkCtx) {
         pipeline.cleanup(vkCtx);
         Arrays.asList(renderInfo).forEach(VkRenderingInfo::free);
-        Arrays.asList(depthAttachmentsInfo).forEach(VkRenderingAttachmentInfo::free);
-        Arrays.asList(colorAttachmentsInfo).forEach(VkRenderingAttachmentInfo.Buffer::free);
-        Arrays.asList(depthAttachments).forEach(a -> a.cleanup(vkCtx));
+        Arrays.asList(attInfoDepth).forEach(VkRenderingAttachmentInfo::free);
+        Arrays.asList(attInfoColor).forEach(VkRenderingAttachmentInfo.Buffer::free);
+        Arrays.asList(attDepth).forEach(a -> a.cleanup(vkCtx));
         MemoryUtil.memFree(pushConstBuff);
         clrValueDepth.free();
         clrValueColor.free();
@@ -170,7 +169,7 @@ public class ScnRender {
                     VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     VK_IMAGE_ASPECT_COLOR_BIT);
-            VkUtils.imageBarrier(stack, cmdHandle, depthAttachments[imageIndex].getImage().getVkImage(),
+            VkUtils.imageBarrier(stack, cmdHandle, attDepth[imageIndex].getImage().getVkImage(),
                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
                     VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
                     VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
@@ -231,13 +230,13 @@ public class ScnRender {
 
     public void resize(VkCtx vkCtx) {
         Arrays.asList(renderInfo).forEach(VkRenderingInfo::free);
-        Arrays.asList(depthAttachmentsInfo).forEach(VkRenderingAttachmentInfo::free);
-        Arrays.asList(colorAttachmentsInfo).forEach(VkRenderingAttachmentInfo.Buffer::free);
-        Arrays.asList(depthAttachments).forEach(a -> a.cleanup(vkCtx));
-        depthAttachments = createDepthAttachments(vkCtx);
-        colorAttachmentsInfo = createColorAttachmentsInfo(vkCtx, clrValueColor);
-        depthAttachmentsInfo = createDepthAttachmentsInfo(vkCtx, depthAttachments, clrValueDepth);
-        renderInfo = createRenderInfo(vkCtx, colorAttachmentsInfo, depthAttachmentsInfo);
+        Arrays.asList(attInfoDepth).forEach(VkRenderingAttachmentInfo::free);
+        Arrays.asList(attInfoColor).forEach(VkRenderingAttachmentInfo.Buffer::free);
+        Arrays.asList(attDepth).forEach(a -> a.cleanup(vkCtx));
+        attDepth = createDepthAttachments(vkCtx);
+        attInfoColor = createColorAttachmentsInfo(vkCtx, clrValueColor);
+        attInfoDepth = createDepthAttachmentsInfo(vkCtx, attDepth, clrValueDepth);
+        renderInfo = createRenderInfo(vkCtx, attInfoColor, attInfoDepth);
     }
 
     private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f projMatrix, Matrix4f modelMatrix) {

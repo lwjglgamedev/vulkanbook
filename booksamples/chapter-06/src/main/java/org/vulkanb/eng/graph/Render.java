@@ -5,8 +5,8 @@ import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.scn.ScnRender;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.ModelData;
 
 import java.util.*;
@@ -20,12 +20,12 @@ public class Render {
     private final Fence[] fences;
     private final Queue.GraphicsQueue graphQueue;
     private final Semaphore[] imageAqSemphs;
+    private final ModelsCache modelsCache;
     private final Queue.PresentQueue presentQueue;
     private final Semaphore[] renderCompleteSemphs;
     private final ScnRender scnRender;
     private final VkCtx vkCtx;
     private int currentFrame;
-    private ModelsCache modelsCache;
 
     public Render(EngCtx engCtx) {
         vkCtx = new VkCtx(engCtx.window());
@@ -89,15 +89,15 @@ public class Render {
 
         waitForFence(currentFrame);
 
-        int imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame]);
-        if (imageIndex < 0) {
-            return;
-        }
-
         var cmdPool = cmdPools[currentFrame];
         var cmdBuffer = cmdBuffers[currentFrame];
 
         recordingStart(cmdPool, cmdBuffer);
+
+        int imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame]);
+        if (imageIndex < 0) {
+            return;
+        }
 
         scnRender.render(vkCtx, cmdBuffer, modelsCache, imageIndex);
 

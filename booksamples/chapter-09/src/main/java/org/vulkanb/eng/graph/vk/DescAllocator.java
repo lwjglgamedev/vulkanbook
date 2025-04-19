@@ -53,7 +53,6 @@ public class DescAllocator {
         DescPoolInfo targetPool = null;
         int poolPos = 0;
         for (DescPoolInfo descPoolInfo : descPoolList) {
-            targetPool = descPoolInfo;
             for (DescSetLayout.LayoutInfo layoutInfo : descSetLayout.getLayoutInfos()) {
                 int descType = layoutInfo.descType();
                 Integer available = descPoolInfo.descCount.get(descType);
@@ -67,10 +66,9 @@ public class DescAllocator {
                 if (available < count) {
                     targetPool = null;
                     break;
+                } else {
+                    targetPool = descPoolInfo;
                 }
-            }
-            if (targetPool != null) {
-                break;
             }
             poolPos++;
         }

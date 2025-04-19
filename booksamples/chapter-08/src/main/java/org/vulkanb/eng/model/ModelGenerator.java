@@ -109,6 +109,7 @@ public class ModelGenerator {
         Logger.info("Generated materials file [{}]", outMaterialFile);
 
         modelBinData.close();
+        aiReleaseImport(aiScene);
         Logger.info("Generated vtx file [{}]", modelBinData.getVtxFilePath());
         Logger.info("Generated idx file [{}]", modelBinData.getIdxFilePath());
     }

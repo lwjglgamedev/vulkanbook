@@ -3,8 +3,10 @@
   "includes":[
     { "pattern":"\\Qeng.properties\\E" },
 	{ "pattern":"\\Qtinylog.properties\\E" },
+	{ "pattern":"\\Qimgui-java.properties\\E" },
 	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/(lwjgl.dll|liblwjgl.so|liblwjgl.dylib)$" },
-	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/glfw/(glfw.dll|libglfw.so|libglfw.dylib)$" }
+	{ "pattern":"^(linux|windows|macos)/(x86|x64|arm32|arm64)/org/lwjgl/glfw/(glfw.dll|libglfw.so|libglfw.dylib)$" },
+	{ "pattern":"^io/imgui/java/native-bin/(imgui-java64.dll|libimgui-java64.so|libimgui-java64.dylib)$" }
 	]},
   "bundles":[]
 }

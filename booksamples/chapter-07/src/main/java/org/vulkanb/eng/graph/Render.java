@@ -5,8 +5,8 @@ import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.scn.ScnRender;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.ModelData;
 import org.vulkanb.eng.wnd.Window;
 
@@ -92,16 +92,16 @@ public class Render {
 
         waitForFence(currentFrame);
 
+        var cmdPool = cmdPools[currentFrame];
+        var cmdBuffer = cmdBuffers[currentFrame];
+
+        recordingStart(cmdPool, cmdBuffer);
+
         int imageIndex;
         if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
             resize(engCtx);
             return;
         }
-
-        var cmdPool = cmdPools[currentFrame];
-        var cmdBuffer = cmdBuffers[currentFrame];
-
-        recordingStart(cmdPool, cmdBuffer);
 
         scnRender.render(engCtx, vkCtx, cmdBuffer, modelsCache, imageIndex);
 

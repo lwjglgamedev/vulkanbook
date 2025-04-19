@@ -58,16 +58,6 @@ public class VkBuffer {
         vkFreeMemory(vkDevice, memory, null);
     }
 
-    public void flush(VkCtx vkCtx) {
-        try (var stack = MemoryStack.stackPush()) {
-            VkMappedMemoryRange mappedRange = VkMappedMemoryRange.calloc(stack)
-                    .sType$Default()
-                    .memory(memory)
-                    .size(VK_WHOLE_SIZE);
-            vkFlushMappedMemoryRanges(vkCtx.getDevice().getVkDevice(), mappedRange);
-        }
-    }
-
     public long getBuffer() {
         return buffer;
     }

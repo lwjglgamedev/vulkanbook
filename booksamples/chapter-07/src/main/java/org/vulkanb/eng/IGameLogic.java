@@ -9,5 +9,4 @@ public interface IGameLogic {
     void input(EngCtx engCtx, long diffTimeMillis);
 
     void update(EngCtx engCtx, long diffTimeMillis);
-    
 }

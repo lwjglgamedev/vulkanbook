@@ -13,31 +13,30 @@ import static org.lwjgl.vulkan.VK13.*;
 public class ScnRender {
 
     private final VkClearValue clrValueColor;
-    private VkRenderingAttachmentInfo.Buffer[] attachments;
+    private VkRenderingAttachmentInfo.Buffer[] attInfoColor;
     private VkRenderingInfo[] renderInfo;
 
     public ScnRender(VkCtx vkCtx) {
         clrValueColor = VkClearValue.calloc().color(
                 c -> c.float32(0, 0.5f).float32(1, 0.7f).float32(2, 0.9f).float32(3, 1.0f));
-        attachments = createAttachments(vkCtx, clrValueColor);
-        renderInfo = createRenderInfo(vkCtx, attachments);
+        attInfoColor = createColorAttachmentsInfo(vkCtx, clrValueColor);
+        renderInfo = createRenderInfo(vkCtx, attInfoColor);
     }
 
-    private static VkRenderingAttachmentInfo.Buffer[] createAttachments(VkCtx vkCtx, VkClearValue clearValue) {
+    private static VkRenderingAttachmentInfo.Buffer[] createColorAttachmentsInfo(VkCtx vkCtx, VkClearValue clearValue) {
         SwapChain swapChain = vkCtx.getSwapChain();
         int numImages = swapChain.getNumImages();
         var result = new VkRenderingAttachmentInfo.Buffer[numImages];
 
         for (int i = 0; i < numImages; ++i) {
-            VkRenderingAttachmentInfo.Buffer colorAttach = VkRenderingAttachmentInfo.calloc(1)
+            var attachments = VkRenderingAttachmentInfo.calloc(1)
                     .sType$Default()
                     .imageView(swapChain.getImageView(i).getVkImageView())
                     .imageLayout(VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR)
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
                     .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
-                    .resolveMode(VK_RESOLVE_MODE_NONE)
                     .clearValue(clearValue);
-            result[i] = colorAttach;
+            result[i] = attachments;
         }
         return result;
     }
@@ -65,7 +64,7 @@ public class ScnRender {
 
     public void cleanup() {
         Arrays.asList(renderInfo).forEach(VkRenderingInfo::free);
-        Arrays.asList(attachments).forEach(VkRenderingAttachmentInfo.Buffer::free);
+        Arrays.asList(attInfoColor).forEach(VkRenderingAttachmentInfo.Buffer::free);
         clrValueColor.free();
     }
 

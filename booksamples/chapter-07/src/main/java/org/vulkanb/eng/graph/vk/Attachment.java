@@ -6,7 +6,6 @@ public class Attachment {
 
     private final Image image;
     private final ImageView imageView;
-
     private boolean depthAttachment;
 
     public Attachment(VkCtx vkCtx, int width, int height, int format, int usage) {

@@ -33,4 +33,3 @@ void main()
         outFragColor = material.diffuseColor;
     }
 }
-

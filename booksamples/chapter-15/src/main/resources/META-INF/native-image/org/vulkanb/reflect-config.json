@@ -10,5 +10,27 @@
 {
   "name":"org.tinylog.writers.ConsoleWriter",
   "methods":[{"name":"<init>","parameterTypes":["java.util.Map"] }]
+},
+{
+  "name":"org.vulkanb.eng.model.ModelData",
+  "allDeclaredFields": true,
+  "allPublicMethods": true,
+  "allDeclaredConstructors": true
+},
+{
+  "name":"org.vulkanb.eng.model.MaterialData",
+  "allDeclaredFields": true,
+  "allPublicMethods": true,
+  "allDeclaredConstructors": true
+},
+{
+  "name":"org.vulkanb.eng.model.MeshData",
+  "allDeclaredFields": true,
+  "allPublicMethods": true,
+  "allDeclaredConstructors": true
+},
+{
+  "name":"org.joml.Vector4f",
+  "unsafeAllocated": true
 }
 ]
