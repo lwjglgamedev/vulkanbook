@@ -274,7 +274,7 @@ public class SoundManager {
 }
 ```
 
-This class holds references to the ```SoundBuffer``` and ```SoundSource``` instances to track and later cleanup them properly. SoundBuffers and SoundSources are stored in in a ```Map``` so they can be retrieved by an identifier. Although a `SoundSource` will be bound always only toa a single `SoundBuffer` we do not need to create a sound soruce for ach possible sound. In fact, we can have a few sound sources depending on their characteristics, for example if they are relative or not, or their position, and change the buffer which they are bound to dynamically. The constructor initializes the OpenAL subsystem:
+This class holds references to the ```SoundBuffer``` and ```SoundSource``` instances to track and later cleanup them properly. SoundBuffers and SoundSources are stored in in a ```Map``` so they can be retrieved by an identifier. Although a `SoundSource` will be bound always only to a single `SoundBuffer` we do not need to create a sound source for each possible sound. In fact, we can have a few sound sources depending on their characteristics, for example if they are relative or not, or their position, and change the buffer which they are bound to dynamically. The constructor initializes the OpenAL subsystem:
 
 * Opens the default device.
 * Create the capabilities for that device.
