@@ -8,8 +8,8 @@ import org.vulkanb.eng.graph.gui.GuiRender;
 import org.vulkanb.eng.graph.post.PostRender;
 import org.vulkanb.eng.graph.scn.ScnRender;
 import org.vulkanb.eng.graph.swap.SwapChainRender;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.*;
 import org.vulkanb.eng.wnd.Window;
 
@@ -25,6 +25,7 @@ public class Render {
     private final Queue.GraphicsQueue graphQueue;
     private final GuiRender guiRender;
     private final Semaphore[] imageAqSemphs;
+    private final MaterialsCache materialsCache;
     private final ModelsCache modelsCache;
     private final PostRender postRender;
     private final Queue.PresentQueue presentQueue;
@@ -34,7 +35,6 @@ public class Render {
     private final TextureCache textureCache;
     private final VkCtx vkCtx;
     private int currentFrame;
-    private MaterialsCache materialsCache;
     private boolean resize;
 
     public Render(EngCtx engCtx) {
@@ -57,7 +57,7 @@ public class Render {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         resize = false;
-        scnRender = new ScnRender(vkCtx, engCtx.scene());
+        scnRender = new ScnRender(vkCtx, engCtx);
         postRender = new PostRender(vkCtx, scnRender.getAttColor());
         guiRender = new GuiRender(engCtx, vkCtx, graphQueue, postRender.getAttachment());
         swapChainRender = new SwapChainRender(vkCtx, postRender.getAttachment());

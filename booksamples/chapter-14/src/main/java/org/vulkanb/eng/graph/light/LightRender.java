@@ -30,8 +30,8 @@ public class LightRender {
     private VkRenderingInfo renderInfo;
 
     public LightRender(VkCtx vkCtx, List<Attachment> attachments) {
-        clrValueColor = VkClearValue.calloc();
-        clrValueColor.color(c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
+        clrValueColor = VkClearValue.calloc().color(
+                c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
 
         attColor = createColorAttachment(vkCtx);
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);

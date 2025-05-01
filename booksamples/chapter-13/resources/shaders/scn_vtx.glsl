@@ -21,4 +21,3 @@ void main()
     gl_Position   = projUniform.matrix * viewUniform.matrix * push_constants.modelMatrix * vec4(inPos, 1);
     outTextCoords = inTextCoords;
 }
-

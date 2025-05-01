@@ -3,6 +3,7 @@ package org.vulkanb.eng.graph;
 import org.tinylog.Logger;
 import org.vulkanb.eng.EngCfg;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 
 import java.io.IOException;
 import java.util.*;
@@ -18,30 +19,32 @@ public class TextureCache {
         textureMap = new IndexedLinkedHashMap<>();
     }
 
-    public Texture addTexture(VkCtx vkCtx, String id, String texturePath, int format) {
+    public Texture addTexture(VkCtx vkCtx, String id, ImageSrc srcImage, int format) {
         if (textureMap.size() > MAX_TEXTURES) {
             throw new IllegalArgumentException("Texture cache is full");
         }
         Texture texture = textureMap.get(id);
-        ImageSrc srcImage = null;
         if (texture == null) {
-            try {
-                srcImage = GraphUtils.loadImage(texturePath);
-                texture = new Texture(vkCtx, id, srcImage, format);
-                textureMap.put(id, texture);
-            } catch (IOException excp) {
-                Logger.error("Could not load texture [{}], {}", texturePath, excp);
-            } finally {
-                if (srcImage != null) {
-                    GraphUtils.cleanImageData(srcImage);
-                }
-            }
+            texture = new Texture(vkCtx, id, srcImage, format);
+            textureMap.put(id, texture);
         }
         return texture;
     }
 
-    public Texture addTexture(VkCtx vkCtx, String id, ImageSrc srcImage, int format) {
-        return textureMap.computeIfAbsent(id, k -> new Texture(vkCtx, id, srcImage, format));
+    public Texture addTexture(VkCtx vkCtx, String id, String texturePath, int format) {
+        ImageSrc srcImage = null;
+        Texture result = null;
+        try {
+            srcImage = GraphUtils.loadImage(texturePath);
+            result = addTexture(vkCtx, id, srcImage, format);
+        } catch (IOException excp) {
+            Logger.error("Could not load texture [{}], {}", texturePath, excp);
+        } finally {
+            if (srcImage != null) {
+                GraphUtils.cleanImageData(srcImage);
+            }
+        }
+        return result;
     }
 
     public void cleanup(VkCtx vkCtx) {
@@ -65,7 +68,7 @@ public class TextureCache {
         return textureMap.get(texturePath.trim());
     }
 
-    public void transitionTexts(VkCtx vkCtx, CmdPool cmdPool, org.vulkanb.eng.graph.vk.Queue queue) {
+    public void transitionTexts(VkCtx vkCtx, CmdPool cmdPool, Queue queue) {
         Logger.debug("Recording texture transitions");
         int numTextures = textureMap.size();
         if (numTextures < MAX_TEXTURES) {

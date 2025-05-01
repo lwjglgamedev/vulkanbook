@@ -32,9 +32,4 @@ void main()
     } else {
         outAlbedo = material.diffuseColor;
     }
-    // Hack to avoid transparent PBR artifacts
-    if (outAlbedo.a < 0.5) {
-        discard;
-    }
 }
-

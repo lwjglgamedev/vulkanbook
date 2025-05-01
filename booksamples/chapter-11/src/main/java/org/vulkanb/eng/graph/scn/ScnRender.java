@@ -17,7 +17,7 @@ import static org.lwjgl.vulkan.VK13.*;
 
 public class ScnRender {
 
-    private static final int COLOR_FORMAT = VK_FORMAT_R32G32B32A32_SFLOAT;
+    private static final int COLOR_FORMAT = VK_FORMAT_R16G16B16A16_SFLOAT;
     private static final int DEPTH_FORMAT = VK_FORMAT_D16_UNORM;
     private static final String DESC_ID_MAT = "SCN_DESC_ID_MAT";
     private static final String DESC_ID_PRJ = "SCN_DESC_ID_PRJ";
@@ -127,9 +127,9 @@ public class ScnRender {
                         })
                 .setDescSetLayouts(descSetLayouts)
                 .setUseBlend(true);
-        Pipeline pipeLine = new Pipeline(vkCtx, buildInfo);
+        var pipeline = new Pipeline(vkCtx, buildInfo);
         vtxBuffStruct.cleanup();
-        return pipeLine;
+        return pipeline;
     }
 
     private static VkRenderingInfo createRenderInfo(Attachment colorAttachment, VkRenderingAttachmentInfo.Buffer colorAttachmentInfo,
@@ -165,11 +165,11 @@ public class ScnRender {
     public void cleanup(VkCtx vkCtx) {
         pipeline.cleanup(vkCtx);
         Arrays.asList(buffViewMatrices).forEach(b -> b.cleanup(vkCtx));
+        buffProjMatrix.cleanup(vkCtx);
+        descLayoutVtxUniform.cleanup(vkCtx);
         descLayoutFrgStorage.cleanup(vkCtx);
         descLayoutTexture.cleanup(vkCtx);
         textureSampler.cleanup(vkCtx);
-        buffProjMatrix.cleanup(vkCtx);
-        descLayoutVtxUniform.cleanup(vkCtx);
         renderInfo.free();
         attInfoDepth.free();
         attInfoColor.free();
@@ -204,7 +204,7 @@ public class ScnRender {
 
             VkUtils.imageBarrier(stack, cmdHandle, attColor.getImage().getVkImage(),
                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     VK_IMAGE_ASPECT_COLOR_BIT);
             VkUtils.imageBarrier(stack, cmdHandle, attDepth.getImage().getVkImage(),

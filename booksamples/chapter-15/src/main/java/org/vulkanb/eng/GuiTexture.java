@@ -1,6 +1,5 @@
 package org.vulkanb.eng;
 
-
 import java.security.SecureRandom;
 
 public record GuiTexture(long id, String texturePath) {

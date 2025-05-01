@@ -23,6 +23,7 @@ public class Render {
     private final Fence[] fences;
     private final Queue.GraphicsQueue graphQueue;
     private final Semaphore[] imageAqSemphs;
+    private final MaterialsCache materialsCache;
     private final ModelsCache modelsCache;
     private final PostRender postRender;
     private final Queue.PresentQueue presentQueue;
@@ -32,7 +33,6 @@ public class Render {
     private final TextureCache textureCache;
     private final VkCtx vkCtx;
     private int currentFrame;
-    private MaterialsCache materialsCache;
     private boolean resize;
 
     public Render(EngCtx engCtx) {

@@ -37,23 +37,23 @@ public class Pipeline {
                 }
             }
 
-            var vkPipelineInputAssemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.calloc(stack)
+            var assemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.calloc(stack)
                     .sType$Default()
                     .topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
-            var vkPipelineViewportStateCreateInfo = VkPipelineViewportStateCreateInfo.calloc(stack)
+            var viewportStateCreateInfo = VkPipelineViewportStateCreateInfo.calloc(stack)
                     .sType$Default()
                     .viewportCount(1)
                     .scissorCount(1);
 
-            var vkPipelineRasterizationStateCreateInfo = VkPipelineRasterizationStateCreateInfo.calloc(stack)
+            var rasterizationStateCreateInfo = VkPipelineRasterizationStateCreateInfo.calloc(stack)
                     .sType$Default()
                     .polygonMode(VK_POLYGON_MODE_FILL)
                     .cullMode(VK_CULL_MODE_NONE)
                     .frontFace(VK_FRONT_FACE_CLOCKWISE)
                     .lineWidth(1.0f);
 
-            var vkPipelineMultisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.calloc(stack)
+            var multisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.calloc(stack)
                     .sType$Default()
                     .rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
 
@@ -107,10 +107,9 @@ public class Pipeline {
                         .srcAlphaBlendFactor(VK_BLEND_FACTOR_SRC_ALPHA)
                         .dstAlphaBlendFactor(VK_BLEND_FACTOR_ZERO);
             }
-            var colorBlendState =
-                    VkPipelineColorBlendStateCreateInfo.calloc(stack)
-                            .sType$Default()
-                            .pAttachments(blendAttState);
+            var colorBlendState = VkPipelineColorBlendStateCreateInfo.calloc(stack)
+                    .sType$Default()
+                    .pAttachments(blendAttState);
 
             IntBuffer colorFormats = stack.mallocInt(1);
             colorFormats.put(0, buildInfo.getColorFormat());
@@ -131,23 +130,24 @@ public class Pipeline {
                     "Failed to create pipeline layout");
             vkPipelineLayout = lp.get(0);
 
-            var pipeline = VkGraphicsPipelineCreateInfo.calloc(1, stack)
+            var createInfo = VkGraphicsPipelineCreateInfo.calloc(1, stack)
                     .sType$Default()
+                    .renderPass(VK_NULL_HANDLE)
                     .pStages(shaderStages)
                     .pVertexInputState(buildInfo.getVi())
-                    .pInputAssemblyState(vkPipelineInputAssemblyStateCreateInfo)
-                    .pViewportState(vkPipelineViewportStateCreateInfo)
-                    .pRasterizationState(vkPipelineRasterizationStateCreateInfo)
+                    .pInputAssemblyState(assemblyStateCreateInfo)
+                    .pViewportState(viewportStateCreateInfo)
+                    .pRasterizationState(rasterizationStateCreateInfo)
                     .pColorBlendState(colorBlendState)
-                    .pMultisampleState(vkPipelineMultisampleStateCreateInfo)
+                    .pMultisampleState(multisampleStateCreateInfo)
                     .pDynamicState(vkPipelineDynamicStateCreateInfo)
                     .layout(vkPipelineLayout)
                     .pNext(rendCreateInfo);
             if (ds != null) {
-                pipeline.pDepthStencilState(ds);
+                createInfo.pDepthStencilState(ds);
             }
 
-            vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), vkCtx.getPipelineCache().getVkPipelineCache(), pipeline, null, lp),
+            vkCheck(vkCreateGraphicsPipelines(device.getVkDevice(), vkCtx.getPipelineCache().getVkPipelineCache(), createInfo, null, lp),
                     "Error creating graphics pipeline");
             vkPipeline = lp.get(0);
         }

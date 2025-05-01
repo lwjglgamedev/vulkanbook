@@ -1,8 +1,8 @@
 package org.vulkanb.eng.graph;
 
 import org.lwjgl.system.MemoryUtil;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.*;
 
 import java.io.*;
@@ -28,7 +28,7 @@ public class ModelsCache {
                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         var dstBuffer = new VkBuffer(vkCtx, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
-                VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+                0, 0);
 
         long mappedMemory = srcBuffer.map(vkCtx);
         IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
@@ -52,7 +52,7 @@ public class ModelsCache {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         var dstBuffer = new VkBuffer(vkCtx, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
-                VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+                0, 0);
 
         long mappedMemory = srcBuffer.map(vkCtx);
         FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());

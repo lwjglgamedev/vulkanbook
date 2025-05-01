@@ -8,5 +8,5 @@ layout(set = 0, binding = 0) uniform sampler2D albedoSampler;
 layout(set = 0, binding = 1) uniform sampler2D depthSampler;
 
 void main() {
-    outFragColor = texture(albedoSampler, inTextCoord);
+    outFragColor = vec4(texture(albedoSampler, inTextCoord).rgb, 1.0);
 }

@@ -67,7 +67,7 @@ public class Main implements IGameLogic {
 
 As you can see, in the `main` method, we just start our render/game engine, modeled by the `Engine` class.
 This class requires, in its constructor, the name of the application and a reference to the class which will implement the application logic.
-This is controlled by an interface `IAppLogic` which defines four methods:
+This is controlled by an interface `IGameLogic` which defines four methods:
 
 - `cleanup`: Which is invoked when the application finished to properly release the acquired resources.
 - `init`: Invoked upon application startup to create the required resources (meshes, textures, etc.).
@@ -121,9 +121,9 @@ public class Engine {
     }
 
     public void run() {
-        EngCfg engineProperties = EngCfg.getInstance();
+        var engCfg = EngCfg.getInstance();
         long initialTime = System.currentTimeMillis();
-        float timeU = 1000.0f / engineProperties.getUps();
+        float timeU = 1000.0f / engCfg.getUps();
         double deltaUpdate = 0;
 
         long updateTime = initialTime;
@@ -137,8 +137,8 @@ public class Engine {
             window.resetInput();
 
             if (deltaUpdate >= 1) {
-                long diffTimeMilis = now - updateTime;
-                gameLogic.update(engCtx, diffTimeMilis);
+                long diffTimeMillis = now - updateTime;
+                gameLogic.update(engCtx, diffTimeMillis);
                 updateTime = now;
                 deltaUpdate--;
             }
@@ -180,8 +180,8 @@ This class also provides a handy `stop` method to get out of said loop and a `cl
 
 Let's go back to the core method of the `Engine` class, the `run` method.
 We basically control the elapsed time since the last loop block to check if enough seconds have passed to update the state. If so,
-we've calculated the elapsed time since the last update and invoke the `update` method from the `IAppLogic` instance.
-We invoke the `input` from the `IAppLogic` instance and the `render` method in each turn of the loop.
+we've calculated the elapsed time since the last update and invoke the `update` method from the `IGameLogic` instance.
+We invoke the `input` from the `IGameLogic` instance and the `render` method in each turn of the loop.
 Later on, we will be able to limit the frame rate using vsync, or leave it uncapped.
 
 You may have noticed that we use a class named `EngCfg`, which in this case establishes the updates per second.

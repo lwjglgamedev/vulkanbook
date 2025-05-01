@@ -9,12 +9,12 @@ public class EngCfg {
     private static final int DEFAULT_UPS = 30;
     private static final String FILENAME = "eng.properties";
     private static EngCfg instance;
+
     private boolean debugShaders;
     private String defaultTexturePath;
     private float fov;
     private boolean fxaa;
     private int maxDescs;
-    private int maxMaterials;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -42,7 +42,6 @@ public class EngCfg {
             zFar = Float.parseFloat(props.getOrDefault("zFar", 100.f).toString());
             maxDescs = Integer.parseInt(props.getOrDefault("maxDescs", 1000).toString());
             defaultTexturePath = props.getProperty("defaultTexturePath");
-            maxMaterials = Integer.parseInt(props.getOrDefault("maxMaterials", 500).toString());
             fxaa = Boolean.parseBoolean(props.getOrDefault("fxaa", true).toString());
         } catch (IOException excp) {
             Logger.error("Could not read [{}] properties file", FILENAME, excp);
@@ -66,10 +65,6 @@ public class EngCfg {
 
     public int getMaxDescs() {
         return maxDescs;
-    }
-
-    public int getMaxMaterials() {
-        return maxMaterials;
     }
 
     public String getPhysDeviceName() {

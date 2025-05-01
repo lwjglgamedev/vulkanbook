@@ -763,7 +763,7 @@ public class Render {
 The last step is to change the `Main` class to use the camera and a new model. In this case we will be using the famous Sponza model (we are using the models from [GitHub - KhronosGroup/glTF-Sample-Models: glTF Sample Models](https://github.com/KhronosGroup/glTF-Sample-Models)). We have modified the `input` to update the camera position with the mouse movement when pressing the right button:
 
 ```java
-public class Main implements IAppLogic {
+public class Main implements IGameLogic {
     ...
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float MOVEMENT_SPEED = 0.01f;
@@ -806,7 +806,7 @@ public class Main implements IAppLogic {
 The `init` method has also been modified to load the new model. The `update` method is empty now:
 
 ```java
-public class Main implements IAppLogic {
+public class Main implements IGameLogic {
     ...
     @Override
     public InitData init(EngCtx engCtx) {

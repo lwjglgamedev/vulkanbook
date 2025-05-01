@@ -8,8 +8,8 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.TextureCache;
 import org.vulkanb.eng.graph.post.PostRender;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.wnd.KeyboardInput;
 
 import java.nio.*;
@@ -276,7 +276,7 @@ public class GuiRender {
             return;
         }
         var vtxBuffer = buffsVtx[idx];
-        if (vtxBuffer == null || vertexBufferSize != vtxBuffer.getRequestedSize()) {
+        if (vtxBuffer == null || vertexBufferSize > vtxBuffer.getRequestedSize()) {
             if (vtxBuffer != null) {
                 vtxBuffer.cleanup(vkCtx);
             }
@@ -287,7 +287,7 @@ public class GuiRender {
         }
 
         var indicesBuffer = buffsIdx[idx];
-        if (indicesBuffer == null || indexBufferSize != indicesBuffer.getRequestedSize()) {
+        if (indicesBuffer == null || indexBufferSize > indicesBuffer.getRequestedSize()) {
             if (indicesBuffer != null) {
                 indicesBuffer.cleanup(vkCtx);
             }

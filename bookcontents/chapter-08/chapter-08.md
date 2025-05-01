@@ -2329,7 +2329,7 @@ We need to change we load the models in the `Main` class. Instead of defining th
 `loadModel` and `loadMaterials` methods to load the data:
 
 ```java
-public class Main implements IAppLogic {
+public class Main implements IGameLogic {
     ...
     @Override
     public InitData init(EngCtx engCtx) {

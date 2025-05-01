@@ -8,7 +8,7 @@ import org.vulkanb.eng.wnd.Window;
 
 import java.nio.*;
 
-import static org.lwjgl.vulkan.VK10.VK_FORMAT_B8G8R8A8_UNORM;
+import static org.lwjgl.vulkan.VK13.VK_FORMAT_B8G8R8A8_UNORM;
 import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class Surface {

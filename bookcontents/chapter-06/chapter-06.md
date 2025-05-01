@@ -1121,7 +1121,7 @@ We are now ready to put all the pieces together and render something to the scre
 ```java
 package org.vulkanb;
 ...
-public class Main implements IAppLogic {
+public class Main implements IGameLogic {
     ...
     @Override
     public InitData init(EngCtx engCtx) {
@@ -1158,7 +1158,7 @@ public record InitData(List<ModelData> models) {
 }
 ```
 
-Therefore, we need to update the `IAppLogic` interface to reflect that change:
+Therefore, we need to update the `IGameLogic` interface to reflect that change:
 
 ```java
 public interface IGameLogic {

@@ -27,6 +27,7 @@ public class ShaderCompiler {
                 Shaderc.shaderc_compile_options_set_optimization_level(options, 0);
                 Shaderc.shaderc_compile_options_set_source_language(options, Shaderc.shaderc_source_language_glsl);
             }
+
             long result = Shaderc.shaderc_compile_into_spv(
                     compiler,
                     shaderCode,

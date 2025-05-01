@@ -25,9 +25,9 @@ public class Engine {
     }
 
     public void run() {
-        EngCfg engineProperties = EngCfg.getInstance();
+        var engCfg = EngCfg.getInstance();
         long initialTime = System.currentTimeMillis();
-        float timeU = 1000.0f / engineProperties.getUps();
+        float timeU = 1000.0f / engCfg.getUps();
         double deltaUpdate = 0;
 
         long updateTime = initialTime;
@@ -41,8 +41,8 @@ public class Engine {
             window.resetInput();
 
             if (deltaUpdate >= 1) {
-                long diffTimeMilis = now - updateTime;
-                gameLogic.update(engCtx, diffTimeMilis);
+                long diffTimeMillis = now - updateTime;
+                gameLogic.update(engCtx, diffTimeMillis);
                 updateTime = now;
                 deltaUpdate--;
             }

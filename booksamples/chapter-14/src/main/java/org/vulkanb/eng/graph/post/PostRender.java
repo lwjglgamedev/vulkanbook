@@ -3,7 +3,7 @@ package org.vulkanb.eng.graph.post;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
-import org.vulkanb.eng.*;
+import org.vulkanb.eng.EngCfg;
 import org.vulkanb.eng.graph.vk.*;
 
 import java.nio.*;
@@ -13,7 +13,7 @@ import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class PostRender {
-    public static final int COLOR_FORMAT = VK_FORMAT_R32G32B32A32_SFLOAT;
+    public static final int COLOR_FORMAT = VK_FORMAT_R16G16B16A16_SFLOAT;
     private static final String DESC_ID_ATT = "POST_DESC_ID_ATT";
     private static final String DESC_ID_SCREEN_SIZE = "POST_DESC_ID_SCREEN_SIZE";
     private static final String FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/post_frg.glsl";
