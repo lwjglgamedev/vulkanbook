@@ -150,7 +150,7 @@ void main() {
     vec3 pbr       = texture(pbrSampler, inTextCoord).rgb;
 
     float roughness = pbr.g;
-    float metallic = pbr.b;
+    float metallic  = pbr.b;
 
     vec3 N = normalize(normal);
     vec3 V = normalize(sceneInfo.camPos - worldPos);

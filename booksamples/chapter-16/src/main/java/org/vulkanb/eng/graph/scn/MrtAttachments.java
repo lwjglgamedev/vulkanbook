@@ -9,7 +9,7 @@ import static org.lwjgl.vulkan.VK13.*;
 
 public class MrtAttachments {
 
-    public static final int ALBEDO_FORMAT = VK_FORMAT_R8G8B8A8_UNORM;
+    public static final int ALBEDO_FORMAT = VK_FORMAT_R16G16B16A16_SFLOAT;
     public static final int DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
     public static final int NORMAL_FORMAT = VK_FORMAT_R16G16B16A16_SFLOAT;
     public static final int PBR_FORMAT = VK_FORMAT_R16G16B16A16_SFLOAT;

@@ -42,7 +42,7 @@ public class Scene {
     }
 
     public Light[] getLights() {
-        return this.lights;
+        return lights;
     }
 
     public Projection getProjection() {

@@ -1,6 +1,5 @@
 package org.vulkanb.eng.graph.light;
 
-import org.joml.Vector3f;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
@@ -28,18 +27,18 @@ public class LightRender {
     private final DescSetLayout attDescSetLayout;
     private final VkClearValue clrValueColor;
     private final VkBuffer[] lightsBuffs;
-    private final DescSetLayout lightsDescSetLayout;
     private final Pipeline pipeline;
     private final VkBuffer[] sceneBuffs;
     private final DescSetLayout sceneDescSetLayout;
+    private final DescSetLayout storageDescSetLayout;
     private final TextureSampler textureSampler;
     private Attachment attColor;
     private VkRenderingAttachmentInfo.Buffer attInfoColor;
     private VkRenderingInfo renderInfo;
 
     public LightRender(VkCtx vkCtx, List<Attachment> attachments) {
-        clrValueColor = VkClearValue.calloc();
-        clrValueColor.color(c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
+        clrValueColor = VkClearValue.calloc().color(
+                c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
 
         attColor = createColorAttachment(vkCtx);
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);
@@ -56,21 +55,22 @@ public class LightRender {
             descSetLayouts[i] = new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, i, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
         }
         attDescSetLayout = new DescSetLayout(vkCtx, descSetLayouts);
+
         createAttDescSet(vkCtx, attDescSetLayout, attachments, textureSampler);
 
-        lightsDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, 1,
+        storageDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        long buffSize = (long) VkUtils.VEC3_SIZE + VkUtils.INT_SIZE + (VkUtils.VEC4_SIZE + VkUtils.VEC3_SIZE) * Scene.MAX_LIGHTS;
+        long buffSize = (long) (VkUtils.VEC4_SIZE + VkUtils.VEC3_SIZE) * Scene.MAX_LIGHTS;
         lightsBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_LIGHTS, lightsDescSetLayout);
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, DESC_ID_LIGHTS, storageDescSetLayout);
 
         sceneDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        buffSize = VkUtils.VEC4_SIZE;
+        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE;
         sceneBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_SCENE, sceneDescSetLayout);
 
-        pipeline = createPipeline(vkCtx, shaderModules, new DescSetLayout[]{attDescSetLayout, lightsDescSetLayout,
+        pipeline = createPipeline(vkCtx, shaderModules, new DescSetLayout[]{attDescSetLayout, storageDescSetLayout,
                 sceneDescSetLayout});
         Arrays.asList(shaderModules).forEach(s -> s.cleanup(vkCtx));
     }
@@ -141,7 +141,7 @@ public class LightRender {
     }
 
     public void cleanup(VkCtx vkCtx) {
-        lightsDescSetLayout.cleanup(vkCtx);
+        storageDescSetLayout.cleanup(vkCtx);
         Arrays.asList(lightsBuffs).forEach(b -> b.cleanup(vkCtx));
         sceneDescSetLayout.cleanup(vkCtx);
         Arrays.asList(sceneBuffs).forEach(b -> b.cleanup(vkCtx));
@@ -160,7 +160,6 @@ public class LightRender {
 
     public void render(EngCtx engCtx, VkCtx vkCtx, CmdBuffer cmdBuffer, MrtAttachments mrtAttachments, int currentFrame) {
         try (var stack = MemoryStack.stackPush()) {
-            Scene scene = engCtx.scene();
             VkCommandBuffer cmdHandle = cmdBuffer.getVkCommandBuffer();
 
             VkUtils.imageBarrier(stack, cmdHandle, attColor.getImage().getVkImage(),
@@ -206,6 +205,8 @@ public class LightRender {
                     .put(0, descAllocator.getDescSet(DESC_ID_ATT).getVkDescriptorSet())
                     .put(1, descAllocator.getDescSet(DESC_ID_LIGHTS, currentFrame).getVkDescriptorSet())
                     .put(2, descAllocator.getDescSet(DESC_ID_SCENE, currentFrame).getVkDescriptorSet());
+
+            Scene scene = engCtx.scene();
             updateSceneInfo(vkCtx, scene, currentFrame);
             updateLights(vkCtx, scene, currentFrame);
 
@@ -227,30 +228,25 @@ public class LightRender {
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);
         renderInfo = createRenderInfo(attColor, attInfoColor);
 
-        DescAllocator descAllocator = vkCtx.getDescAllocator();
-        DescSet descSet = descAllocator.getDescSet(DESC_ID_ATT);
-        List<ImageView> imageViews = new ArrayList<>();
+        DescSet descSet = vkCtx.getDescAllocator().getDescSet(DESC_ID_ATT);
+        var imageViews = new ArrayList<ImageView>();
         attachments.forEach(a -> imageViews.add(a.getImageView()));
         descSet.setImages(vkCtx.getDevice(), imageViews, textureSampler, 0);
     }
 
     private void updateLights(VkCtx vkCtx, Scene scene, int currentFrame) {
-        Vector3f ambientLight = scene.getAmbientLight();
         Light[] lights = scene.getLights();
         VkBuffer buff = lightsBuffs[currentFrame];
         long mappedMemory = buff.map(vkCtx);
-        ByteBuffer uniformBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) buff.getRequestedSize());
+        ByteBuffer dataBuff = MemoryUtil.memByteBuffer(mappedMemory, (int) buff.getRequestedSize());
 
-        ambientLight.get(0, uniformBuffer);
-        int offset = VkUtils.VEC3_SIZE;
+        int offset = 0;
         int numLights = lights != null ? lights.length : 0;
-        uniformBuffer.putInt(offset, numLights);
-        offset += VkUtils.FLOAT_SIZE;
         for (int i = 0; i < numLights; i++) {
             Light light = lights[i];
-            light.getPosition().get(offset, uniformBuffer);
+            light.position().get(offset, dataBuff);
             offset += VkUtils.VEC4_SIZE;
-            light.getColor().get(offset, uniformBuffer);
+            light.color().get(offset, dataBuff);
             offset += VkUtils.VEC3_SIZE;
         }
 
@@ -261,7 +257,17 @@ public class LightRender {
         VkBuffer buff = sceneBuffs[currentFrame];
         long mappedMemory = buff.map(vkCtx);
         ByteBuffer dataBuff = MemoryUtil.memByteBuffer(mappedMemory, (int) buff.getRequestedSize());
-        scene.getCamera().getPosition().get(0, dataBuff);
+
+        int offset = 0;
+        scene.getCamera().getPosition().get(offset, dataBuff);
+        offset += VkUtils.VEC3_SIZE;
+
+        scene.getAmbientLight().get(offset, dataBuff);
+        offset += VkUtils.VEC3_SIZE;
+
+        Light[] lights = scene.getLights();
+        int numLights = lights != null ? lights.length : 0;
+        dataBuff.putInt(offset, numLights);
         buff.unMap(vkCtx);
     }
 }

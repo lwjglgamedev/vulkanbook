@@ -36,6 +36,10 @@ public class Device {
             }
 
             // Set up required features
+            var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
+                    .sType$Default()
+                    .scalarBlockLayout(true);
+
             var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
                     .sType$Default()
                     .dynamicRendering(true)
@@ -50,6 +54,7 @@ public class Device {
                 features.samplerAnisotropy(true);
             }
             features2.pNext(features13.address());
+            features13.pNext(features12.address());
 
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()

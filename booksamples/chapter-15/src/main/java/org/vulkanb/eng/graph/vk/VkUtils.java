@@ -19,7 +19,6 @@ public class VkUtils {
     public static final int SHORT_LENGTH = 2;
     public static final int VEC2_SIZE = 2 * FLOAT_SIZE;
     public static final int VEC3_SIZE = 3 * FLOAT_SIZE;
-    ;
     public static final int VEC4_SIZE = 4 * FLOAT_SIZE;
 
     private VkUtils() {

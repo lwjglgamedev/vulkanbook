@@ -178,7 +178,6 @@ public class Render {
 
         VkExtent2D extent = vkCtx.getSwapChain().getSwapChainExtent();
         engCtx.scene().getProjection().resize(extent.width(), extent.height());
-
         scnRender.resize(engCtx, vkCtx);
         lightRender.resize(vkCtx, scnRender.getMrtAttachments().getAllAttachments());
         postRender.resize(vkCtx, lightRender.getAttachment());

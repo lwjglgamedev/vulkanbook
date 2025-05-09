@@ -21,13 +21,13 @@ layout(set = 0, binding = 1) uniform sampler2D albedoSampler;
 layout(set = 0, binding = 2) uniform sampler2D normalsSampler;
 layout(set = 0, binding = 3) uniform sampler2D pbrSampler;
 
-layout(scalar, set = 1, binding = 0) uniform Lights {
+layout(scalar, set = 1, binding = 0) readonly buffer Lights {
+    Light lights[];
+} lights;
+layout(scalar, set = 2, binding = 0) uniform SceneInfo {
+    vec3 camPos;
     vec3 ambientLightColor;
     uint numLights;
-    Light lights[MAX_LIGHTS];
-} lights;
-layout(set = 2, binding = 0) uniform SceneInfo {
-    vec3 camPos;
 } sceneInfo;
 
 float distributionGGX(float dotNH, float roughness)
@@ -95,7 +95,7 @@ void main() {
     F0 = mix(F0, albedo, metallic);
 
     vec3 Lo = vec3(0.0);
-    for (uint i = 0U; i < lights.numLights; i++) {
+    for (uint i = 0U; i < sceneInfo.numLights; i++) {
         Light light = lights.lights[i];
         // calculate per-light radiance
         vec3 L;
@@ -113,7 +113,7 @@ void main() {
         Lo += BRDF(albedo, light.color.rgb * attenuation, L, V, N, metallic, roughness);
     }
 
-    vec3 ambient = lights.ambientLightColor.rgb * albedo;
+    vec3 ambient = sceneInfo.ambientLightColor.rgb * albedo;
     vec3 color = ambient + Lo;
 
     outFragColor = vec4(color, 1.0);

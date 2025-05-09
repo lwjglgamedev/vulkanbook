@@ -42,8 +42,8 @@ public class LightRender {
     private VkRenderingInfo renderInfo;
 
     public LightRender(VkCtx vkCtx, List<Attachment> attachments) {
-        clrValueColor = VkClearValue.calloc();
-        clrValueColor.color(c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
+        clrValueColor = VkClearValue.calloc().color(
+                c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
 
         attColor = createColorAttachment(vkCtx);
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);
@@ -57,12 +57,11 @@ public class LightRender {
         textureSampler = new TextureSampler(vkCtx, textureSamplerInfo);
         int numAttachments = attachments.size();
         DescSetLayout.LayoutInfo[] descSetLayouts = new DescSetLayout.LayoutInfo[numAttachments + 1];
-        for (int i = 0; i < numAttachments; i++) {
+        for (int i = 0; i < numAttachments + 1; i++) {
             descSetLayouts[i] = new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, i, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
         }
-        descSetLayouts[numAttachments] = new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, numAttachments, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-
         attDescSetLayout = new DescSetLayout(vkCtx, descSetLayouts);
+
         createAttDescSet(vkCtx, attDescSetLayout, attachments, textureSampler);
 
         storageDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1,
@@ -265,9 +264,8 @@ public class LightRender {
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);
         renderInfo = createRenderInfo(attColor, attInfoColor);
 
-        DescAllocator descAllocator = vkCtx.getDescAllocator();
-        DescSet descSet = descAllocator.getDescSet(DESC_ID_ATT);
-        List<ImageView> imageViews = new ArrayList<>();
+        DescSet descSet = vkCtx.getDescAllocator().getDescSet(DESC_ID_ATT);
+        var imageViews = new ArrayList<ImageView>();
         attachments.forEach(a -> imageViews.add(a.getImageView()));
         descSet.setImages(vkCtx.getDevice(), imageViews, textureSampler, 0);
     }
@@ -298,9 +296,9 @@ public class LightRender {
         int numLights = lights != null ? lights.length : 0;
         for (int i = 0; i < numLights; i++) {
             Light light = lights[i];
-            light.getPosition().get(offset, dataBuff);
+            light.position().get(offset, dataBuff);
             offset += VkUtils.VEC4_SIZE;
-            light.getColor().get(offset, dataBuff);
+            light.color().get(offset, dataBuff);
             offset += VkUtils.VEC3_SIZE;
         }
 

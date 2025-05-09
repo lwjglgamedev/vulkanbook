@@ -414,7 +414,7 @@ public class LightRender {
                                          TextureSampler sampler) {
         DescAllocator descAllocator = vkCtx.getDescAllocator();
         Device device = vkCtx.getDevice();
-        DescSet descSet = descAllocator.addDescSets(device, DESC_ID_ATT, 1, descSetLayout)[0];
+        DescSet descSet = descAllocator.addDescSet(device, DESC_ID_ATT, descSetLayout);
         List<ImageView> imageViews = new ArrayList<>();
         attachments.forEach(a -> imageViews.add(a.getImageView()));
         descSet.setImages(device, imageViews, sampler, 0);

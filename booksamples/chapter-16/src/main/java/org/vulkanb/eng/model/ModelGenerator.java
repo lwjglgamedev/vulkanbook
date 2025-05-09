@@ -100,15 +100,6 @@ public class ModelGenerator {
         return textCoords;
     }
 
-    private String dumpTexture(String baseDir, AITexture aiTexture) throws IOException {
-        String baseFileName = aiTexture.mFilename().dataString() + ".png";
-        var path = Path.of(baseDir + File.separator + baseFileName);
-        Logger.info("Dumping texture file to [{}]", path);
-        var channel = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-        channel.write(aiTexture.pcDataCompressed());
-        return baseFileName;
-    }
-
     private void mainProcessing() throws IOException {
         Logger.debug("Loading model data [{}]", modelPath);
         var modelFile = new File(modelPath);
@@ -165,6 +156,7 @@ public class ModelGenerator {
         Logger.info("Generated materials file [{}]", outMaterialFile);
 
         modelBinData.close();
+        aiReleaseImport(aiScene);
         Logger.info("Generated vtx file [{}]", modelBinData.getVtxFilePath());
         Logger.info("Generated idx file [{}]", modelBinData.getIdxFilePath());
     }

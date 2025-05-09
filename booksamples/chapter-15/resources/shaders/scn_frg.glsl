@@ -25,10 +25,10 @@ struct Material {
     float roughnessFactor;
     float metallicFactor;
 };
-layout(set = 2, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
-layout(set = 3, binding = 0) readonly buffer MaterialUniform {
+layout(set = 2, binding = 0) readonly buffer MaterialUniform {
     Material materials[];
 } matUniform;
+layout(set = 3, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
 
 vec3 calcNormal(Material material, vec3 normal, vec2 textCoords, mat3 TBN)
 {

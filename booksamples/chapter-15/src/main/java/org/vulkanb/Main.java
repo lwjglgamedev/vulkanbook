@@ -56,16 +56,12 @@ public class Main implements IGameLogic {
 
         scene.getAmbientLight().set(0.2f, 0.2f, 0.2f);
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light();
-        dirLight.getPosition().set(0.0f, -1.0f, 0.0f, 0.0f);
-        dirLight.getColor().set(1.0f, 1.0f, 1.0f, 1.0f);
+        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
         lights.add(dirLight);
 
-        pointLight = new Light();
-        pointLight.getPosition().set(5.0f, 3.4f, 0.9f, 1.0f);
-        pointLight.getColor().set(0.0f, 1.0f, 0.0f, 1.0f);
+        pointLight = new Light(new Vector4f(5.0f, 3.4f, 0.9f, 1.0f), new Vector4f(0.0f, 1.0f, 0.0f, 1.0f));
         lights.add(pointLight);
-        Vector4f pointPos = pointLight.getPosition();
+        Vector4f pointPos = pointLight.position();
         lightEntity.setPosition(pointPos.x, pointPos.y, pointPos.z);
         lightEntity.updateModelMatrix();
 
@@ -114,14 +110,14 @@ public class Main implements IGameLogic {
 
         move = move * 0.1f;
         if (ki.keyPressed(GLFW_KEY_1)) {
-            pointLight.getPosition().y += move;
+            pointLight.position().y += move;
         } else if (ki.keyPressed(GLFW_KEY_2)) {
-            pointLight.getPosition().y -= move;
+            pointLight.position().y -= move;
         }
         if (ki.keyPressed(GLFW_KEY_3)) {
-            pointLight.getPosition().z -= move;
+            pointLight.position().z -= move;
         } else if (ki.keyPressed(GLFW_KEY_4)) {
-            pointLight.getPosition().z += move;
+            pointLight.position().z += move;
         }
 
         MouseInput mi = window.getMouseInput();
@@ -144,7 +140,7 @@ public class Main implements IGameLogic {
 
     @Override
     public void update(EngCtx engCtx, long diffTimeMillis) {
-        Vector4f pointPos = pointLight.getPosition();
+        Vector4f pointPos = pointLight.position();
         lightEntity.setPosition(pointPos.x, pointPos.y, pointPos.z);
         lightEntity.updateModelMatrix();
     }
@@ -152,7 +148,7 @@ public class Main implements IGameLogic {
     private void updateDirLight() {
         float zValue = (float) Math.cos(Math.toRadians(lightAngle));
         float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = dirLight.getPosition();
+        Vector4f lightDirection = dirLight.position();
         lightDirection.x = 0;
         lightDirection.y = yValue;
         lightDirection.z = zValue;
