@@ -3,7 +3,7 @@
 // Keep in sync manually with Java code
 const int MAX_TEXTURES = 100;
 
-layout(location = 0) in vec4 inPos;
+layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inTangent;
 layout(location = 3) in vec3 inBitangent;
@@ -25,11 +25,10 @@ struct Material {
     float roughnessFactor;
     float metallicFactor;
 };
-
-layout(set = 2, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
-layout(set = 3, binding = 0) readonly buffer MaterialUniform {
+layout(set = 2, binding = 0) readonly buffer MaterialUniform {
     Material materials[];
 } matUniform;
+layout(set = 3, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
 
 vec3 calcNormal(Material material, vec3 normal, vec2 textCoords, mat3 TBN)
 {
@@ -49,7 +48,7 @@ layout(push_constant) uniform pc {
 
 void main()
 {
-    outPos = inPos;
+    outPos = vec4(inPos, 1.0);
 
     Material material = matUniform.materials[push_constants.materialIdx];
     if (material.hasTexture == 1) {

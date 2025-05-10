@@ -781,9 +781,9 @@ public class Render {
 
         recordingStop(cmdBuffer);
 
-        submit(cmdBuffer, currentFrame);
+        submit(cmdBuffer, currentFrame, imageIndex);
 
-        resize = swapChain.presentImage(presentQueue, renderCompleteSemphs[currentFrame], imageIndex);
+        resize = swapChain.presentImage(presentQueue, renderCompleteSemphs[imageIndex], imageIndex);
 
         currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
     }
@@ -802,6 +802,8 @@ public class Render {
         Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
         for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
             imageAqSemphs[i] = new Semaphore(vkCtx);
+        }
+        for (int i = 0; i < vkCtx.getSwapChain().getNumImages(); i++) {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
         }
 

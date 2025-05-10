@@ -47,8 +47,7 @@ public class Queue {
             }
             long fenceHandle = fence != null ? fence.getVkFence() : VK_NULL_HANDLE;
 
-            vkCheck(vkQueueSubmit2(vkQueue, submitInfo, fenceHandle),
-                    "Failed to submit command to queue");
+            vkCheck(vkQueueSubmit2(vkQueue, submitInfo, fenceHandle), "Failed to submit command to queue");
         }
     }
 

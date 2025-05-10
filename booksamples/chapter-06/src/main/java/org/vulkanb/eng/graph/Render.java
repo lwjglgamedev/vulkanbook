@@ -38,12 +38,15 @@ public class Render {
         cmdBuffers = new CmdBuffer[VkUtils.MAX_IN_FLIGHT];
         fences = new Fence[VkUtils.MAX_IN_FLIGHT];
         imageAqSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
-        renderCompleteSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        int numSwapChainImages = vkCtx.getSwapChain().getNumImages();
+        renderCompleteSemphs = new Semaphore[numSwapChainImages];
         for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
             cmdPools[i] = new CmdPool(vkCtx, graphQueue.getQueueFamilyIndex(), false);
             cmdBuffers[i] = new CmdBuffer(vkCtx, cmdPools[i], true, true);
             fences[i] = new Fence(vkCtx, true);
             imageAqSemphs[i] = new Semaphore(vkCtx);
+        }
+        for (int i = 0; i < numSwapChainImages; i++) {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         scnRender = new ScnRender(vkCtx);
@@ -103,14 +106,14 @@ public class Render {
 
         recordingStop(cmdBuffer);
 
-        submit(cmdBuffer, currentFrame);
+        submit(cmdBuffer, currentFrame, imageIndex);
 
-        swapChain.presentImage(presentQueue, renderCompleteSemphs[currentFrame], imageIndex);
+        swapChain.presentImage(presentQueue, renderCompleteSemphs[imageIndex], imageIndex);
 
         currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
     }
 
-    private void submit(CmdBuffer cmdBuff, int currentFrame) {
+    private void submit(CmdBuffer cmdBuff, int currentFrame, int imageIndex) {
         try (var stack = MemoryStack.stackPush()) {
             var fence = fences[currentFrame];
             fence.reset(vkCtx);
@@ -124,7 +127,7 @@ public class Render {
             VkSemaphoreSubmitInfo.Buffer signalSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
                     .sType$Default()
                     .stageMask(VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT)
-                    .semaphore(renderCompleteSemphs[currentFrame].getVkSemaphore());
+                    .semaphore(renderCompleteSemphs[imageIndex].getVkSemaphore());
             graphQueue.submit(cmds, waitSemphs, signalSemphs, fence);
         }
     }

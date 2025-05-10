@@ -1157,9 +1157,9 @@ public class Render {
 
         recordingStop(cmdBuffer);
 
-        submit(cmdBuffer, currentFrame);
+        submit(cmdBuffer, currentFrame, imageIndex);
 
-        resize = swapChain.presentImage(presentQueue, renderCompleteSemphs[currentFrame], imageIndex);
+        resize = swapChain.presentImage(presentQueue, renderCompleteSemphs[imageIndex], imageIndex);
 
         currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
     }

@@ -19,7 +19,6 @@ import java.util.*;
 import java.util.regex.*;
 
 import static org.lwjgl.assimp.Assimp.*;
-import static org.vulkanb.eng.EngUtils.*;
 
 public class ModelGenerator {
 
@@ -129,6 +128,19 @@ public class ModelGenerator {
             }
         }
         return result;
+    }
+
+    private static float[] listFloatToArray(List<Float> list) {
+        int size = list != null ? list.size() : 0;
+        float[] floatArr = new float[size];
+        for (int i = 0; i < size; i++) {
+            floatArr[i] = list.get(i);
+        }
+        return floatArr;
+    }
+
+    private static int[] listIntToArray(List<Integer> list) {
+        return list.stream().mapToInt((Integer v) -> v).toArray();
     }
 
     public static void main(String[] args) {

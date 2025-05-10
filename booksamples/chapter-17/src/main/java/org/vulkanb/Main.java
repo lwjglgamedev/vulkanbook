@@ -64,9 +64,7 @@ public class Main implements IGameLogic {
 
         scene.getAmbientLight().set(0.8f, 0.8f, 0.8f);
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light();
-        dirLight.getPosition().set(0.0f, -1.0f, 0.0f, 0.0f);
-        dirLight.getColor().set(1.0f, 1.0f, 1.0f, 1.0f);
+        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(5.0f, 5.0f, 5.0f, 1.0f));
         lights.add(dirLight);
 
         Light[] lightArr = new Light[lights.size()];
@@ -146,7 +144,7 @@ public class Main implements IGameLogic {
     private void updateDirLight() {
         float zValue = (float) Math.cos(Math.toRadians(lightAngle));
         float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = dirLight.getPosition();
+        Vector4f lightDirection = dirLight.position();
         lightDirection.x = 0;
         lightDirection.y = yValue;
         lightDirection.z = zValue;

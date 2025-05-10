@@ -150,9 +150,9 @@ public class ScnRender {
     public void cleanup(VkCtx vkCtx) {
         pipeline.cleanup(vkCtx);
         Arrays.asList(buffViewMatrices).forEach(b -> b.cleanup(vkCtx));
+        descLayoutFrgStorage.cleanup(vkCtx);
         descLayoutTexture.cleanup(vkCtx);
         textureSampler.cleanup(vkCtx);
-        descLayoutFrgStorage.cleanup(vkCtx);
         buffProjMatrix.cleanup(vkCtx);
         descLayoutVtxUniform.cleanup(vkCtx);
         renderInfo.free();

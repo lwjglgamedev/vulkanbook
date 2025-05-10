@@ -320,8 +320,7 @@ public class Queue {
             }
             long fenceHandle = fence != null ? fence.getVkFence() : VK_NULL_HANDLE;
 
-            vkCheck(vkQueueSubmit2(vkQueue, submitInfo, fenceHandle),
-                    "Failed to submit command to queue");
+            vkCheck(vkQueueSubmit2(vkQueue, submitInfo, fenceHandle), "Failed to submit command to queue");
         }
     }
     ...
@@ -367,7 +366,7 @@ Prior to progress on how we render graphics, we will analyze first how what we w
 command buffer and a command pool, of course having a queue to submit the commands and we will need something to do with the image views of the `SwapChain`.
 So, let's just create one instance of each and that's it, right? Well, it turns out that is not so easy. We need to make sure that the image we are rendering into
 is not in use. Ok, so let's then use a fence and a semaphore to prevent that, and that's all, right? Again, it is not so easy. Remember when we talked about the
-`SwapChain` class? We created several image views. We want to be able to perform operations in the CPU while the GPU  is working, this is why we tried to use 
+`SwapChain` class? We created several image views. We want to be able to perform operations in the CPU while the GPU is working, this is why we tried to use 
 triple buffering. So we need to have several resources while processing each frame. How many of them? At first, you may think that you need as many as image views
 have the `SwapChain`image views. The reality, however, is that you do not need as many, with just two is enough. The reason is that we do not want the CPU to wait for
 the GPU to prevent having latency. We will refer to this number as frames in flight, which shall not be confused with total swap chain image views.
@@ -383,6 +382,32 @@ public class VkUtils {
 
 There is an excellent resource [here](https://docs.vulkan.org/tutorial/latest/03_Drawing_a_triangle/03_Drawing/03_Frames_in_flight.html)
 which provides additional information.
+
+So then just create as many semaphores and fences as frames in flight an that's all, right? Again is not so easy!. We need to take care with swap chain image presentation.
+We will use a semaphore when submitting the work to a queue to be signaled after all the work has been done. We will use an array of semaphores for that, called
+`renderCompleteSemphs`. When presenting the acquired swap chain image we wil use the proper index `renderCompleteSemphs[i]` when calling the `vkQueuePresentKHR` function
+so presentation cannot start until render work has been finished. The issue here is that this will be an asynchronous call that can be processed later on. Imagine that we created as the `renderCompleteSemphs` array is size to contain as many instances as flights in frame, let's say `2` and we will have `3` swap chain images.
+
+- In Frame `#0`:
+    - We acquire the first swap chain image (with an index equal to `0`).
+    - We submit the work using `renderCompleteSemphs[0]`.
+    - We present the swap chain image (that is, call the `vkQueuePresentKHR` function using `renderCompleteSemphs[0]` sempahore).
+- In Frame `#1`:
+    - We acquire the next swap chain image (with an index equal to `1`).
+    - We submit the work using `renderCompleteSemphs[1]`.
+    - We present the swap chain image (that is, call the `vkQueuePresentKHR` function using `renderCompleteSemphs[1]` sempahore).
+    - Everything is ok up to this point.
+- In Frame `#2`:
+    - We acquire the next swap chain image (with an index equal to `2`).
+    - We have just `2` instances of `renderCompleteSemphs`, so we need to use `renderCompleteSemphs[0]`.
+    - The issue here is that presentation for Frame `#0` may not have finished, and thus `renderCompleteSemphs[0]` may still be in use. We may have a synchronization issue here.
+
+But, shouldn't fences help us prevent us from this issue? The answer is now, fences will be used when submitting work to a queue. Therefore, if we wait for a fence,
+we wil be sure that previous work associated to the same frame in flight index will have finished. The issue is with presentation, when presenting the swap chain
+image we just only pass a semaphore to wait to be signaled when the render work is finished, but we cannot signal when the presentation will be finished. Therefore, fence
+wait does not know anything about presentation state, The solution for this is to have as many render complete semaphores as swap chain images. The rest of synchronization 
+elements and per-frame elements just need to be sized to the maximum number of flight, because they are concerned to just render activities, presentation is not involved
+at all.
 
 Let's go now to the `Render` class and see the new attributes that we will need (showing the changes in the constructor and the `cleanup` method):
 
@@ -410,13 +435,16 @@ public class Render {
         cmdPools = new CmdPool[VkUtils.MAX_IN_FLIGHT];
         cmdBuffers = new CmdBuffer[VkUtils.MAX_IN_FLIGHT];
         fences = new Fence[VkUtils.MAX_IN_FLIGHT];
-        imageAqSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
-        renderCompleteSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        presCompleteSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        int numSwapChainImages = vkCtx.getSwapChain().getNumImages();
+        renderCompleteSemphs = new Semaphore[numSwapChainImages];
         for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
             cmdPools[i] = new CmdPool(vkCtx, graphQueue.getQueueFamilyIndex(), false);
             cmdBuffers[i] = new CmdBuffer(vkCtx, cmdPools[i], true, true);
-            fences[i] = new Fence(vkCtx, true);
             imageAqSemphs[i] = new Semaphore(vkCtx);
+            fences[i] = new Fence(vkCtx, true);
+        }
+        for (int i = 0; i < numSwapChainImages; i++) {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         scnRender = new ScnRender(vkCtx);
@@ -444,7 +472,8 @@ public class Render {
 We will need:
 - An array of command pools, whose size will be equal to the maximum number of flights in flight.
 - An array of command buffers, one per frame in flight where will be recording the commands for each of them.
-- Synchronization instances, semaphores and fences, as well, as many as frames in flight.
+- Synchronization instances, semaphores and fences, as well, as many as frames in flight with the exception of the semaphores that will be signaled when the render process
+is completed. 
 - One one `Queue.GraphicsQueue` since we can use them in multiple frames. Synchronization wil be controlled by fences and semaphores.
 - You will see to new classes that have not been defined yet: `Queue.PresentQueue` (which will be used to present swap chain images)
 and `ScnRender` (to actually render a scene). We will see their definition later on.
@@ -499,9 +528,9 @@ public class Render {
 
         recordingStop(cmdBuffer);
 
-        submit(cmdBuffer, currentFrame);
+        submit(cmdBuffer, currentFrame, imageIndex);
 
-        swapChain.presentImage(presentQueue, renderCompleteSemphs[currentFrame], imageIndex);
+        swapChain.presentImage(presentQueue, renderCompleteSemphs[imageIndex], imageIndex);
 
         currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
     }
@@ -518,7 +547,7 @@ The `render` loop performs the following actions:
 - We then call to `recordingStart` which resets the command pool and sets the command buffer in recording mode. Remember that we will not be resetting the command
 buffers but the pool. After this step we could start recording "A commands".
 - In our case, since we do not have "A commands" yet", we just acquire next swap chain image. We will see the implementation later on, but this method returns
-the index of the image acquired (it may not be just the next image index). The `imageAqSemphs` array is the semaphore used to synchronize image acquisitions.
+the index of the image acquired (it may not be just the next image index). The `imageAqSemphs` array is the semaphore used to synchronize image acquisition
 When the image is acquired, this semaphore will be signaled. Any operation depending on this image to be acquired, can use this semaphore as a blocking mechanism.
 - If the `acquireNextImage` returns a negative value, this will mean that the operation failed. This could be because the window has been resized. By now, we just return.
 - Then we can record "B commands" which we will do by calling `scnRender.render(vkCtx, cmdBuffer, imageIndex);`
@@ -530,7 +559,7 @@ The `submit` method is defined like this:
 ```java
 public class Render {
     ...
-    private void submit(CmdBuffer cmdBuff, int currentFrame) {
+    private void submit(CmdBuffer cmdBuff, int currentFrame, int imageIndex) {
         try (var stack = MemoryStack.stackPush()) {
             var fence = fences[currentFrame];
             fence.reset(vkCtx);
@@ -544,7 +573,7 @@ public class Render {
             VkSemaphoreSubmitInfo.Buffer signalSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
                     .sType$Default()
                     .stageMask(VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT)
-                    .semaphore(renderCompleteSemphs[currentFrame].getVkSemaphore());
+                    .semaphore(renderCompleteSemphs[imageIndex].getVkSemaphore());
             graphQueue.submit(cmds, waitSemphs, signalSemphs, fence);
         }
     }
@@ -560,8 +589,10 @@ since we depend on swap chain image view, we want to make sure that the image ha
 - `signalSemphs`: It holds a list of semaphores that will be signaled when all the commands have finished. Remember that we use semaphores for GPU-GPU synchronization. In this case, we are submitting the semaphore used in the swap chain presentation. This will provoke that the image cannot be presented until the commands have finished, that is, until
 render has finished. This is why we use the `VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT`, all the commands need to have finalized their journey through the pipeline.
 
-Finally, we use the current `Fence` instance, this way we block the CPU from resetting command buffers that are still in use.
+Please notice that we have different array sizes for the image acquisition semaphores and the render complete semaphores. Later one (`renderCompleteSemphs`) will need to be
+in accessed with the swap chain acquire image index, while the first one (`imageAqSemphs`) will just need frame in flight index.
 
+Finally, we use the current `Fence` instance, this way we block the CPU from resetting command buffers that are still in use.
 
 Let's start now by reviewing the missing methods in `SwapChain` class. First method is `acquireNextImage`:
 

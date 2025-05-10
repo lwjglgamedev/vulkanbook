@@ -6,7 +6,7 @@ layout(location = 2) in vec3 inTangent;
 layout(location = 3) in vec3 inBitangent;
 layout(location = 4) in vec2 inTextCoords;
 
-layout(location = 0) out vec4 outPos;
+layout(location = 0) out vec3 outPos;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outTangent;
 layout(location = 3) out vec3 outBitangent;
@@ -28,7 +28,7 @@ void main()
     vec4 worldPos = push_constants.modelMatrix * vec4(inPos, 1);
     gl_Position   = projUniform.matrix * viewUniform.matrix * worldPos;
     mat3 mNormal  = transpose(inverse(mat3(push_constants.modelMatrix)));
-    outPos        = worldPos;
+    outPos        = worldPos.xyz;
     outNormal     = mNormal * normalize(inNormal);
     outTangent    = mNormal * normalize(inTangent);
     outBitangent  = mNormal * normalize(inBitangent);

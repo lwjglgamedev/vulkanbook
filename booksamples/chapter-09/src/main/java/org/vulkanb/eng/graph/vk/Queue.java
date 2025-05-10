@@ -5,7 +5,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 
-import java.nio.*;
+import java.nio.IntBuffer;
 
 import static org.lwjgl.vulkan.VK13.*;
 import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
@@ -47,8 +47,7 @@ public class Queue {
             }
             long fenceHandle = fence != null ? fence.getVkFence() : VK_NULL_HANDLE;
 
-            vkCheck(vkQueueSubmit2(vkQueue, submitInfo, fenceHandle),
-                    "Failed to submit command to queue");
+            vkCheck(vkQueueSubmit2(vkQueue, submitInfo, fenceHandle), "Failed to submit command to queue");
         }
     }
 
