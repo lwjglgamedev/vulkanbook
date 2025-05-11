@@ -318,7 +318,7 @@ public class ModelGenerator {
             throw new RuntimeException("Model path does not exist [" + modelPath + "]");
         }
 
-        AIScene aiScene = aiImportFile(modelPath, FLAGS | (animation ? 0 : aiProcess_PreTransformVertices));
+        AIScene aiScene = aiImportFile(modelPath, FLAGS | (animation ? aiProcess_LimitBoneWeights : aiProcess_PreTransformVertices));
         if (aiScene == null) {
             throw new RuntimeException("Error loading model [modelPath: " + modelPath + "]");
         }
@@ -386,6 +386,7 @@ public class ModelGenerator {
         Logger.info("Generated materials file [{}]", outMaterialFile);
 
         modelBinData.close();
+        aiReleaseImport(aiScene);
         Logger.info("Generated vtx file [{}]", modelBinData.getVtxFilePath());
         Logger.info("Generated idx file [{}]", modelBinData.getIdxFilePath());
     }

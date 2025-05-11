@@ -20,4 +20,4 @@ void main()
     outMaterialIdx = push_constants.materialIdx;
 
     gl_Position = push_constants.modelMatrix * vec4(entityPos, 1.0f);
- }
+}

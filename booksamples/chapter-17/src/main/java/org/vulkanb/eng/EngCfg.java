@@ -17,8 +17,6 @@ public class EngCfg {
     private boolean fxaa;
     private int maxDescs;
     private int maxJointsMatricesLists;
-    private int maxMaterials;
-    private int maxStorageBuffers;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -50,13 +48,11 @@ public class EngCfg {
             zFar = Float.parseFloat(props.getOrDefault("zFar", 100.f).toString());
             maxDescs = Integer.parseInt(props.getOrDefault("maxDescs", 1000).toString());
             defaultTexturePath = props.getProperty("defaultTexturePath");
-            maxMaterials = Integer.parseInt(props.getOrDefault("maxMaterials", 500).toString());
             fxaa = Boolean.parseBoolean(props.getOrDefault("fxaa", true).toString());
             shadowPcf = Boolean.parseBoolean(props.getOrDefault("shadowPcf", false).toString());
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", 0.00005f).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", 2048).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
-            maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", 100).toString());
             maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", 100).toString());
         } catch (IOException excp) {
             Logger.error("Could not read [{}] properties file", FILENAME, excp);
@@ -84,14 +80,6 @@ public class EngCfg {
 
     public int getMaxJointsMatricesLists() {
         return maxJointsMatricesLists;
-    }
-
-    public int getMaxMaterials() {
-        return maxMaterials;
-    }
-
-    public int getMaxStorageBuffers() {
-        return maxStorageBuffers;
     }
 
     public String getPhysDeviceName() {
@@ -148,13 +136,5 @@ public class EngCfg {
 
     public boolean isVkValidate() {
         return vkValidate;
-    }
-
-    public void setMaxJointsMatricesLists(int maxJointsMatricesLists) {
-        this.maxJointsMatricesLists = maxJointsMatricesLists;
-    }
-
-    public void setMaxStorageBuffers(int maxStorageBuffers) {
-        this.maxStorageBuffers = maxStorageBuffers;
     }
 }

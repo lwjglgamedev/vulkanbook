@@ -11,7 +11,6 @@ layout (constant_id = 3) const int DEBUG_SHADOWS = 0;
 const float PI = 3.14159265359;
 const float SHADOW_FACTOR = 0.25;
 
-// color cannot be vec3 due to std140 in GLSL
 struct Light {
     vec4 position;
     vec3 color;
@@ -151,7 +150,7 @@ void main() {
     vec3 pbr       = texture(pbrSampler, inTextCoord).rgb;
 
     float roughness = pbr.g;
-    float metallic = pbr.b;
+    float metallic  = pbr.b;
 
     vec3 N = normalize(normal);
     vec3 V = normalize(sceneInfo.camPos - worldPos);

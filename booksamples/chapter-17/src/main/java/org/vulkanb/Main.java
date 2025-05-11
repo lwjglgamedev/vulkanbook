@@ -47,7 +47,7 @@ public class Main implements IGameLogic {
 
         ModelData bobModelData = ModelLoader.loadModel("resources/models/bob/boblamp.json");
         models.add(bobModelData);
-        maxFrames = bobModelData.animationsList().get(0).frames().size();
+        maxFrames = bobModelData.animations().get(0).frames().size();
         bobEntity = new Entity("BobEntity", bobModelData.id(), new Vector3f(0.0f, 0.0f, 0.0f));
         bobEntity.setScale(0.04f);
         bobEntity.getRotation().rotateY((float) Math.toRadians(-90.0f));
@@ -58,9 +58,6 @@ public class Main implements IGameLogic {
         List<MaterialData> materials = new ArrayList<>();
         materials.addAll(ModelLoader.loadMaterials("resources/models/sponza/Sponza_mat.json"));
         materials.addAll(ModelLoader.loadMaterials("resources/models/bob/boblamp_mat.json"));
-
-        List<Entity> animatedEntities = new ArrayList<>();
-        animatedEntities.add(bobEntity);
 
         scene.getAmbientLight().set(0.8f, 0.8f, 0.8f);
         List<Light> lights = new ArrayList<>();
