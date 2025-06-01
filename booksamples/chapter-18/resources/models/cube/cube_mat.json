@@ -15,7 +15,7 @@
   },
   {
     "id": "cube-mat-1",
-    "texture_path": "resources\\models\\cube\\cube.png",
+    "texture_path": "resources/models/cube/cube.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {

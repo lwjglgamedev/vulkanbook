@@ -15,7 +15,7 @@
   },
   {
     "id": "tree-mat-1",
-    "texture_path": "resources\\models\\tree\\trunk.png",
+    "texture_path": "resources/models/tree/trunk.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {
@@ -29,7 +29,7 @@
   },
   {
     "id": "tree-mat-2",
-    "texture_path": "resources\\models\\tree\\leaf_maple.png",
+    "texture_path": "resources/models/tree/leaf_maple.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {

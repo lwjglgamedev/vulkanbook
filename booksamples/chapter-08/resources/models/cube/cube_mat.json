@@ -11,7 +11,7 @@
   },
   {
     "id": "cube-mat-1",
-    "texture_path": "resources\\models\\cube\\cube.png",
+    "texture_path": "resources/models/cube/cube.png",
     "diffuse_color": {
       "x": 0.0,
       "y": 0.0,

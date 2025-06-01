@@ -281,12 +281,12 @@ public class ModelGenerator {
                     // Embedded texture
                     var aiTexture = AITexture.create(aiScene.mTextures().get(embeddedTextureIdx));
                     String baseFileName = aiTexture.mFilename().dataString() + ".png";
-                    texturePath = baseDir + File.separator + baseFileName;
+                    texturePath = baseDir + "/" + baseFileName;
                     Logger.info("Dumping texture file to [{}]", texturePath);
                     var channel = FileChannel.open(Path.of(texturePath), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
                     channel.write(aiTexture.pcDataCompressed());
                 } else {
-                    texturePath = baseDir + File.separator + new File(texturePath).getName();
+                    texturePath = baseDir + "/" + new File(texturePath).getName();
                 }
             }
         }
