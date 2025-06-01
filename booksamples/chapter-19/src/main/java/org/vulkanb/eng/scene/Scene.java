@@ -13,12 +13,12 @@ public class Scene {
 
     private final Vector3f ambientLight;
     private final Camera camera;
-    private final List<Entity> entities;
+    private final Map<String, List<Entity>> entitiesMap;
     private final Projection projection;
     private Light[] lights;
 
     public Scene(Window window) {
-        entities = new ArrayList<>();
+        entitiesMap = new HashMap<>();
         var engCfg = EngCfg.getInstance();
         projection = new Projection(engCfg.getFov(), engCfg.getZNear(), engCfg.getZFar(), window.getWidth(),
                 window.getHeight());
@@ -27,7 +27,8 @@ public class Scene {
     }
 
     public void addEntity(Entity entity) {
-        entities.add(entity);
+        var list = entitiesMap.computeIfAbsent(entity.getModelId(), k -> new ArrayList<>());
+        list.add(entity);
     }
 
     public Vector3f getAmbientLight() {
@@ -38,12 +39,16 @@ public class Scene {
         return camera;
     }
 
-    public List<Entity> getEntities() {
-        return entities;
+    public Map<String, List<Entity>> getEntities() {
+        return entitiesMap;
     }
 
     public Light[] getLights() {
-        return this.lights;
+        return lights;
+    }
+
+    public int getNumEntities() {
+        return entitiesMap.values().stream().mapToInt(List::size).sum();
     }
 
     public Projection getProjection() {
@@ -51,15 +56,13 @@ public class Scene {
     }
 
     public void removeAllEntities() {
-        entities.clear();
-    }
-
-    public void removeEntity(Entity entity) {
-        entities.removeIf(entity1 -> entity1.getId().equals(entity.getId()));
+        entitiesMap.clear();
     }
 
     public void removeEntity(String entityId) {
-        entities.removeIf(entity1 -> entity1.getId().equals(entityId));
+        for (var list : entitiesMap.values()) {
+            list.removeIf(entity1 -> entity1.getId().equals(entityId));
+        }
     }
 
     public void setLights(Light[] lights) {

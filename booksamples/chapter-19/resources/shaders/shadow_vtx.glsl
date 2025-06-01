@@ -12,21 +12,27 @@ struct Vertex {
     vec2 inTextCoords;
 };
 
-layout(scalar, buffer_reference, buffer_reference_align=8) buffer VertexBuffer {
-    Vertex vertices[];
+layout(scalar, buffer_reference, buffer_reference_align=16) buffer VertexBuffer {
+    Vertex[] vertices;
 };
 
-layout(std430, buffer_reference, buffer_reference_align=8) buffer IndexBuffer {
-    uint indices[];
+layout(std430, buffer_reference, buffer_reference_align=16) buffer IndexBuffer {
+    uint[] indices;
 };
 
 struct InstanceData {
-    mat4 modelMatrix;
+    uint modelMatrixIdx;
     uint materialIdx;
+    uint addrIdx;
+    uint padding;
 };
 
-layout(scalar, buffer_reference, buffer_reference_align=8) buffer InstancesDataBuffer {
+layout(std430, buffer_reference, buffer_reference_align=16) buffer InstancesDataBuffer {
     InstanceData[] instancesData;
+};
+
+layout(std430, buffer_reference, buffer_reference_align=8) buffer ModelMatricesDataBuffer {
+    mat4[] modelMatrices;
 };
 
 layout(buffer_reference, scalar) buffer AddressBuffer { uint64_t addresses[]; };
@@ -35,6 +41,7 @@ layout(push_constant) uniform pc {
     uint64_t vertexBuffersArr;
     uint64_t indexBuffersAddr;
     InstancesDataBuffer instancesDataBuffer;
+    ModelMatricesDataBuffer modelsMatricesDataBuffer;
 } push_constants;
 
 layout (location = 0) out vec2 outTextCoords;
@@ -42,20 +49,25 @@ layout (location = 1) out flat uint outMaterialIdx;
 
 void main()
 {
+    uint entityId = gl_InstanceIndex;
+
     AddressBuffer vertexAddresses = AddressBuffer(push_constants.vertexBuffersArr);
     AddressBuffer indexAddresses = AddressBuffer(push_constants.indexBuffersAddr);
 
-    VertexBuffer vertexBuffer = VertexBuffer(vertexAddresses.addresses[gl_DrawID]);
-    IndexBuffer indexBuffer = IndexBuffer(indexAddresses.addresses[gl_DrawID]);
+    InstancesDataBuffer instancesDataBuffer = push_constants.instancesDataBuffer;
+    InstanceData instanceData = instancesDataBuffer.instancesData[entityId];
+
+    VertexBuffer vertexBuffer = VertexBuffer(vertexAddresses.addresses[instanceData.addrIdx]);
+    IndexBuffer indexBuffer = IndexBuffer(indexAddresses.addresses[instanceData.addrIdx]);
+
+    ModelMatricesDataBuffer modelMatricesDataBuffer = push_constants.modelsMatricesDataBuffer;
+    mat4 modelMatrix = modelMatricesDataBuffer.modelMatrices[instanceData.modelMatrixIdx];
 
     uint index = indexBuffer.indices[gl_VertexIndex];
     Vertex vertex = vertexBuffer.vertices[index];
 
-    InstancesDataBuffer instancesDataBuffer = push_constants.instancesDataBuffer;
-    InstanceData instanceData = instancesDataBuffer.instancesData[gl_DrawID];
-
     vec3 inPos     = vertex.inPos;
-    vec4 worldPos  = instanceData.modelMatrix * vec4(inPos, 1);
+    vec4 worldPos  = modelMatrix * vec4(inPos, 1);
     outTextCoords  = vertex.inTextCoords;
     outMaterialIdx = instanceData.materialIdx;
 

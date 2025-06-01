@@ -1,19 +1,11 @@
 package org.vulkanb.eng.graph;
 
-import java.util.*;
+import org.vulkanb.eng.graph.vk.*;
 
-public class VulkanAnimation {
-    private final List<VulkanAnimationFrame> vulkanAnimationFrameList;
+import java.util.List;
 
-    public VulkanAnimation() {
-        vulkanAnimationFrameList = new ArrayList<>();
-    }
-
-    public void addVulkanAnimationFrame(VulkanAnimationFrame vulkanAnimationFrame) {
-        vulkanAnimationFrameList.add(vulkanAnimationFrame);
-    }
-
-    public List<VulkanAnimationFrame> getVulkanAnimationFrameList() {
-        return vulkanAnimationFrameList;
+public record VulkanAnimation(String name, List<VkBuffer> frameBufferList) {
+    public void cleanup(VkCtx vkCtx) {
+        frameBufferList.forEach(b -> b.cleanup(vkCtx));
     }
 }

@@ -29,7 +29,7 @@ public class ShadowUtils {
         int numLights = lights.length;
         Light dirLight = null;
         for (int i = 0; i < numLights; i++) {
-            if (lights[i].getPosition().w == 0) {
+            if (lights[i].position().w == 0) {
                 dirLight = lights[i];
                 break;
             }
@@ -37,7 +37,7 @@ public class ShadowUtils {
         if (dirLight == null) {
             throw new RuntimeException("Could not find directional light");
         }
-        Vector4f lightPos = dirLight.getPosition();
+        Vector4f lightPos = dirLight.position();
 
         float[] cascadeSplits = new float[Scene.SHADOW_MAP_CASCADE_COUNT];
 

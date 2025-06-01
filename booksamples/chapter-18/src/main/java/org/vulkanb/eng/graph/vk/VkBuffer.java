@@ -9,8 +9,7 @@ import java.nio.LongBuffer;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.util.vma.Vma.*;
-import static org.lwjgl.vulkan.VK10.VK_WHOLE_SIZE;
-import static org.lwjgl.vulkan.VK13.VK_SHARING_MODE_EXCLUSIVE;
+import static org.lwjgl.vulkan.VK13.*;
 import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class VkBuffer {
@@ -19,7 +18,7 @@ public class VkBuffer {
     private final long buffer;
     private final PointerBuffer pb;
     private final long requestedSize;
-
+    private Long address;
     private long mappedMemory;
 
     public VkBuffer(VkCtx vkCtx, long size, int bufferUsage, int vmaUsage, int vmaFlags, int reqFlags) {
@@ -44,6 +43,9 @@ public class VkBuffer {
             buffer = lp.get(0);
             allocation = pAllocation.get(0);
             pb = MemoryUtil.memAllocPointer(1);
+            if ((bufferUsage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) > 0) {
+                address = VkUtils.getBufferAddress(vkCtx, buffer);
+            }
         }
     }
 
@@ -55,6 +57,13 @@ public class VkBuffer {
 
     public void flush(VkCtx vkCtx) {
         vmaFlushAllocation(vkCtx.getMemAlloc().getVmaAlloc(), allocation, 0, VK_WHOLE_SIZE);
+    }
+
+    public long getAddress() {
+        if (address == null) {
+            throw new IllegalStateException("Buffer was not created with VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT usage flag");
+        }
+        return address;
     }
 
     public long getBuffer() {

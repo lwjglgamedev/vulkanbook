@@ -50,10 +50,6 @@ public class Entity {
         return scale;
     }
 
-    public boolean hasAnimation() {
-        return entityAnimation != null;
-    }
-
     public void resetRotation() {
         rotation.x = 0.0f;
         rotation.y = 0.0f;

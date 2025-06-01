@@ -1,15 +1,15 @@
 package org.vulkanb.eng.graph.anim;
 
-import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.*;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.scene.*;
 
-import java.nio.LongBuffer;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 import static org.lwjgl.vulkan.VK13.*;
@@ -19,6 +19,7 @@ public class AnimRender {
     private static final String COMPUTE_SHADER_FILE_GLSL = "resources/shaders/anim_comp.glsl";
     private static final String COMPUTE_SHADER_FILE_SPV = COMPUTE_SHADER_FILE_GLSL + ".spv";
     private static final int LOCAL_SIZE_X = 32;
+    private static final int PUSH_CONSTANTS_SIZE = VkUtils.PTR_SIZE * 5;
 
     private final CmdBuffer cmdBuffer;
     private final CmdPool cmdPool;
@@ -26,6 +27,7 @@ public class AnimRender {
     private final Fence fence;
     private final Map<String, Integer> grpSizeMap;
     private final ComputePipeline pipeline;
+    private final ByteBuffer pushConstBuff;
     private final DescSetLayout stDescSetLayout;
 
     public AnimRender(VkCtx vkCtx) {
@@ -39,8 +41,10 @@ public class AnimRender {
                 0, 1, VK_SHADER_STAGE_COMPUTE_BIT));
 
         ShaderModule shaderModule = createShaderModule(vkCtx);
+        pushConstBuff = MemoryUtil.memAlloc(PUSH_CONSTANTS_SIZE);
+
         CompPipelineBuildInfo buildInfo = new CompPipelineBuildInfo(shaderModule, new DescSetLayout[]{
-                stDescSetLayout, stDescSetLayout, stDescSetLayout, stDescSetLayout}, 0);
+                stDescSetLayout, stDescSetLayout, stDescSetLayout, stDescSetLayout}, PUSH_CONSTANTS_SIZE);
         pipeline = new ComputePipeline(vkCtx, buildInfo);
         shaderModule.cleanup(vkCtx);
         grpSizeMap = new HashMap<>();
@@ -54,6 +58,7 @@ public class AnimRender {
     }
 
     public void cleanup(VkCtx vkCtx) {
+        MemoryUtil.memFree(pushConstBuff);
         pipeline.cleanup(vkCtx);
         stDescSetLayout.cleanup(vkCtx);
         fence.cleanup(vkCtx);
@@ -61,58 +66,17 @@ public class AnimRender {
         cmdPool.cleanup(vkCtx);
     }
 
-    public void loadModels(VkCtx vkCtx, ModelsCache modelsCache, List<Entity> entities, AnimationsCache animationsCache) {
-        DescAllocator descAllocator = vkCtx.getDescAllocator();
-        Device device = vkCtx.getDevice();
-        DescSetLayout.LayoutInfo layoutInfo = stDescSetLayout.getLayoutInfo();
+    public void loadModels(VkCtx vkCtx, ModelsCache modelsCache) {
         var models = modelsCache.getModelsMap().values();
         for (VulkanModel vulkanModel : models) {
             if (!vulkanModel.hasAnimations()) {
                 continue;
             }
-            String modelId = vulkanModel.getId();
-            int animationIdx = 0;
-            for (VulkanAnimation animation : vulkanModel.getVulkanAnimationList()) {
-                int buffPos = 0;
-                for (VkBuffer jointsMatricesBuffer : animation.frameBufferList()) {
-                    String id = modelId + "_" + animationIdx + "_" + buffPos;
-                    DescSet descSet = descAllocator.addDescSet(device, id, stDescSetLayout);
-                    descSet.setBuffer(device, jointsMatricesBuffer, jointsMatricesBuffer.getRequestedSize(), 0,
-                            layoutInfo.descType());
-                    buffPos++;
-                }
-                animationIdx++;
-            }
-
             for (VulkanMesh mesh : vulkanModel.getVulkanMeshList()) {
                 int vertexSize = 14 * VkUtils.FLOAT_SIZE;
                 int groupSize = (int) Math.ceil(((float) mesh.verticesBuffer().getRequestedSize() / vertexSize) /
                         LOCAL_SIZE_X);
-                DescSet vtxDescSet = descAllocator.addDescSet(device, mesh.id() + "_VTX", stDescSetLayout);
-                vtxDescSet.setBuffer(device, mesh.verticesBuffer(), mesh.verticesBuffer().getRequestedSize(), 0,
-                        layoutInfo.descType());
                 grpSizeMap.put(mesh.id(), groupSize);
-
-                DescSet weightsDescSet = descAllocator.addDescSet(device, mesh.id() + "_W", stDescSetLayout);
-                weightsDescSet.setBuffer(device, mesh.weightsBuffer(), mesh.weightsBuffer().getRequestedSize(), 0,
-                        layoutInfo.descType());
-            }
-        }
-
-        int numEntities = entities.size();
-        for (int i = 0; i < numEntities; i++) {
-            var entity = entities.get(i);
-            VulkanModel model = modelsCache.getModel(entity.getModelId());
-            if (!model.hasAnimations()) {
-                continue;
-            }
-            List<VulkanMesh> vulkanMeshList = model.getVulkanMeshList();
-            int numMeshes = vulkanMeshList.size();
-            for (int j = 0; j < numMeshes; j++) {
-                var vulkanMesh = vulkanMeshList.get(j);
-                VkBuffer animationBuffer = animationsCache.getBuffer(entity.getId(), vulkanMesh.id());
-                DescSet descSet = descAllocator.addDescSet(device, entity.getId() + "_" + vulkanMesh.id() + "_ENT", stDescSetLayout);
-                descSet.setBuffer(device, animationBuffer, animationBuffer.getRequestedSize(), 0, layoutInfo.descType());
             }
         }
     }
@@ -126,7 +90,7 @@ public class AnimRender {
         cmdBuffer.endRecording();
     }
 
-    public void render(EngCtx engCtx, VkCtx vkCtx, ModelsCache modelsCache) {
+    public void render(EngCtx engCtx, VkCtx vkCtx, ModelsCache modelsCache, AnimationsCache animationsCache) {
         fence.fenceWait(vkCtx);
         fence.reset(vkCtx);
 
@@ -140,38 +104,38 @@ public class AnimRender {
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getVkPipeline());
 
-            LongBuffer descriptorSets = stack.mallocLong(4);
-
             Scene scene = engCtx.scene();
-            DescAllocator descAllocator = vkCtx.getDescAllocator();
 
-            List<Entity> entities = scene.getEntities();
-            int numEntities = entities.size();
-            for (int i = 0; i < numEntities; i++) {
-                var entity = entities.get(i);
-                String modelId = entity.getModelId();
-                VulkanModel model = modelsCache.getModel(modelId);
-                EntityAnimation entityAnimation = entity.getEntityAnimation();
-                if (entityAnimation == null || !model.hasAnimations()) {
-                    continue;
-                }
-                List<VulkanMesh> vulkanMeshList = model.getVulkanMeshList();
-                int numMeshes = vulkanMeshList.size();
-                for (int j = 0; j < numMeshes; j++) {
-                    var vulkanMesh = vulkanMeshList.get(j);
-                    descriptorSets.put(0, descAllocator.getDescSet(vulkanMesh.id() + "_VTX").getVkDescriptorSet());
-                    descriptorSets.put(1, descAllocator.getDescSet(vulkanMesh.id() + "_W").getVkDescriptorSet());
-                    descriptorSets.put(2, descAllocator.getDescSet(entity.getId() + "_" + vulkanMesh.id() + "_ENT").getVkDescriptorSet());
+            Map<String, List<Entity>> entitiesMap = scene.getEntities();
+            for (var list : entitiesMap.values()) {
+                int size = list.size();
+                for (int i = 0; i < size; i++) {
+                    var entity = list.get(i);
+                    String modelId = entity.getModelId();
+                    VulkanModel model = modelsCache.getModel(modelId);
+                    EntityAnimation entityAnimation = entity.getEntityAnimation();
+                    if (entityAnimation == null || !model.hasAnimations()) {
+                        continue;
+                    }
+                    VulkanAnimation animation = model.getVulkanAnimationList().get(entityAnimation.getAnimationIdx());
+                    long jointsBuffAddress = animation.frameBufferList().get(entityAnimation.getCurrentFrame()).getAddress();
+                    List<VulkanMesh> vulkanMeshList = model.getVulkanMeshList();
+                    int numMeshes = vulkanMeshList.size();
+                    for (int j = 0; j < numMeshes; j++) {
+                        var vulkanMesh = vulkanMeshList.get(j);
 
-                    String id = modelId + "_" + entityAnimation.getAnimationIdx() + "_" + entityAnimation.getCurrentFrame();
-                    descriptorSets.put(3, descAllocator.getDescSet(id).getVkDescriptorSet());
+                        setPushConstants(cmdHandle,
+                                vulkanMesh.verticesBuffer().getAddress(),
+                                vulkanMesh.weightsBuffer().getAddress(),
+                                jointsBuffAddress,
+                                animationsCache.getBuffer(entity.getId(), vulkanMesh.id()).getAddress(),
+                                vulkanMesh.verticesBuffer().getRequestedSize() / VkUtils.FLOAT_SIZE);
 
-                    vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipeline.getVkPipelineLayout(), 0, descriptorSets, null);
-
-                    vkCmdDispatch(cmdHandle, grpSizeMap.get(vulkanMesh.id()), 1, 1);
+                        vkCmdDispatch(cmdHandle, grpSizeMap.get(vulkanMesh.id()), 1, 1);
+                    }
                 }
             }
+
             recordingStop();
 
             var cmds = VkCommandBufferSubmitInfo.calloc(1, stack)
@@ -179,5 +143,21 @@ public class AnimRender {
                     .commandBuffer(cmdBuffer.getVkCommandBuffer());
             computeQueue.submit(cmds, null, null, fence);
         }
+    }
+
+    private void setPushConstants(VkCommandBuffer cmdHandle, long srcBufAddress, long weightsBufAddress,
+                                  long jointsBufAddress, long dstAddress, long srcBuffFloatSize) {
+        int offset = 0;
+        pushConstBuff.putLong(offset, srcBufAddress);
+        offset += VkUtils.PTR_SIZE;
+        pushConstBuff.putLong(offset, weightsBufAddress);
+        offset += VkUtils.PTR_SIZE;
+        pushConstBuff.putLong(offset, jointsBufAddress);
+        offset += VkUtils.PTR_SIZE;
+        pushConstBuff.putLong(offset, dstAddress);
+        offset += VkUtils.PTR_SIZE;
+        pushConstBuff.putLong(offset, srcBuffFloatSize);
+        vkCmdPushConstants(cmdHandle, pipeline.getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                pushConstBuff);
     }
 }

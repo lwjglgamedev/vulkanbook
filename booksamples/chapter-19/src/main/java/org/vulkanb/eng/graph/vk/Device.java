@@ -50,6 +50,7 @@ public class Device {
             features.depthClamp(depthClamp);
             features.multiDrawIndirect(true);
             features.shaderInt64(true);
+            features.drawIndirectFirstInstance(true);
 
             var features11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
                     .sType$Default()

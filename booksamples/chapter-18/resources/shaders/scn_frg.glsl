@@ -1,19 +1,18 @@
 #version 450
 
 // Keep in sync manually with Java code
-const int MAX_TEXTURES = 150;
+const int MAX_TEXTURES = 100;
 
-layout (location = 0) in vec4 inPos;
-layout (location = 1) in vec3 inNormal;
-layout (location = 2) in vec3 inTangent;
-layout (location = 3) in vec3 inBitangent;
-layout (location = 4) in vec2 inTextCoords;
-layout (location = 5) flat in uint inMatIdx;
+layout(location = 0) in vec4 inPos;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec3 inTangent;
+layout(location = 3) in vec3 inBitangent;
+layout(location = 4) in vec2 inTextCoords;
 
-layout (location = 0) out vec4 outPos;
-layout (location = 1) out vec4 outAlbedo;
-layout (location = 2) out vec4 outNormal;
-layout (location = 3) out vec4 outPBR;
+layout(location = 0) out vec4 outPos;
+layout(location = 1) out vec4 outAlbedo;
+layout(location = 2) out vec4 outNormal;
+layout(location = 3) out vec4 outPBR;
 
 struct Material {
     vec4 diffuseColor;
@@ -26,11 +25,10 @@ struct Material {
     float roughnessFactor;
     float metallicFactor;
 };
-
-layout (std430, set = 2, binding = 0) readonly buffer srcBuf {
-    Material data[];
-} materialsBuf;
-layout (set = 3, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
+layout(set = 2, binding = 0) readonly buffer MaterialUniform {
+    Material materials[];
+} matUniform;
+layout(set = 3, binding = 0) uniform sampler2D textSampler[MAX_TEXTURES];
 
 vec3 calcNormal(Material material, vec3 normal, vec2 textCoords, mat3 TBN)
 {
@@ -44,11 +42,15 @@ vec3 calcNormal(Material material, vec3 normal, vec2 textCoords, mat3 TBN)
     return newNormal;
 }
 
+layout(push_constant) uniform pc {
+    layout(offset = 80) uint materialIdx;
+} push_constants;
+
 void main()
 {
     outPos = inPos;
 
-    Material material = materialsBuf.data[inMatIdx];
+    Material material = matUniform.materials[push_constants.materialIdx];
     if (material.hasTexture == 1) {
         outAlbedo = texture(textSampler[material.textureIdx], inTextCoords);
     } else {

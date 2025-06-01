@@ -8,9 +8,7 @@ public class EmptyVtxBuffStruct {
 
     public EmptyVtxBuffStruct() {
         vi = VkPipelineVertexInputStateCreateInfo.calloc();
-        vi.sType$Default()
-                .pVertexBindingDescriptions(null)
-                .pVertexAttributeDescriptions(null);
+        vi.sType$Default();
     }
 
     public void cleanup() {

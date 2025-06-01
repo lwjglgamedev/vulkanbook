@@ -11,21 +11,23 @@ import java.util.*;
 import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.vulkan.VK13.*;
 
-// TODO: Support instances
+// TODO: Avoid repetition loadEntities vs update
 public class GlobalBuffers {
     public static final int IND_COMMAND_STRIDE = VkDrawIndirectCommand.SIZEOF;
-    private static final int INSTANCE_DATA_SIZE = VkUtils.MAT4X4_SIZE + VkUtils.INT_SIZE;
+    private static final int INSTANCE_DATA_SIZE = VkUtils.INT_SIZE * 4;
 
     private final VkBuffer[] buffIdxAddresses;
     private final VkBuffer[] buffIndirectDrawCmds;
-    private final VkBuffer[] buffInstanceDataAddresses;
+    private final VkBuffer[] buffInstanceData;
+    private final VkBuffer[] buffModelMatrices;
     private final VkBuffer[] buffVtxAddresses;
     private final int[] drawCounts;
 
     public GlobalBuffers() {
         buffVtxAddresses = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
         buffIdxAddresses = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
-        buffInstanceDataAddresses = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
+        buffInstanceData = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
+        buffModelMatrices = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
         buffIndirectDrawCmds = new VkBuffer[VkUtils.MAX_IN_FLIGHT];
         drawCounts = new int[VkUtils.MAX_IN_FLIGHT];
     }
@@ -42,12 +44,14 @@ public class GlobalBuffers {
 
     public void cleanup(VkCtx vkCtx) {
         Arrays.asList(buffIndirectDrawCmds).forEach(b -> b.cleanup(vkCtx));
-        Arrays.asList(buffInstanceDataAddresses).forEach(b -> b.cleanup(vkCtx));
+        Arrays.asList(buffModelMatrices).forEach(b -> b.cleanup(vkCtx));
+        Arrays.asList(buffInstanceData).forEach(b -> b.cleanup(vkCtx));
         Arrays.asList(buffVtxAddresses).forEach(b -> b.cleanup(vkCtx));
         Arrays.asList(buffIdxAddresses).forEach(b -> b.cleanup(vkCtx));
     }
 
-    private void createOrUpdateBuffers(VkCtx vkCtx, int frame, int numVtxAddresses, int numIdxAddresses, int numIndCommands) {
+    private void createOrUpdateBuffers(VkCtx vkCtx, int frame, int numVtxAddresses, int numIdxAddresses,
+                                       int numIndCommands, int numInstanceData, int numEntities) {
         int buffVtxAddressSize = numVtxAddresses * VkUtils.PTR_SIZE;
         int buffIdxAddressSize = numIdxAddresses * VkUtils.PTR_SIZE;
         boolean create = false;
@@ -79,20 +83,36 @@ public class GlobalBuffers {
         drawCounts[frame] = numIndCommands;
 
         create = false;
-        int bufferSize = drawCounts[frame] * INSTANCE_DATA_SIZE;
-        if (buffInstanceDataAddresses[frame] != null && buffInstanceDataAddresses[frame].getRequestedSize() < bufferSize) {
-            buffInstanceDataAddresses[frame].cleanup(vkCtx);
+        int bufferSize = numInstanceData * INSTANCE_DATA_SIZE;
+        if (buffInstanceData[frame] != null && buffInstanceData[frame].getRequestedSize() < bufferSize) {
+            buffInstanceData[frame].cleanup(vkCtx);
             create = true;
         }
-        if (buffInstanceDataAddresses[frame] == null || create) {
-            buffInstanceDataAddresses[frame] = new VkBuffer(vkCtx, bufferSize,
+        if (buffInstanceData[frame] == null || create) {
+            buffInstanceData[frame] = new VkBuffer(vkCtx, bufferSize,
+                    VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        }
+
+        create = false;
+        bufferSize = numEntities * VkUtils.MAT4X4_SIZE;
+        if (buffModelMatrices[frame] != null && buffModelMatrices[frame].getRequestedSize() < bufferSize) {
+            buffModelMatrices[frame].cleanup(vkCtx);
+            create = true;
+        }
+        if (buffModelMatrices[frame] == null || create) {
+            buffModelMatrices[frame] = new VkBuffer(vkCtx, bufferSize,
                     VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
                     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
     }
 
     public long getAddrBufInstanceData(int currentFrame) {
-        return buffInstanceDataAddresses[currentFrame].getAddress();
+        return buffInstanceData[currentFrame].getAddress();
+    }
+
+    public long getAddrBufModeMatrices(int currentFrame) {
+        return buffModelMatrices[currentFrame].getAddress();
     }
 
     public long getAddrBuffIdxAddresses(int currentFrame) {
@@ -114,38 +134,60 @@ public class GlobalBuffers {
     public void loadEntities(VkCtx vkCtx, Scene scene, ModelsCache modelsCache, AnimationsCache animationsCache) {
 
         try (var stack = MemoryStack.stackPush()) {
-            List<Entity> entities = scene.getEntities();
-            int numEntities = entities.size();
-
+            Map<String, List<Entity>> entitiesMap = scene.getEntities();
             var vtxAddresses = new ArrayList<Long>();
             var idxAddresses = new ArrayList<Long>();
             var indCommandList = new ArrayList<VkDrawIndirectCommand>();
 
-            for (int i = 0; i < numEntities; i++) {
-                var entity = entities.get(i);
-                VulkanModel vulkanModel = modelsCache.getModel(entity.getModelId());
+            int baseEntityIdx = 0;
+            int numInstanceData = 0;
+            for (String key : entitiesMap.keySet()) {
+                var entities = entitiesMap.get(key);
+                int numEntities = entities.size();
+                VulkanModel vulkanModel = modelsCache.getModel(key);
                 List<VulkanMesh> vulkanMeshList = vulkanModel.getVulkanMeshList();
                 int numMeshes = vulkanMeshList.size();
-                boolean animation = vulkanModel.hasAnimations();
-                for (int j = 0; j < numMeshes; j++) {
-                    var vulkanMesh = vulkanMeshList.get(j);
-                    long vtxBufferAddress = animation ?
-                            VkUtils.getBufferAddress(vkCtx, animationsCache.getBuffer(entity.getId(), vulkanMesh.id()).getBuffer()) :
-                            vulkanMesh.verticesBuffer().getAddress();
-                    vtxAddresses.add(vtxBufferAddress);
-                    idxAddresses.add(vulkanMesh.indicesBuffer().getAddress());
+                if (vulkanModel.hasAnimations()) {
+                    for (int i = 0; i < numEntities; i++) {
+                        var entity = entities.get(i);
+                        for (int j = 0; j < numMeshes; j++) {
+                            var vulkanMesh = vulkanMeshList.get(j);
+                            long vtxBufferAddress = animationsCache.getBuffer(entity.getId(), vulkanMesh.id()).getBuffer();
+                            vtxAddresses.add(vtxBufferAddress);
+                            idxAddresses.add(vulkanMesh.indicesBuffer().getAddress());
 
-                    var indCommand = VkDrawIndirectCommand.calloc(stack)
-                            .vertexCount(vulkanMesh.numIndices())
-                            .instanceCount(1)
-                            .firstVertex(0)
-                            .firstInstance(0);
-                    indCommandList.add(indCommand);
+                            var indCommand = VkDrawIndirectCommand.calloc(stack)
+                                    .vertexCount(vulkanMesh.numIndices())
+                                    .instanceCount(1)
+                                    .firstVertex(0)
+                                    .firstInstance(0);
+                            indCommandList.add(indCommand);
+                            baseEntityIdx++;
+                            numInstanceData++;
+                        }
+                    }
+                } else {
+                    for (int j = 0; j < numMeshes; j++) {
+                        var vulkanMesh = vulkanMeshList.get(j);
+                        long vtxBufferAddress = vulkanMesh.verticesBuffer().getAddress();
+                        vtxAddresses.add(vtxBufferAddress);
+                        idxAddresses.add(vulkanMesh.indicesBuffer().getAddress());
+
+                        var indCommand = VkDrawIndirectCommand.calloc(stack)
+                                .vertexCount(vulkanMesh.numIndices())
+                                .instanceCount(numEntities)
+                                .firstVertex(0)
+                                .firstInstance(baseEntityIdx);
+                        indCommandList.add(indCommand);
+                        baseEntityIdx += numEntities;
+                        numInstanceData += numEntities;
+                    }
                 }
             }
-
+            int totalEntities = scene.getNumEntities();
             for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
-                createOrUpdateBuffers(vkCtx, i, vtxAddresses.size(), idxAddresses.size(), indCommandList.size());
+                createOrUpdateBuffers(vkCtx, i, vtxAddresses.size(), idxAddresses.size(), indCommandList.size(),
+                        numInstanceData, totalEntities);
             }
         }
     }
@@ -153,41 +195,63 @@ public class GlobalBuffers {
     public void update(VkCtx vkCtx, Scene scene, ModelsCache modelsCache, MaterialsCache materialsCache,
                        AnimationsCache animationsCache, int frame) {
         try (var stack = MemoryStack.stackPush()) {
-            List<Entity> entities = scene.getEntities();
-            int numEntities = entities.size();
-
+            Map<String, List<Entity>> entitiesMap = scene.getEntities();
             var vtxAddresses = new ArrayList<Long>();
             var idxAddresses = new ArrayList<Long>();
             var indCommandList = new ArrayList<VkDrawIndirectCommand>();
 
-            for (int i = 0; i < numEntities; i++) {
-                var entity = entities.get(i);
-                VulkanModel vulkanModel = modelsCache.getModel(entity.getModelId());
+            int baseEntityIdx = 0;
+            int numInstanceData = 0;
+            for (String key : entitiesMap.keySet()) {
+                var entities = entitiesMap.get(key);
+                int numEntities = entities.size();
+                VulkanModel vulkanModel = modelsCache.getModel(key);
                 List<VulkanMesh> vulkanMeshList = vulkanModel.getVulkanMeshList();
                 int numMeshes = vulkanMeshList.size();
-                boolean animation = vulkanModel.hasAnimations();
-                for (int j = 0; j < numMeshes; j++) {
-                    var vulkanMesh = vulkanMeshList.get(j);
-                    long vtxBufferAddress = animation ?
-                            VkUtils.getBufferAddress(vkCtx, animationsCache.getBuffer(entity.getId(), vulkanMesh.id()).getBuffer()) :
-                            vulkanMesh.verticesBuffer().getAddress();
-                    vtxAddresses.add(vtxBufferAddress);
-                    idxAddresses.add(vulkanMesh.indicesBuffer().getAddress());
+                if (vulkanModel.hasAnimations()) {
+                    for (int i = 0; i < numEntities; i++) {
+                        var entity = entities.get(i);
+                        for (int j = 0; j < numMeshes; j++) {
+                            var vulkanMesh = vulkanMeshList.get(j);
+                            long vtxBufferAddress = animationsCache.getBuffer(entity.getId(), vulkanMesh.id()).getAddress();
+                            vtxAddresses.add(vtxBufferAddress);
+                            idxAddresses.add(vulkanMesh.indicesBuffer().getAddress());
 
-                    var indCommand = VkDrawIndirectCommand.calloc(stack)
-                            .vertexCount(vulkanMesh.numIndices())
-                            .instanceCount(1)
-                            .firstVertex(0)
-                            .firstInstance(0);
-                    indCommandList.add(indCommand);
+                            var indCommand = VkDrawIndirectCommand.calloc(stack)
+                                    .vertexCount(vulkanMesh.numIndices())
+                                    .instanceCount(1)
+                                    .firstVertex(0)
+                                    .firstInstance(baseEntityIdx);
+                            indCommandList.add(indCommand);
+                            baseEntityIdx++;
+                            numInstanceData++;
+                        }
+                    }
+                } else {
+                    for (int j = 0; j < numMeshes; j++) {
+                        var vulkanMesh = vulkanMeshList.get(j);
+                        long vtxBufferAddress = vulkanMesh.verticesBuffer().getAddress();
+                        vtxAddresses.add(vtxBufferAddress);
+                        idxAddresses.add(vulkanMesh.indicesBuffer().getAddress());
+
+                        var indCommand = VkDrawIndirectCommand.calloc(stack)
+                                .vertexCount(vulkanMesh.numIndices())
+                                .instanceCount(numEntities)
+                                .firstVertex(0)
+                                .firstInstance(baseEntityIdx);
+                        indCommandList.add(indCommand);
+                        baseEntityIdx += numEntities;
+                        numInstanceData += numEntities;
+                    }
                 }
             }
-
-            createOrUpdateBuffers(vkCtx, frame, vtxAddresses.size(), idxAddresses.size(), indCommandList.size());
+            int totalEntities = scene.getNumEntities();
+            createOrUpdateBuffers(vkCtx, frame, vtxAddresses.size(), idxAddresses.size(), indCommandList.size(),
+                    numInstanceData, totalEntities);
 
             updateAddresses(vkCtx, vtxAddresses, idxAddresses, frame);
             updateCmdIndirectCommands(vkCtx, indCommandList, frame);
-            updateInstanceData(vkCtx, scene, modelsCache, materialsCache, frame);
+            updateInstanceData(vkCtx, entitiesMap, modelsCache, materialsCache, frame);
         }
     }
 
@@ -207,28 +271,48 @@ public class GlobalBuffers {
         buffer.unMap(vkCtx);
     }
 
-    private void updateInstanceData(VkCtx vkCtx, Scene scene, ModelsCache modelsCache, MaterialsCache materialsCache,
-                                    int frame) {
-        var buffer = buffInstanceDataAddresses[frame];
-        long mappedMemory = buffer.map(vkCtx);
-        ByteBuffer dataBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) buffer.getRequestedSize());
+    private void updateInstanceData(VkCtx vkCtx, Map<String, List<Entity>> entitiesMap, ModelsCache modelsCache,
+                                    MaterialsCache materialsCache, int frame) {
+        var bufferInstances = buffInstanceData[frame];
+        long mappedMemory = bufferInstances.map(vkCtx);
+        ByteBuffer instanceData = MemoryUtil.memByteBuffer(mappedMemory, (int) bufferInstances.getRequestedSize());
 
-        List<Entity> entities = scene.getEntities();
-        int numEntities = entities.size();
+        var bufferModels = buffModelMatrices[frame];
+        mappedMemory = bufferModels.map(vkCtx);
+        ByteBuffer matricesData = MemoryUtil.memByteBuffer(mappedMemory, (int) bufferModels.getRequestedSize());
+
+        int baseEntities = 0;
         int offset = 0;
-        for (int i = 0; i < numEntities; i++) {
-            Entity entity = entities.get(i);
-            VulkanModel vulkanModel = modelsCache.getModel(entity.getModelId());
+        int meshIdx = 0;
+        for (String modelId : entitiesMap.keySet()) {
+            List<Entity> entities = entitiesMap.get(modelId);
+            int numEntities = entities.size();
+
+            VulkanModel vulkanModel = modelsCache.getModel(modelId);
             List<VulkanMesh> vulkanMeshList = vulkanModel.getVulkanMeshList();
             int numMeshes = vulkanMeshList.size();
-            for (int j = 0; j < numMeshes; j++) {
-                var vulkanMesh = vulkanMeshList.get(j);
-                entity.getModelMatrix().get(offset, dataBuffer);
-                offset += VkUtils.MAT4X4_SIZE;
-                dataBuffer.putInt(offset, materialsCache.getPosition(vulkanMesh.materialdId()));
-                offset += VkUtils.INT_SIZE;
+            for (int i = 0; i < numMeshes; i++) {
+                for (int j = 0; j < numEntities; j++) {
+                    Entity entity = entities.get(j);
+                    int entityIdx = baseEntities + j;
+                    entity.getModelMatrix().get(entityIdx * VkUtils.MAT4X4_SIZE, matricesData);
+
+                    instanceData.putInt(offset, entityIdx);
+                    offset += VkUtils.INT_SIZE;
+                    var vulkanMesh = vulkanMeshList.get(i);
+                    instanceData.putInt(offset, materialsCache.getPosition(vulkanMesh.materialdId()));
+                    offset += VkUtils.INT_SIZE;
+                    instanceData.putInt(offset, meshIdx);
+                    offset += VkUtils.INT_SIZE;
+                    instanceData.putInt(offset, 0);
+                    offset += VkUtils.INT_SIZE;
+                }
+                meshIdx++;
             }
+            baseEntities += numEntities;
         }
-        buffer.unMap(vkCtx);
+
+        bufferInstances.unMap(vkCtx);
+        bufferModels.unMap(vkCtx);
     }
 }

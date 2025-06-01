@@ -17,7 +17,6 @@ public class Main implements IGameLogic {
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float MOVEMENT_SPEED = 0.01f;
 
-    private final List<String> cubes = new ArrayList<>();
     private float angleInc;
     private Entity bobEntity;
     private Light dirLight;
@@ -46,9 +45,10 @@ public class Main implements IGameLogic {
         Entity sponzaEntity = new Entity("SponzaEntity", sponzaModel.id(), new Vector3f(0.0f, 0.0f, 0.0f));
         scene.addEntity(sponzaEntity);
 
+
         ModelData bobModelData = ModelLoader.loadModel("resources/models/bob/boblamp.json");
         models.add(bobModelData);
-        maxFrames = bobModelData.animationsList().get(0).frames().size();
+        maxFrames = bobModelData.animations().get(0).frames().size();
         bobEntity = new Entity("BobEntity", bobModelData.id(), new Vector3f(0.0f, 0.0f, 0.0f));
         bobEntity.setScale(0.04f);
         bobEntity.getRotation().rotateY((float) Math.toRadians(-90.0f));
@@ -56,19 +56,13 @@ public class Main implements IGameLogic {
         bobEntity.setEntityAnimation(new EntityAnimation(true, 0, 0));
         scene.addEntity(bobEntity);
 
-        ModelData cubeModel = ModelLoader.loadModel("resources/models/cube/cube.json");
-        models.add(cubeModel);
-
         List<MaterialData> materials = new ArrayList<>();
         materials.addAll(ModelLoader.loadMaterials("resources/models/sponza/Sponza_mat.json"));
         materials.addAll(ModelLoader.loadMaterials("resources/models/bob/boblamp_mat.json"));
-        materials.addAll(ModelLoader.loadMaterials("resources/models/cube/cube_mat.json"));
 
         scene.getAmbientLight().set(0.8f, 0.8f, 0.8f);
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light();
-        dirLight.getPosition().set(0.0f, -1.0f, 0.0f, 0.0f);
-        dirLight.getColor().set(1.0f, 1.0f, 1.0f, 1.0f);
+        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(5.0f, 5.0f, 5.0f, 1.0f));
         lights.add(dirLight);
 
         Light[] lightArr = new Light[lights.size()];
@@ -117,15 +111,6 @@ public class Main implements IGameLogic {
             EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
             entityAnimation.setStarted(!entityAnimation.isStarted());
         }
-        if (ki.keySinglePress(GLFW_KEY_1)) {
-            float pos = (float) Math.random() * 2.0f;
-            Entity entity = new Entity("CubeEntity_" + System.currentTimeMillis(), "cube", new Vector3f(pos, pos, -pos));
-            scene.addEntity(entity);
-            cubes.add(entity.getId());
-        } else if (ki.keySinglePress(GLFW_KEY_2) && !cubes.isEmpty()) {
-            String id = cubes.removeLast();
-            scene.removeEntity(id);
-        }
 
         MouseInput mi = window.getMouseInput();
         if (mi.isRightButtonPressed()) {
@@ -157,7 +142,7 @@ public class Main implements IGameLogic {
     private void updateDirLight() {
         float zValue = (float) Math.cos(Math.toRadians(lightAngle));
         float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = dirLight.getPosition();
+        Vector4f lightDirection = dirLight.position();
         lightDirection.x = 0;
         lightDirection.y = yValue;
         lightDirection.z = zValue;

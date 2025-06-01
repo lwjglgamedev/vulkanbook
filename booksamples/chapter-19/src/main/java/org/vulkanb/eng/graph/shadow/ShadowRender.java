@@ -5,7 +5,6 @@ import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.*;
-import org.vulkanb.eng.graph.scn.VtxBuffStruct;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.scene.Scene;
 
@@ -22,7 +21,7 @@ public class ShadowRender {
     private static final String DESC_ID_TEXT = "SHADOW_SCN_DESC_ID_TEXT";
     private static final String FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/shadow_frg.glsl";
     private static final String FRAGMENT_SHADER_FILE_SPV = FRAGMENT_SHADER_FILE_GLSL + ".spv";
-    private static final int PUSH_CONSTANTS_SIZE = VkUtils.PTR_SIZE * 3;
+    private static final int PUSH_CONSTANTS_SIZE = VkUtils.PTR_SIZE * 4;
     private static final String SHADOW_GEOMETRY_SHADER_FILE_GLSL = "resources/shaders/shadow_geom.glsl";
     private static final String SHADOW_GEOMETRY_SHADER_FILE_SPV = SHADOW_GEOMETRY_SHADER_FILE_GLSL + ".spv";
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/shadow_vtx.glsl";
@@ -94,7 +93,7 @@ public class ShadowRender {
     }
 
     private static Pipeline createPipeline(VkCtx vkCtx, ShaderModule[] shaderModules, DescSetLayout[] descSetLayouts) {
-        var vtxBuffStruct = new VtxBuffStruct();
+        var vtxBuffStruct = new EmptyVtxBuffStruct();
         var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(), new int[]{})
                 .setDepthFormat(DEPTH_FORMAT)
                 .setPushConstRanges(
@@ -235,6 +234,8 @@ public class ShadowRender {
         pushConstBuff.putLong(offset, globalBuffers.getAddrBuffIdxAddresses(currentFrame));
         offset += VkUtils.PTR_SIZE;
         pushConstBuff.putLong(offset, globalBuffers.getAddrBufInstanceData(currentFrame));
+        offset += VkUtils.PTR_SIZE;
+        pushConstBuff.putLong(offset, globalBuffers.getAddrBufModeMatrices(currentFrame));
         vkCmdPushConstants(cmdHandle, pipeline.getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstBuff);
     }
 

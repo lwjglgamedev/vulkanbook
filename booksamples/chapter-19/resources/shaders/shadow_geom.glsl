@@ -21,7 +21,7 @@ void main()
 {
     for (int i = 0; i < 3; i++)
     {
-        outTextCoords  = inTextCoords[i];
+        outTextCoords = inTextCoords[i];
         outMaterialIdx = inMaterialIdx[i];
         gl_Layer = gl_InvocationID;
         gl_Position = projUniforms.projViewMatrices[gl_InvocationID] * gl_in[i].gl_Position;

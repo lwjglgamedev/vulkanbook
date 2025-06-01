@@ -1,22 +1,50 @@
-#version 450
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
-layout(location = 0) in vec3 entityPos;
-layout(location = 1) in vec3 entityNormal;
-layout(location = 2) in vec3 entityTangent;
-layout(location = 3) in vec3 entityBitangent;
-layout(location = 4) in vec2 entityTextCoords;
+struct Vertex {
+    vec3 inPos;
+    vec3 inNormal;
+    vec3 inTangent;
+    vec3 inBitangent;
+    vec2 inTextCoords;
+};
 
-// Instanced attributes
-layout (location = 5) in mat4 entityModelMatrix;
-layout (location = 9) in uint entityMatIdx;
+layout(scalar, buffer_reference, buffer_reference_align=16) buffer VertexBuffer {
+    Vertex[] vertices;
+};
 
-layout (location = 0) out vec2 outTextCoord;
-layout (location = 1) out flat uint outMatIdx;
+layout(std430, buffer_reference, buffer_reference_align=16) buffer IndexBuffer {
+    uint[] indices;
+};
+
+struct InstanceData {
+    mat4 modelMatrix;
+    uint materialIdx;
+    uint padding[3];
+};
+
+layout(push_constant) uniform pc {
+    mat4 modelMatrix;
+    VertexBuffer vertexBuffer;
+    IndexBuffer indexBuffer;
+    uint materialIdx;
+} push_constants;
+
+layout (location = 0) out vec2 outTextCoords;
+layout (location = 1) out flat uint outMaterialIdx;
 
 void main()
 {
-    gl_Position = entityModelMatrix * vec4(entityPos, 1.0f);
-    outTextCoord = entityTextCoords;
-    outTextCoord = entityTextCoords;
-    outMatIdx = entityMatIdx;
+    uint index = push_constants.indexBuffer.indices[gl_VertexIndex];
+    VertexBuffer vertexData = push_constants.vertexBuffer;
+
+    Vertex vertex = vertexData.vertices[index];
+
+    outTextCoords  = vertex.inTextCoords;
+    outMaterialIdx = push_constants.materialIdx;
+
+    gl_Position = push_constants.modelMatrix * vec4(vertex.inPos, 1.0f);
 }

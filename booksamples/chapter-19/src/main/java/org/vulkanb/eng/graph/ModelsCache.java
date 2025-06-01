@@ -55,8 +55,8 @@ public class ModelsCache {
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         var dstBuffer = new VkBuffer(vkCtx, bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
-                VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                VMA_MEMORY_USAGE_AUTO, 0, 0);
 
         long mappedMemory = srcBuffer.map(vkCtx);
         ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
@@ -102,8 +102,8 @@ public class ModelsCache {
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         var dstBuffer = new VkBuffer(vkCtx, bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+                        | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO, 0, 0);
 
         long mappedMemory = srcBuffer.map(vkCtx);
         FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
@@ -150,7 +150,7 @@ public class ModelsCache {
                 VulkanModel vulkanModel = new VulkanModel(modelData.id());
                 modelsMap.put(vulkanModel.getId(), vulkanModel);
 
-                List<Animation> animationsList = modelData.animationsList();
+                List<Animation> animationsList = modelData.animations();
                 boolean hasAnimation = animationsList != null && !animationsList.isEmpty();
                 if (hasAnimation) {
                     for (Animation animation : animationsList) {
@@ -180,7 +180,7 @@ public class ModelsCache {
                     indicesBuffers.recordTransferCommand(cmd);
 
                     TransferBuffer weightsBuffers = null;
-                    List<AnimMeshData> animMeshDataList = modelData.animMeshDataList();
+                    List<AnimMeshData> animMeshDataList = modelData.animMeshes();
                     if (animMeshDataList != null && !animMeshDataList.isEmpty()) {
                         weightsBuffers = createWeightsBuffers(vkCtx, animMeshDataList.get(meshCount));
                         stagingBufferList.add(weightsBuffers.srcBuffer());

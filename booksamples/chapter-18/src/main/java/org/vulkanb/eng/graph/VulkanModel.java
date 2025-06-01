@@ -1,5 +1,7 @@
 package org.vulkanb.eng.graph;
 
+import org.vulkanb.eng.graph.vk.VkCtx;
+
 import java.util.*;
 
 public class VulkanModel {
@@ -14,12 +16,13 @@ public class VulkanModel {
         vulkanAnimationList = new ArrayList<>();
     }
 
-    public void addVulkanAnimation(VulkanAnimation vulkanAnimationData) {
-        vulkanAnimationList.add(vulkanAnimationData);
+    public void addVulkanAnimation(VulkanAnimation vulkanAnimation) {
+        vulkanAnimationList.add(vulkanAnimation);
     }
 
-    public void addVulkanMesh(VulkanMesh vulkanMesh) {
-        vulkanMeshList.add(vulkanMesh);
+    public void cleanup(VkCtx vkCtx) {
+        vulkanMeshList.forEach(mesh -> mesh.cleanup(vkCtx));
+        vulkanAnimationList.forEach(a -> a.cleanup(vkCtx));
     }
 
     public String getId() {

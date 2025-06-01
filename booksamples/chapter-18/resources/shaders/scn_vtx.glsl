@@ -1,21 +1,14 @@
-#version 450
-
-layout(location = 0) in vec3 inPos;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec3 inTangent;
-layout(location = 3) in vec3 inBitangent;
-layout(location = 4) in vec2 inTextCoords;
-
-// Instanced attributes
-layout (location = 5) in mat4 inModelMatrix;
-layout (location = 9) in uint inMatIdx;
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
 layout(location = 0) out vec4 outPos;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outTangent;
 layout(location = 3) out vec3 outBitangent;
 layout(location = 4) out vec2 outTextCoords;
-layout(location = 5) flat out uint outMatIdx;
 
 layout(set = 0, binding = 0) uniform ProjUniform {
     mat4 matrix;
@@ -24,15 +17,43 @@ layout(set = 1, binding = 0) uniform ViewUniform {
     mat4 matrix;
 } viewUniform;
 
+struct Vertex {
+    vec3 inPos;
+    vec3 inNormal;
+    vec3 inTangent;
+    vec3 inBitangent;
+    vec2 inTextCoords;
+};
+
+layout(scalar, buffer_reference, buffer_reference_align=16) buffer VertexBuffer {
+    Vertex[] vertices;
+};
+
+layout(std430, buffer_reference, buffer_reference_align=16) buffer IndexBuffer {
+    uint[] indices;
+};
+
+layout(push_constant) uniform pc {
+    mat4 modelMatrix;
+    VertexBuffer vertexBuffer;
+    IndexBuffer indexBuffer;
+} push_constants;
+
 void main()
 {
-    mat3 mNormal  = transpose(inverse(mat3(inModelMatrix)));
-    outNormal     = mNormal * normalize(inNormal);
-    outTangent    = mNormal * normalize(inTangent);
-    outBitangent  = mNormal * normalize(inBitangent);
-    outTextCoords = inTextCoords;
-    vec4 worldPos  = inModelMatrix * vec4(inPos, 1);
-    outPos        = worldPos;
-    outMatIdx     = inMatIdx;
+    uint index = push_constants.indexBuffer.indices[gl_VertexIndex];
+    VertexBuffer vertexData = push_constants.vertexBuffer;
+
+    Vertex vertex = vertexData.vertices[index];
+    vec3 inPos    = vertex.inPos;
+    vec4 worldPos = push_constants.modelMatrix * vec4(inPos, 1);
     gl_Position   = projUniform.matrix * viewUniform.matrix * worldPos;
+    mat3 mNormal  = transpose(inverse(mat3(push_constants.modelMatrix)));
+
+    outPos        = worldPos;
+    outNormal     = mNormal * normalize(vertex.inNormal);
+    outTangent    = mNormal * normalize(vertex.inTangent);
+    outBitangent  = mNormal * normalize(vertex.inBitangent);
+
+    outTextCoords = vertex.inTextCoords;
 }

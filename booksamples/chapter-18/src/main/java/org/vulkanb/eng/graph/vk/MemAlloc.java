@@ -20,6 +20,7 @@ public class MemAlloc {
                     .set(instance.getVkInstance(), device.getVkDevice());
 
             var createInfo = VmaAllocatorCreateInfo.calloc(stack)
+                    .flags(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT)
                     .instance(instance.getVkInstance())
                     .vulkanApiVersion(VK_API_VERSION_1_3)
                     .device(device.getVkDevice())

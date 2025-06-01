@@ -12,7 +12,7 @@ import org.vulkanb.eng.scene.*;
 import java.nio.*;
 import java.util.*;
 
-import static org.lwjgl.vulkan.KHRSwapchain.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class LightRender {
@@ -41,10 +41,9 @@ public class LightRender {
     private VkRenderingAttachmentInfo.Buffer attInfoColor;
     private VkRenderingInfo renderInfo;
 
-
     public LightRender(VkCtx vkCtx, List<Attachment> attachments) {
-        clrValueColor = VkClearValue.calloc();
-        clrValueColor.color(c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
+        clrValueColor = VkClearValue.calloc().color(
+                c -> c.float32(0, 0.0f).float32(1, 0.0f).float32(2, 0.0f).float32(3, 0.0f));
 
         attColor = createColorAttachment(vkCtx);
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);
@@ -58,11 +57,11 @@ public class LightRender {
         textureSampler = new TextureSampler(vkCtx, textureSamplerInfo);
         int numAttachments = attachments.size();
         DescSetLayout.LayoutInfo[] descSetLayouts = new DescSetLayout.LayoutInfo[numAttachments + 1];
-        for (int i = 0; i < numAttachments; i++) {
+        for (int i = 0; i < numAttachments + 1; i++) {
             descSetLayouts[i] = new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, i, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
         }
-        descSetLayouts[numAttachments] = new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, numAttachments, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
         attDescSetLayout = new DescSetLayout(vkCtx, descSetLayouts);
+
         createAttDescSet(vkCtx, attDescSetLayout, attachments, textureSampler);
 
         storageDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1,
@@ -77,9 +76,7 @@ public class LightRender {
         sceneBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_SCENE, sceneDescSetLayout);
 
-        buffSize = (VkUtils.MAT4X4_SIZE + VkUtils.VEC4_SIZE) * Scene.SHADOW_MAP_CASCADE_COUNT;
-        shadowMatrices = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, DESC_ID_SHADOW_MATRICES, storageDescSetLayout);
+        shadowMatrices = createShadowMatBuffers(vkCtx, storageDescSetLayout);
 
         pipeline = createPipeline(vkCtx, shaderModules, new DescSetLayout[]{attDescSetLayout, storageDescSetLayout,
                 storageDescSetLayout, sceneDescSetLayout});
@@ -90,7 +87,7 @@ public class LightRender {
                                          TextureSampler sampler) {
         DescAllocator descAllocator = vkCtx.getDescAllocator();
         Device device = vkCtx.getDevice();
-        DescSet descSet = descAllocator.addDescSets(device, DESC_ID_ATT, 1, descSetLayout)[0];
+        DescSet descSet = descAllocator.addDescSet(device, DESC_ID_ATT, descSetLayout);
         List<ImageView> imageViews = new ArrayList<>();
         attachments.forEach(a -> imageViews.add(a.getImageView()));
         descSet.setImages(device, imageViews, sampler, 0);
@@ -151,16 +148,32 @@ public class LightRender {
         };
     }
 
+    private static VkBuffer[] createShadowMatBuffers(VkCtx vkCtx, DescSetLayout layout) {
+        int numBuffs = VkUtils.MAX_IN_FLIGHT;
+        VkBuffer[] buffers = new VkBuffer[numBuffs];
+        Device device = vkCtx.getDevice();
+        DescSet[] descSets = vkCtx.getDescAllocator().addDescSets(device, DESC_ID_SHADOW_MATRICES, numBuffs, layout);
+        for (int i = 0; i < numBuffs; i++) {
+            long buffSize = (long) (VkUtils.MAT4X4_SIZE + VkUtils.VEC4_SIZE) * Scene.SHADOW_MAP_CASCADE_COUNT;
+            buffers[i] = new VkBuffer(vkCtx, buffSize,
+                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            descSets[i].setBuffer(device, buffers[i], buffers[i].getRequestedSize(),
+                    layout.getLayoutInfo().binding(), layout.getLayoutInfo().descType());
+        }
+        return buffers;
+    }
+
     public void cleanup(VkCtx vkCtx) {
         storageDescSetLayout.cleanup(vkCtx);
         Arrays.asList(lightsBuffs).forEach(b -> b.cleanup(vkCtx));
         sceneDescSetLayout.cleanup(vkCtx);
         Arrays.asList(sceneBuffs).forEach(b -> b.cleanup(vkCtx));
+        Arrays.asList(shadowMatrices).forEach(b -> b.cleanup(vkCtx));
         pipeline.cleanup(vkCtx);
         attDescSetLayout.cleanup(vkCtx);
         textureSampler.cleanup(vkCtx);
         lightSpecConsts.cleanup();
-        Arrays.asList(shadowMatrices).forEach(b -> b.cleanup(vkCtx));
         renderInfo.free();
         attColor.cleanup(vkCtx);
         attInfoColor.free();
@@ -251,22 +264,10 @@ public class LightRender {
         attInfoColor = createColorAttachmentInfo(attColor, clrValueColor);
         renderInfo = createRenderInfo(attColor, attInfoColor);
 
-        DescAllocator descAllocator = vkCtx.getDescAllocator();
-        DescSet descSet = descAllocator.getDescSet(DESC_ID_ATT);
-        List<ImageView> imageViews = new ArrayList<>();
+        DescSet descSet = vkCtx.getDescAllocator().getDescSet(DESC_ID_ATT);
+        var imageViews = new ArrayList<ImageView>();
         attachments.forEach(a -> imageViews.add(a.getImageView()));
         descSet.setImages(vkCtx.getDevice(), imageViews, textureSampler, 0);
-    }
-
-    public void transitionToPresent(VkCtx vkCtx, CmdBuffer cmdBuffer, int imageIndex) {
-        try (var stack = MemoryStack.stackPush()) {
-            long swapChainImage = vkCtx.getSwapChain().getImageView(imageIndex).getVkImage();
-            VkUtils.imageBarrier(stack, cmdBuffer.getVkCommandBuffer(), swapChainImage,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-                    VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
-                    VK_IMAGE_ASPECT_COLOR_BIT);
-        }
     }
 
     private void updateCascadeShadowMatrices(VkCtx vkCtx, CascadeShadows cascadeShadows, int currentFrame) {
@@ -295,9 +296,9 @@ public class LightRender {
         int numLights = lights != null ? lights.length : 0;
         for (int i = 0; i < numLights; i++) {
             Light light = lights[i];
-            light.getPosition().get(offset, dataBuff);
+            light.position().get(offset, dataBuff);
             offset += VkUtils.VEC4_SIZE;
-            light.getColor().get(offset, dataBuff);
+            light.color().get(offset, dataBuff);
             offset += VkUtils.VEC3_SIZE;
         }
 

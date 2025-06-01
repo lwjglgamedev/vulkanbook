@@ -7,6 +7,7 @@ import org.lwjgl.vulkan.*;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
+import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.vulkan.VK13.*;
 
@@ -16,6 +17,7 @@ public class VkUtils {
     public static final int INT_SIZE = 4;
     public static final int MAT4X4_SIZE = 16 * FLOAT_SIZE;
     public static final int MAX_IN_FLIGHT = 2;
+    public static final int PTR_SIZE = 8;
     public static final int SHORT_LENGTH = 2;
     public static final int VEC2_SIZE = 2 * FLOAT_SIZE;
     public static final int VEC3_SIZE = 3 * FLOAT_SIZE;
@@ -56,6 +58,17 @@ public class VkUtils {
             descSet.setBuffer(device, result[i], result[i].getRequestedSize(), layoutInfo.binding(), layoutInfo.descType());
         }
         return result;
+    }
+
+    public static long getBufferAddress(VkCtx vkCtx, long buffer) {
+        long address;
+        try (MemoryStack stack = stackPush()) {
+            address = vkGetBufferDeviceAddress(vkCtx.getDevice().getVkDevice(), VkBufferDeviceAddressInfo
+                    .calloc(stack)
+                    .sType$Default()
+                    .buffer(buffer));
+        }
+        return address;
     }
 
     public static OSType getOS() {
@@ -99,25 +112,9 @@ public class VkUtils {
         vkCmdPipelineBarrier2(cmdHandle, depInfo);
     }
 
-    public static int memoryTypeFromProperties(VkCtx vkCtx, int typeBits, int reqsMask) {
-        int result = -1;
-        VkMemoryType.Buffer memoryTypes = vkCtx.getPhysDevice().getVkMemoryProperties().memoryTypes();
-        for (int i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
-            if ((typeBits & 1) == 1 && (memoryTypes.get(i).propertyFlags() & reqsMask) == reqsMask) {
-                result = i;
-                break;
-            }
-            typeBits >>= 1;
-        }
-        if (result < 0) {
-            throw new RuntimeException("Failed to find memoryType");
-        }
-        return result;
-    }
-
-    public static void setMemBarrier(CmdBuffer cmdBuffer, int srcStageMask, int dstStageMask, int srcAccessMask,
+    public static void memoryBarrier(CmdBuffer cmdBuffer, int srcStageMask, int dstStageMask, int srcAccessMask,
                                      int dstAccessMask, int dependencyFlags) {
-        try (var stack = MemoryStack.stackPush()) {
+        try (var stack = stackPush()) {
             VkMemoryBarrier2.Buffer buff = VkMemoryBarrier2.calloc(1, stack)
                     .sType$Default()
                     .srcStageMask(srcStageMask)
@@ -132,6 +129,22 @@ public class VkUtils {
 
             vkCmdPipelineBarrier2(cmdBuffer.getVkCommandBuffer(), depInfo);
         }
+    }
+
+    public static int memoryTypeFromProperties(VkCtx vkCtx, int typeBits, int reqsMask) {
+        int result = -1;
+        VkMemoryType.Buffer memoryTypes = vkCtx.getPhysDevice().getVkMemoryProperties().memoryTypes();
+        for (int i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
+            if ((typeBits & 1) == 1 && (memoryTypes.get(i).propertyFlags() & reqsMask) == reqsMask) {
+                result = i;
+                break;
+            }
+            typeBits >>= 1;
+        }
+        if (result < 0) {
+            throw new RuntimeException("Failed to find memoryType");
+        }
+        return result;
     }
 
     public static void vkCheck(int err, String errMsg) {

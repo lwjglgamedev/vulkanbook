@@ -127,6 +127,7 @@ public class Pipeline {
                     .sType$Default()
                     .pAttachments(blendAttState);
 
+
             var pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.calloc(stack)
                     .sType$Default()
                     .pSetLayouts(ppLayout)

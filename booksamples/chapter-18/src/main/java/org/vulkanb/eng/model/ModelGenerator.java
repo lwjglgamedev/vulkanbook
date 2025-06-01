@@ -8,6 +8,7 @@ import org.lwjgl.assimp.*;
 import org.lwjgl.system.MemoryStack;
 import org.tinylog.Logger;
 import org.vulkanb.eng.EngCfg;
+import org.vulkanb.eng.graph.vk.VkUtils;
 
 import java.io.*;
 import java.lang.Math;
@@ -18,7 +19,6 @@ import java.util.*;
 import java.util.regex.*;
 
 import static org.lwjgl.assimp.Assimp.*;
-import static org.vulkanb.eng.EngUtils.*;
 
 public class ModelGenerator {
 
@@ -128,6 +128,19 @@ public class ModelGenerator {
             }
         }
         return result;
+    }
+
+    private static float[] listFloatToArray(List<Float> list) {
+        int size = list != null ? list.size() : 0;
+        float[] floatArr = new float[size];
+        for (int i = 0; i < size; i++) {
+            floatArr[i] = list.get(i);
+        }
+        return floatArr;
+    }
+
+    private static int[] listIntToArray(List<Integer> list) {
+        return list.stream().mapToInt((Integer v) -> v).toArray();
     }
 
     public static void main(String[] args) {
@@ -305,7 +318,7 @@ public class ModelGenerator {
             throw new RuntimeException("Model path does not exist [" + modelPath + "]");
         }
 
-        AIScene aiScene = aiImportFile(modelPath, FLAGS | (animation ? 0 : aiProcess_PreTransformVertices));
+        AIScene aiScene = aiImportFile(modelPath, FLAGS | (animation ? aiProcess_LimitBoneWeights : aiProcess_PreTransformVertices));
         if (aiScene == null) {
             throw new RuntimeException("Error loading model [modelPath: " + modelPath + "]");
         }
@@ -314,6 +327,8 @@ public class ModelGenerator {
         if (modelId.contains(".")) {
             modelId = modelId.substring(0, modelId.lastIndexOf('.'));
         }
+
+        ModelBinData modelBinData = new ModelBinData(modelPath);
 
         int numMaterials = aiScene.mNumMaterials();
         Logger.debug("Number of materials: {}", numMaterials);
@@ -330,7 +345,7 @@ public class ModelGenerator {
         List<MeshData> meshList = new ArrayList<>();
         for (int i = 0; i < numMeshes; i++) {
             AIMesh aiMesh = AIMesh.create(aiMeshes.get(i));
-            MeshData meshData = processMesh(aiMesh, matList, i);
+            MeshData meshData = processMesh(aiMesh, matList, i, modelBinData);
             meshList.add(meshData);
         }
 
@@ -352,7 +367,8 @@ public class ModelGenerator {
             animations = processAnimations(aiScene, boneList, rootNode, globalInverseTransformation);
         }
 
-        var model = new ModelData(modelId, meshList, animMeshDataList, animations);
+        var model = new ModelData(modelId, meshList, modelBinData.getVtxFilePath(), modelBinData.getIdxFilePath(),
+                animMeshDataList, animations);
 
         String outModelFile = modelPath.substring(0, modelPath.lastIndexOf('.')) + ".json";
         Writer writer = new FileWriter(outModelFile);
@@ -368,6 +384,11 @@ public class ModelGenerator {
         writer.flush();
         writer.close();
         Logger.info("Generated materials file [{}]", outMaterialFile);
+
+        modelBinData.close();
+        aiReleaseImport(aiScene);
+        Logger.info("Generated vtx file [{}]", modelBinData.getVtxFilePath());
+        Logger.info("Generated idx file [{}]", modelBinData.getIdxFilePath());
     }
 
     private List<Integer> processIndices(AIMesh aiMesh) {
@@ -416,7 +437,8 @@ public class ModelGenerator {
                 roughnessArr[0], metallicArr[0]);
     }
 
-    private MeshData processMesh(AIMesh aiMesh, List<MaterialData> materialList, int pos) {
+    private MeshData processMesh(AIMesh aiMesh, List<MaterialData> materialList, int meshPosition,
+                                 ModelBinData modelBinData) throws IOException {
         List<Float> vertices = processVertices(aiMesh);
         List<Float> normals = processNormals(aiMesh);
         List<Float> tangents = processTangents(aiMesh, normals);
@@ -424,17 +446,54 @@ public class ModelGenerator {
         List<Float> textCoords = processTextCoords(aiMesh);
         List<Integer> indices = processIndices(aiMesh);
 
+        int vtxSize = vertices.size();
+        if (textCoords.isEmpty()) {
+            textCoords = Collections.nCopies((vtxSize / 3) * 2, 0.0f);
+        }
+
+        DataOutputStream vtxOutput = modelBinData.getVtxOutput();
+        int rows = vtxSize / 3;
+        int vtxInc = (vtxSize + normals.size() + tangents.size() + biTangents.size() + textCoords.size()) * VkUtils.FLOAT_SIZE;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 3;
+            int startTextCoord = row * 2;
+            vtxOutput.writeFloat(vertices.get(startPos));
+            vtxOutput.writeFloat(vertices.get(startPos + 1));
+            vtxOutput.writeFloat(vertices.get(startPos + 2));
+            vtxOutput.writeFloat(normals.get(startPos));
+            vtxOutput.writeFloat(normals.get(startPos + 1));
+            vtxOutput.writeFloat(normals.get(startPos + 2));
+            vtxOutput.writeFloat(tangents.get(startPos));
+            vtxOutput.writeFloat(tangents.get(startPos + 1));
+            vtxOutput.writeFloat(tangents.get(startPos + 2));
+            vtxOutput.writeFloat(biTangents.get(startPos));
+            vtxOutput.writeFloat(biTangents.get(startPos + 1));
+            vtxOutput.writeFloat(biTangents.get(startPos + 2));
+            vtxOutput.writeFloat(textCoords.get(startTextCoord));
+            vtxOutput.writeFloat(textCoords.get(startTextCoord + 1));
+        }
+
+        DataOutputStream idxOutput = modelBinData.getIdxOutput();
+        int idxSize = indices.size();
+        int idxInc = idxSize * VkUtils.INT_SIZE;
+        for (int idx = 0; idx < idxSize; idx++) {
+            idxOutput.writeInt(indices.get(idx));
+        }
+
         // Add position to mesh id to ensure unique ids
-        String id = aiMesh.mName().dataString() + "_" + pos;
+        String id = aiMesh.mName().dataString() + "_" + meshPosition;
         int materialIdx = aiMesh.mMaterialIndex();
         String materialId = "";
         if (materialIdx >= 0 && materialIdx < materialList.size()) {
             materialId = materialList.get(materialIdx).id();
         }
 
-        return new MeshData(id, materialId, materialIdx, listFloatToArray(vertices), listFloatToArray(normals),
-                listFloatToArray(tangents), listFloatToArray(biTangents),
-                listFloatToArray(textCoords), listIntToArray(indices));
+        var meshData = new MeshData(id, materialId, modelBinData.getVtxOffset(), vtxInc, modelBinData.getIdxOffset(),
+                idxInc);
+
+        modelBinData.incVtxOffset(vtxInc);
+        modelBinData.incIdxOffset(idxInc);
+        return meshData;
     }
 
     private String processTexture(AIScene aiScene, AIMaterial aiMaterial, String baseDir, int textureType) throws IOException {

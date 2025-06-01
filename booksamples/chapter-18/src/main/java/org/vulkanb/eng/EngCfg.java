@@ -15,14 +15,8 @@ public class EngCfg {
     private String defaultTexturePath;
     private float fov;
     private boolean fxaa;
-    private int maxAnimWeightsBuffer;
     private int maxDescs;
-    private int maxIndicesBuffer;
-    private int maxJointMatricesBuffer;
     private int maxJointsMatricesLists;
-    private int maxStorageBuffers;
-    private int maxTextures;
-    private int maxVerticesBuffer;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -59,13 +53,7 @@ public class EngCfg {
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", 0.00005f).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", 2048).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
-            maxStorageBuffers = Integer.parseInt(props.getOrDefault("maxStorageBuffers", 100).toString());
             maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", 100).toString());
-            maxVerticesBuffer = Integer.parseInt(props.getOrDefault("maxVerticesBuffer", 20000000).toString());
-            maxIndicesBuffer = Integer.parseInt(props.getOrDefault("maxIndicesBuffer", 5000000).toString());
-            maxAnimWeightsBuffer = Integer.parseInt(props.getOrDefault("maxAnimWeightsBuffer", 100000).toString());
-            maxJointMatricesBuffer = Integer.parseInt(props.getOrDefault("maxJointMatricesBuffer", 2000000).toString());
-            maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", 300).toString());
         } catch (IOException excp) {
             Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -86,36 +74,12 @@ public class EngCfg {
         return fov;
     }
 
-    public int getMaxAnimWeightsBuffer() {
-        return maxAnimWeightsBuffer;
-    }
-
     public int getMaxDescs() {
         return maxDescs;
     }
 
-    public int getMaxIndicesBuffer() {
-        return maxIndicesBuffer;
-    }
-
-    public int getMaxJointMatricesBuffer() {
-        return maxJointMatricesBuffer;
-    }
-
     public int getMaxJointsMatricesLists() {
         return maxJointsMatricesLists;
-    }
-
-    public int getMaxStorageBuffers() {
-        return maxStorageBuffers;
-    }
-
-    public int getMaxTextures() {
-        return maxTextures;
-    }
-
-    public int getMaxVerticesBuffer() {
-        return maxVerticesBuffer;
     }
 
     public String getPhysDeviceName() {
@@ -172,13 +136,5 @@ public class EngCfg {
 
     public boolean isVkValidate() {
         return vkValidate;
-    }
-
-    public void setMaxJointsMatricesLists(int maxJointsMatricesLists) {
-        this.maxJointsMatricesLists = maxJointsMatricesLists;
-    }
-
-    public void setMaxStorageBuffers(int maxStorageBuffers) {
-        this.maxStorageBuffers = maxStorageBuffers;
     }
 }

@@ -1,14 +1,14 @@
 package org.vulkanb.eng.graph.shadow;
 
+import org.joml.Matrix4f;
 import org.lwjgl.system.*;
 import org.lwjgl.util.shaderc.Shaderc;
 import org.lwjgl.vulkan.*;
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.*;
-import org.vulkanb.eng.graph.scn.VtxBuffStruct;
 import org.vulkanb.eng.graph.vk.*;
-import org.vulkanb.eng.scene.Scene;
+import org.vulkanb.eng.scene.*;
 
 import java.nio.*;
 import java.util.*;
@@ -20,9 +20,10 @@ public class ShadowRender {
     public static final int DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
     private static final String DESC_ID_MAT = "SHADOW_DESC_ID_MAT";
     private static final String DESC_ID_PRJ = "SHADOW_DESC_ID_PRJ";
-    private static final String DESC_ID_TEXT = "SHADOW_DESC_ID_TEXT";
+    private static final String DESC_ID_TEXT = "SHADOW_SCN_DESC_ID_TEXT";
     private static final String FRAGMENT_SHADER_FILE_GLSL = "resources/shaders/shadow_frg.glsl";
     private static final String FRAGMENT_SHADER_FILE_SPV = FRAGMENT_SHADER_FILE_GLSL + ".spv";
+    private static final int PUSH_CONSTANTS_SIZE = VkUtils.MAT4X4_SIZE + VkUtils.PTR_SIZE * 2 + VkUtils.INT_SIZE;
     private static final String SHADOW_GEOMETRY_SHADER_FILE_GLSL = "resources/shaders/shadow_geom.glsl";
     private static final String SHADOW_GEOMETRY_SHADER_FILE_SPV = SHADOW_GEOMETRY_SHADER_FILE_GLSL + ".spv";
     private static final String VERTEX_SHADER_FILE_GLSL = "resources/shaders/shadow_vtx.glsl";
@@ -42,31 +43,30 @@ public class ShadowRender {
     private final DescSetLayout uniformGeomDescSetLayout;
 
     public ShadowRender(VkCtx vkCtx) {
-        var engCfg = EngCfg.getInstance();
         clrValueDepth = VkClearValue.calloc();
         clrValueDepth.color(c -> c.float32(0, 1.0f));
         depthAttachment = createDepthAttachment(vkCtx);
         depthAttachmentInfo = createDepthAttachmentInfo(depthAttachment, clrValueDepth);
 
-        pushConstBuff = MemoryUtil.memAlloc(VkUtils.MAT4X4_SIZE);
+        pushConstBuff = MemoryUtil.memAlloc(PUSH_CONSTANTS_SIZE);
 
         renderingInfo = createRenderInfo(depthAttachmentInfo);
         ShaderModule[] shaderModules = createShaderModules(vkCtx);
 
         uniformGeomDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 0, 1, VK_SHADER_STAGE_GEOMETRY_BIT));
-        int buffSize = VkUtils.MAT4X4_SIZE * Scene.SHADOW_MAP_CASCADE_COUNT;
+        long buffSize = (long) VkUtils.MAT4X4_SIZE * Scene.SHADOW_MAP_CASCADE_COUNT;
         prjBuffers = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_PRJ, uniformGeomDescSetLayout);
+
+        descLayoutFrgStorage = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                0, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
 
         var textureSamplerInfo = new TextureSamplerInfo(VK_SAMPLER_ADDRESS_MODE_REPEAT,
                 VK_BORDER_COLOR_INT_OPAQUE_BLACK, 1, true);
         textureSampler = new TextureSampler(vkCtx, textureSamplerInfo);
         textDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                0, engCfg.getMaxTextures(), VK_SHADER_STAGE_FRAGMENT_BIT));
-
-        descLayoutFrgStorage = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                0, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
+                0, TextureCache.MAX_TEXTURES, VK_SHADER_STAGE_FRAGMENT_BIT));
 
         pipeline = createPipeline(vkCtx, shaderModules, new DescSetLayout[]{uniformGeomDescSetLayout, textDescSetLayout,
                 descLayoutFrgStorage});
@@ -95,12 +95,12 @@ public class ShadowRender {
     }
 
     private static Pipeline createPipeline(VkCtx vkCtx, ShaderModule[] shaderModules, DescSetLayout[] descSetLayouts) {
-        var vtxBuffStruct = new VtxBuffStruct();
+        var vtxBuffStruct = new EmptyVtxBuffStruct();
         var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(), new int[]{})
                 .setDepthFormat(DEPTH_FORMAT)
                 .setPushConstRanges(
                         new PushConstRange[]{
-                                new PushConstRange(VK_SHADER_STAGE_VERTEX_BIT, 0, VkUtils.MAT4X4_SIZE)
+                                new PushConstRange(VK_SHADER_STAGE_VERTEX_BIT, 0, PUSH_CONSTANTS_SIZE)
                         })
                 .setDescSetLayouts(descSetLayouts)
                 .setDescSetLayouts(descSetLayouts)
@@ -143,9 +143,9 @@ public class ShadowRender {
     public void cleanup(VkCtx vkCtx) {
         pipeline.cleanup(vkCtx);
         uniformGeomDescSetLayout.cleanup(vkCtx);
+        descLayoutFrgStorage.cleanup(vkCtx);
         textDescSetLayout.cleanup(vkCtx);
         textureSampler.cleanup(vkCtx);
-        descLayoutFrgStorage.cleanup(vkCtx);
         Arrays.asList(prjBuffers).forEach(b -> b.cleanup(vkCtx));
         renderingInfo.free();
         depthAttachmentInfo.free();
@@ -170,23 +170,13 @@ public class ShadowRender {
         var buffer = materialsCache.getMaterialsBuffer();
         descSet.setBuffer(device, buffer, buffer.getRequestedSize(), layoutInfo.binding(), layoutInfo.descType());
 
-        int maxTextures = EngCfg.getInstance().getMaxTextures();
         List<ImageView> imageViews = textureCache.getAsList().stream().map(Texture::getImageView).toList();
-        int gap = maxTextures - imageViews.size();
-        if (gap > 0) {
-            ImageView defaultImageView = imageViews.get(0);
-            imageViews = new ArrayList<>(imageViews);
-            for (int i = 0; i < gap; i++) {
-                imageViews.add(defaultImageView);
-            }
-        } else if (gap < 0) {
-            Logger.warn("Increase maximum textures to [{}]", imageViews.size());
-        }
         descSet = vkCtx.getDescAllocator().addDescSet(device, DESC_ID_TEXT, textDescSetLayout);
         descSet.setImagesArr(device, imageViews, textureSampler, 0);
     }
 
-    public void render(EngCtx engCtx, VkCtx vkCtx, CmdBuffer cmdBuffer, GlobalBuffers globalBuffers, int currentFrame) {
+    public void render(EngCtx engCtx, VkCtx vkCtx, CmdBuffer cmdBuffer, ModelsCache modelsCache,
+                       MaterialsCache materialsCache, AnimationsCache animationsCache, int currentFrame) {
         try (var stack = MemoryStack.stackPush()) {
             Scene scene = engCtx.scene();
 
@@ -202,8 +192,6 @@ public class ShadowRender {
                     VK_IMAGE_ASPECT_DEPTH_BIT);
 
             vkCmdBeginRendering(cmdHandle, renderingInfo);
-
-            updateProjBuffer(vkCtx, currentFrame);
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.getVkPipeline());
 
@@ -224,48 +212,53 @@ public class ShadowRender {
                     .offset(it -> it.x(0).y(0));
             vkCmdSetScissor(cmdHandle, 0, scissor);
 
-            LongBuffer vertexBuffer = stack.mallocLong(1);
-            LongBuffer instanceBuffer = stack.mallocLong(1);
-            LongBuffer offsets = stack.mallocLong(1).put(0, 0L);
-
+            updateProjBuffer(vkCtx, currentFrame);
             DescAllocator descAllocator = vkCtx.getDescAllocator();
             LongBuffer descriptorSets = stack.mallocLong(3)
                     .put(0, descAllocator.getDescSet(DESC_ID_PRJ, currentFrame).getVkDescriptorSet())
                     .put(1, descAllocator.getDescSet(DESC_ID_TEXT).getVkDescriptorSet())
                     .put(2, descAllocator.getDescSet(DESC_ID_MAT).getVkDescriptorSet());
+            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.getVkPipelineLayout(),
+                    0, descriptorSets, null);
 
-            vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipeline.getVkPipelineLayout(), 0, descriptorSets, null);
+            List<Entity> entities = scene.getEntities();
+            int numEntities = entities.size();
+            for (int i = 0; i < numEntities; i++) {
+                var entity = entities.get(i);
+                VulkanModel model = modelsCache.getModel(entity.getModelId());
+                List<VulkanMesh> vulkanMeshList = model.getVulkanMeshList();
+                int numMeshes = vulkanMeshList.size();
+                for (int j = 0; j < numMeshes; j++) {
+                    var vulkanMesh = vulkanMeshList.get(j);
+                    String materialId = vulkanMesh.materialdId();
+                    int materialIdx = materialsCache.getPosition(materialId);
+                    VulkanMaterial vulkanMaterial = materialsCache.getMaterial(materialId);
+                    if (vulkanMaterial == null) {
+                        Logger.warn("Mesh [{}] in model [{}] does not have material", j, model.getId());
+                        continue;
+                    }
+                    long bufferAddress = model.hasAnimations() ?
+                            animationsCache.getBuffer(entity.getId(), vulkanMesh.id()).getAddress() :
+                            vulkanMesh.verticesBuffer().getAddress();
+                    setPushConstants(cmdHandle, entity.getModelMatrix(), bufferAddress, vulkanMesh.indicesBuffer().getAddress(),
+                            materialIdx);
 
-            // Draw commands for non animated models
-            if (globalBuffers.getNumIndirectCommands() > 0) {
-                vertexBuffer.put(0, globalBuffers.getVerticesBuffer().getBuffer());
-                instanceBuffer.put(0, globalBuffers.getInstanceDataBuffers()[currentFrame].getBuffer());
-
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-
-                VkBuffer indirectBuffer = globalBuffers.getIndirectBuffer();
-                vkCmdDrawIndexedIndirect(cmdHandle, indirectBuffer.getBuffer(), 0, globalBuffers.getNumIndirectCommands(),
-                        GlobalBuffers.IND_COMMAND_STRIDE);
-            }
-
-            if (globalBuffers.getNumAnimIndirectCommands() > 0) {
-                // Draw commands for  animated models
-                vertexBuffer.put(0, globalBuffers.getAnimVerticesBuffer().getBuffer());
-                instanceBuffer.put(0, globalBuffers.getAnimInstanceDataBuffers()[currentFrame].getBuffer());
-
-                vkCmdBindVertexBuffers(cmdHandle, 0, vertexBuffer, offsets);
-                vkCmdBindVertexBuffers(cmdHandle, 1, instanceBuffer, offsets);
-                vkCmdBindIndexBuffer(cmdHandle, globalBuffers.getIndicesBuffer().getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-                VkBuffer animIndirectBuffer = globalBuffers.getAnimIndirectBuffer();
-                vkCmdDrawIndexedIndirect(cmdHandle, animIndirectBuffer.getBuffer(), 0, globalBuffers.getNumAnimIndirectCommands(),
-                        GlobalBuffers.IND_COMMAND_STRIDE);
+                    vkCmdDraw(cmdHandle, vulkanMesh.numIndices(), 1, 0, 0);
+                }
             }
 
             vkCmdEndRendering(cmdHandle);
         }
+    }
+
+    private void setPushConstants(VkCommandBuffer cmdHandle, Matrix4f modelMatrix, long vtxAddress,
+                                  long indicesAddress, int materialIdx) {
+        int vtxPcSize = VkUtils.MAT4X4_SIZE + VkUtils.PTR_SIZE * 2;
+        modelMatrix.get(0, pushConstBuff);
+        pushConstBuff.putLong(VkUtils.MAT4X4_SIZE, vtxAddress);
+        pushConstBuff.putLong(VkUtils.MAT4X4_SIZE + VkUtils.PTR_SIZE, indicesAddress);
+        pushConstBuff.putInt(vtxPcSize, materialIdx);
+        vkCmdPushConstants(cmdHandle, pipeline.getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstBuff);
     }
 
     private void updateProjBuffer(VkCtx vkCtx, int currentFrame) {
