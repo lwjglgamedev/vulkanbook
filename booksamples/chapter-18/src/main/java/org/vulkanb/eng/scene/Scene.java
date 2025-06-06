@@ -58,10 +58,6 @@ public class Scene {
         entities.removeIf(entity1 -> entity1.getId().equals(entity.getId()));
     }
 
-    public void removeEntity(String entityId) {
-        entities.removeIf(entity1 -> entity1.getId().equals(entityId));
-    }
-
     public void setLights(Light[] lights) {
         int numLights = lights != null ? lights.length : 0;
         if (numLights > MAX_LIGHTS) {

@@ -7,7 +7,7 @@ import org.tinylog.Logger;
 import java.nio.*;
 
 import static org.lwjgl.vulkan.KHRRayTracingPipeline.vkCreateRayTracingPipelinesKHR;
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK13.*;
 import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class RtPipeline {

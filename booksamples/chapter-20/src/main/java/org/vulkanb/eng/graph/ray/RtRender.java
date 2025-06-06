@@ -16,8 +16,7 @@ import java.util.*;
 import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 import static org.lwjgl.vulkan.KHRRayTracingPipeline.*;
-import static org.lwjgl.vulkan.VK10.*;
-import static org.lwjgl.vulkan.VK13.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+import static org.lwjgl.vulkan.VK13.*;
 
 public class RtRender {
     private static final int COLOR_FORMAT = VK_FORMAT_R8G8B8A8_UNORM;

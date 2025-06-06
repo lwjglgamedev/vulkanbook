@@ -10,7 +10,6 @@ import java.nio.*;
 import java.util.Arrays;
 
 import static org.lwjgl.vulkan.KHRRayTracingPipeline.VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class PostRender {

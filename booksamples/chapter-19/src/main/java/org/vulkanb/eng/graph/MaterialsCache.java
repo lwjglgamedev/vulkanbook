@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import static org.lwjgl.util.vma.Vma.*;
-import static org.lwjgl.vulkan.VK10.*;
+import static org.lwjgl.vulkan.VK13.*;
 
 public class MaterialsCache {
 

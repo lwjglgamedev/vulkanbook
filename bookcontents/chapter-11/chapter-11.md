@@ -367,7 +367,6 @@ import org.vulkanb.eng.graph.vk.*;
 import java.nio.*;
 import java.util.Arrays;
 
-import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class PostRender {
@@ -500,9 +499,7 @@ public class EmptyVtxBuffStruct {
 
     public EmptyVtxBuffStruct() {
         vi = VkPipelineVertexInputStateCreateInfo.calloc();
-        vi.sType$Default()
-                .pVertexBindingDescriptions(null)
-                .pVertexAttributeDescriptions(null);
+        vi.sType$Default();
     }
 
     public void cleanup() {

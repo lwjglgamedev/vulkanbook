@@ -20,3 +20,4 @@ The book is structured in the following chapters:
 - [Chapter 15](chapter-15/chapter-15.md): Deferred rendering (II). 
 - [Chapter 16](chapter-16/chapter-16.md): Cascade shadows.
 - [Chapter 17](chapter-17/chapter-17.md): Animations.
+- [Chapter 18](chapter-18/chapter-18.md): Buffer Device Address (BDA).

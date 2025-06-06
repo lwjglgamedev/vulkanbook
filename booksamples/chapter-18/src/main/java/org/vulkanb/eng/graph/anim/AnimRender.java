@@ -66,10 +66,7 @@ public class AnimRender {
         cmdPool.cleanup(vkCtx);
     }
 
-    public void loadModels(VkCtx vkCtx, ModelsCache modelsCache, List<Entity> entities, AnimationsCache animationsCache) {
-        DescAllocator descAllocator = vkCtx.getDescAllocator();
-        Device device = vkCtx.getDevice();
-        DescSetLayout.LayoutInfo layoutInfo = stDescSetLayout.getLayoutInfo();
+    public void loadModels(ModelsCache modelsCache) {
         var models = modelsCache.getModelsMap().values();
         for (VulkanModel vulkanModel : models) {
             if (!vulkanModel.hasAnimations()) {
@@ -80,23 +77,6 @@ public class AnimRender {
                 int groupSize = (int) Math.ceil(((float) mesh.verticesBuffer().getRequestedSize() / vertexSize) /
                         LOCAL_SIZE_X);
                 grpSizeMap.put(mesh.id(), groupSize);
-            }
-        }
-
-        int numEntities = entities.size();
-        for (int i = 0; i < numEntities; i++) {
-            var entity = entities.get(i);
-            VulkanModel model = modelsCache.getModel(entity.getModelId());
-            if (!model.hasAnimations()) {
-                continue;
-            }
-            List<VulkanMesh> vulkanMeshList = model.getVulkanMeshList();
-            int numMeshes = vulkanMeshList.size();
-            for (int j = 0; j < numMeshes; j++) {
-                var vulkanMesh = vulkanMeshList.get(j);
-                VkBuffer animationBuffer = animationsCache.getBuffer(entity.getId(), vulkanMesh.id());
-                DescSet descSet = descAllocator.addDescSet(device, entity.getId() + "_" + vulkanMesh.id() + "_ENT", stDescSetLayout);
-                descSet.setBuffer(device, animationBuffer, animationBuffer.getRequestedSize(), 0, layoutInfo.descType());
             }
         }
     }

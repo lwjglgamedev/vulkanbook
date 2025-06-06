@@ -1,8 +1,7 @@
-#version 460
+#version 450
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_buffer_reference2 : enable
 #extension GL_EXT_scalar_block_layout : require
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
 struct Vertex {
     vec3 inPos;
@@ -12,11 +11,11 @@ struct Vertex {
     vec2 inTextCoords;
 };
 
-layout(scalar, buffer_reference, buffer_reference_align=16) buffer VertexBuffer {
+layout(scalar, buffer_reference) buffer VertexBuffer {
     Vertex[] vertices;
 };
 
-layout(std430, buffer_reference, buffer_reference_align=16) buffer IndexBuffer {
+layout(std430, buffer_reference) buffer IndexBuffer {
     uint[] indices;
 };
 

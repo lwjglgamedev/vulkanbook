@@ -11,8 +11,7 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.util.vma.Vma.*;
-import static org.lwjgl.vulkan.VK10.*;
-import static org.lwjgl.vulkan.VK12.VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+import static org.lwjgl.vulkan.VK13.*;
 
 public class ModelsCache {
 

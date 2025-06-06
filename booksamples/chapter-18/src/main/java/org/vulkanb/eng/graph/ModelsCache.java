@@ -11,8 +11,7 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.util.vma.Vma.*;
-import static org.lwjgl.vulkan.VK10.*;
-import static org.lwjgl.vulkan.VK12.VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+import static org.lwjgl.vulkan.VK13.*;
 
 public class ModelsCache {
 
@@ -76,8 +75,7 @@ public class ModelsCache {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         var dstBuffer = new VkBuffer(vkCtx, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-                        | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO,
-                VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+                        | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO, 0, 0);
 
         long mappedMemory = srcBuffer.map(vkCtx);
         FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
@@ -188,8 +186,7 @@ public class ModelsCache {
                     }
 
                     VulkanMesh vulkanMesh = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(),
-                            indicesBuffers.dstBuffer(),
-                            weightsBuffers != null ? weightsBuffers.dstBuffer() : null,
+                            indicesBuffers.dstBuffer(), weightsBuffers != null ? weightsBuffers.dstBuffer() : null,
                             meshData.idxSize() / VkUtils.INT_SIZE, meshData.materialId());
                     vulkanModel.getVulkanMeshList().add(vulkanMesh);
 

@@ -3,7 +3,7 @@
 // Keep in sync manually with Java code
 const int MAX_TEXTURES = 100;
 
-layout(location = 0) in vec3 inPos;
+layout(location = 0) in vec4 inPos;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inTangent;
 layout(location = 3) in vec3 inBitangent;
@@ -48,7 +48,7 @@ layout(push_constant) uniform pc {
 
 void main()
 {
-    outPos = vec4(inPos, 1.0);
+    outPos = inPos;
 
     Material material = matUniform.materials[push_constants.materialIdx];
     if (material.hasTexture == 1) {

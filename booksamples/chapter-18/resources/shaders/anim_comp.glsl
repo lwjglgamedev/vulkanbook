@@ -2,11 +2,11 @@
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
-layout(std430, buffer_reference, buffer_reference_align=4) buffer FloatBuf {
+layout(std430, buffer_reference) buffer FloatBuf {
     float data[];
 };
 
-layout(std430, buffer_reference, buffer_reference_align=16) buffer MatricesBuf {
+layout(std430, buffer_reference) buffer MatricesBuf {
     mat4[] data;
 };
 

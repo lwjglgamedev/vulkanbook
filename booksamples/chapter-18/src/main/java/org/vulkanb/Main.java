@@ -17,7 +17,6 @@ public class Main implements IGameLogic {
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float MOVEMENT_SPEED = 0.01f;
 
-    private final List<String> cubes = new ArrayList<>();
     private float angleInc;
     private Entity bobEntity;
     private Light dirLight;
@@ -56,13 +55,9 @@ public class Main implements IGameLogic {
         bobEntity.setEntityAnimation(new EntityAnimation(true, 0, 0));
         scene.addEntity(bobEntity);
 
-        ModelData cubeModel = ModelLoader.loadModel("resources/models/cube/cube.json");
-        models.add(cubeModel);
-
         List<MaterialData> materials = new ArrayList<>();
         materials.addAll(ModelLoader.loadMaterials("resources/models/sponza/Sponza_mat.json"));
         materials.addAll(ModelLoader.loadMaterials("resources/models/bob/boblamp_mat.json"));
-        materials.addAll(ModelLoader.loadMaterials("resources/models/cube/cube_mat.json"));
 
         scene.getAmbientLight().set(0.8f, 0.8f, 0.8f);
         List<Light> lights = new ArrayList<>();
@@ -114,15 +109,6 @@ public class Main implements IGameLogic {
         if (ki.keySinglePress(GLFW_KEY_SPACE)) {
             EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
             entityAnimation.setStarted(!entityAnimation.isStarted());
-        }
-        if (ki.keySinglePress(GLFW_KEY_1)) {
-            float pos = (float) Math.random() * 2.0f;
-            Entity entity = new Entity("CubeEntity_" + System.currentTimeMillis(), "cube", new Vector3f(pos, pos, -pos));
-            scene.addEntity(entity);
-            cubes.add(entity.getId());
-        } else if (ki.keySinglePress(GLFW_KEY_2) && !cubes.isEmpty()) {
-            String id = cubes.removeLast();
-            scene.removeEntity(id);
         }
 
         MouseInput mi = window.getMouseInput();

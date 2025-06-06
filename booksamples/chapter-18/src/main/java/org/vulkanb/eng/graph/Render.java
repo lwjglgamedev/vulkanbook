@@ -134,7 +134,7 @@ public class Render {
         shadowRender.loadMaterials(vkCtx, materialsCache, textureCache);
         guiRender.loadTextures(vkCtx, initData.guiTextures(), textureCache);
         animationsCache.loadAnimations(vkCtx, engCtx.scene().getEntities(), modelsCache);
-        animRender.loadModels(vkCtx, modelsCache, engCtx.scene().getEntities(), animationsCache);
+        animRender.loadModels(modelsCache);
     }
 
     private void recordingStart(CmdPool cmdPool, CmdBuffer cmdBuffer) {

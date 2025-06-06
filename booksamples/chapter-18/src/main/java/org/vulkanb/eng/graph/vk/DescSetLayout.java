@@ -11,8 +11,8 @@ import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class DescSetLayout {
 
+    private final LayoutInfo[] layoutInfos;
     protected long vkDescLayout;
-    private LayoutInfo[] layoutInfos;
 
     public DescSetLayout(VkCtx vkCtx, LayoutInfo layoutInfo) {
         this(vkCtx, new DescSetLayout.LayoutInfo[]{layoutInfo});
