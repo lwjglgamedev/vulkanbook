@@ -157,8 +157,24 @@ public class GuiRender {
 }
 ```
 
-Some things to notice, we will not need to store the fonts texture in the `GuiRender` class, this is managed now in the `FontsMaTextureCachenager` class. Also ww
-need to call the new `loadFontsTexture` method in the `Render` class:
+Some things to notice, we will not need to store the fonts texture in the `GuiRender` class, this is managed now in the `TextureCacher` class. We will need
+a new method in the `TextureCache` class to add textures:
+
+```java
+public class TextureCache {
+    ...
+    public Texture addTexture(String id, Texture texture) {
+        if (textureMap.size() > MAX_TEXTURES) {
+            throw new IllegalArgumentException("Texture cache is full");
+        }
+        textureMap.put(id, texture);
+        return texture;
+    }
+    ...
+}
+```
+
+Also we need to call the new `loadFontsTexture` method in the `Render` class:
 
 ```java
 public class Render {

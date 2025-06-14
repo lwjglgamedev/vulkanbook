@@ -19,6 +19,14 @@ public class TextureCache {
         textureMap = new IndexedLinkedHashMap<>();
     }
 
+    public Texture addTexture(String id, Texture texture) {
+        if (textureMap.size() > MAX_TEXTURES) {
+            throw new IllegalArgumentException("Texture cache is full");
+        }
+        textureMap.put(id, texture);
+        return texture;
+    }
+    
     public Texture addTexture(VkCtx vkCtx, String id, ImageSrc srcImage, int format) {
         if (textureMap.size() > MAX_TEXTURES) {
             throw new IllegalArgumentException("Texture cache is full");
