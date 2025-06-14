@@ -1,0 +1,15 @@
+{
+  "id": "floor-model",
+  "meshes": [
+    {
+      "id": "default_0",
+      "material_id": "floor-mat-1",
+      "offset_vtx": 0,
+      "vtx_size": 280,
+      "offset_idx": 0,
+      "idx_size": 24
+    }
+  ],
+  "vtx_path": "resources/models/floor/floor.vtx",
+  "idx_path": "resources/models/floor/floor.idx"
+}

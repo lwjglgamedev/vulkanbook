@@ -1,6 +1,7 @@
 package org.vulkanb.eng.graph;
 
 import org.lwjgl.system.MemoryUtil;
+import org.tinylog.Logger;
 import org.vulkanb.eng.graph.vk.*;
 import org.vulkanb.eng.model.MaterialData;
 
@@ -38,10 +39,12 @@ public class MaterialsCache {
         int result = -1;
         if (id != null) {
             result = materialsMap.getIndexOf(id);
+        } else {
+            Logger.warn("Could not find material with id [{}]", id);
         }
         return result;
     }
-
+	
     public void loadMaterials(VkCtx vkCtx, List<MaterialData> materials, TextureCache textureCache, CmdPool cmdPool,
                               Queue queue) {
         int numMaterials = materials.size();

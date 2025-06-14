@@ -1,0 +1,30 @@
+[
+  {
+    "id": "player-model-mat-0",
+    "texture_path": "resources\\models\\player/Guard_02__diffuse.png",
+    "normal_map_path": "resources\\models\\player/Guard_02__normal.png",
+    "metal_rough_map": "",
+    "diffuse_color": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0,
+      "w": 1.0
+    },
+    "roughness_factor": 0.7487672,
+    "metallic_factor": 0.5
+  },
+  {
+    "id": "player-model-mat-1",
+    "texture_path": "",
+    "normal_map_path": "",
+    "metal_rough_map": "",
+    "diffuse_color": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0,
+      "w": 1.0
+    },
+    "roughness_factor": 1.0,
+    "metallic_factor": 1.0
+  }
+]
