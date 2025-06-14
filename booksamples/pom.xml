@@ -165,6 +165,7 @@
         <module>chapter-17</module>
         <module>chapter-18</module>
         <module>chapter-20</module>
+        <module>appendix-01</module>
     </modules>
 
     <properties>

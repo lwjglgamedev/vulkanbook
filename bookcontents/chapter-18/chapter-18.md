@@ -778,6 +778,6 @@ public class Render {
 ```
 
 And that's all! I hope you will appreciate how these changes simplify code. By getting rid of descriptor sets (or at least some of them) we already have an almost
-bindless render.
+bind-less render.
 
 [Next chapter](../chapter-19/chapter-19.md)

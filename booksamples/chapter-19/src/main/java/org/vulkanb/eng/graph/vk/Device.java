@@ -37,11 +37,21 @@ public class Device {
             }
 
             // Set up required features
-            VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
-            samplerAnisotropy = supportedFeatures.samplerAnisotropy();
+            var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
+                    .sType$Default()
+                    .bufferDeviceAddress(true)
+                    .scalarBlockLayout(true);
+
+            var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
+                    .sType$Default()
+                    .dynamicRendering(true)
+                    .synchronization2(true);
 
             var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
             var features = features2.features();
+
+            VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
+            samplerAnisotropy = supportedFeatures.samplerAnisotropy();
             if (samplerAnisotropy) {
                 features.samplerAnisotropy(true);
             }
@@ -52,23 +62,7 @@ public class Device {
             features.shaderInt64(true);
             features.drawIndirectFirstInstance(true);
 
-            var features11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
-                    .sType$Default()
-                    .shaderDrawParameters(true);
-
-            var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
-                    .sType$Default()
-                    .bufferDeviceAddress(true)
-                    .runtimeDescriptorArray(true)
-                    .scalarBlockLayout(true);
-
-            var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
-                    .sType$Default()
-                    .dynamicRendering(true)
-                    .synchronization2(true);
-
-            features2.pNext(features11.address());
-            features11.pNext(features12.address());
+            features2.pNext(features12.address());
             features12.pNext(features13.address());
 
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)

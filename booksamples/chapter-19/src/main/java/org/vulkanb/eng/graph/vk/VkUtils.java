@@ -7,7 +7,6 @@ import org.lwjgl.vulkan.*;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
-import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.vulkan.VK13.*;
 
@@ -62,7 +61,7 @@ public class VkUtils {
 
     public static long getBufferAddress(VkCtx vkCtx, long buffer) {
         long address;
-        try (MemoryStack stack = stackPush()) {
+        try (var stack = MemoryStack.stackPush()) {
             address = vkGetBufferDeviceAddress(vkCtx.getDevice().getVkDevice(), VkBufferDeviceAddressInfo
                     .calloc(stack)
                     .sType$Default()
@@ -114,7 +113,7 @@ public class VkUtils {
 
     public static void memoryBarrier(CmdBuffer cmdBuffer, int srcStageMask, int dstStageMask, int srcAccessMask,
                                      int dstAccessMask, int dependencyFlags) {
-        try (var stack = stackPush()) {
+        try (var stack = MemoryStack.stackPush()) {
             VkMemoryBarrier2.Buffer buff = VkMemoryBarrier2.calloc(1, stack)
                     .sType$Default()
                     .srcStageMask(srcStageMask)
