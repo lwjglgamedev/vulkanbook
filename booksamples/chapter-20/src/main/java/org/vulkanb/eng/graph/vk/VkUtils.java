@@ -7,7 +7,6 @@ import org.lwjgl.vulkan.*;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
-import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.util.vma.Vma.*;
 import static org.lwjgl.vulkan.VK13.*;
 
@@ -20,6 +19,7 @@ public class VkUtils {
     public static final int MAX_IN_FLIGHT = 2;
     public static final int SHORT_LENGTH = 2;
     public static final int VEC2_SIZE = 2 * FLOAT_SIZE;
+    public static final int VEC3_SIZE = 3 * FLOAT_SIZE;
     public static final int VEC4_SIZE = 4 * FLOAT_SIZE;
 
     private VkUtils() {
@@ -91,20 +91,12 @@ public class VkUtils {
 
     public static long getBufferAddress(VkCtx vkCtx, long buffer) {
         long address;
-        try (MemoryStack stack = stackPush()) {
+        try (var stack = MemoryStack.stackPush()) {
             address = vkGetBufferDeviceAddress(vkCtx.getDevice().getVkDevice(), VkBufferDeviceAddressInfo
                     .calloc(stack)
                     .sType$Default()
                     .buffer(buffer));
         }
-        return address;
-    }
-
-    public static long getBufferAddress(VkCtx vkCtx, long buffer, long alignment) {
-        long address = getBufferAddress(vkCtx, buffer);
-        // check alignment
-        if ((address % alignment) != 0)
-            throw new AssertionError("Illegal address alignment");
         return address;
     }
 

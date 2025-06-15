@@ -8,6 +8,7 @@
 
 // Keep in sync manually with Java code
 const int MAX_TEXTURES = 100;
+const int STRIDE = 14;
 
 struct Material {
     vec4 diffuseColor;
@@ -31,6 +32,8 @@ struct MeshData {
 struct Vertex {
   vec3 pos;
   vec3 normal;
+  vec3 tangent;
+  vec3 bitangent;
   vec2 uv;
 };
 
@@ -43,7 +46,7 @@ struct hitPayload
 };
 
 layout(location = 0) rayPayloadInEXT hitPayload prd;
-layout(buffer_reference, scalar) buffer Vertices {vec4 v[]; }; // Positions of an object
+layout(buffer_reference, scalar) buffer Vertices {float v[]; }; // Positions of an object
 layout(buffer_reference, scalar) buffer Indices {uint i[]; }; // Triangle indices
 
 layout(set=4, binding=0) readonly buffer srcBuf {
@@ -59,13 +62,17 @@ layout(set=6, binding=0) uniform sampler2D textSampler[MAX_TEXTURES];
 hitAttributeEXT vec2 attribs;
 
 Vertex unpack(uint index, Vertices vertices) {
-    const uint offset = index * 2;
-    vec4 d0 = vertices.v[offset];
-    vec4 d1 = vertices.v[offset + 1];
+    uint offset = index * STRIDE;
     Vertex result;
-    result.pos = d0.xyz;
-    result.normal = vec3(d0.w, d1.x, d1.y);
-    result.uv = d1.zw;
+    result.pos = vec3(vertices.v[offset], vertices.v[offset + 1], vertices.v[offset + 2]);
+    offset += 3;
+    result.normal = vec3(vertices.v[offset], vertices.v[offset + 1], vertices.v[offset + 2]);
+    offset += 3;
+    result.tangent = vec3(vertices.v[offset], vertices.v[offset + 1], vertices.v[offset + 2]);
+    offset += 3;
+    result.bitangent = vec3(vertices.v[offset], vertices.v[offset + 1], vertices.v[offset + 2]);
+    offset += 3;
+    result.uv = vec2(vertices.v[offset], vertices.v[offset + 1]);
     return result;
 }
 

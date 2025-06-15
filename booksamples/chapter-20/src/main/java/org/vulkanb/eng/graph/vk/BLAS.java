@@ -15,7 +15,7 @@ import static org.vulkanb.eng.graph.vk.VkUtils.vkCheck;
 
 public class BLAS {
 
-    private static final int STRIDE = VkUtils.FLOAT_SIZE * 3 + VkUtils.FLOAT_SIZE * 3 + VkUtils.FLOAT_SIZE * 2;
+    private static final int STRIDE = VkUtils.VEC3_SIZE * 4 + VkUtils.VEC2_SIZE;
     private final VkBuffer buffBlas;
     private final long deviceAddress;
     private final long handle;
@@ -105,7 +105,6 @@ public class BLAS {
                     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
                     VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
 
-            // TODO: CHECK IF THIS CAN BE REUSED from previous ones
             var accelBuildGeomInfo = VkAccelerationStructureBuildGeometryInfoKHR.calloc(1, stack)
                     .sType$Default()
                     .type(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)

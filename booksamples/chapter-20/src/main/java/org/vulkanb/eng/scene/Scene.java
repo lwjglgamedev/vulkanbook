@@ -9,6 +9,7 @@ import java.util.*;
 public class Scene {
 
     public static final int MAX_LIGHTS = 10;
+    public static final int SHADOW_MAP_CASCADE_COUNT = 3;
 
     private final Vector3f ambientLight;
     private final Camera camera;
@@ -42,7 +43,7 @@ public class Scene {
     }
 
     public Light[] getLights() {
-        return this.lights;
+        return lights;
     }
 
     public Projection getProjection() {

@@ -6,6 +6,7 @@ import java.io.*;
 import java.util.Properties;
 
 public class EngCfg {
+    public static final int MAX_WEIGHTS = 4;
     private static final int DEFAULT_UPS = 30;
     private static final String FILENAME = "eng.properties";
     private static EngCfg instance;
@@ -15,6 +16,7 @@ public class EngCfg {
     private float fov;
     private boolean fxaa;
     private int maxDescs;
+    private int maxJointsMatricesLists;
     private int maxTextures;
     private String physDeviceName;
     private int requestedImages;
@@ -52,6 +54,7 @@ public class EngCfg {
             shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", 0.00005f).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", 2048).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
+            maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", 100).toString());
             maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", 100).toString());
         } catch (IOException excp) {
             Logger.error("Could not read [{}] properties file", FILENAME, excp);
@@ -75,6 +78,10 @@ public class EngCfg {
 
     public int getMaxDescs() {
         return maxDescs;
+    }
+
+    public int getMaxJointsMatricesLists() {
+        return maxJointsMatricesLists;
     }
 
     public int getMaxTextures() {

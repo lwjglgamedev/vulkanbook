@@ -8,8 +8,8 @@ import org.lwjgl.vulkan.*;
 import org.vulkanb.eng.*;
 import org.vulkanb.eng.graph.TextureCache;
 import org.vulkanb.eng.graph.post.PostRender;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.wnd.KeyboardInput;
 
 import java.nio.*;
@@ -79,7 +79,10 @@ public class GuiRender {
         var vtxBuffStruct = new GuiVtxBuffStruct();
         var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(),
                 new int[]{PostRender.COLOR_FORMAT})
-                .setPushConstRanges(new PushConstRange[]{new PushConstRange(VK_SHADER_STAGE_VERTEX_BIT, 0, VkUtils.VEC2_SIZE)})
+                .setPushConstRanges(
+                        new PushConstRange[]{
+                                new PushConstRange(VK_SHADER_STAGE_VERTEX_BIT, 0, VkUtils.VEC2_SIZE)
+                        })
                 .setDescSetLayouts(descSetLayouts)
                 .setUseBlend(true);
         var pipeline = new Pipeline(vkCtx, buildInfo);
@@ -273,7 +276,7 @@ public class GuiRender {
             return;
         }
         var vtxBuffer = buffsVtx[idx];
-        if (vtxBuffer == null || vertexBufferSize != vtxBuffer.getRequestedSize()) {
+        if (vtxBuffer == null || vertexBufferSize > vtxBuffer.getRequestedSize()) {
             if (vtxBuffer != null) {
                 vtxBuffer.cleanup(vkCtx);
             }
@@ -284,7 +287,7 @@ public class GuiRender {
         }
 
         var indicesBuffer = buffsIdx[idx];
-        if (indicesBuffer == null || indexBufferSize != indicesBuffer.getRequestedSize()) {
+        if (indicesBuffer == null || indexBufferSize > indicesBuffer.getRequestedSize()) {
             if (indicesBuffer != null) {
                 indicesBuffer.cleanup(vkCtx);
             }
