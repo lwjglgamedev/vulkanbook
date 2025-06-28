@@ -42,12 +42,10 @@ public class Render {
     private final SwapChainRender swapChainRender;
     private final TextureCache textureCache;
     private final VkCtx vkCtx;
-    private int currentFrame;
     private boolean resize;
 
     public Render(EngCtx engCtx) {
         vkCtx = new VkCtx(engCtx.window());
-        currentFrame = 0;
 
         graphQueue = new Queue.GraphicsQueue(vkCtx, 0);
         presentQueue = new Queue.PresentQueue(vkCtx, 0);
@@ -149,29 +147,27 @@ public class Render {
         cmdBuffer.endRecording();
     }
 
-    public void render(EngCtx engCtx) {
+    public void render(EngCtx engCtx, int currentRenderFrame) {
         SwapChain swapChain = vkCtx.getSwapChain();
 
-        waitForFence(currentFrame);
+        waitForFence(currentRenderFrame);
 
-        var cmdPool = cmdPools[currentFrame];
-        var cmdBuffer = cmdBuffers[currentFrame];
+        var cmdPool = cmdPools[currentRenderFrame];
+        var cmdBuffer = cmdBuffers[currentRenderFrame];
 
         animRender.render(engCtx, vkCtx, modelsCache, animationsCache);
 
         recordingStart(cmdPool, cmdBuffer);
 
-        globalBuffers.update(vkCtx, engCtx.scene(), modelsCache, animationsCache, materialsCache, currentFrame);
-
-        scnRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentFrame);
-        shadowRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentFrame);
+        scnRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentRenderFrame);
+        shadowRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentRenderFrame);
         lightRender.render(engCtx, vkCtx, cmdBuffer, scnRender.getMrtAttachments(), shadowRender.getDepthAttachment(),
-                shadowRender.getCascadeShadows(currentFrame), currentFrame);
+                shadowRender.getCascadeShadows(currentRenderFrame), currentRenderFrame);
         postRender.render(vkCtx, cmdBuffer, lightRender.getAttachment());
-        guiRender.render(vkCtx, cmdBuffer, currentFrame, postRender.getAttachment());
+        guiRender.render(vkCtx, cmdBuffer, currentRenderFrame, postRender.getAttachment());
 
         int imageIndex;
-        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
+        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentRenderFrame])) < 0) {
             resize(engCtx);
             return;
         }
@@ -180,11 +176,9 @@ public class Render {
 
         recordingStop(cmdBuffer);
 
-        submit(cmdBuffer, currentFrame, imageIndex);
+        submit(cmdBuffer, currentRenderFrame, imageIndex);
 
         resize = swapChain.presentImage(presentQueue, renderCompleteSemphs[imageIndex], imageIndex);
-
-        currentFrame = (currentFrame + 1) % VkUtils.MAX_IN_FLIGHT;
     }
 
     private void resize(EngCtx engCtx) {
@@ -234,6 +228,10 @@ public class Render {
                     .semaphore(renderCompleteSemphs[imageIndex].getVkSemaphore());
             graphQueue.submit(cmds, waitSemphs, signalSemphs, fence);
         }
+    }
+
+    public void updateGlobalBuffers(EngCtx engCtx, int currentFrame) {
+        globalBuffers.update(vkCtx, engCtx.scene(), modelsCache, animationsCache, materialsCache, currentFrame);
     }
 
     private void waitForFence(int currentFrame) {

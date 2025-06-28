@@ -22,5 +22,7 @@ The book is structured in the following chapters:
 - [Chapter 17](chapter-17/chapter-17.md): Animations.
 - [Chapter 18](chapter-18/chapter-18.md): Buffer Device Address (BDA).
 - [Chapter 18](chapter-19/chapter-19.md): Indirect drawing.
+- [Chapter 18](chapter-19/chapter-20.md): Multi-thread.
+- [Chapter 18](chapter-19/chapter-21.md): Ray tracing.
 - [Appendix 01](appendix-01/appendix-01.md): This chapter provides some insights on how to troubleshoot a loss of device error.
 - [Appendix 02](appendix-02/appendix-02.md): This chapter provides a simple 3D game to put everything together

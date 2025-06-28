@@ -123,7 +123,7 @@ public class ScnRender {
                     .imageView(depthAttachments[i].getImageView().getVkImageView())
                     .imageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
-                    .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
+                    .storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
                     .clearValue(clearValue);
             result[i] = attachments;
         }

@@ -17,7 +17,6 @@ public class EngCfg {
     private boolean fxaa;
     private int maxDescs;
     private int maxJointsMatricesLists;
-    private int maxTextures;
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
@@ -55,7 +54,6 @@ public class EngCfg {
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", 2048).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
             maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", 100).toString());
-            maxTextures = Integer.parseInt(props.getOrDefault("maxTextures", 100).toString());
         } catch (IOException excp) {
             Logger.error("Could not read [{}] properties file", FILENAME, excp);
         }
@@ -82,10 +80,6 @@ public class EngCfg {
 
     public int getMaxJointsMatricesLists() {
         return maxJointsMatricesLists;
-    }
-
-    public int getMaxTextures() {
-        return maxTextures;
     }
 
     public String getPhysDeviceName() {

@@ -919,7 +919,7 @@ public class ScnRender {
                     .imageView(depthAttachments[i].getImageView().getVkImageView())
                     .imageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                     .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
-                    .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
+                    .storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
                     .clearValue(clearValue);
             result[i] = attachments;
         }
@@ -929,7 +929,9 @@ public class ScnRender {
 }
 ```
 
-The code is quite similar as the one used for color attachments, but the layout is different: `VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL` to state that is for depth values.
+The code is quite similar as the one used for color attachments, but the layout is different: `VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL` to state that is for depth values. In this case the store operation can be
+`VK_ATTACHMENT_STORE_OP_DONT_CARE` instead of `VK_ATTACHMENT_STORE_OP_STORE` because we do not need to store the results, we just
+need a depth attachment to perform depth tests. We do not need to access those results later on.
 
 The `createPipeline` needs to be updated to set the push constants range:
 

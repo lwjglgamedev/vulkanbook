@@ -140,7 +140,7 @@ public class ScnRender {
 ```
 
 In addition to just having a single `VkRenderingAttachmentInfo.Buffer`, the `imageLayout` is now `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` instead of being
-`VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR` since the image is not related yo the swp chain now. The methods `createDepthAttachment` and `createDepthAttachmentInfo` are
+`VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR` since the image is not related yo the swap chain now. The methods `createDepthAttachment` and `createDepthAttachmentInfo` are
 like this:
 
 ```java
@@ -159,7 +159,7 @@ public class ScnRender {
                 .imageView(depthAttachment.getImageView().getVkImageView())
                 .imageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                 .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
-                .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
+                .storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
                 .clearValue(clearValue);
     }
     ...

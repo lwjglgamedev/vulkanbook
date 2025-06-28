@@ -17,13 +17,11 @@ public class Main implements IGameLogic {
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float MOVEMENT_SPEED = 0.01f;
 
-    private final Vector3f rotatingAxis = new Vector3f(1, 1, 1);
-    private float angle = 0.0f;
     private float angleInc;
-    private Entity cubeEntity1;
-    private Entity cubeEntity2;
+    private Entity bobEntity;
     private Light dirLight;
     private float lightAngle = 270;
+    private int maxFrames;
 
     public static void main(String[] args) {
         Logger.info("Starting application");
@@ -41,28 +39,29 @@ public class Main implements IGameLogic {
     public InitData init(EngCtx engCtx) {
         Scene scene = engCtx.scene();
         List<ModelData> models = new ArrayList<>();
-        List<MaterialData> materials = new ArrayList<>();
 
         ModelData sponzaModel = ModelLoader.loadModel("resources/models/sponza/Sponza.json");
         models.add(sponzaModel);
         Entity sponzaEntity = new Entity("SponzaEntity", sponzaModel.id(), new Vector3f(0.0f, 0.0f, 0.0f));
         scene.addEntity(sponzaEntity);
 
+        ModelData bobModelData = ModelLoader.loadModel("resources/models/bob/boblamp.json");
+        models.add(bobModelData);
+        maxFrames = bobModelData.animations().get(0).frames().size();
+        bobEntity = new Entity("BobEntity", bobModelData.id(), new Vector3f(0.0f, 0.0f, 0.0f));
+        bobEntity.setScale(0.04f);
+        bobEntity.getRotation().rotateY((float) Math.toRadians(-90.0f));
+        bobEntity.updateModelMatrix();
+        bobEntity.setEntityAnimation(new EntityAnimation(true, 0, 0));
+        scene.addEntity(bobEntity);
+
+        List<MaterialData> materials = new ArrayList<>();
         materials.addAll(ModelLoader.loadMaterials("resources/models/sponza/Sponza_mat.json"));
-
-        ModelData modelData = ModelLoader.loadModel("resources/models/cube/cube.json");
-        models.add(modelData);
-        cubeEntity1 = new Entity("CubeEntity", modelData.id(), new Vector3f(0.0f, 2.0f, 0.0f));
-        scene.addEntity(cubeEntity1);
-
-        cubeEntity2 = new Entity("CubeEntity2", modelData.id(), new Vector3f(-2.0f, 2.0f, 0.0f));
-        scene.addEntity(cubeEntity2);
-
-        materials.addAll(ModelLoader.loadMaterials("resources/models/cube/cube_mat.json"));
+        materials.addAll(ModelLoader.loadMaterials("resources/models/bob/boblamp_mat.json"));
 
         scene.getAmbientLight().set(0.8f, 0.8f, 0.8f);
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(5.0f, 5.0f, 5.0f, 1.0f));
         lights.add(dirLight);
 
         Light[] lightArr = new Light[lights.size()];
@@ -107,6 +106,10 @@ public class Main implements IGameLogic {
         } else {
             angleInc = 0;
         }
+        if (ki.keySinglePress(GLFW_KEY_SPACE)) {
+            EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
+            entityAnimation.setStarted(!entityAnimation.isStarted());
+        }
 
         MouseInput mi = window.getMouseInput();
         if (mi.isRightButtonPressed()) {
@@ -128,15 +131,11 @@ public class Main implements IGameLogic {
 
     @Override
     public void update(EngCtx engCtx, long diffTimeMillis) {
-        angle += 1.0f;
-        if (angle >= 360) {
-            angle = angle - 360;
+        EntityAnimation entityAnimation = bobEntity.getEntityAnimation();
+        if (entityAnimation.isStarted()) {
+            int currentFrame = Math.floorMod(entityAnimation.getCurrentFrame() + 1, maxFrames);
+            entityAnimation.setCurrentFrame(currentFrame);
         }
-        float angleRad = (float) Math.toRadians(angle);
-        cubeEntity1.getRotation().identity().rotateAxis(angleRad, rotatingAxis);
-        cubeEntity1.updateModelMatrix();
-        cubeEntity2.getRotation().identity().rotateAxis(-angleRad, rotatingAxis);
-        cubeEntity2.updateModelMatrix();
     }
 
     private void updateDirLight() {

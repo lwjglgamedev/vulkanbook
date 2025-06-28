@@ -478,10 +478,7 @@ public class ShadowRender {
 }
 ```
 
-We create the depth attachment in the `createDepthAttachment` information. In this case it will be a single image but with as many layers as cascade shadows will be. We
-will see how this modifies the creation of attachments. The size of the depth image will not be dependant on the screen size, it weill be a configurable value.
-The rest of the methods to crate attachment information, render information and shader and pipeline are quite similar.
-In this case, we are using three shader modules for vertex, geometry and fragment shading.
+We create the depth attachment in the `createDepthAttachment` information. In this case it will be a single image but with as many layers as cascade shadows will be. We will see how this modifies the creation of attachments. The size of the depth image will not be dependant on the screen size, it weill be a configurable value. The rest of the methods to crate attachment information, render information and shader and pipeline are quite similar. In this case, we are using three shader modules for vertex, geometry and fragment shading. In this case, we need to store depth attachment, this is why we use the `VK_ATTACHMENT_STORE_OP_STORE`, because we will sample it while applying lights
 
 The `ShadowRender` class defines also a `cleanup` method to free the resources and some getters to retrieve the depth attachment and the cascade shadows.
 

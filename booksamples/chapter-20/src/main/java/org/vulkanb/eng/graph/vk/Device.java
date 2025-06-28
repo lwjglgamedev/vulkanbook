@@ -37,27 +37,9 @@ public class Device {
             }
 
             // Set up required features
-            VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
-            samplerAnisotropy = supportedFeatures.samplerAnisotropy();
-
-            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
-            var features = features2.features();
-            if (samplerAnisotropy) {
-                features.samplerAnisotropy(true);
-            }
-            features.geometryShader(true);
-            depthClamp = supportedFeatures.depthClamp();
-            features.depthClamp(depthClamp);
-            features.shaderInt64(true);
-
-            var features11 = VkPhysicalDeviceVulkan11Features.calloc(stack)
-                    .sType$Default()
-                    .shaderDrawParameters(true);
-
             var features12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
                     .sType$Default()
                     .bufferDeviceAddress(true)
-                    .runtimeDescriptorArray(true)
                     .scalarBlockLayout(true);
 
             var features13 = VkPhysicalDeviceVulkan13Features.calloc(stack)
@@ -65,23 +47,29 @@ public class Device {
                     .dynamicRendering(true)
                     .synchronization2(true);
 
-            features2.pNext(features11.address());
-            features11.pNext(features12.address());
+            var features2 = VkPhysicalDeviceFeatures2.calloc(stack).sType$Default();
+            var features = features2.features();
+
+            VkPhysicalDeviceFeatures supportedFeatures = physDevice.getVkPhysicalDeviceFeatures();
+            samplerAnisotropy = supportedFeatures.samplerAnisotropy();
+            if (samplerAnisotropy) {
+                features.samplerAnisotropy(true);
+            }
+            features.geometryShader(true);
+            depthClamp = supportedFeatures.depthClamp();
+            features.depthClamp(depthClamp);
+            features.multiDrawIndirect(true);
+            features.shaderInt64(true);
+            features.drawIndirectFirstInstance(true);
+
+            features2.pNext(features12.address());
             features12.pNext(features13.address());
 
             var deviceCreateInfo = VkDeviceCreateInfo.calloc(stack)
                     .sType$Default()
                     .pNext(features2.address())
                     .ppEnabledExtensionNames(reqExtensions)
-                    .pQueueCreateInfos(queueCreationInfoBuf)
-                    .pNext(VkPhysicalDeviceRayTracingPipelineFeaturesKHR
-                            .calloc(stack)
-                            .sType$Default()
-                            .rayTracingPipeline(true))
-                    .pNext(VkPhysicalDeviceAccelerationStructureFeaturesKHR
-                            .calloc(stack)
-                            .sType$Default()
-                            .accelerationStructure(true));
+                    .pQueueCreateInfos(queueCreationInfoBuf);
 
             PointerBuffer pp = stack.mallocPointer(1);
             vkCheck(vkCreateDevice(physDevice.getVkPhysicalDevice(), deviceCreateInfo, null, pp),

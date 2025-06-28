@@ -1,2 +1,2 @@
-# Chapter 20 - Ray tracing
+# Chapter 20 - Multi-thread
 TBD

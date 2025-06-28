@@ -1,8 +1,9 @@
 package org.vulkanb.eng.graph;
 
+import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
-import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.graph.vk.*;
+import org.vulkanb.eng.graph.vk.Queue;
 import org.vulkanb.eng.model.*;
 
 import java.io.*;
@@ -10,7 +11,6 @@ import java.nio.*;
 import java.util.*;
 
 import static org.lwjgl.util.vma.Vma.*;
-import static org.lwjgl.vulkan.KHRAccelerationStructure.VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 import static org.lwjgl.vulkan.VK13.*;
 
 public class ModelsCache {
@@ -28,9 +28,8 @@ public class ModelsCache {
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         var dstBuffer = new VkBuffer(vkCtx, bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR, VMA_MEMORY_USAGE_AUTO,
-                VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
 
         long mappedMemory = srcBuffer.map(vkCtx);
         IntBuffer data = MemoryUtil.memIntBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
@@ -46,6 +45,28 @@ public class ModelsCache {
         return new TransferBuffer(srcBuffer, dstBuffer);
     }
 
+    private static TransferBuffer createJointMatricesBuffers(VkCtx vkCtx, AnimatedFrame frame) {
+        Matrix4f[] matrices = frame.jointMatrices();
+        int numMatrices = matrices.length;
+        int bufferSize = numMatrices * VkUtils.MAT4X4_SIZE;
+
+        var srcBuffer = new VkBuffer(vkCtx, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        var dstBuffer = new VkBuffer(vkCtx, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                VMA_MEMORY_USAGE_AUTO, 0, 0);
+
+        long mappedMemory = srcBuffer.map(vkCtx);
+        ByteBuffer matrixBuffer = MemoryUtil.memByteBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+        for (int i = 0; i < numMatrices; i++) {
+            matrices[i].get(i * VkUtils.MAT4X4_SIZE, matrixBuffer);
+        }
+        srcBuffer.unMap(vkCtx);
+
+        return new TransferBuffer(srcBuffer, dstBuffer);
+    }
+
     private static TransferBuffer createVerticesBuffers(VkCtx vkCtx, MeshData meshData, DataInputStream vtxInput)
             throws IOException {
         int bufferSize = meshData.vtxSize();
@@ -54,8 +75,7 @@ public class ModelsCache {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         var dstBuffer = new VkBuffer(vkCtx, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-                        | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
-                VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 0);
+                        | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO, 0, 0);
 
         long mappedMemory = srcBuffer.map(vkCtx);
         FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
@@ -64,6 +84,39 @@ public class ModelsCache {
         while (valuesToRead > 0) {
             data.put(vtxInput.readFloat());
             valuesToRead--;
+        }
+
+        srcBuffer.unMap(vkCtx);
+
+        return new TransferBuffer(srcBuffer, dstBuffer);
+    }
+
+    private static TransferBuffer createWeightsBuffers(VkCtx vkCtx, AnimMeshData animMeshData) {
+        float[] weights = animMeshData.weights();
+        int[] boneIds = animMeshData.boneIds();
+        int bufferSize = weights.length * VkUtils.FLOAT_SIZE + boneIds.length * VkUtils.INT_SIZE;
+
+        var srcBuffer = new VkBuffer(vkCtx, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        var dstBuffer = new VkBuffer(vkCtx, bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+                        | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO, 0, 0);
+
+        long mappedMemory = srcBuffer.map(vkCtx);
+        FloatBuffer data = MemoryUtil.memFloatBuffer(mappedMemory, (int) srcBuffer.getRequestedSize());
+
+        int rows = weights.length / 4;
+        for (int row = 0; row < rows; row++) {
+            int startPos = row * 4;
+            data.put(weights[startPos]);
+            data.put(weights[startPos + 1]);
+            data.put(weights[startPos + 2]);
+            data.put(weights[startPos + 3]);
+            data.put(boneIds[startPos]);
+            data.put(boneIds[startPos + 1]);
+            data.put(boneIds[startPos + 2]);
+            data.put(boneIds[startPos + 3]);
         }
 
         srcBuffer.unMap(vkCtx);
@@ -95,9 +148,27 @@ public class ModelsCache {
                 VulkanModel vulkanModel = new VulkanModel(modelData.id());
                 modelsMap.put(vulkanModel.getId(), vulkanModel);
 
+                List<Animation> animationsList = modelData.animations();
+                boolean hasAnimation = animationsList != null && !animationsList.isEmpty();
+                if (hasAnimation) {
+                    for (Animation animation : animationsList) {
+                        List<VkBuffer> vulkanFrameBufferList = new ArrayList<>();
+                        VulkanAnimation vulkanAnimation = new VulkanAnimation(animation.name(), vulkanFrameBufferList);
+                        vulkanModel.addVulkanAnimation(vulkanAnimation);
+                        List<AnimatedFrame> frameList = animation.frames();
+                        for (AnimatedFrame frame : frameList) {
+                            TransferBuffer jointMatricesBuffers = createJointMatricesBuffers(vkCtx, frame);
+                            stagingBufferList.add(jointMatricesBuffers.srcBuffer());
+                            jointMatricesBuffers.recordTransferCommand(cmd);
+                            vulkanFrameBufferList.add(jointMatricesBuffers.dstBuffer());
+                        }
+                    }
+                }
+
                 DataInputStream vtxInput = new DataInputStream(new BufferedInputStream(new FileInputStream(modelData.vtxPath())));
                 DataInputStream idxInput = new DataInputStream(new BufferedInputStream(new FileInputStream(modelData.idxPath())));
                 // Transform meshes loading their data into GPU buffers
+                int meshCount = 0;
                 for (MeshData meshData : modelData.meshes()) {
                     TransferBuffer verticesBuffers = createVerticesBuffers(vkCtx, meshData, vtxInput);
                     TransferBuffer indicesBuffers = createIndicesBuffers(vkCtx, meshData, idxInput);
@@ -106,11 +177,20 @@ public class ModelsCache {
                     verticesBuffers.recordTransferCommand(cmd);
                     indicesBuffers.recordTransferCommand(cmd);
 
-                    int numVertices = meshData.vtxSize() / (VkUtils.FLOAT_SIZE * 3 * 2 + VkUtils.FLOAT_SIZE * 2);
-                    int numIndices = meshData.idxSize() / VkUtils.INT_SIZE;
-                    VulkanMesh vulkanMesh = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(), numVertices,
-                            indicesBuffers.dstBuffer(), numIndices, meshData.materialId());
+                    TransferBuffer weightsBuffers = null;
+                    List<AnimMeshData> animMeshDataList = modelData.animMeshes();
+                    if (animMeshDataList != null && !animMeshDataList.isEmpty()) {
+                        weightsBuffers = createWeightsBuffers(vkCtx, animMeshDataList.get(meshCount));
+                        stagingBufferList.add(weightsBuffers.srcBuffer());
+                        weightsBuffers.recordTransferCommand(cmd);
+                    }
+
+                    VulkanMesh vulkanMesh = new VulkanMesh(meshData.id(), verticesBuffers.dstBuffer(),
+                            indicesBuffers.dstBuffer(), weightsBuffers != null ? weightsBuffers.dstBuffer() : null,
+                            meshData.idxSize() / VkUtils.INT_SIZE, meshData.materialId());
                     vulkanModel.getVulkanMeshList().add(vulkanMesh);
+
+                    meshCount++;
                 }
             }
 

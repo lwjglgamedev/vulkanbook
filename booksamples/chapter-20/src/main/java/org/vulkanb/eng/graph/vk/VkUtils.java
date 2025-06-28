@@ -13,10 +13,10 @@ import static org.lwjgl.vulkan.VK13.*;
 public class VkUtils {
 
     public static final int FLOAT_SIZE = 4;
-    public static final int INT64_SIZE = 8;
     public static final int INT_SIZE = 4;
     public static final int MAT4X4_SIZE = 16 * FLOAT_SIZE;
     public static final int MAX_IN_FLIGHT = 2;
+    public static final int PTR_SIZE = 8;
     public static final int SHORT_LENGTH = 2;
     public static final int VEC2_SIZE = 2 * FLOAT_SIZE;
     public static final int VEC3_SIZE = 3 * FLOAT_SIZE;
@@ -24,36 +24,6 @@ public class VkUtils {
 
     private VkUtils() {
         // Utility class
-    }
-
-    public static int alignUp(int size, int alignment) {
-        return (size + alignment - 1) & -alignment;
-    }
-
-    public static void copyBufferToBuffer(VkCtx vkCtx, ByteBuffer srcBuffer, int srcOffset, VkBuffer dstVkBuffer,
-                                          int dstOffset, int length) {
-        long dstMapped = dstVkBuffer.map(vkCtx);
-
-        ByteBuffer dstBuffer = MemoryUtil.memByteBuffer(dstMapped, (int) dstVkBuffer.getRequestedSize());
-        for (int i = 0; i < length; ++i) {
-            dstBuffer.put(i + dstOffset, srcBuffer.get(i + srcOffset));
-        }
-
-        dstVkBuffer.unMap(vkCtx);
-    }
-
-    public static void copyBufferToBuffer(VkCtx vkCtx, ByteBuffer scrBuffer, VkBuffer vkBuffer) {
-        long mappedMemory = vkBuffer.map(vkCtx);
-        int srcSize = scrBuffer.remaining();
-        int dstSize = (int) vkBuffer.getRequestedSize();
-        if (srcSize < dstSize) {
-            throw new IllegalArgumentException("Src size is too small");
-        }
-        ByteBuffer dstBuffer = MemoryUtil.memByteBuffer(mappedMemory, dstSize);
-        for (int i = 0; i < dstSize; ++i) {
-            dstBuffer.put(i, scrBuffer.get(i));
-        }
-        vkBuffer.unMap(vkCtx);
     }
 
     public static void copyMatrixToBuffer(VkCtx vkCtx, VkBuffer vkBuffer, Matrix4f matrix, int offset) {
@@ -98,12 +68,6 @@ public class VkUtils {
                     .buffer(buffer));
         }
         return address;
-    }
-
-    public static VkDeviceOrHostAddressConstKHR getBufferAddressConst(MemoryStack stack, VkCtx vkCtx, long buffer) {
-        return VkDeviceOrHostAddressConstKHR
-                .malloc(stack)
-                .deviceAddress(getBufferAddress(vkCtx, buffer));
     }
 
     public static OSType getOS() {
