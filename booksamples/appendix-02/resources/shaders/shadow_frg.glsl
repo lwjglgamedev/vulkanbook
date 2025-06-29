@@ -45,7 +45,7 @@ void main()
     // Adjust moments to avoid light bleeding
     float dx = dFdx(depth);
     float dy = dFdy(depth);
-    //moment2 += 0.25 * (dx * dx + dy * dy);
+    moment2 += 0.25 * (dx * dx + dy * dy);
 
     outFragColor = vec2(moment1, moment2);
 }
