@@ -176,7 +176,7 @@ public class ModelGenerator {
 ```
 
 This method is execute for each of the materials found in the model file.
-First we retrieve the material diffuse color by calling the `aiGetMaterialColor` function. After that we try to get the the texture
+First we retrieve the material diffuse color by calling the `aiGetMaterialColor` function. After that we try to get the texture
 associated to the material by calling the `processTexture` method:
 
 ```java
@@ -291,7 +291,7 @@ This method delegates the vertices, indices and texture coordinates extraction t
 `processTextCoords` methods respectively. Once that data has been loaded, we check if the model defined texture coordinates.
 If not, we create an empty placeholder for them. The buffers that we will create later on will assume that all of them will
 have position and texture coordinates so we need to reserve space for them. After that, we dump vertices and indices to
-binary files which are handled by the `ModelBinData` instance. The next step is to get the the material index associated with
+binary files which are handled by the `ModelBinData` instance. The next step is to get the material index associated with
 this mesh by calling the `mMaterialIndex` method over the `aiMesh` instance we are processing. By using that index, we can
 associate the mesh with the previously processed materials. For each mesh we register the offset in the binary files
 (for vertices and indices) and the size within them as you can see in its definition:
@@ -926,7 +926,7 @@ public record VulkanMaterial(String id) {
 }
 ```
 
-Let's update now the `ModelsCache` cache to be able to load preprocessed models. Remember that priori to use any model you
+Let's update now the `ModelsCache` cache to be able to load preprocessed models. Remember that prior to use any model you
 need to preprocess it by using the `ModelGenerator` class. Let's start with the `loadModels` class:
 
 ```java
@@ -1600,7 +1600,7 @@ public class DescSet {
 ```
 
 In this case, the process is quite similar, but we use a `VkDescriptorImageInfo` to associate with an image view instead of
-a buffer and use the `pImageInfo` when writing to a descriptor set. In this case, we provide a a method to associate to a a single
+a buffer and use the `pImageInfo` when writing to a descriptor set. In this case, we provide a method to associate to a single
 image view or a list. In the later case, you see that each descriptor within the set will have a different image view, and will
 use an incremental binding point starting at `baseBinding`. We can update all of them at once by calling also `vkUpdateDescriptorSets`.
 In both cases we need to use a `TextureSampler`, which if you recall will specify how we will access to the image. For simplicity
@@ -1998,7 +1998,7 @@ void main()
 }
 ```
 
-In the vertex shader, we are using a uniform to hold the value of the projection matrix as an uniform. Therefore, we will need a descriptor
+In the vertex shader, we are using a uniform to hold the value of the projection matrix as a uniform. Therefore, we will need a descriptor
 set for this. The push constant just holds the model matrix. By changing this, we do not need to store the projection matrix in the push
 constants for each mesh. It will be set just once.
 
@@ -2168,7 +2168,7 @@ public class ScnRender {
 ```
 
 We will add a new method named `loadMaterials`. This method will create a descriptor set for the storage buffer that contains material
-data, and associate to the buffer we cerated in the `MaterialsCache` class. We will also create the array of samplers descriptor set
+data, and associate to the buffer we created in the `MaterialsCache` class. We will also create the array of samplers descriptor set
 with the textures loaded in `TextureCache` class. This method will need to be invoked uring initialization so descriptor sets are ready
 during render process.
 

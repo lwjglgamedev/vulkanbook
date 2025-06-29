@@ -1,5 +1,5 @@
 #version 450
-#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_scalar_block_layout: require
 
 // CREDITS: Most of the functions here have been obtained from this link: https://github.com/SaschaWillems/Vulkan
 // developed by Sascha Willems, https://twitter.com/JoeyDeVriez, and licensed under the terms of the MIT License (MIT)
@@ -8,7 +8,9 @@ const int MAX_LIGHTS = 10;
 const float PI = 3.14159265359;
 
 struct Light {
-    vec4 position;
+    vec3 position;
+    uint directional;
+    float intensity;
     vec3 color;
 };
 
@@ -26,57 +28,96 @@ layout(scalar, set = 1, binding = 0) readonly buffer Lights {
 } lights;
 layout(scalar, set = 2, binding = 0) uniform SceneInfo {
     vec3 camPos;
+    float ambientLightIntensity;
     vec3 ambientLightColor;
     uint numLights;
 } sceneInfo;
 
-float distributionGGX(float dotNH, float roughness)
-{
-    float alpha  = roughness * roughness;
-    float alpha2 = alpha * alpha;
-	float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-	return (alpha2)/(PI * denom*denom);
+float distributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float nom = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return nom / denom;
 }
 
-float geometrySchlickGGX(float dotNL, float dotNV, float roughness)
-{
-	float r = (roughness + 1.0);
-	float k = (r*r) / 8.0;
-	float GL = dotNL / (dotNL * (1.0 - k) + k);
-	float GV = dotNV / (dotNV * (1.0 - k) + k);
-	return GL * GV;
+float geometrySchlickGGX(float NdotV, float roughness) {
+    float r = (roughness + 1.0);
+    float k = (r * r) / 8.0;
+
+    float nom = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return nom / denom;
 }
 
-vec3 fresnelSchlick(vec3 albedo, float cosTheta, float metallic)
-{
-	vec3 F0 = mix(vec3(0.04), albedo, metallic);
-	vec3 F = F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-	return F;
+float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = geometrySchlickGGX(NdotV, roughness);
+    float ggx1 = geometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
 }
 
-vec3 BRDF(vec3 albedo, vec3 lightColor, vec3 L, vec3 V, vec3 N, float metallic, float roughness)
-{
-	vec3 H = normalize (V + L);
-	float dotNV = clamp(dot(N, V), 0.0, 1.0);
-	float dotNL = clamp(dot(N, L), 0.0, 1.0);
-	float dotLH = clamp(dot(L, H), 0.0, 1.0);
-	float dotNH = clamp(dot(N, H), 0.0, 1.0);
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 
-	vec3 color = vec3(0.0);
+vec3 calculatePointLight(Light light, vec3 worldPos, vec3 V, vec3 N, vec3 F0, vec3 albedo, float metallic, float roughness) {
+    vec3 tmpSub = light.position - worldPos;
+    vec3 L = normalize(tmpSub - worldPos);
+    vec3 H = normalize(V + L);
 
-	if (dotNL > 0.0 && dotNV > 0.0)
-	{
-		roughness = max(0.05, roughness);
-		float D   = distributionGGX(dotNH, roughness);
-		float G   = geometrySchlickGGX(dotNL, dotNV, roughness);
-		vec3 F    = fresnelSchlick(albedo, dotNV, metallic);
+    // Calculate distance and attenuation
+    float distance = length(tmpSub);
+    float attenuation = 1.0 / (distance * distance);
+    float intensity = 10.0f;
+    vec3 radiance = light.color * light.intensity * attenuation;
 
-		vec3 spec = D * F * G / (4.0 * dotNL * dotNV);
+    // Cook-Torrance BRDF
+    float NDF = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-		color += spec * dotNL * lightColor;
-	}
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
 
-	return color;
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+    return (kD * albedo / PI + specular) * radiance * NdotL;
+}
+
+vec3 calculateDirectionalLight(Light light, vec3 V, vec3 N, vec3 F0, vec3 albedo, float metallic, float roughness) {
+    vec3 L = normalize(-light.position);
+    vec3 H = normalize(V + L);
+
+    vec3 radiance = light.color * light.intensity;
+
+    // Cook-Torrance BRDF
+    float NDF = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
+
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+    return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 
 void main() {
@@ -95,25 +136,15 @@ void main() {
     F0 = mix(F0, albedo, metallic);
 
     vec3 Lo = vec3(0.0);
-    for (uint i = 0U; i < sceneInfo.numLights; i++) {
+    for (uint i = 0; i < sceneInfo.numLights; i++) {
         Light light = lights.lights[i];
-        // calculate per-light radiance
-        vec3 L;
-        float attenuation;
-        if (light.position.w == 0) {
-            // Directional
-            L = normalize(-light.position.xyz);
-            attenuation = 1.0;
+        if (light.directional == 1) {
+            Lo += calculateDirectionalLight(light, V, N, F0, albedo, metallic, roughness);
         } else {
-            vec3 tmpSub = light.position.xyz - worldPos;
-            L = normalize(tmpSub);
-            float distance = length(tmpSub);
-            attenuation = 1.0 / (distance * distance);
+            Lo += calculatePointLight(light, worldPos, V, N, F0, albedo, metallic, roughness);
         }
-        Lo += BRDF(albedo, light.color.rgb * attenuation, L, V, N, metallic, roughness);
     }
-
-    vec3 ambient = sceneInfo.ambientLightColor.rgb * albedo;
+    vec3 ambient = sceneInfo.ambientLightColor * albedo * sceneInfo.ambientLightIntensity;
     vec3 color = ambient + Lo;
 
     outFragColor = vec4(color, 1.0);

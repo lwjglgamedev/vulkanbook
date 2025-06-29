@@ -1,10 +1,37 @@
 package org.vulkanb.eng.scene;
 
-import org.joml.Vector4f;
+import org.joml.Vector3f;
 
-/**
- * For directional lights, the "w" coordinate of the position attribute will be 0. For point lights it will be "1". For directional lights
- * this attribute should be read as a direction from the light to the scene.
- */
-public record Light(Vector4f position, Vector4f color) {
+public class Light {
+    private final Vector3f color;
+    private final boolean directional;
+    private final Vector3f position;
+    private float intensity;
+
+    public Light(Vector3f position, boolean directional, float intensity, Vector3f color) {
+        this.position = position;
+        this.directional = directional;
+        this.intensity = intensity;
+        this.color = color;
+    }
+
+    public Vector3f getColor() {
+        return color;
+    }
+
+    public float getIntensity() {
+        return intensity;
+    }
+
+    public Vector3f getPosition() {
+        return position;
+    }
+
+    public boolean isDirectional() {
+        return directional;
+    }
+
+    public void setIntensity(float intensity) {
+        this.intensity = intensity;
+    }
 }

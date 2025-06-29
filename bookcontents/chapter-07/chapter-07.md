@@ -5,7 +5,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 ## Depth Image
 
-The first thing we must do is create a depth image. In the case of the swap chain, images were already there, we just used a image view to access them. This case is different, we need to allocate the images by ourselves. In order to handle that task we will create a new class named `Image`. Since image creation parameters can be lengthy, we will create first an inner class named `ImageData`, which will act as build helper class using a fluent style API.
+The first thing we must do is create a depth image. In the case of the swap chain, images were already there, we just used an image view to access them. This case is different, we need to allocate the images by ourselves. In order to handle that task we will create a new class named `Image`. Since image creation parameters can be lengthy, we will create first an inner class named `ImageData`, which will act as build helper class using a fluent style API.
 
 ```java
 package org.vulkanb.eng.graph.vk;
@@ -127,7 +127,7 @@ public class Image {
 
 Besides storing some parameters as attributes of the class, the first thing we do is instantiate a structure needed to create an image named `VkImageCreateInfo`. The attributes that we are using are:
 
-- `imageType`:  It specifies the dimensions of the the image. In our case we will be using regular 2D dimensions, so we set to the value: `VK_IMAGE_TYPE_2D`. Three dimensions images (`VK_IMAGE_TYPE_3D`) are like a set of slices of 2D textures and are used for volumetric effects or for scientific or medical visualizations (like MRIs). One dimension textures are define by the value `VK_IMAGE_TYPE_1D`.
+- `imageType`:  It specifies the dimensions of the image. In our case we will be using regular 2D dimensions, so we set to the value: `VK_IMAGE_TYPE_2D`. Three dimensions images (`VK_IMAGE_TYPE_3D`) are like a set of slices of 2D textures and are used for volumetric effects or for scientific or medical visualizations (like MRIs). One dimension textures are define by the value `VK_IMAGE_TYPE_1D`.
 - `format`: Described above, format of the texel blocks that compose the image.
 - `extent`:  It is the size of the image. In this case, the structure needs to support 3D images, so it includes the depth. For 2D images we just set it to `1`.
 - `mipLevels`:  Already described in the constructor's parameters description.
@@ -547,7 +547,7 @@ public class Entity {
 }
 ```
 
-Each `Entity` shall have an identifier which should be unique. It is also linked to the model that will be used to render it through the `modelId` attribute. An `Entity` will have also a position, a rotation (modeled using a  quaternion) and a scale. With all that information we are able to construct a model matrix by calling the `updateModelMatrix` from the `Matrix4f` class. The `updateModelMatrix` should be called, each time the position, rotation or scale changes.
+Each `Entity` shall have an identifier which should be unique. It is also linked to the model that will be used to render it through the `modelId` attribute. An `Entity` will have also a position, a rotation (modeled using a quaternion) and a scale. With all that information we are able to construct a model matrix by calling the `updateModelMatrix` from the `Matrix4f` class. The `updateModelMatrix` should be called, each time the position, rotation or scale changes.
 
 Now we can setup the required infrastructure to put the `Projection` and `Entity` classes into work. We will add this to an empty class which has been there since the beginning, the  `Scene` class. The class definition starts like this:
 
@@ -1096,7 +1096,7 @@ public class ScnRender {
 }
 ```
 
-We need first to add a new image layout transition using a memory barrier for the depth image.It is quite similar to the one
+We need first to add a new image layout transition using a memory barrier for the depth image. It is quite similar to the one
 used for swap chain images, but the stages to consider are now: `VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT` and the access flags shall be specifically set for depth attachments:
 `VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT` and `VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT`.
 

@@ -143,7 +143,7 @@ public class VkBuffer {
 }
 ```
 
-The constructor is now finished. The next methods are the usual `cleanup` method and some getters for the properties that define the buffer (since the `PointerBuffer` have been allocated using `MemoryUtil` we need to free it manually):
+The constructor is now finished. The next methods are the usual `cleanup` method and some *getters* for the properties that define the buffer (since the `PointerBuffer` have been allocated using `MemoryUtil` we need to free it manually):
 
 ```java
 public class VkBuffer {
@@ -283,7 +283,7 @@ public class VtxBuffStruct {
 
 ## Loading the data
 
-We have created the the structures that will hold the data for our models (`VkBuffer`) and the ones that define their format (`VtxBuffStruct`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that wll be used to actually form the triangles. We will define a new class named `VulkanModel` which will hold the information for 3D models. For now, it will hold the buffers for the different meshes that compose a 3D model. In next chapters it will be extended to support richer structures. At this moment a model is just a collection of meshes which will hold the references to buffers that contain positions data and their indices. This class will also define the methods to populate those structures. The basic structure of this class is quite simple:
+We have created the structures that will hold the data for our models (`VkBuffer`) and the ones that define their format (`VtxBuffStruct`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that wll be used to actually form the triangles. We will define a new class named `VulkanModel` which will hold the information for 3D models. For now, it will hold the buffers for the different meshes that compose a 3D model. In next chapters it will be extended to support richer structures. At this moment a model is just a collection of meshes which will hold the references to buffers that contain positions data and their indices. This class will also define the methods to populate those structures. The basic structure of this class is quite simple:
 
 ```java
 package org.vulkanb.eng.graph;
@@ -353,7 +353,7 @@ public record MeshData(String id, float[] positions, int[] indices) {
 }
 ```
 
-As you can see the `ModelData` and `MeshData` are quite simple just records which hold list ¡fo meshes which are arrays of floats and indices. Just raw model data.
+As you can see the `ModelData` and `MeshData` are quite simple just records which hold list of meshes which are arrays of floats and indices. Just raw model data.
 
 Now it is the turn to see how we can pass from raw data to populate the buffers that can be used by the GPU. This will be done in the `ModelsCache` class, which will 
 store references to `VulkanModel`s instances by id and will encapsulate all the transformation operations. It starts like this:
@@ -382,7 +382,7 @@ public class ModelsCache {
 }
 ```
 
-As you can see all the `VulkanModel`s instances will be stored in a `Map` indexed by its identifier.As it has been shown before, each `VulkanMesh` instance has two buffers, one for positions and another one for the indices. These buffers will be used by the GPU while rendering but we need to access them from the CPU in order to load the data into them. We could use buffers that are accessible from both the CPU and the GPU, but the performance would be worse than buffers that can only used by the GPU. So, how do we solve this? The answer is by using intermediate buffers:
+As you can see all the `VulkanModel`s instances will be stored in a `Map` indexed by its identifier. As it has been shown before, each `VulkanMesh` instance has two buffers, one for positions and another one for the indices. These buffers will be used by the GPU while rendering but we need to access them from the CPU in order to load the data into them. We could use buffers that are accessible from both the CPU and the GPU, but the performance would be worse than buffers that can only used by the GPU. So, how do we solve this? The answer is by using intermediate buffers:
 
 1. We first create an intermediate buffer (or staging buffer) that can be accessed both by the CPU and the GPU. This will be our source buffer.
 2. We create another buffer that can be accessed only from the GPU. This will be our destination buffer.
@@ -408,7 +408,7 @@ public class ModelsCache {
 }
 ```
 
-The method starts by creating a list, named `stagingBufferList`, that will contain the CPU accessible buffers (the staging buffers), so we can destroy them after the copy operations have finished. It also creates a new `CmdBuffer` which will be used to record the copy operations that involve the different buffers used and start the recording. AFter that, we start the recording. The next step is to iterate over the models and their associated meshes:
+The method starts by creating a list, named `stagingBufferList`, that will contain the CPU accessible buffers (the staging buffers), so we can destroy them after the copy operations have finished. It also creates a new `CmdBuffer` which will be used to record the copy operations that involve the different buffers used and start the recording. After that, we start the recording. The next step is to iterate over the models and their associated meshes:
 
 ```java
 public class ModelsCache {
@@ -576,7 +576,7 @@ Description of the stages (NOTE: graphics pipeline in Vulkan can also work in me
 - Fragment shader: Processes the fragments from the rasterization stage determining the values that will be written into the frame buffer output attachments. This is also a programmable stage which usually outputs the color for each pixel.
 - Blending: Controls how different fragments can be mixed over the same pixel handling aspects such as transparencies and color mixing.
 
-One important topic to understand when working with Vulkan pipelines is that they are almost immutable. Unlike OpenGL, we can't modify at run time the properties of a graphics pipeline. Almost any change that we want to make implies the creation of a new pipeline. For example, in OpenGL it is common to modify ay runtime certain parameters that control how transparencies are handled (blending) or if the depth-testing is enabled. In OpenGL we can modify those parameters at run time with no restrictions. (The reality is that under the hood, our driver is switching between pipelines definitions that meet those settings). In Vulkan, however, we will need to define multiple pipelines if we want to change those settings while rendering and switch between them manually. 
+One important topic to understand when working with Vulkan pipelines is that they are almost immutable. Unlike OpenGL, we can't modify at run time the properties of a graphics pipeline. Almost any change that we want to make implies the creation of a new pipeline. For example, in OpenGL it is common to modify ay runtime certain parameters that control how transparencies are handled (blending) or if the depth-testing is enabled. In OpenGL we can modify those parameters at run time with no restrictions. (The reality is that under the hood, our driver is switching between pipelines definitions that meet those settings). In Vulkan, however, we will need to define multiple pipelines if we want to change those settings while rendering and switch between them manually. 
 
 ## Shaders
 
@@ -1062,7 +1062,7 @@ public class Pipeline {
 }
 ```
 
-Now we have all the information required to create the pipeline. We just need to set up a buffer in the `VkGraphicsPipelineCreateInfo` structures. It is a buffer, because several pipelines can be created with a single call to the the `vkCreateGraphicsPipelines` function. In our case, we will create them one by one:
+Now we have all the information required to create the pipeline. We just need to set up a buffer in the `VkGraphicsPipelineCreateInfo` structures. It is a buffer, because several pipelines can be created with a single call to the `vkCreateGraphicsPipelines` function. In our case, we will create them one by one:
 
 ```java
 public class Pipeline {
@@ -1143,7 +1143,7 @@ public class Main implements IGameLogic {
 }
 ```
 
-We create a new instance of the `MeshData` class that define the vertices and the indices of a triangle. We also cerate a model with a unique identifier, which will be used later on to link entities with the associated model.
+We create a new instance of the `MeshData` class that define the vertices and the indices of a triangle. We also create a model with a unique identifier, which will be used later on to link entities with the associated model.
 In addition, we have modified `init` signature by returning `InitData` which basically just contains the list of models
 that we want to load:
 

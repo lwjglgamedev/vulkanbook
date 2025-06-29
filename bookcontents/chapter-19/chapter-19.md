@@ -18,7 +18,7 @@ As it has been introduced, we will use a buffer to store indirect drawing comman
 
 - `vertexCount`: Number of vertices to be drawn.
 - `instanceCount`: Number of instances to be drawn. If we have several entities that share the same model, we do not need to record an individual draw call for ach of the entity
-and all the associated meshes. We can just ouse one command to draw a mesh for all the associated entities. We just nee dto set up the number of entities with this field.
+and all the associated meshes. We can just use one command to draw a mesh for all the associated entities. We just need to set up the number of entities with this field.
 - `firstVertex`: The index of the first vertex to be drawn.
 - `firstInstance`: It can be used to setup a unique instance identifier to be used when drawing. We will see in the shaders how we can use it.
 
@@ -55,7 +55,7 @@ The following figure shows the structures involved.
 We need to enable two features in the `Device` class:
 
 - `multiDrawIndirect`: Since we will be using draw indirect capability.
-- `drawIndirectFirstInstance`: When using draw indirect, we need to set up a proper instance ID for each of the involved draw call. Wew ill do it through the `firstInstance``
+- `drawIndirectFirstInstance`: When using draw indirect, we need to set up a proper instance ID for each of the involved draw call. We will do it through the `firstInstance``
 attribute of the `VkDrawIndirectCommand` structure. We need to enable this for this to work.
 
 Changes in the `Device` class are like this:
@@ -330,7 +330,7 @@ public class GlobalBuffers {
 Let's dissect the method:
 - We first iterate over the models and their associated entities.
 - We get the meshes associated to the model.
-- If the model is animated, we need to cerate an indirect command for each of the entities and meshes, no instanced render will be used. This is why we create
+- If the model is animated, we need to create an indirect command for each of the entities and meshes, no instanced render will be used. This is why we create
 always the commands with `instanceCount` equal to `1`. We need to properly set the `firstInstance` vale. In this case, for  each mesh of the entity we just increase the value
 with one. Later on, in the shaders we will use the built in variable `gl_InstanceIndex`, which will help us to navigate through the `buffInstanceData` data. In each mesh
 that we will process for animated models for each entity the `gl_InstanceIndex` will be equal to the value set in the `firstInstance` field.
@@ -435,9 +435,9 @@ first the changes in the scene vertex shader (`scn_vtx.glsl`):
 
 ```glsl
 #version 450
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_buffer_reference2 : enable
-#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference: require
+#extension GL_EXT_buffer_reference2: enable
+#extension GL_EXT_scalar_block_layout: require
 
 layout(location = 0) out vec4 outPos;
 layout(location = 1) out vec3 outNormal;
@@ -659,9 +659,9 @@ structures:
 
 ```glsl
 #version 450
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_buffer_reference2 : enable
-#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference: require
+#extension GL_EXT_buffer_reference2: enable
+#extension GL_EXT_scalar_block_layout: require
 
 struct Vertex {
     vec3 inPos;
@@ -860,4 +860,6 @@ public class Render {
 
 With all these changes we have BDA plus indirect drawing. If you want to even create a more performant code, you could use a single buffer to hold vertices buffers
 for all the meshes of all the models. you will just need to update the offset fields when filling up the indirect command buffer. Depending if you use indexed render or not
-that offset would refer to the indices buffer or the vertices one (taking care of adapting indices to the fact that al the vertices are now in a single structure).
+that offset would refer to the indices buffer or the vertices one (taking care of adapting indices to the fact that all the vertices are now in a single structure).
+
+[Next chapter](../chapter-20/chapter-20.md)

@@ -6,7 +6,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 ## OpenAL
 
-Audio capability is going to be addressed in this chapter with the help of [OpenAL](https://www.openal.org "OpenAL") (Open Audio Library). OpenAL is the OpenGL counterpart for audio, it allows us to play sounds through an abstraction layer. That layer isolates us from the underlying complexities of the audio subsystem. Besides that, it allows us to “render” sounds in a 3D scene, where sounds can be set up in specific locations, attenuated with the distance and modified according to their velocity (simulating [Doppler effect](https://en.wikipedia.org/wiki/Doppler_effect)\)
+Audio capability is going to be addressed in this chapter with the help of [OpenAL](https://www.openal.org "OpenAL") (Open Audio Library). OpenAL is the OpenGL counterpart for audio, it allows us to play sounds through an abstraction layer. That layer isolates us from the underlying complexities of the audio subsystem. Besides that, it allows us to "render" sounds in a 3D scene, where sounds can be set up in specific locations, attenuated with the distance and modified according to their velocity (simulating [Doppler effect](https://en.wikipedia.org/wiki/Doppler_effect)\)
 
 Before start coding we need to present the main elements involved when dealing with OpenAL, which are:
 
@@ -180,7 +180,7 @@ The first parameter, `loop`, indicates if the sound to be played should be in lo
 
 The other parameter, `relative`, controls if the position of the source is relative to the listener or not. In this case, when we set the position for a source, we basically are defining the distance (with a vector) to the listener, not the position in the OpenAL 3D scene, not the world position. This activated by the "`alSourcei(sourceId, AL_SOURCE_RELATIVE, AL_TRUE);"` call. But, What can we use this for? This property is interesting, for instance, for background sounds that shouldn't be affected (attenuated) by the distance to the listener. Think, for instance, in background music or sound effects related to player controls. If we set these sources as relative, and set their position to $$(0, 0, 0)$$ they will not be attenuated.
 
-Now it’s turn for the listener which, surprise, is modelled by a class named `SoundListener`. Here’s the definition for that class.
+Now it’s turn for the listener which, surprise, is modeled by a class named `SoundListener`. Here’s the definition for that class.
 
 ```java
 package org.vulkanb.eng.sound;
@@ -223,9 +223,9 @@ A difference you will notice from the previous classes is that there’s no need
 
 The “at” vector basically points where the listener is facing, and by default its coordinates are $$(0, 0, -1)$$. The “up” vector determines which direction is up for the listener, and by default it points to $$(0, 1, 0)$$. So the three components of each of those two vectors are what are set in the `alListenerfv` method call. This method is used to transfer a set of floats (a variable number of floats) to a property, in this case, the orientation.
 
-Before continuing, it's necessary to stress out some concepts in relation to source and listener speeds. The relative speed between sources and listener will cause OpenAL to simulate Doppler effect. In case you don’t know, Doppler effect is what causes that a moving object that is getting closer to you seems to emit in a higher frequency than it seems to emit when it is moving away. The thing is, that simply by setting a source or listener velocity, OpenAL will not update their position for you. It will use the relative velocity to calculate the Doppler effect, but the positions won’t be modified. So, if you want to simulate a moving source or listener, you must take care of updating their positions in the game loop.
+Before continuing, it's necessary to stress out some concepts in relation to source and listener speeds. The relative speed between sources and listener will cause OpenAL to simulate Doppler effect. In case you don not know, Doppler effect is what causes that a moving object that is getting closer to you seems to emit in a higher frequency than it seems to emit when it is moving away. The thing is, that simply by setting a source or listener velocity, OpenAL will not update their position for you. It will use the relative velocity to calculate the Doppler effect, but the positions won’t be modified. So, if you want to simulate a moving source or listener, you must take care of updating their positions in the game loop.
 
-Now that we have modelled the key elements, we can set them up to work; we need to initialize the OpenAL library, so we will create a new class named `SoundManager` that will handle this and starts like this:
+Now that we have modeled the key elements, we can set them up to work; we need to initialize the OpenAL library, so we will create a new class named `SoundManager` that will handle this and starts like this:
 
 ```java
 package org.vulkanb.eng.sound;
@@ -541,6 +541,6 @@ public class Main implements IGameLogic {
 }
 ```
 
-A final note. OpenAL also allows you to change the attenuation model by using the alDistanceModel and passing the model you want (`AL11.AL_EXPONENT_DISTANCE`, `AL_EXPONENT_DISTANCE_CLAMP`, etc.). You can play with them and check the results.
+A final note. OpenAL also allows you to change the attenuation model by using the `alDistanceModel` and passing the model you want (`AL11.AL_EXPONENT_DISTANCE`, `AL_EXPONENT_DISTANCE_CLAMP`, etc.). You can play with them and check the results.
 
 [Next chapter](../chapter-14/chapter-14.md)

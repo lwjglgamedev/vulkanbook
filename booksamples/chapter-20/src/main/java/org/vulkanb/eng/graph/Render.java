@@ -69,7 +69,7 @@ public class Render {
         scnRender = new ScnRender(vkCtx, engCtx);
         shadowRender = new ShadowRender(vkCtx);
         List<Attachment> attachments = new ArrayList<>(scnRender.getMrtAttachments().getColorAttachments());
-        attachments.add(shadowRender.getDepthAttachment());
+        attachments.add(shadowRender.getShadowAttachment());
         lightRender = new LightRender(vkCtx, attachments);
         postRender = new PostRender(vkCtx, lightRender.getAttachment());
         guiRender = new GuiRender(engCtx, vkCtx, graphQueue, postRender.getAttachment());
@@ -161,7 +161,7 @@ public class Render {
 
         scnRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentRenderFrame);
         shadowRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentRenderFrame);
-        lightRender.render(engCtx, vkCtx, cmdBuffer, scnRender.getMrtAttachments(), shadowRender.getDepthAttachment(),
+        lightRender.render(engCtx, vkCtx, cmdBuffer, scnRender.getMrtAttachments(), shadowRender.getShadowAttachment(),
                 shadowRender.getCascadeShadows(currentRenderFrame), currentRenderFrame);
         postRender.render(vkCtx, cmdBuffer, lightRender.getAttachment());
         guiRender.render(vkCtx, cmdBuffer, currentRenderFrame, postRender.getAttachment());
@@ -204,7 +204,7 @@ public class Render {
         engCtx.scene().getProjection().resize(extent.width(), extent.height());
         scnRender.resize(engCtx, vkCtx);
         List<Attachment> attachments = new ArrayList<>(scnRender.getMrtAttachments().getColorAttachments());
-        attachments.add(shadowRender.getDepthAttachment());
+        attachments.add(shadowRender.getShadowAttachment());
         lightRender.resize(vkCtx, attachments);
         postRender.resize(vkCtx, lightRender.getAttachment());
         guiRender.resize(vkCtx, postRender.getAttachment());

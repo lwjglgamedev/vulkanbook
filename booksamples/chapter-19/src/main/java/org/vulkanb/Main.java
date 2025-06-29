@@ -59,9 +59,10 @@ public class Main implements IGameLogic {
         materials.addAll(ModelLoader.loadMaterials("resources/models/sponza/Sponza_mat.json"));
         materials.addAll(ModelLoader.loadMaterials("resources/models/bob/boblamp_mat.json"));
 
-        scene.getAmbientLight().set(0.8f, 0.8f, 0.8f);
+        scene.getAmbientLightColor().set(1.0f, 1.0f, 1.0f);
+        scene.setAmbientLightIntensity(0.2f);
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(5.0f, 5.0f, 5.0f, 1.0f));
+        dirLight = new Light(new Vector3f(0.0f, -1.0f, 0.0f), true, 8.0f, new Vector3f(1.0f, 1.0f, 1.0f));
         lights.add(dirLight);
 
         Light[] lightArr = new Light[lights.size()];
@@ -141,11 +142,10 @@ public class Main implements IGameLogic {
     private void updateDirLight() {
         float zValue = (float) Math.cos(Math.toRadians(lightAngle));
         float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = dirLight.position();
+        Vector3f lightDirection = dirLight.getPosition();
         lightDirection.x = 0;
         lightDirection.y = yValue;
         lightDirection.z = zValue;
         lightDirection.normalize();
-        lightDirection.w = 0.0f;
     }
 }

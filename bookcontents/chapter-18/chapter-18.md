@@ -1,7 +1,7 @@
 # Chapter 18 - Buffer Device Address (BDA)
 
 In this chapter we will use Buffer device address, which will allow us to refer to buffer virtual addresses in shaders instead of using descriptor sets. This is very convenient
-to use a bind-less approach where wwe will access data  as pointers, and will simplify the code a lot. The drawback is that any miss-use in setting the addresses may cause the GPU to crash.
+to use a bind-less approach where we will access data  as pointers, and will simplify the code a lot. The drawback is that any miss-use in setting the addresses may cause the GPU to crash.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-18).
 
@@ -28,7 +28,7 @@ public class Device {
 }
 ```
 
-In order to get a device address from a buffer whe need to use the `VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT` flag, in the `bufferUsage` constructor parameter. If a Vulkan
+In order to get a device address from a buffer we need to use the `VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT` flag, in the `bufferUsage` constructor parameter. If a Vulkan
 buffer is created with that flag, we can store the address in a class attribute:
 
 ```java
@@ -108,9 +108,9 @@ starts like this:
 
 ```glsl
 #version 450
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_buffer_reference2 : enable
-#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference: require
+#extension GL_EXT_buffer_reference2: enable
+#extension GL_EXT_scalar_block_layout: require
 ...
 ```
 We first use several extensions required to use buffer addresses and to use scalar layouts for them. The next part is quite similar to the ones used before. We just define
@@ -296,9 +296,9 @@ Changes in the shadow render stage are quite similar. We need to update the vert
 
 ```glsl
 #version 450
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_buffer_reference2 : enable
-#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_buffer_reference: require
+#extension GL_EXT_buffer_reference2: enable
+#extension GL_EXT_scalar_block_layout: require
 
 struct Vertex {
     vec3 inPos;
@@ -354,7 +354,7 @@ public class ShadowRender {
     private static final int PUSH_CONSTANTS_SIZE = VkUtils.MAT4X4_SIZE + VkUtils.PTR_SIZE * 2 + VkUtils.INT_SIZE;
     ...
     private static Pipeline createPipeline(VkCtx vkCtx, ShaderModule[] shaderModules, DescSetLayout[] descSetLayouts) {
-        var vtxBuffStruct = new VtxBuffStruct();
+        var vtxBuffStruct = new EmptyVtxBuffStruct();
         ...
     }
     ...
@@ -367,12 +367,11 @@ public class ShadowRender {
 
             VkCommandBuffer cmdHandle = cmdBuffer.getVkCommandBuffer();
 
-            VkUtils.imageBarrier(stack, cmdHandle, depthAttachment.getImage().getVkImage(),
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-                    VK_ACCESS_2_NONE, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                    VK_IMAGE_ASPECT_DEPTH_BIT);
+            VkUtils.imageBarrier(stack, cmdHandle, colorAttachment.getImage().getVkImage(),
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_ACCESS_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT);
 
             vkCmdBeginRendering(cmdHandle, renderingInfo);
 
@@ -453,7 +452,7 @@ We will also buffer references in the animation compute shader (`anim_comp.glsl`
 
 ```glsl
 #version 450
-#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference: require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
 layout(std430, buffer_reference) buffer FloatBuf {
@@ -685,7 +684,7 @@ public class AnimRender {
 
 ## Final changes
 
-We still have one important change to apply, all the buffers that are passed as references need to be cerated with the `VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT` flag.
+We still have one important change to apply, all the buffers that are passed as references need to be created with the `VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT` flag.
 This affects the `ModelsCache` class:
 
 ```java

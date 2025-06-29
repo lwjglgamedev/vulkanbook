@@ -6,7 +6,7 @@ You can find the complete source code for this chapter [here](../../booksamples/
 
 ## PBR
 
-PBR tries to bring a more realistic way of handling lights, compared with simpler models such as Phong or Blinn-Phon models, but still keeping it simple enough so it can be applied in real time. Instead of trying to summarize here what PBR consists of I will link to the best tutorial I've found about this: [https://learnopengl.com/PBR/Theory](https://learnopengl.com/PBR/Theory). In that link you will be able to read about the theory and to see how it can be implemented. In fact, most of the PBR computation functions lighting fragment shader source code are a copy of the ones defined in that page (developed by [Joey de Vries](https://twitter.com/JoeyDeVriez) and licensed under the terms of the [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode)).
+PBR tries to bring a more realistic way of handling lights, compared with simpler models such as Phong or Blinn-Phon models, but still keeping it simple enough so it can be applied in real time. Instead of trying to summarize here what PBR consists of I will link to the best tutorial I've found about this: [https://learnopengl.com/PBR/Theory](https://learnopengl.com/PBR/Theory). In that link you will be able to read about theory and to see how it can be implemented. In fact, most of the PBR computation functions lighting fragment shader source code are a copy of the ones defined in that page (developed by [Joey de Vries](https://twitter.com/JoeyDeVriez) and licensed under the terms of the [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/legalcode)).
 
 ## Material changes
 
@@ -200,7 +200,7 @@ public class VtxBuffStruct {
 }
 ```
 
-We need to modify the `MaterialsCache` class to to hold the associated information for normal map and metallica roughness textures and metallic and roughness factors.
+We need to modify the `MaterialsCache` class to to hold the associated information for normal map and metallic-roughness textures and metallic and roughness factors.
 
 ```java
 public class MaterialsCache {
@@ -257,40 +257,80 @@ In order to apply lighting we need to add support for lights. Therefore, the fir
 ```java
 package org.vulkanb.eng.scene;
 
-import org.joml.Vector4f;
+import org.joml.Vector3f;
 
-/**
- * For directional lights, the "w" coordinate of the position attribute will be 0. For point lights it will be "1". For directional lights
- * this attribute should be read as a direction from the light to the scene.
- */
-public record Light(Vector4f position, Vector4f color) {
+public class Light {
+    private final Vector3f color;
+    private final boolean directional;
+    private final Vector3f position;
+    private float intensity;
+
+    public Light(Vector3f position, boolean directional, float intensity, Vector3f color) {
+        this.position = position;
+        this.directional = directional;
+        this.intensity = intensity;
+        this.color = color;
+    }
+
+    public Vector3f getColor() {
+        return color;
+    }
+
+    public float getIntensity() {
+        return intensity;
+    }
+
+    public Vector3f getPosition() {
+        return position;
+    }
+
+    public boolean isDirectional() {
+        return directional;
+    }
+
+    public void setIntensity(float intensity) {
+        this.intensity = intensity;
+    }
 }
-```
 
-We will support directional and point lights. A light is defined by a position (in the case of a point light) or a directional (in the case of a directional light, for example the sun light). Since we are using `Vector4f` for positions / directions we will use `w` component to state if it as point light (the `w` component will be `0`) or a directional light (the `w` component will be `1`). A light will also define a color. In addition to that, we need also to add support for ambient light (a color that will be added to all the fragments independently of their position and normals). We will add this in the `Scene` class along with the list of lights.
+```
+We will support directional and point lights. A light is defined by a position (in the case of a point light) or a directional (in the case of a directional light, for example the sun light). When using directional lights, the `position` attribute 
+will be the direction from the light source to the scene. Lights will also have a color and an intensity.
+
+We will need also to add support for ambient light (a color that will be added to all the fragments independently of their position and normals). We will need a color for that light and an intensity. We will add this in the `Scene` class along with the list of lights.
 
 ```java
 public class Scene {
     ...
     public static final int MAX_LIGHTS = 10;
 
-    private final Vector3f ambientLight;
+    private final Vector3f ambientLightColor;
     ...
+    private float ambientLightIntensity;
     private Light[] lights;
     ...
     public Scene(Window window) {
         ...
-        ambientLight = new Vector3f();
+        ambientLightColor = new Vector3f();
+        ambientLightIntensity = 0.0f;
     }
     ...
-    public Vector3f getAmbientLight() {
-        return ambientLight;
+    public Vector3f getAmbientLightColor() {
+        return ambientLightColor;
+    }
+
+    public float getAmbientLightIntensity() {
+        return ambientLightIntensity;
     }
     ...
     public Light[] getLights() {
         return lights;
     }
     ...
+    public void setAmbientLightIntensity(float ambientLightIntensity) {
+        this.ambientLightIntensity = ambientLightIntensity;
+    }
+
     public void setLights(Light[] lights) {
         int numLights = lights != null ? lights.length : 0;
         if (numLights > GraphConstants.MAX_LIGHTS) {
@@ -561,7 +601,7 @@ objects:
 <img src="rc15-artifacts.png" title="" alt="Transparent artifacts" data-align="center">
 
 So, why not just simply apply blending to just the albedo attachment? If we would do that, we would have another problem, which normal information we would get? We would
-be viewing albedo information which ias a mix of teh different fragments with the normal information of the less distant one, which may be the transparent one. The
+be viewing albedo information which is a mix of the different fragments with the normal information of the less distant one, which may be the transparent one. The
 solution we apply, although is not ideal, it is good enough. The fact is that deferred rendering does not deal very well with transparencies. In fact, the recommended
 approach is to render transparent objects in a separate render stage with a "forward" render approach.
 
@@ -589,13 +629,13 @@ public class LightRender {
         ...
         storageDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        long buffSize = (long) (VkUtils.VEC4_SIZE + VkUtils.VEC3_SIZE) * Scene.MAX_LIGHTS;
+        long buffSize = (long) (VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE + VkUtils.FLOAT_SIZE) * Scene.MAX_LIGHTS;
         lightsBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, DESC_ID_LIGHTS, storageDescSetLayout);
 
         sceneDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE;
+        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.FLOAT_SIZE + VkUtils.INT_SIZE;
         sceneBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_SCENE, sceneDescSetLayout);
 
@@ -621,11 +661,9 @@ public class LightRender {
 }
 ```
 
-We wil use two no descriptor sets, on to store light information and the other to store general scene information (ambient light, total number of active lights, and the
-camera position which will be used in light computation). Lights information will be exposed to the shader as an storage buffer (it will be basically an array of lights)
-while scene information will be a uniform. For both descriptor sets we will use buffers. Since the information stored in them may change in each frame we will
-use an array of buffers with as many instances as frames in flight. We need to update also the `createPipeline` method since now we expect an array of color formats and
-the `cleanup` method to free the new resources.
+We wil use two no descriptor sets, on to store light information and the other to store general scene information (ambient light,
+total number of active lights, and the camera position which will be used in light computation). Lights information will be exposed to the shader as an storage buffer (it will be basically an array of lights) while scene information will be a uniform. For both descriptor sets we will use buffers. Since the information stored in them may change in each frame we will
+use an array of buffers with as many instances as frames in flight. We need to update also the `createPipeline` method since now we expect an array of color formats and the `cleanup` method to free the new resources.
 
 We need to add a new constant to the `VkUtils` class:
 
@@ -637,8 +675,7 @@ public class VkUtils {
 }
 ```
 
-Back to the `LightRender` class, in the `render` method we will use those new descriptor sets and call two `update` methods (`updateSceneInfo` and `updateLights`) to store
-the proper data in the associated buffers:
+Back to the `LightRender` class, in the `render` method we will use those new descriptor sets and call two `update` methods (`updateSceneInfo` and `updateLights`) to store the proper data in the associated buffers:
 
 ```java
 public class LightRender {
@@ -673,7 +710,10 @@ public class LightRender {
         scene.getCamera().getPosition().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
-        scene.getAmbientLight().get(offset, dataBuff);
+        dataBuff.putFloat(offset, scene.getAmbientLightIntensity());
+        offset += VkUtils.FLOAT_SIZE;
+
+        scene.getAmbientLightColor().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
         Light[] lights = scene.getLights();
@@ -701,9 +741,13 @@ public class LightRender {
         int numLights = lights != null ? lights.length : 0;
         for (int i = 0; i < numLights; i++) {
             Light light = lights[i];
-            light.position().get(offset, dataBuff);
-            offset += VkUtils.VEC4_SIZE;
-            light.color().get(offset, dataBuff);
+            light.getPosition().get(offset, dataBuff);
+            offset += VkUtils.VEC3_SIZE;
+            dataBuff.putInt(offset, light.isDirectional() ? 1 : 0);
+            offset += VkUtils.INT_SIZE;
+            dataBuff.putFloat(offset, light.getIntensity());
+            offset += VkUtils.FLOAT_SIZE;
+            light.getColor().get(offset, dataBuff);
             offset += VkUtils.VEC3_SIZE;
         }
 
@@ -717,7 +761,7 @@ The lighting vertex shader (`light_vtx.glsl`) has not been modified at all. Howe
 
 ```glsl
 #version 450
-#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_scalar_block_layout: require
 
 // CREDITS: Most of the functions here have been obtained from this link: https://github.com/SaschaWillems/Vulkan
 // developed by Sascha Willems, https://twitter.com/JoeyDeVriez, and licensed under the terms of the MIT License (MIT)
@@ -726,7 +770,9 @@ const int MAX_LIGHTS = 10;
 const float PI = 3.14159265359;
 
 struct Light {
-    vec4 position;
+    vec3 position;
+    uint directional;
+    float intensity;
     vec3 color;
 };
 
@@ -744,6 +790,7 @@ layout(scalar, set = 1, binding = 0) readonly buffer Lights {
 } lights;
 layout(scalar, set = 2, binding = 0) uniform SceneInfo {
     vec3 camPos;
+    float ambientLightIntensity;
     vec3 ambientLightColor;
     uint numLights;
 } sceneInfo;
@@ -754,60 +801,98 @@ We first define some constants and then the structure to hold lights information
 an storage buffer which sores an array of lights information. Finally there is a uniform that stores camera  position, the ambient color and the number of lights. You may have
 noticed that we are using a new layout format in the uniform, the `scalar` one. This layout allows us to use a more flexible layout of data, without having to fulfill
 `std140` constraints. Basically it will remove the need to use padding data. In order to use it in the shaders, we will need to enable the `GL_EXT_scalar_block_layout` GLSL
-extension to use it, this is why we include the line `#extension GL_EXT_scalar_block_layout : require`. In addition to that, we will need to use a specific Vulkan feature
+extension to use it, this is why we include the line `#extension GL_EXT_scalar_block_layout: require`. In addition to that, we will need to use a specific Vulkan feature
 to support this layout (we will see later on)
 
 The next functions apply the PBR techniques to modify the fragment color associated to each light. As it has been said before, you can find a great explanation here: [PBR](https://learnopengl.com/PBR/Theory) (It makes no sense to repeat that here):
 
 ```glsl
 ...
-float distributionGGX(float dotNH, float roughness)
-{
-    float alpha  = roughness * roughness;
-    float alpha2 = alpha * alpha;
-	float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-	return (alpha2)/(PI * denom*denom);
+float distributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float nom = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return nom / denom;
 }
 
-float geometrySchlickGGX(float dotNL, float dotNV, float roughness)
-{
-	float r = (roughness + 1.0);
-	float k = (r*r) / 8.0;
-	float GL = dotNL / (dotNL * (1.0 - k) + k);
-	float GV = dotNV / (dotNV * (1.0 - k) + k);
-	return GL * GV;
+float geometrySchlickGGX(float NdotV, float roughness) {
+    float r = (roughness + 1.0);
+    float k = (r * r) / 8.0;
+
+    float nom = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return nom / denom;
 }
 
-vec3 fresnelSchlick(vec3 albedo, float cosTheta, float metallic)
-{
-	vec3 F0 = mix(vec3(0.04), albedo, metallic);
-	vec3 F = F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-	return F;
+float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = geometrySchlickGGX(NdotV, roughness);
+    float ggx1 = geometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
 }
 
-vec3 BRDF(vec3 albedo, vec3 lightColor, vec3 L, vec3 V, vec3 N, float metallic, float roughness)
-{
-	vec3 H = normalize (V + L);
-	float dotNV = clamp(dot(N, V), 0.0, 1.0);
-	float dotNL = clamp(dot(N, L), 0.0, 1.0);
-	float dotLH = clamp(dot(L, H), 0.0, 1.0);
-	float dotNH = clamp(dot(N, H), 0.0, 1.0);
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 
-	vec3 color = vec3(0.0);
+vec3 calculatePointLight(Light light, vec3 worldPos, vec3 V, vec3 N, vec3 F0, vec3 albedo, float metallic, float roughness) {
+    vec3 tmpSub = light.position - worldPos;
+    vec3 L = normalize(tmpSub - worldPos);
+    vec3 H = normalize(V + L);
 
-	if (dotNL > 0.0 && dotNV > 0.0)
-	{
-		roughness = max(0.05, roughness);
-		float D   = distributionGGX(dotNH, roughness);
-		float G   = geometrySchlickGGX(dotNL, dotNV, roughness);
-		vec3 F    = fresnelSchlick(albedo, dotNV, metallic);
+    // Calculate distance and attenuation
+    float distance = length(tmpSub);
+    float attenuation = 1.0 / (distance * distance);
+    float intensity = 10.0f;
+    vec3 radiance = light.color * light.intensity * attenuation;
 
-		vec3 spec = D * F * G / (4.0 * dotNL * dotNV);
+    // Cook-Torrance BRDF
+    float NDF = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-		color += spec * dotNL * lightColor;
-	}
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
 
-	return color;
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+    return (kD * albedo / PI + specular) * radiance * NdotL;
+}
+
+vec3 calculateDirectionalLight(Light light, vec3 V, vec3 N, vec3 F0, vec3 albedo, float metallic, float roughness) {
+    vec3 L = normalize(-light.position);
+    vec3 H = normalize(V + L);
+
+    vec3 radiance = light.color * light.intensity;
+
+    // Cook-Torrance BRDF
+    float NDF = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
+
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+    return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 ...
 ```
@@ -832,25 +917,15 @@ void main() {
     F0 = mix(F0, albedo, metallic);
 
     vec3 Lo = vec3(0.0);
-    for (uint i = 0U; i < sceneInfo.numLights; i++) {
+    for (uint i = 0; i < sceneInfo.numLights; i++) {
         Light light = lights.lights[i];
-        // calculate per-light radiance
-        vec3 L;
-        float attenuation;
-        if (light.position.w == 0) {
-            // Directional
-            L = normalize(-light.position.xyz);
-            attenuation = 1.0;
+        if (light.directional == 1) {
+            Lo += calculateDirectionalLight(light, V, N, F0, albedo, metallic, roughness);
         } else {
-            vec3 tmpSub = light.position.xyz - worldPos;
-            L = normalize(tmpSub);
-            float distance = length(tmpSub);
-            attenuation = 1.0 / (distance * distance);
+            Lo += calculatePointLight(light, worldPos, V, N, F0, albedo, metallic, roughness);
         }
-        Lo += BRDF(albedo, light.color.rgb * attenuation, L, V, N, metallic, roughness);
     }
-
-    vec3 ambient = sceneInfo.ambientLightColor.rgb * albedo;
+    vec3 ambient = sceneInfo.ambientLightColor * albedo * sceneInfo.ambientLightIntensity;
     vec3 color = ambient + Lo;
 
     outFragColor = vec4(color, 1.0);
@@ -968,14 +1043,17 @@ public class Main implements IGameLogic {
         List<MaterialData> materials = new ArrayList<>(ModelLoader.loadMaterials("resources/models/sponza/Sponza_mat.json"));
         materials.addAll(ModelLoader.loadMaterials("resources/models/cube/cube_mat.json"));
 
-        scene.getAmbientLight().set(0.2f, 0.2f, 0.2f);
+        scene.getAmbientLightColor().set(1.0f, 1.0f, 1.0f);
+        scene.setAmbientLightIntensity(0.2f);
+
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+        dirLight = new Light(new Vector3f(0.0f, -1.0f, 0.0f), true, 1.0f, new Vector3f(1.0f, 1.0f, 1.0f));
         lights.add(dirLight);
 
-        pointLight = new Light(new Vector4f(5.0f, 3.4f, 0.9f, 1.0f), new Vector4f(0.0f, 1.0f, 0.0f, 1.0f));
+        pointLight = new Light(new Vector3f(5.0f, 3.4f, 1.2f), false, 1.0f, new Vector3f(0.0f, 1.0f, 0.0f));
         lights.add(pointLight);
-        Vector4f pointPos = pointLight.position();
+        Vector3f pointPos = pointLight.getPosition();
+
         lightEntity.setPosition(pointPos.x, pointPos.y, pointPos.z);
         lightEntity.updateModelMatrix();
 
@@ -985,9 +1063,30 @@ public class Main implements IGameLogic {
         ...
     }
 
-    @Override
+   @Override
     public void input(EngCtx engCtx, long diffTimeMillis) {
-        ...
+        Scene scene = engCtx.scene();
+        Window window = engCtx.window();
+
+        KeyboardInput ki = window.getKeyboardInput();
+        float move = diffTimeMillis * MOVEMENT_SPEED;
+        Camera camera = scene.getCamera();
+        if (ki.keyPressed(GLFW_KEY_W)) {
+            camera.moveForward(move);
+        } else if (ki.keyPressed(GLFW_KEY_S)) {
+            camera.moveBackwards(move);
+        }
+        if (ki.keyPressed(GLFW_KEY_A)) {
+            camera.moveLeft(move);
+        } else if (ki.keyPressed(GLFW_KEY_D)) {
+            camera.moveRight(move);
+        }
+        if (ki.keyPressed(GLFW_KEY_UP)) {
+            camera.moveUp(move);
+        } else if (ki.keyPressed(GLFW_KEY_DOWN)) {
+            camera.moveDown(move);
+        }
+
         if (ki.keyPressed(GLFW_KEY_LEFT)) {
             angleInc -= 0.05f;
         } else if (ki.keyPressed(GLFW_KEY_RIGHT)) {
@@ -998,16 +1097,23 @@ public class Main implements IGameLogic {
 
         move = move * 0.1f;
         if (ki.keyPressed(GLFW_KEY_1)) {
-            pointLight.position().y += move;
+            pointLight.getPosition().y += move;
         } else if (ki.keyPressed(GLFW_KEY_2)) {
-            pointLight.position().y -= move;
+            pointLight.getPosition().y -= move;
         }
         if (ki.keyPressed(GLFW_KEY_3)) {
-            pointLight.position().z -= move;
+            pointLight.getPosition().z -= move;
         } else if (ki.keyPressed(GLFW_KEY_4)) {
-            pointLight.position().z += move;
+            pointLight.getPosition().z += move;
         }
-        ...
+
+        MouseInput mi = window.getMouseInput();
+        if (mi.isRightButtonPressed()) {
+            Vector2f deltaPos = mi.getDeltaPos();
+            camera.addRotation((float) Math.toRadians(-deltaPos.y * MOUSE_SENSITIVITY),
+                    (float) Math.toRadians(-deltaPos.x * MOUSE_SENSITIVITY));
+        }
+
         if (angleInc != 0.0) {
             lightAngle += angleInc;
             if (lightAngle < 180) {
@@ -1018,10 +1124,10 @@ public class Main implements IGameLogic {
             updateDirLight();
         }
     }
-    ...
+
     @Override
     public void update(EngCtx engCtx, long diffTimeMillis) {
-        Vector4f pointPos = pointLight.position();
+        Vector3f pointPos = pointLight.getPosition();
         lightEntity.setPosition(pointPos.x, pointPos.y, pointPos.z);
         lightEntity.updateModelMatrix();
     }
@@ -1029,17 +1135,16 @@ public class Main implements IGameLogic {
     private void updateDirLight() {
         float zValue = (float) Math.cos(Math.toRadians(lightAngle));
         float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = dirLight.position();
+        Vector3f lightDirection = dirLight.getPosition();
         lightDirection.x = 0;
         lightDirection.y = yValue;
         lightDirection.z = zValue;
         lightDirection.normalize();
-        lightDirection.w = 0.0f;
     }
 }
 ```
 
-With all these changes, you will get something  like this:
+With all these changes, you will get something like this:
 
 <img src="rc15-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 

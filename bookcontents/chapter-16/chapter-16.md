@@ -12,6 +12,15 @@ In order to render shadows, we just need to render the scene from the light poin
 
 The problem with shadow depth maps is their resolution, we need to cover a wide area, and in order to get high quality visuals we would need huge images to store that information. One possible solution for that are cascade shadow maps. It is based on the fact that, shadows of objects that are closer to the camera need to have a higher quality than shadows for distant objects. The approach that Cascaded Shadow Maps (CSMs) use is to divide the view frustum into several splits. Splits closer to the camera cover a smaller amount of space whilst distant regions cover much wider regions. CSMs use one depth map per split. For each of these splits, the depth map is rendered, adjusting the light view and projection matrices to cover each split.
 
+Specifically, we will use the Variance Shadow Mapping (VSM) technique to generate and calculate shadows. In previous versions,
+we just computed the depth for the different shadow map cascades. This caused several artifacts which wer difficult to mitigate,
+such as shadow acne and peter panning. Instead of just storing the depth values we will also store the depth squared. By doing
+so, and by calculating in a different way if a fragment is in shadow, we will be able to get more quality in the shadows.
+For any fragment, when computing if it is in shadow or not, we will calculate the mean and the variance. We will use
+Chebyshev's inequality to estimate the probability that the fragment is in shadow. We will be enable to better handle hard
+edges and smooth transitions.
+
+
 ## Rendering the depth map
 
 We will start by creating a new package, `org.vulkanb.eng.graph.shadows`, that will hold all the code related to calculate and render the shadow maps. The first class in this package will be responsible of calculating the matrices required to render the shadow maps from light perspective. The class is named `CascadeData` and will store the projection view matrix (from light perspective) for a specific cascade shadow split (`projViewMatrix` attribute) and the far plane distance for its ortho-projection matrix (`splitDistance` attribute):
@@ -334,6 +343,7 @@ import static org.lwjgl.vulkan.VK13.*;
 public class ShadowRender {
 
     public static final int DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
+    private static final int ATT_FORMAT = VK_FORMAT_R32G32_SFLOAT;
     private static final String DESC_ID_MAT = "SHADOW_DESC_ID_MAT";
     private static final String DESC_ID_PRJ = "SHADOW_DESC_ID_PRJ";
     private static final String DESC_ID_TEXT = "SHADOW_SCN_DESC_ID_TEXT";
@@ -346,7 +356,10 @@ public class ShadowRender {
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
 
     private final CascadeShadows[] cascadeShadows;
+    private final VkClearValue clrValueColor;
     private final VkClearValue clrValueDepth;
+    private final Attachment colorAttachment;
+    private final VkRenderingAttachmentInfo.Buffer colorAttachmentInfo;
     private final Attachment depthAttachment;
     private final VkRenderingAttachmentInfo depthAttachmentInfo;
     private final DescSetLayout descLayoutFrgStorage;
@@ -361,12 +374,19 @@ public class ShadowRender {
     public ShadowRender(VkCtx vkCtx) {
         clrValueDepth = VkClearValue.calloc();
         clrValueDepth.color(c -> c.float32(0, 1.0f));
+
+        clrValueColor = VkClearValue.calloc();
+        clrValueColor.color(c -> c.float32(0, 1.0f).float32(1, 1.0f));
+
         depthAttachment = createDepthAttachment(vkCtx);
         depthAttachmentInfo = createDepthAttachmentInfo(depthAttachment, clrValueDepth);
 
+        colorAttachment = createColorAttachment(vkCtx);
+        colorAttachmentInfo = createColorAttachmentInfo(colorAttachment, clrValueColor);
+
         pushConstBuff = MemoryUtil.memAlloc(PUSH_CONSTANTS_SIZE);
 
-        renderingInfo = createRenderInfo(depthAttachmentInfo);
+        renderingInfo = createRenderInfo(colorAttachmentInfo, depthAttachmentInfo);
         ShaderModule[] shaderModules = createShaderModules(vkCtx);
 
         uniformGeomDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -397,8 +417,15 @@ public class ShadowRender {
 }
 ```
 
-As you can see, its definition is quite similar to other render classes defined before, we will render to a depth attachment, and will use some descriptor sets in the
-shaders. We need tio define a constant in the `Scene` class to set yup the maximum number of cascade shadow maps:
+We will use two attachments in this case:
+- One attachment for depth testing, as in the `ScnRender` class. This attachment has `VK_FORMAT_D32_SFLOAT` and we will not
+need to store its contents after we have finished the shadow render stage.
+- One attachment that will store depth and depth squared values. This attachment will be use din lighting phase to calculate
+if fragments are in shadow. We will handle this as a color attachment using the format `VK_FORMAT_R32G32_SFLOAT`. We will 
+refer to this attachment as VSM attachment.
+
+The rest of the code is quite similar to the other render classes defined before, we create the attachments, shaders,
+descriptor sets associated to the uniforms / buffers used in the shader and the pipeline. We need to define a constant in the `Scene` class to set up the maximum number of cascade shadow maps:
 
 ```java
 public class Scene {
@@ -413,6 +440,22 @@ Let's review the methods used in the constructor:
 ```java
 public class ShadowRender {
     ...
+    private static Attachment createColorAttachment(VkCtx vkCtx) {
+        int shadowMapSize = EngCfg.getInstance().getShadowMapSize();
+        return new Attachment(vkCtx, shadowMapSize, shadowMapSize,
+                ATT_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, Scene.SHADOW_MAP_CASCADE_COUNT);
+    }
+
+    private static VkRenderingAttachmentInfo.Buffer createColorAttachmentInfo(Attachment srcAttachment, VkClearValue clearValue) {
+        return VkRenderingAttachmentInfo.calloc(1)
+                .sType$Default()
+                .imageView(srcAttachment.getImageView().getVkImageView())
+                .imageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+                .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
+                .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
+                .clearValue(clearValue);
+    }
+
     private static Attachment createDepthAttachment(VkCtx vkCtx) {
         int shadowMapSize = EngCfg.getInstance().getShadowMapSize();
         return new Attachment(vkCtx, shadowMapSize, shadowMapSize,
@@ -425,13 +468,13 @@ public class ShadowRender {
                 .imageView(depthAttachment.getImageView().getVkImageView())
                 .imageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                 .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
-                .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
+                .storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
                 .clearValue(clearValue);
     }
 
     private static Pipeline createPipeline(VkCtx vkCtx, ShaderModule[] shaderModules, DescSetLayout[] descSetLayouts) {
         var vtxBuffStruct = new VtxBuffStruct();
-        var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(), new int[]{})
+        var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(), new int[]{ATT_FORMAT})
                 .setDepthFormat(DEPTH_FORMAT)
                 .setPushConstRanges(
                         new PushConstRange[]{
@@ -439,24 +482,24 @@ public class ShadowRender {
                         })
                 .setDescSetLayouts(descSetLayouts)
                 .setDescSetLayouts(descSetLayouts)
-                .setUseBlend(true)
                 .setDepthClamp(vkCtx.getDevice().getDepthClamp());
         var pipeline = new Pipeline(vkCtx, buildInfo);
         vtxBuffStruct.cleanup();
         return pipeline;
     }
 
-    private static VkRenderingInfo createRenderInfo(VkRenderingAttachmentInfo depthAttachments) {
-        VkRenderingInfo result = VkRenderingInfo.calloc();
+    private static VkRenderingInfo createRenderInfo(VkRenderingAttachmentInfo.Buffer colorAttachmentInfo,
+                                                    VkRenderingAttachmentInfo depthAttachments) {
+        var result = VkRenderingInfo.calloc().sType$Default();
         try (var stack = MemoryStack.stackPush()) {
             int shadowMapSize = EngCfg.getInstance().getShadowMapSize();
             VkExtent2D extent = VkExtent2D.calloc(stack);
             extent.width(shadowMapSize);
             extent.height(shadowMapSize);
             var renderArea = VkRect2D.calloc(stack).extent(extent);
-            result.sType$Default()
-                    .renderArea(renderArea)
+            result.renderArea(renderArea)
                     .layerCount(Scene.SHADOW_MAP_CASCADE_COUNT)
+                    .pColorAttachments(colorAttachmentInfo)
                     .pDepthAttachment(depthAttachments);
         }
         return result;
@@ -478,7 +521,13 @@ public class ShadowRender {
 }
 ```
 
-We create the depth attachment in the `createDepthAttachment` information. In this case it will be a single image but with as many layers as cascade shadows will be. We will see how this modifies the creation of attachments. The size of the depth image will not be dependant on the screen size, it weill be a configurable value. The rest of the methods to crate attachment information, render information and shader and pipeline are quite similar. In this case, we are using three shader modules for vertex, geometry and fragment shading. In this case, we need to store depth attachment, this is why we use the `VK_ATTACHMENT_STORE_OP_STORE`, because we will sample it while applying lights
+We create the color attachment that will store depth and depths squared values in the `createColorAttachment`. In this case
+it will be a single image but with as many layers as cascade shadows will be. The size of the depth image will not be dependent
+on the screen size, it will be a configurable value. We will later on see how this affects the attachment creation.
+The depth attachment used for the depth testing is created in the method `createDepthAttachment` where the same considerations
+about layers and size apply. The rest of the methods to create attachment information, render information and shader and pipeline
+are quite similar. In this case, we are using three shader modules for vertex, geometry and fragment shading. In this case, we
+need to store depth attachment, this is why we use the `VK_ATTACHMENT_STORE_OP_STORE`, because we will sample it while applying lights.
 
 The `ShadowRender` class defines also a `cleanup` method to free the resources and some getters to retrieve the depth attachment and the cascade shadows.
 
@@ -495,7 +544,10 @@ public class ShadowRender {
         renderingInfo.free();
         depthAttachmentInfo.free();
         depthAttachment.cleanup(vkCtx);
+        colorAttachmentInfo.free();
+        colorAttachment.cleanup(vkCtx);
         MemoryUtil.memFree(pushConstBuff);
+        clrValueColor.free();
         clrValueDepth.free();
     }
 
@@ -546,12 +598,11 @@ public class ShadowRender {
 
             VkCommandBuffer cmdHandle = cmdBuffer.getVkCommandBuffer();
 
-            VkUtils.imageBarrier(stack, cmdHandle, depthAttachment.getImage().getVkImage(),
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-                    VK_ACCESS_2_NONE, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                    VK_IMAGE_ASPECT_DEPTH_BIT);
+            VkUtils.imageBarrier(stack, cmdHandle, colorAttachment.getImage().getVkImage(),
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_ACCESS_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT);
 
             vkCmdBeginRendering(cmdHandle, renderingInfo);
 
@@ -618,14 +669,16 @@ public class ShadowRender {
 }
 ```
 
-The method is quite similar to the one used in the `ScneRender` class, with the following differences:
+The method is quite similar to the one used in the `SceneRender` class, with the following differences:
 
 - We update cascade shadow maps information.
 - We do not need to render opaque elements first since we will not be using blending, we will just discard fragments below a certain transparent threshold.
-- We need to setup an image barrier over the depth image. We need to wait for any previous command in fragment test stage to finish, and we need to ensure that the image
-is in the `VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL` layout.
+- We need to setup an image barrier over the VSM attachment image. We need to wait for any previous command in the output
+color stage to finish, and we need to ensure that the image is in the `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` layout.
+We do not need to set up a barrier for the depth attachments since the contents will note be stored, we just use it
+for depth testing as in scene render stage.
 
-We will need two methods to se tup push constants and upload cascade shadows projection matrices:
+We will need two methods to set up push constants and upload cascade shadows projection matrices:
 ```java
 public class ShadowRender {
     ...
@@ -734,6 +787,8 @@ const int MAX_TEXTURES = 100;
 layout (location = 0) in vec2 inTextCoords;
 layout (location = 1) in flat uint inMaterialIdx;
 
+layout(location = 0) out vec2 outFragColor;
+
 struct Material {
     vec4 diffuseColor;
     uint hasTexture;
@@ -763,10 +818,26 @@ void main()
     if (albedo.a < 0.5) {
         discard;
     }
+
+    float depth = gl_FragCoord.z;
+    float moment1 = depth;
+    float moment2 = depth * depth;
+
+    // Adjust moments to avoid light bleeding
+    float dx = dFdx(depth);
+    float dy = dFdy(depth);
+    moment2 += 0.25 * (dx * dx + dy * dy);
+
+    outFragColor = vec2(moment1, moment2);
 }
 ```
 
-As you can see, we use the texture coordinates to check the level of transparency of the fragment and discard the ones below `0.5`. By doing so, we will control that transparent fragments will not cast any shadow. Keep in mind that if you do not need to support transparent elements, you can remove the fragment shader, depth values would be generated correctly just form the output of the geometry shader. In this case, there is no need to have even an empty fragment shader. You can just remove it.
+As you can see, we use the texture coordinates to check the level of transparency of the fragment and discard the ones below `0.5`. By doing so, we will control that transparent fragments will not cast any shadow. Keep in mind that if you do not need to support transparent elements. In the shader, we dump the depth and depth squared values as a result. We adjust depth squared a
+little bit to avoid light bleeding effects. These effects may occur if the attachment is blurred or down sampled. Light bleeding
+occurs when Chebyshev’s inequality, used in the light phase, overestimates the visibility probability due to incorrect variance
+from filtering. If we add a term proportional to the local depth variation, we compensate interpolation errors. The `dFdx` 
+function calculates how much the depth changes horizontally (dx) or vertically (dy). You can check all the details behind VSM
+in this [article](https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-8-summed-area-variance-shadow-maps).
 
 We have modified the `Attachment` class to be able to set up the image layers:
 
@@ -798,24 +869,20 @@ Prior to reviewing the changes in the `LightingRender` class, we will examine th
 ```glsl
 ...
 layout (constant_id = 0) const int SHADOW_MAP_CASCADE_COUNT = 3;
-layout (constant_id = 1) const int USE_PCF = 0;
-layout (constant_id = 2) const float BIAS = 0.0005;
-layout (constant_id = 3) const int DEBUG_SHADOWS = 0;
-...
-const float SHADOW_FACTOR = 0.25;
+layout (constant_id = 1) const int DEBUG_SHADOWS = 0;
 ...
 ```
 
 Description of the constants:
 
 - `SHADOW_MAP_CASCADE_COUNT`: It will hold the number of splits we are going to have. 
-- `USE_PCF`: It will control if we apply Percentage Closer Filter (`1`) or not (`0`) to the shadows.
-- `BIAS`: The depth bias to apply when estimating if a fragment is affected by a shadow or not. This is used to reduce shadow artifacts, such as shadow acne.
 - `DEBUG_SHADOWS`: This will control if we apply a color to the fragments to identify the cascade split to which they will assigned (it will need to have the value `1` to activate this).
 
 We will need also to pass cascade shadows information as long as the view matrix to perform how shadows affect final fragment color:
 
 ```glsl
+...
+layout(set = 0, binding = 4) uniform sampler2DArray shadowSampler;
 ...
 struct CascadeShadow {
     mat4 projViewMatrix;
@@ -827,74 +894,49 @@ layout(set = 2, binding = 0) readonly buffer Shadows {
 } shadows;
 layout(scalar, set = 3, binding = 0) uniform SceneInfo {
     vec3 camPos;
+    float ambientLightIntensity;
     vec3 ambientLightColor;
     uint numLights;
     mat4 viewMatrix;
 } sceneInfo;
 ```
 
-We will create a new function, named `calcShadow`, which given a world position an a cascade split index, will return a shadow factor that will be applied to the final fragment color. If the fragment is not affected by a shadow, the result will be `1`, it will not affect the final color:
+We will create a new function, named `calcVisibility`, which given a world position an a cascade split index, will return a shadow factor that will be applied to the final fragment color. If the fragment is not affected by a shadow, the result will be `1`, if it is, it will be `0`. This function will use the Chebyshev's inequality, defined in the `chebyshevUpperBound` function.
+
 ```glsl
-float calcShadow(vec4 worldPosition, uint cascadeIndex, float bias)
-{
+float chebyshevUpperBound(vec2 moments, float t) {
+    // Surface is fully lit if the current fragment is before the light occluder
+    if (t <= moments.x)
+    return 1.0;
+
+    // Compute variance
+    float variance = moments.y - (moments.x * moments.x);
+    variance = max(variance, 0.00002); // Small epsilon to avoid divide by zero
+
+    // Compute probabilistic upper bound
+    float d = t - moments.x;
+    float p_max = variance / (variance + d * d);
+
+    // Reduce light bleeding
+    p_max = smoothstep(0.2, 1.0, p_max);
+
+    return p_max;
+}
+
+float calcVisibility(vec4 worldPosition, uint cascadeIndex) {
     vec4 shadowMapPosition = shadows.cascadeshadows[cascadeIndex].projViewMatrix * worldPosition;
 
-    float shadow = 1.0;
-    vec4 shadowCoord = shadowMapPosition / shadowMapPosition.w;
-    shadowCoord.x = shadowCoord.x * 0.5 + 0.5;
-    shadowCoord.y = (-shadowCoord.y) * 0.5 + 0.5;
+    vec2 uv = vec2(shadowMapPosition.x * 0.5 + 0.5, (-shadowMapPosition.y) * 0.5 + 0.5);
+    float depth = shadowMapPosition.z;
+    vec2 moments = texture(shadowSampler, vec3(uv, cascadeIndex)).rg;
 
-    if (USE_PCF == 1) {
-        shadow = filterPCF(shadowCoord, cascadeIndex, bias);
-    } else {
-        shadow = textureProj(shadowCoord, vec2(0, 0), cascadeIndex, bias);
-    }
-    return shadow;
-}
-```
-This function, transforms from world coordinates space to the NDC space of the directional light, for a specific cascade split, using its ortographic projection. That is, we multiply world space by the projection view matrix of the specified cascade split. After that, we need to transform those coordinates to texture coordinates (that is in the range [0, 1], starting at the top left corner). With that information, we can apply PCF or not. If not, we will call the `textureProj` function which just calculates the shadow factor without applying any filtering and is defined like this:
-```glsl
-float textureProj(vec4 shadowCoord, vec2 offset, uint cascadeIndex, float bias)
-{
-    float shadow = 1.0;
+    float visibility = chebyshevUpperBound(moments, depth);
+    return visibility;
+}```
+T
+his function, transforms from world coordinates space to the NDC space of the directional light, for a specific cascade split, using its orthographic projection. That is, we multiply world space by the projection view matrix of the specified cascade split. After that, we need to transform those coordinates to texture coordinates (that is in the range [0, 1], starting at the top left corner). With that information, we check if is affected by shadow or not by calling the `chebyshevUpperBound` function.
 
-    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0) {
-        float dist = texture(shadowSampler, vec3(shadowCoord.st + offset, cascadeIndex)).r;
-        if (shadowCoord.w > 0 && dist < shadowCoord.z - bias) {
-            shadow = SHADOW_FACTOR;
-        }
-    }
-    return shadow;
-}
-```
-
-This function just samples the depth maps, generated previously, with the texture coordinates and setting the layer associated to the proper cascade index. If the retrieved depth value is lower than the fragment `z` value , this will mean that this fragment is in a shadow. This function receives an `offset` parameter which purpose will be understood when examining the `filterPCF` function:
-
-```glsl
-float filterPCF(vec4 sc, uint cascadeIndex, float bias)
-{
-    ivec2 texDim = textureSize(shadowSampler, 0).xy;
-    float scale = 0.75;
-    float dx = scale * 1.0 / float(texDim.x);
-    float dy = scale * 1.0 / float(texDim.y);
-
-    float shadowFactor = 0.0;
-    int count = 0;
-    int range = 2;
-
-    for (int x = -range; x <= range; x++) {
-        for (int y = -range; y <= range; y++) {
-            shadowFactor += textureProj(sc, vec2(dx*x, dy*y), cascadeIndex, bias);
-            count++;
-        }
-    }
-    return shadowFactor / count;
-}
-```
-
-This purpose of this function to return an average shadow factor calculated using the values obtained from the fragments that surround the current one. It just calculates this, retrieving the shadow factor for each of them, calling the `textureProj` function, by passing an offset that will be used when sampling the shadow map.
-
-In the `main` function is defined like this:
+The `main` function is defined like this:
 
 ```glsl
 void main() {
@@ -913,27 +955,6 @@ void main() {
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo, metallic);
 
-    vec3 Lo = vec3(0.0);
-    float bias = BIAS;
-    for (uint i = 0U; i < sceneInfo.numLights; i++) {
-        Light light = lights.lights[i];
-        // calculate per-light radiance
-        vec3 L;
-        float attenuation;
-        if (light.position.w == 0) {
-            // Directional
-            L = normalize(-light.position.xyz);
-            attenuation = 1.0;
-            bias = max(BIAS * 5 * (1.0 - dot(N, L)), BIAS);
-        } else {
-            vec3 tmpSub = light.position.xyz - worldPos;
-            L = normalize(tmpSub);
-            float distance = length(tmpSub);
-            attenuation = 1.0 / (distance * distance);
-        }
-        Lo += BRDF(albedo, light.color.rgb * attenuation, L, V, N, metallic, roughness);
-    }
-
     uint cascadeIndex = 0;
     vec4 viewPos = sceneInfo.viewMatrix * worldPosW;
     for (uint i = 0; i < SHADOW_MAP_CASCADE_COUNT - 1; ++i) {
@@ -941,41 +962,43 @@ void main() {
             cascadeIndex = i + 1;
         }
     }
+    float shadow = calcVisibility(vec4(worldPos, 1), cascadeIndex);
 
-    float shadowFactor = calcShadow(vec4(worldPos, 1), cascadeIndex, bias);
-
-    vec3 ambient = sceneInfo.ambientLightColor.rgb * albedo;
-    vec3 color = ambient + Lo;
-
-    if ( shadowFactor < 0.3) {
-        shadowFactor *= shadowFactor;
+    vec3 Lo = vec3(0.0);
+    for (uint i = 0; i < sceneInfo.numLights; i++) {
+        Light light = lights.lights[i];
+        if (light.directional == 1) {
+            Lo += calculateDirectionalLight(light, V, N, F0, albedo, metallic, roughness);
+        } else {
+            Lo += calculatePointLight(light, worldPos, V, N, F0, albedo, metallic, roughness);
+        }
     }
-    outFragColor = vec4(color * shadowFactor, 1.0);
+    vec3 ambient = sceneInfo.ambientLightColor * albedo * sceneInfo.ambientLightIntensity;
+    outFragColor = vec4(Lo * shadow + ambient, 1.0f);
 
     if (DEBUG_SHADOWS == 1) {
         switch (cascadeIndex) {
             case 0:
-            outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
-            break;
+                outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
+                break;
             case 1:
-            outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
-            break;
+                outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
+                break;
             case 2:
-            outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
-            break;
-            default :
-            outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
-            break;
+                outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
+                break;
+            default:
+                outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
+                break;
         }
     }
 }
 ```
 
-Basically, we cascade shadows splits to select the one that matches the view distance and use that index. With that information we invoke the `calcShadow` function. We
-also adapt the bias to take into consideration the direction of the light and the normal to provide better quality. The final fragment color is modulated by the shadow factor.
+Basically, we cascade shadows splits to select the one that matches the view distance and use that index. With that information we invoke the `calcVisibility` function.
 Finally, if the debug mode is activated we apply a color to that fragment to identify the cascades we are using.
 
-Before examining the changes in the `LightingRender` class we will create a new class named `LightSpecConsts` which will cerate the required structures that will hold specialization constants information. The class is defined like this:
+Before examining the changes in the `LightingRender` class we will create a new class named `LightSpecConsts` which will create the required structures that will hold specialization constants information. The class is defined like this:
 
 ```java
 package org.vulkanb.eng.graph.light;
@@ -996,33 +1019,15 @@ public class LightSpecConsts {
 
     public LightSpecConsts() {
         var engCfg = EngCfg.getInstance();
-        data = MemoryUtil.memAlloc(VkUtils.INT_SIZE * 3 + VkUtils.FLOAT_SIZE);
+        data = MemoryUtil.memAlloc(VkUtils.INT_SIZE * 2);
         data.putInt(Scene.SHADOW_MAP_CASCADE_COUNT);
-        data.putInt(engCfg.isShadowPcf() ? 1 : 0);
-        data.putFloat(engCfg.getShadowBias());
         data.putInt(engCfg.isShadowDebug() ? 1 : 0);
         data.flip();
 
-        specEntryMap = VkSpecializationMapEntry.calloc(4);
+        specEntryMap = VkSpecializationMapEntry.calloc(2);
         int offset = 0;
         int pos = 0;
         int size = VkUtils.INT_SIZE;
-        specEntryMap.get(pos)
-                .constantID(pos)
-                .size(size)
-                .offset(offset);
-        offset += size;
-        pos++;
-
-        size = VkUtils.INT_SIZE;
-        specEntryMap.get(pos)
-                .constantID(pos)
-                .size(size)
-                .offset(offset);
-        offset += size;
-        pos++;
-
-        size = VkUtils.FLOAT_SIZE;
         specEntryMap.get(pos)
                 .constantID(pos)
                 .size(size)
@@ -1053,8 +1058,8 @@ public class LightSpecConsts {
 }
 ```
 
-First, we create a buffer that will hold the specialization constants data, which will be the number of cascade shadows, if we will use PCF, the value of shadow bias and the
-debug flag. We need to create one `VkSpecializationMapEntry` for each specialization constant. The `VkSpecializationMapEntry` defines  the numerical identifier used by the constant, the size of the data and the offset in the buffer that holds the data for all the constants. With all that information, we create the `VkSpecializationInfo` structure.
+First, we create a buffer that will hold the specialization constants data, which will be the number of cascade shadows and the
+debug flag. We need to create one `VkSpecializationMapEntry` for each specialization constant. The `VkSpecializationMapEntry` defines the numerical identifier used by the constant, the size of the data and the offset in the buffer that holds the data for all the constants. With all that information, we create the `VkSpecializationInfo` structure.
 
 Now we can examine the changes in the `LightingRender` class. First, we will create new attributes for the specialization constants and the cascade shadows data (we will
 need one buffer per frame in flight in this case to be able to update it in each frame). This will require new descriptor sets. We will also need more space for
@@ -1080,7 +1085,7 @@ public class LightRender {
         }
         attDescSetLayout = new DescSetLayout(vkCtx, descSetLayouts);
         ...
-        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE + VkUtils.MAT4X4_SIZE;
+        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.FLOAT_SIZE + VkUtils.INT_SIZE + VkUtils.MAT4X4_SIZE;
         sceneBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_SCENE, sceneDescSetLayout);
 
@@ -1145,11 +1150,11 @@ public class LightRender {
         try (var stack = MemoryStack.stackPush()) {
             Scene scene = engCtx.scene();
             ...
-            VkUtils.imageBarrier(stack, cmdHandle, depthAttachment.getImage().getVkImage(),
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-                    VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                    VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
-                    VK_IMAGE_ASPECT_DEPTH_BIT);
+            VkUtils.imageBarrier(stack, cmdHandle, shadowAttachment.getImage().getVkImage(),
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT);
 
             updateCascadeShadowMatrices(vkCtx, cascadeShadows, currentFrame);
             ...
@@ -1165,9 +1170,9 @@ public class LightRender {
 }
 ```
 
-We now need to receive as a parameter the depth attachment. We will need also to set up an image barrier to en sure that the shadow stage has finished. We need to
-ensure that there are no tasks writing to it in the `VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT` when we reach also that stage to read from it. We need also
-to bind the the new descriptor set for the cascade shadow map data. We need to create a new method to write in a buffer cascade shadows map data:
+We now need to receive as a parameter the depth attachment. We will need also to set up an image barrier to be sure that the shadow stage has finished. We need to
+ensure that there are no tasks writing to it in the `VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT` when we reach also that stage to read from it. We need also
+to bind the new descriptor set for the cascade shadow map data. We need to create a new method to write in a buffer cascade shadows map data:
 
 ```java
 public class LightRender {
@@ -1205,7 +1210,10 @@ public class LightRender {
         scene.getCamera().getPosition().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
-        scene.getAmbientLight().get(offset, dataBuff);
+        dataBuff.putFloat(offset, scene.getAmbientLightIntensity());
+        offset += VkUtils.FLOAT_SIZE;
+
+        scene.getAmbientLightColor().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
         Light[] lights = scene.getLights();
@@ -1339,34 +1347,22 @@ The `EngCfg` class needs also to be updated to read the additional properties th
 ```java
 public class EngCfg {
     ...
-    private float shadowBias;
     private boolean shadowDebug;
     private int shadowMapSize;
-    private boolean shadowPcf;
     ...
     private EngCfg() {
         ...
-            shadowPcf = Boolean.parseBoolean(props.getOrDefault("shadowPcf", false).toString());
-            shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", 0.00005f).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", 2048).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
         ...
     }
     ...
-    public float getShadowBias() {
-        return shadowBias;
-    }
-
     public int getShadowMapSize() {
         return shadowMapSize;
     }
     ...
     public boolean isShadowDebug() {
         return shadowDebug;
-    }
-
-    public boolean isShadowPcf() {
-        return shadowPcf;
     }
     ...
 }
@@ -1394,12 +1390,12 @@ public class Main implements IGameLogic {
         Entity treeEntity = new Entity("treeEntity", treeModel.id(), new Vector3f(0.0f, 0.0f, 0.0f));
         treeEntity.setScale(0.005f);
         scene.addEntity(treeEntity);
-
         materials.addAll(ModelLoader.loadMaterials("resources/models/tree/tree_mat.json"));
 
-        scene.getAmbientLight().set(0.8f, 0.8f, 0.8f);
+        scene.getAmbientLightColor().set(1.0f, 1.0f, 1.0f);
+        scene.setAmbientLightIntensity(0.2f);
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(5.0f, 5.0f, 5.0f, 1.0f));
+        dirLight = new Light(new Vector3f(0.0f, -1.0f, 0.0f), true, 8.0f, new Vector3f(1.0f, 1.0f, 1.0f));
         lights.add(dirLight);
 
         Light[] lightArr = new Light[lights.size()];

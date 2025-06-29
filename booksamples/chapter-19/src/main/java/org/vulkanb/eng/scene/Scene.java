@@ -11,10 +11,11 @@ public class Scene {
     public static final int MAX_LIGHTS = 10;
     public static final int SHADOW_MAP_CASCADE_COUNT = 3;
 
-    private final Vector3f ambientLight;
+    private final Vector3f ambientLightColor;
     private final Camera camera;
     private final Map<String, List<Entity>> entities;
     private final Projection projection;
+    private float ambientLightIntensity;
     private Light[] lights;
 
     public Scene(Window window) {
@@ -23,7 +24,8 @@ public class Scene {
         projection = new Projection(engCfg.getFov(), engCfg.getZNear(), engCfg.getZFar(), window.getWidth(),
                 window.getHeight());
         camera = new Camera();
-        ambientLight = new Vector3f();
+        ambientLightColor = new Vector3f();
+        ambientLightIntensity = 0.0f;
     }
 
     public void addEntity(Entity entity) {
@@ -31,8 +33,12 @@ public class Scene {
         list.add(entity);
     }
 
-    public Vector3f getAmbientLight() {
-        return ambientLight;
+    public Vector3f getAmbientLightColor() {
+        return ambientLightColor;
+    }
+
+    public float getAmbientLightIntensity() {
+        return ambientLightIntensity;
     }
 
     public Camera getCamera() {
@@ -63,6 +69,10 @@ public class Scene {
         for (var list : entities.values()) {
             list.removeIf(entity1 -> entity1.getId().equals(entityId));
         }
+    }
+
+    public void setAmbientLightIntensity(float ambientLightIntensity) {
+        this.ambientLightIntensity = ambientLightIntensity;
     }
 
     public void setLights(Light[] lights) {

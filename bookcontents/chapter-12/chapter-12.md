@@ -105,8 +105,8 @@ public class GuiRender {
 ```
 
 The constructor is quite similar to the other `*Render` classes. In this case, we receive as an input a color attachment where will be rendering. This will be the 
-attachment used for post processing. We will not use depth attachments in this case, since GUI elements are essentially 2D shapes. We need to cerate render info,
-shader modules, the associated pipelines and we will use arrays to sre vertices and indices buffers to store ImGui render results. For each frame, ImGui will generate
+attachment used for post processing. We will not use depth attachments in this case, since GUI elements are essentially 2D shapes. We need to create render info,
+shader modules, the associated pipelines and we will use arrays to store vertices and indices buffers to store ImGui render results. For each frame, ImGui will generate
 the vertices and indices associated to the GUI elements we need to render. At the end of the constructor you will see that wee set a char callback and add a key
 callback to the `KeyboardInput` instance. We need to do this in order to handle keyboard input in ImGui widgets, we will see the definition of the `GuiUtils` class later on.
 
@@ -346,7 +346,7 @@ public record GuiTexture(long id, String texturePath) {
 ```
 
 As you can see is basically a wrapper around a texture path and an automatically generated identifier which is created randomly and always needs to be greater than `0`(more
-on this later on). `GuiTexture` instances will be cerated during model creation in the `init` method of the `IGameLogic` implementation. Therefore, we will include them
+on this later on). `GuiTexture` instances will be created during model creation in the `init` method of the `IGameLogic` implementation. Therefore, we will include them
 in the `InitData` class:
 
 ```java
@@ -452,7 +452,7 @@ The first thing that we do is to update the buffers that we will used to store v
 just a single buffer (one for vertices and one for indices) when rendering the GUI elements (we will see later on how this is done). One important thing, is that we have
 not initialized those buffers in the constructors, so they can be null. In fact, as long as there is no GUI information to be rendered they will stay in that state.
 Therefore, if they are null, there is nothing to be done, so we just return. We then just do the usual steps, begin the render, bind the pipeline, set the view port and
-bind the vertex and indices buffers. Then, we set push constants to pass a scaling factor (composed by two floats). ImGui will use a coordinate system which sets `(0, 0)` at the top left corner of the screen and `(width, height)` as the the bottom right corner, being `width` and `height` the values set in the `ImGuiIO` `setDisplaySize` method call. We need to transform from that coordinate system to one in the range of `[-1, 1]` for x and y axis, which will be done in the vertex shader with the help of that scaling factor. After that, we iterate over the ImGui draw data, which will help us to set the proper offsets over the vertices and indices buffers when calling `vkCmdDrawIndexed`.
+bind the vertex and indices buffers. Then, we set push constants to pass a scaling factor (composed by two floats). ImGui will use a coordinate system which sets `(0, 0)` at the top left corner of the screen and `(width, height)` as the bottom right corner, being `width` and `height` the values set in the `ImGuiIO` `setDisplaySize` method call. We need to transform from that coordinate system to one in the range of `[-1, 1]` for x and y axis, which will be done in the vertex shader with the help of that scaling factor. After that, we iterate over the ImGui draw data, which will help us to set the proper offsets over the vertices and indices buffers when calling `vkCmdDrawIndexed`.
 We also restrict the drawing area using the `vkCmdSetScissor` for each of the GUI elements to be rendered. For each of these elements, we will check if it has a specific
 texture or no. If the GUI element has defined a texture it will contain a value different than `0` in the opaque handler element retrieved by `getCmdListCmdBufferTextureId`.
 With that information and the help of the `guiTexturesMap` we can properly set the proper descriptor set.
@@ -864,8 +864,8 @@ public class Main implements IGameLogic {
 }
 ```
 
-We have two possible GUI Windows to show, the default IMgui demo window and a simple onw which hows a texture. Therefore, we need to load that sample texture. In the `input`
-method we also checc if the input has been handled by ImGui and return uin this case to avoid double handling of users input.The final result is shown in the next figure.
+We have two possible GUI Windows to show, the default ImGui demo window and a simple onw which hows a texture. Therefore, we need to load that sample texture. In the `input`
+method we also check if the input has been handled by ImGui and return in this case to avoid double handling of users input. The final result is shown in the next figure.
 
 <img src="rc12-screen-shot.png" title="" alt="Screen Shot" data-align="center">
 

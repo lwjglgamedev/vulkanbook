@@ -44,7 +44,7 @@ public class MaterialsCache {
         }
         return result;
     }
-	
+
     public void loadMaterials(VkCtx vkCtx, List<MaterialData> materials, TextureCache textureCache, CmdPool cmdPool,
                               Queue queue) {
         int numMaterials = materials.size();

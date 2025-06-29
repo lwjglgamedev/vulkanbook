@@ -60,13 +60,13 @@ public class LightRender {
 
         storageDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        long buffSize = (long) (VkUtils.VEC4_SIZE + VkUtils.VEC3_SIZE) * Scene.MAX_LIGHTS;
+        long buffSize = (long) (VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE + VkUtils.FLOAT_SIZE) * Scene.MAX_LIGHTS;
         lightsBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, DESC_ID_LIGHTS, storageDescSetLayout);
 
         sceneDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE;
+        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.FLOAT_SIZE + VkUtils.INT_SIZE;
         sceneBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_SCENE, sceneDescSetLayout);
 
@@ -244,9 +244,13 @@ public class LightRender {
         int numLights = lights != null ? lights.length : 0;
         for (int i = 0; i < numLights; i++) {
             Light light = lights[i];
-            light.position().get(offset, dataBuff);
-            offset += VkUtils.VEC4_SIZE;
-            light.color().get(offset, dataBuff);
+            light.getPosition().get(offset, dataBuff);
+            offset += VkUtils.VEC3_SIZE;
+            dataBuff.putInt(offset, light.isDirectional() ? 1 : 0);
+            offset += VkUtils.INT_SIZE;
+            dataBuff.putFloat(offset, light.getIntensity());
+            offset += VkUtils.FLOAT_SIZE;
+            light.getColor().get(offset, dataBuff);
             offset += VkUtils.VEC3_SIZE;
         }
 
@@ -262,7 +266,10 @@ public class LightRender {
         scene.getCamera().getPosition().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
-        scene.getAmbientLight().get(offset, dataBuff);
+        dataBuff.putFloat(offset, scene.getAmbientLightIntensity());
+        offset += VkUtils.FLOAT_SIZE;
+
+        scene.getAmbientLightColor().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
         Light[] lights = scene.getLights();

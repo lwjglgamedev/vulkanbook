@@ -1,12 +1,3 @@
-- eng.properties.
-- EngCfg
-- Render
-- VkCtx
-- Device
-- PhysDevice
-- Queue
-- Surface
-
 # Chapter 03 - Physical, Logical devices and Surface
 
 In this chapter we will progress in the definition of the Vulkan structures required to render a 3D scene. Specifically, we will setup the Physical and Logical devices and a Surface.

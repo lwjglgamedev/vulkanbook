@@ -1,7 +1,7 @@
 # Chapter 11 - Post processing
 
-In this chapter we will implement a post-processing stage. We will render to a buffer instead of directly rendering to a swp chain image and once, we have finished we
-will apply some effects suc us FXAA filtering and gamma correction.
+In this chapter we will implement a post-processing stage. We will render to a buffer instead of directly rendering to a swap chain image and once, we have finished we
+will apply some effects such us FXAA filtering and gamma correction.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-11).
 
@@ -104,7 +104,7 @@ public class ScnRender {
 }
 ```
 
-We will have now two attachments, one for the the color data and one for the depth data. We will not have separate instances per swap chain images
+We will have now two attachments, one for the color data and one for the depth data. We will not have separate instances per swap chain images
 to avoid waisting too much memory, we will manage synchronization differently. We now need to create an Attachment (image and image view) for outputting color,
 therefore we need a `createColorAttachment` method:
 
@@ -706,7 +706,7 @@ First, we transition the output attachment used by the `ScnRender` class to `VK_
 as a source, we will not be modifying it. We need this to happen when we reach `VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT` stage and to access in read only mode
 (`VK_ACCESS_2_SHADER_READ_BIT`). This is achieved with the first barrier. We need also to ensure that the output attachment of this class is in
 `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` layout by setting the second barrier. AFter that, we just bind the pipeline, set the view port and scissors, bind
-the descriptor sets and perform a call to `vkCmdDraw`. Wih this call we just draw 3 vertices without needing to bind any vertex or index buffer. Remember
+the descriptor sets and perform a call to `vkCmdDraw`. With this call we just draw 3 vertices without needing to bind any vertex or index buffer. Remember
 that we will just need to render a quad in clip space, so we do not need even the coordinates, we will generate them using the vertex fragment. We will not 
 even using two triangles to render a quad, one single triangle is enough for us to achieve the same effect. We will see how it is done in the  vertex shader.
 
@@ -866,7 +866,7 @@ stage. FXAA implementation has been obtained from [here](https://mini.gmshaders.
 
 In order to copy the processed image to the swap chain, we have two possibilities:
 - We can just use the post processing image as an input attachment and render a quad to copy each fragment.
-- We an copy the image using `vkCmdBlitImage` and `vkCmdCopyImage` to copy the post processing image contents.
+- We can copy the image using `vkCmdBlitImage` and `vkCmdCopyImage` to copy the post processing image contents.
 
 We will chose the first option, since it seems to be equally performant and does not impose any restriction sin terms in difference on sampling between images.
 

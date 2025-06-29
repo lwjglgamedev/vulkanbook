@@ -164,7 +164,7 @@ public class CmdBuffer {
 }
 ```
 
-We have two methods to start recording, the first one, which receives no parameter is a convenience method which can be used for primary command buffers. The next one receives an InheritanceInfo instance which is required for secondary buffers. To start recording we need to create a `VkCommandBufferBeginInfo` structure and invoke the `vkBeginCommandBuffer` function. If we are submitting a short lived command, we can signal that using the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. In this case, the driver may not try to optimize that command buffer since it will only be used one time. Secondary buffers need to be instructed which render pass and frame buffer they will need to use since a render pass wil not be started when recording. We need to fill up the `VkCommandBufferInheritanceInfo` structure filled up with the color and depth attachments formats (more on this later). Secondary command buffers can be integrated into primary command buffers by executing the `vkCmdExecuteCommands` function.
+We have two methods to start recording, the first one, which receives no parameter is a convenience method which can be used for primary command buffers. The next one receives an `InheritanceInfo` instance which is required for secondary buffers. To start recording we need to create a `VkCommandBufferBeginInfo` structure and invoke the `vkBeginCommandBuffer` function. If we are submitting a short lived command, we can signal that using the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. In this case, the driver may not try to optimize that command buffer since it will only be used one time. Secondary buffers need to be instructed which render pass and frame buffer they will need to use since a render pass wil not be started when recording. We need to fill up the `VkCommandBufferInheritanceInfo` structure filled up with the color and depth attachments formats (more on this later). Secondary command buffers can be integrated into primary command buffers by executing the `vkCmdExecuteCommands` function.
 
 The next methods are the usual `cleanup` for releasing resources, to finalize the recording and another one to get the command buffer Vulkan instance.
 
@@ -210,7 +210,7 @@ prior to showing that method we need to introduce new concepts.
 
 Prior to progress in rendering something on the screen, we need to address a fundamental topic in Vulkan: synchronization. In Vulkan we will be in charge of properly control the synchronization of the resources. This imposes certain complexity but allows us to have a full control about how operations will be done. In this section we well address two main mechanisms involved in Vulkan synchronization: semaphores and fences. There are some other elements such as barriers or events, we will explain them once we first use them. 
 
-Fences are the mechanisms used in Vulkan to synchronize operations between the GPU and the CPU (our application). Semaphores are used to synchronize operations inside the GPU (GPU to GPU synchronization), and are frequently used to synchronize queue submissions. These elements are used to block the execution until a signal is performed. Once a signal is received  execution is resumed. It is important to note, that signalling is always done in the GPU side. In the case of fences, our application can block (waiting in the CPU) until the GPU signals that execution can go on, but we cannot trigger the signalling from the CPU. In the case of semaphores, since they are internal to the GPU, waiting can only happen in the GPU.
+Fences are the mechanisms used in Vulkan to synchronize operations between the GPU and the CPU (our application). Semaphores are used to synchronize operations inside the GPU (GPU to GPU synchronization), and are frequently used to synchronize queue submissions. These elements are used to block the execution until a signal is performed. Once a signal is received  execution is resumed. It is important to note, that signaling is always done in the GPU side. In the case of fences, our application can block (waiting in the CPU) until the GPU signals that execution can go on, but we cannot trigger the signaling from the CPU. In the case of semaphores, since they are internal to the GPU, waiting can only happen in the GPU.
 
 Before using these elements, we will define some classes to manage them. We will firs start with the `Semaphore` class:
 
@@ -250,7 +250,7 @@ public class Semaphore {
 }
 ```
 
-In this case we are modelling what is called a binary semaphore, which can be in two states: signaled and un-signaled. When you create a semaphore is in an un-signaled state. When we submit command we can specify a semaphore to be signaled when the commands complete. If later on, we record some other commands or perform some operation that require those previous commands to be completed, we use the same semaphore to wait. The cycle is like this, the semaphore in the first step is un-signaled, when the operations are completed get signaled and then, commands that are waiting can continue (we say that these second step activities are waiting for the semaphore to be signaled). Creating a semaphore is easy, just define a `VkSemaphoreCreateInfo`  and call the `vkCreateSemaphore` function. The rest of the methods are the usual ones, one for cleaning up the resources and another one to get the semaphore handle.
+In this case we are modeling what is called a binary semaphore, which can be in two states: signaled and un-signaled. When you create a semaphore is in an un-signaled state. When we submit command we can specify a semaphore to be signaled when the commands complete. If later on, we record some other commands or perform some operation that require those previous commands to be completed, we use the same semaphore to wait. The cycle is like this, the semaphore in the first step is un-signaled, when the operations are completed get signaled and then, commands that are waiting can continue (we say that these second step activities are waiting for the semaphore to be signaled). Creating a semaphore is easy, just define a `VkSemaphoreCreateInfo`  and call the `vkCreateSemaphore` function. The rest of the methods are the usual ones, one for cleaning up the resources and another one to get the semaphore handle.
 
 Now it's turn for the `Fence`class:
 
@@ -299,7 +299,7 @@ public class Fence {
 }
 ```
 
-As in the `Semaphore` class, the `Fence` class is also very simple. We also need to fill up an initialization structure named `VkFenceCreateInfo`. In this case, we can set (through a constructor argument), if the fence should be already signaled when created or not. Besides the cleaning method and the one for getting the handle we have one method called `fenceWait` which waits waits for the fence to be signaled (waits in the CPU the signal raised by the GPU). We have another one named `reset` which resets the fence to unsignaled state by calling the `vkResetFences` function.
+As in the `Semaphore` class, the `Fence` class is also very simple. We also need to fill up an initialization structure named `VkFenceCreateInfo`. In this case, we can set (through a constructor argument), if the fence should be already signaled when created or not. Besides the cleaning method and the one for getting the handle we have one method called `fenceWait` which waits waits for the fence to be signaled (waits in the CPU the signal raised by the GPU). We have another one named `reset` which resets the fence to un-signaled state by calling the `vkResetFences` function.
 
 ![Synchronization](rc05-yuml-02.svg)
 
@@ -385,7 +385,7 @@ which provides additional information.
 
 So then just create as many semaphores and fences as frames in flight an that's all, right? Again is not so easy!. We need to take care with swap chain image presentation.
 We will use a semaphore when submitting the work to a queue to be signaled after all the work has been done. We will use an array of semaphores for that, called
-`renderCompleteSemphs`. When presenting the acquired swap chain image we wil use the proper index `renderCompleteSemphs[i]` when calling the `vkQueuePresentKHR` function
+`renderCompleteSemphs`. When presenting the acquired swap chain image we will use the proper index `renderCompleteSemphs[i]` when calling the `vkQueuePresentKHR` function
 so presentation cannot start until render work has been finished. The issue here is that this will be an asynchronous call that can be processed later on. Imagine that we created as the `renderCompleteSemphs` array is size to contain as many instances as flights in frame, let's say `2` and we will have `3` swap chain images.
 
 - In Frame `#0`:
@@ -403,7 +403,7 @@ so presentation cannot start until render work has been finished. The issue here
     - The issue here is that presentation for Frame `#0` may not have finished, and thus `renderCompleteSemphs[0]` may still be in use. We may have a synchronization issue here.
 
 But, shouldn't fences help us prevent us from this issue? The answer is now, fences will be used when submitting work to a queue. Therefore, if we wait for a fence,
-we wil be sure that previous work associated to the same frame in flight index will have finished. The issue is with presentation, when presenting the swap chain
+we will be sure that previous work associated to the same frame in flight index will have finished. The issue is with presentation, when presenting the swap chain
 image we just only pass a semaphore to wait to be signaled when the render work is finished, but we cannot signal when the presentation will be finished. Therefore, fence
 wait does not know anything about presentation state, The solution for this is to have as many render complete semaphores as swap chain images. The rest of synchronization 
 elements and per-frame elements just need to be sized to the maximum number of flight, because they are concerned to just render activities, presentation is not involved
@@ -489,7 +489,7 @@ Remember that fences are the way to synchronize between GPU and CPU. When we wil
 - *Record commands A*: Once we have passed the fence, we can start recording commands in the command buffer associated to the current frame. But Why having two sets of
 command "A" and "B" ? The reason for that is that we will have commands that do not depend on the specific swap chain image that we need to acquire ("A commands") and
 commands that will perform operations over a specific image view ("B commands"). We can start recording the first step prior to acquiring the swap chain image.
-- *Acquire image*: We need to acquire the next swap chain image which will be used to render. In this chapter we will noy have "A commands" yet however.
+- *Acquire image*: We need to acquire the next swap chain image which will be used to render. In this chapter we will not have "A commands" yet however.
 - *Record commands B*: Already explained.
 - *Submit commands*: Just submit the commands to a graphical queue.
 - *Present Image*.
@@ -621,7 +621,7 @@ public class SwapChain {
 }
 ```
   
-In order to acquire a image we need to call the function `vkAcquireNextImageKHR`. The parameters for this function are:
+In order to acquire an image we need to call the function `vkAcquireNextImageKHR`. The parameters for this function are:
 - `device`: The handle to the Vulkan logical device. 
 - `swapchain`: The handle to the Vulkan swap chain.
 - `timeout`: It specifies the maximum time to get blocked in this call (in nanoseconds). If the value is greater than `0` and we are not able to get an image in that time, we will get a `VK_TIMEOUT` error. In our case, we just want to block indefinitely. 

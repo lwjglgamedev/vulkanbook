@@ -21,10 +21,8 @@ public class EngCfg {
     private String physDeviceName;
     private int requestedImages;
     private boolean shaderRecompilation;
-    private float shadowBias;
     private boolean shadowDebug;
     private int shadowMapSize;
-    private boolean shadowPcf;
     private int ups;
     private boolean vSync;
     private boolean vkValidate;
@@ -50,8 +48,6 @@ public class EngCfg {
             maxDescs = Integer.parseInt(props.getOrDefault("maxDescs", 1000).toString());
             defaultTexturePath = props.getProperty("defaultTexturePath");
             fxaa = Boolean.parseBoolean(props.getOrDefault("fxaa", true).toString());
-            shadowPcf = Boolean.parseBoolean(props.getOrDefault("shadowPcf", false).toString());
-            shadowBias = Float.parseFloat(props.getOrDefault("shadowBias", 0.00005f).toString());
             shadowMapSize = Integer.parseInt(props.getOrDefault("shadowMapSize", 2048).toString());
             shadowDebug = Boolean.parseBoolean(props.getOrDefault("shadowDebug", false).toString());
             maxJointsMatricesLists = Integer.parseInt(props.getOrDefault("maxJointsMatricesLists", 100).toString());
@@ -92,10 +88,6 @@ public class EngCfg {
         return requestedImages;
     }
 
-    public float getShadowBias() {
-        return shadowBias;
-    }
-
     public int getShadowMapSize() {
         return shadowMapSize;
     }
@@ -134,10 +126,6 @@ public class EngCfg {
 
     public boolean isShadowDebug() {
         return shadowDebug;
-    }
-
-    public boolean isShadowPcf() {
-        return shadowPcf;
     }
 
     public boolean isVkValidate() {

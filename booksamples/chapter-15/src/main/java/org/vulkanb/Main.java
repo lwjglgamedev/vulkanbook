@@ -54,14 +54,17 @@ public class Main implements IGameLogic {
         List<MaterialData> materials = new ArrayList<>(ModelLoader.loadMaterials("resources/models/sponza/Sponza_mat.json"));
         materials.addAll(ModelLoader.loadMaterials("resources/models/cube/cube_mat.json"));
 
-        scene.getAmbientLight().set(0.2f, 0.2f, 0.2f);
+        scene.getAmbientLightColor().set(1.0f, 1.0f, 1.0f);
+        scene.setAmbientLightIntensity(0.2f);
+
         List<Light> lights = new ArrayList<>();
-        dirLight = new Light(new Vector4f(0.0f, -1.0f, 0.0f, 0.0f), new Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+        dirLight = new Light(new Vector3f(0.0f, -1.0f, 0.0f), true, 1.0f, new Vector3f(1.0f, 1.0f, 1.0f));
         lights.add(dirLight);
 
-        pointLight = new Light(new Vector4f(5.0f, 3.4f, 0.9f, 1.0f), new Vector4f(0.0f, 1.0f, 0.0f, 1.0f));
+        pointLight = new Light(new Vector3f(5.0f, 3.4f, 1.2f), false, 1.0f, new Vector3f(0.0f, 1.0f, 0.0f));
         lights.add(pointLight);
-        Vector4f pointPos = pointLight.position();
+        Vector3f pointPos = pointLight.getPosition();
+
         lightEntity.setPosition(pointPos.x, pointPos.y, pointPos.z);
         lightEntity.updateModelMatrix();
 
@@ -110,14 +113,14 @@ public class Main implements IGameLogic {
 
         move = move * 0.1f;
         if (ki.keyPressed(GLFW_KEY_1)) {
-            pointLight.position().y += move;
+            pointLight.getPosition().y += move;
         } else if (ki.keyPressed(GLFW_KEY_2)) {
-            pointLight.position().y -= move;
+            pointLight.getPosition().y -= move;
         }
         if (ki.keyPressed(GLFW_KEY_3)) {
-            pointLight.position().z -= move;
+            pointLight.getPosition().z -= move;
         } else if (ki.keyPressed(GLFW_KEY_4)) {
-            pointLight.position().z += move;
+            pointLight.getPosition().z += move;
         }
 
         MouseInput mi = window.getMouseInput();
@@ -140,7 +143,7 @@ public class Main implements IGameLogic {
 
     @Override
     public void update(EngCtx engCtx, long diffTimeMillis) {
-        Vector4f pointPos = pointLight.position();
+        Vector3f pointPos = pointLight.getPosition();
         lightEntity.setPosition(pointPos.x, pointPos.y, pointPos.z);
         lightEntity.updateModelMatrix();
     }
@@ -148,11 +151,10 @@ public class Main implements IGameLogic {
     private void updateDirLight() {
         float zValue = (float) Math.cos(Math.toRadians(lightAngle));
         float yValue = (float) Math.sin(Math.toRadians(lightAngle));
-        Vector4f lightDirection = dirLight.position();
+        Vector3f lightDirection = dirLight.getPosition();
         lightDirection.x = 0;
         lightDirection.y = yValue;
         lightDirection.z = zValue;
         lightDirection.normalize();
-        lightDirection.w = 0.0f;
     }
 }

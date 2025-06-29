@@ -16,33 +16,15 @@ public class LightSpecConsts {
 
     public LightSpecConsts() {
         var engCfg = EngCfg.getInstance();
-        data = MemoryUtil.memAlloc(VkUtils.INT_SIZE * 3 + VkUtils.FLOAT_SIZE);
+        data = MemoryUtil.memAlloc(VkUtils.INT_SIZE * 2);
         data.putInt(Scene.SHADOW_MAP_CASCADE_COUNT);
-        data.putInt(engCfg.isShadowPcf() ? 1 : 0);
-        data.putFloat(engCfg.getShadowBias());
         data.putInt(engCfg.isShadowDebug() ? 1 : 0);
         data.flip();
 
-        specEntryMap = VkSpecializationMapEntry.calloc(4);
+        specEntryMap = VkSpecializationMapEntry.calloc(2);
         int offset = 0;
         int pos = 0;
         int size = VkUtils.INT_SIZE;
-        specEntryMap.get(pos)
-                .constantID(pos)
-                .size(size)
-                .offset(offset);
-        offset += size;
-        pos++;
-
-        size = VkUtils.INT_SIZE;
-        specEntryMap.get(pos)
-                .constantID(pos)
-                .size(size)
-                .offset(offset);
-        offset += size;
-        pos++;
-
-        size = VkUtils.FLOAT_SIZE;
         specEntryMap.get(pos)
                 .constantID(pos)
                 .size(size)

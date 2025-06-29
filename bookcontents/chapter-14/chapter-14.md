@@ -97,7 +97,7 @@ As you can see, we initialize an array of `Attachment` instances which is compos
 
 The class provides methods to access the attachments, to get the size of them, to free the resources and to get the reference to the depth attachment.
 
-We will need to sample the attachments where whe render the scene, therefore we will modify the `Attachment` class to support this:
+We will need to sample the attachments where we render the scene, therefore we will modify the `Attachment` class to support this:
 
 ```java
 public class Attachment {
@@ -614,7 +614,7 @@ void main() {
 
 By now we will not apply lighting, we will just return the albedo color associated to the current coordinates sampling the attachment that contains albedo information.
 
-Finally, we just need to update the `Render` class to use the the new render class:
+Finally, we just need to update the `Render` class to use the new render class:
 
 ```java
 public class Render {

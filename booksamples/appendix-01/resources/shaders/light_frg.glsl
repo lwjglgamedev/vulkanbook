@@ -1,18 +1,17 @@
 #version 450
-#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_scalar_block_layout: require
 
 // CREDITS: Most of the functions here have been obtained from this link: https://github.com/SaschaWillems/Vulkan
 // developed by Sascha Willems, https://twitter.com/JoeyDeVriez, and licensed under the terms of the MIT License (MIT)
 
 layout (constant_id = 0) const int SHADOW_MAP_CASCADE_COUNT = 3;
-layout (constant_id = 1) const int USE_PCF = 0;
-layout (constant_id = 2) const float BIAS = 0.0005;
-layout (constant_id = 3) const int DEBUG_SHADOWS = 0;
+layout (constant_id = 1) const int DEBUG_SHADOWS = 0;
 const float PI = 3.14159265359;
-const float SHADOW_FACTOR = 0.25;
 
 struct Light {
-    vec4 position;
+    vec3 position;
+    uint directional;
+    float intensity;
     vec3 color;
 };
 struct CascadeShadow {
@@ -38,108 +37,127 @@ layout(set = 2, binding = 0) readonly buffer Shadows {
 } shadows;
 layout(scalar, set = 3, binding = 0) uniform SceneInfo {
     vec3 camPos;
+    float ambientLightIntensity;
     vec3 ambientLightColor;
     uint numLights;
     mat4 viewMatrix;
 } sceneInfo;
 
-float textureProj(vec4 shadowCoord, vec2 offset, uint cascadeIndex, float bias)
-{
-    float shadow = 1.0;
+float chebyshevUpperBound(vec2 moments, float t) {
+    // Surface is fully lit if the current fragment is before the light occluder
+    if (t <= moments.x)
+    return 1.0;
 
-    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0) {
-        float dist = texture(shadowSampler, vec3(shadowCoord.st + offset, cascadeIndex)).r;
-        if (shadowCoord.w > 0 && dist < shadowCoord.z - bias) {
-            shadow = SHADOW_FACTOR;
-        }
-    }
-    return shadow;
+    // Compute variance
+    float variance = moments.y - (moments.x * moments.x);
+    variance = max(variance, 0.00002); // Small epsilon to avoid divide by zero
+
+    // Compute probabilistic upper bound
+    float d = t - moments.x;
+    float p_max = variance / (variance + d * d);
+
+    // Reduce light bleeding
+    p_max = smoothstep(0.2, 1.0, p_max);
+
+    return p_max;
 }
 
-float filterPCF(vec4 sc, uint cascadeIndex, float bias)
-{
-    ivec2 texDim = textureSize(shadowSampler, 0).xy;
-    float scale = 0.75;
-    float dx = scale * 1.0 / float(texDim.x);
-    float dy = scale * 1.0 / float(texDim.y);
-
-    float shadowFactor = 0.0;
-    int count = 0;
-    int range = 2;
-
-    for (int x = -range; x <= range; x++) {
-        for (int y = -range; y <= range; y++) {
-            shadowFactor += textureProj(sc, vec2(dx*x, dy*y), cascadeIndex, bias);
-            count++;
-        }
-    }
-    return shadowFactor / count;
-}
-
-float calcShadow(vec4 worldPosition, uint cascadeIndex, float bias)
-{
+float calcVisibility(vec4 worldPosition, uint cascadeIndex) {
     vec4 shadowMapPosition = shadows.cascadeshadows[cascadeIndex].projViewMatrix * worldPosition;
 
-    float shadow = 1.0;
-    vec4 shadowCoord = shadowMapPosition / shadowMapPosition.w;
-    shadowCoord.x = shadowCoord.x * 0.5 + 0.5;
-    shadowCoord.y = (-shadowCoord.y) * 0.5 + 0.5;
+    vec2 uv = vec2(shadowMapPosition.x * 0.5 + 0.5, (-shadowMapPosition.y) * 0.5 + 0.5);
+    float depth = shadowMapPosition.z;
+    vec2 moments = texture(shadowSampler, vec3(uv, cascadeIndex)).rg;
 
-    if (USE_PCF == 1) {
-        shadow = filterPCF(shadowCoord, cascadeIndex, bias);
-    } else {
-        shadow = textureProj(shadowCoord, vec2(0, 0), cascadeIndex, bias);
-    }
-    return shadow;
+    float visibility = chebyshevUpperBound(moments, depth);
+    return visibility;
 }
 
-float distributionGGX(float dotNH, float roughness)
-{
-    float alpha  = roughness * roughness;
-    float alpha2 = alpha * alpha;
-	float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-	return (alpha2)/(PI * denom*denom);
+float distributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float nom = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return nom / denom;
 }
 
-float geometrySchlickGGX(float dotNL, float dotNV, float roughness)
-{
-	float r = (roughness + 1.0);
-	float k = (r*r) / 8.0;
-	float GL = dotNL / (dotNL * (1.0 - k) + k);
-	float GV = dotNV / (dotNV * (1.0 - k) + k);
-	return GL * GV;
+float geometrySchlickGGX(float NdotV, float roughness) {
+    float r = (roughness + 1.0);
+    float k = (r * r) / 8.0;
+
+    float nom = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return nom / denom;
 }
 
-vec3 fresnelSchlick(vec3 albedo, float cosTheta, float metallic)
-{
-	vec3 F0 = mix(vec3(0.04), albedo, metallic);
-	vec3 F = F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-	return F;
+float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = geometrySchlickGGX(NdotV, roughness);
+    float ggx1 = geometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
 }
 
-vec3 BRDF(vec3 albedo, vec3 lightColor, vec3 L, vec3 V, vec3 N, float metallic, float roughness)
-{
-	vec3 H = normalize (V + L);
-	float dotNV = clamp(dot(N, V), 0.0, 1.0);
-	float dotNL = clamp(dot(N, L), 0.0, 1.0);
-	float dotLH = clamp(dot(L, H), 0.0, 1.0);
-	float dotNH = clamp(dot(N, H), 0.0, 1.0);
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 
-	vec3 color = vec3(0.0);
+vec3 calculatePointLight(Light light, vec3 worldPos, vec3 V, vec3 N, vec3 F0, vec3 albedo, float metallic, float roughness) {
+    vec3 tmpSub = light.position - worldPos;
+    vec3 L = normalize(tmpSub - worldPos);
+    vec3 H = normalize(V + L);
 
-	if (dotNL > 0.0 && dotNV > 0.0)
-	{
-		roughness = max(0.05, roughness);
-		float D   = distributionGGX(dotNH, roughness);
-		float G   = geometrySchlickGGX(dotNL, dotNV, roughness);
-		vec3 F    = fresnelSchlick(albedo, dotNV, metallic);
+    // Calculate distance and attenuation
+    float distance = length(tmpSub);
+    float attenuation = 1.0 / (distance * distance);
+    float intensity = 10.0f;
+    vec3 radiance = light.color * light.intensity * attenuation;
 
-		vec3 spec = D * F * G / (4.0 * dotNL * dotNV);
+    // Cook-Torrance BRDF
+    float NDF = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-		color += spec * dotNL * lightColor;
-	}
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
 
-	return color;
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+    return (kD * albedo / PI + specular) * radiance * NdotL;
+}
+
+vec3 calculateDirectionalLight(Light light, vec3 V, vec3 N, vec3 F0, vec3 albedo, float metallic, float roughness) {
+    vec3 L = normalize(-light.position);
+    vec3 H = normalize(V + L);
+
+    vec3 radiance = light.color * light.intensity;
+
+    // Cook-Torrance BRDF
+    float NDF = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
+
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+
+    float NdotL = max(dot(N, L), 0.0);
+    return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 
 void main() {
@@ -158,27 +176,6 @@ void main() {
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo, metallic);
 
-    vec3 Lo = vec3(0.0);
-    float bias = BIAS;
-    for (uint i = 0U; i < sceneInfo.numLights; i++) {
-        Light light = lights.lights[i];
-        // calculate per-light radiance
-        vec3 L;
-        float attenuation;
-        if (light.position.w == 0) {
-            // Directional
-            L = normalize(-light.position.xyz);
-            attenuation = 1.0;
-            bias = max(BIAS * 5 * (1.0 - dot(N, L)), BIAS);
-        } else {
-            vec3 tmpSub = light.position.xyz - worldPos;
-            L = normalize(tmpSub);
-            float distance = length(tmpSub);
-            attenuation = 1.0 / (distance * distance);
-        }
-        Lo += BRDF(albedo, light.color.rgb * attenuation, L, V, N, metallic, roughness);
-    }
-
     uint cascadeIndex = 0;
     vec4 viewPos = sceneInfo.viewMatrix * worldPosW;
     for (uint i = 0; i < SHADOW_MAP_CASCADE_COUNT - 1; ++i) {
@@ -186,31 +183,34 @@ void main() {
             cascadeIndex = i + 1;
         }
     }
+    float shadow = calcVisibility(vec4(worldPos, 1), cascadeIndex);
 
-    float shadowFactor = calcShadow(vec4(worldPos, 1), cascadeIndex, bias);
-
-    vec3 ambient = sceneInfo.ambientLightColor.rgb * albedo;
-    vec3 color = ambient + Lo;
-
-    if ( shadowFactor < 0.3) {
-        shadowFactor *= shadowFactor;
+    vec3 Lo = vec3(0.0);
+    for (uint i = 0; i < sceneInfo.numLights; i++) {
+        Light light = lights.lights[i];
+        if (light.directional == 1) {
+            Lo += calculateDirectionalLight(light, V, N, F0, albedo, metallic, roughness);
+        } else {
+            Lo += calculatePointLight(light, worldPos, V, N, F0, albedo, metallic, roughness);
+        }
     }
-    outFragColor = vec4(color * shadowFactor, 1.0);
+    vec3 ambient = sceneInfo.ambientLightColor * albedo * sceneInfo.ambientLightIntensity;
+    outFragColor = vec4(Lo * shadow + ambient, 1.0f);
 
     if (DEBUG_SHADOWS == 1) {
         switch (cascadeIndex) {
             case 0:
-            outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
-            break;
+                outFragColor.rgb *= vec3(1.0f, 0.25f, 0.25f);
+                break;
             case 1:
-            outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
-            break;
+                outFragColor.rgb *= vec3(0.25f, 1.0f, 0.25f);
+                break;
             case 2:
-            outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
-            break;
-            default :
-            outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
-            break;
+                outFragColor.rgb *= vec3(0.25f, 0.25f, 1.0f);
+                break;
+            default:
+                outFragColor.rgb *= vec3(1.0f, 1.0f, 0.25f);
+                break;
         }
     }
 }

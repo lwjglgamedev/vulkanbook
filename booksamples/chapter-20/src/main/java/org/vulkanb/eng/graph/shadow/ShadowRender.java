@@ -16,6 +16,7 @@ import static org.lwjgl.vulkan.VK13.*;
 public class ShadowRender {
 
     public static final int DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
+    private static final int ATT_FORMAT = VK_FORMAT_R32G32_SFLOAT;
     private static final String DESC_ID_MAT = "SHADOW_DESC_ID_MAT";
     private static final String DESC_ID_PRJ = "SHADOW_DESC_ID_PRJ";
     private static final String DESC_ID_TEXT = "SHADOW_SCN_DESC_ID_TEXT";
@@ -28,7 +29,10 @@ public class ShadowRender {
     private static final String VERTEX_SHADER_FILE_SPV = VERTEX_SHADER_FILE_GLSL + ".spv";
 
     private final CascadeShadows[] cascadeShadows;
+    private final VkClearValue clrValueColor;
     private final VkClearValue clrValueDepth;
+    private final Attachment colorAttachment;
+    private final VkRenderingAttachmentInfo.Buffer colorAttachmentInfo;
     private final Attachment depthAttachment;
     private final VkRenderingAttachmentInfo depthAttachmentInfo;
     private final DescSetLayout descLayoutFrgStorage;
@@ -43,12 +47,19 @@ public class ShadowRender {
     public ShadowRender(VkCtx vkCtx) {
         clrValueDepth = VkClearValue.calloc();
         clrValueDepth.color(c -> c.float32(0, 1.0f));
+
+        clrValueColor = VkClearValue.calloc();
+        clrValueColor.color(c -> c.float32(0, 1.0f).float32(1, 1.0f));
+
         depthAttachment = createDepthAttachment(vkCtx);
         depthAttachmentInfo = createDepthAttachmentInfo(depthAttachment, clrValueDepth);
 
+        colorAttachment = createColorAttachment(vkCtx);
+        colorAttachmentInfo = createColorAttachmentInfo(colorAttachment, clrValueColor);
+
         pushConstBuff = MemoryUtil.memAlloc(PUSH_CONSTANTS_SIZE);
 
-        renderingInfo = createRenderInfo(depthAttachmentInfo);
+        renderingInfo = createRenderInfo(colorAttachmentInfo, depthAttachmentInfo);
         ShaderModule[] shaderModules = createShaderModules(vkCtx);
 
         uniformGeomDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -76,6 +87,22 @@ public class ShadowRender {
         }
     }
 
+    private static Attachment createColorAttachment(VkCtx vkCtx) {
+        int shadowMapSize = EngCfg.getInstance().getShadowMapSize();
+        return new Attachment(vkCtx, shadowMapSize, shadowMapSize,
+                ATT_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, Scene.SHADOW_MAP_CASCADE_COUNT);
+    }
+
+    private static VkRenderingAttachmentInfo.Buffer createColorAttachmentInfo(Attachment srcAttachment, VkClearValue clearValue) {
+        return VkRenderingAttachmentInfo.calloc(1)
+                .sType$Default()
+                .imageView(srcAttachment.getImageView().getVkImageView())
+                .imageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+                .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
+                .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
+                .clearValue(clearValue);
+    }
+
     private static Attachment createDepthAttachment(VkCtx vkCtx) {
         int shadowMapSize = EngCfg.getInstance().getShadowMapSize();
         return new Attachment(vkCtx, shadowMapSize, shadowMapSize,
@@ -88,13 +115,13 @@ public class ShadowRender {
                 .imageView(depthAttachment.getImageView().getVkImageView())
                 .imageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                 .loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR)
-                .storeOp(VK_ATTACHMENT_STORE_OP_STORE)
+                .storeOp(VK_ATTACHMENT_STORE_OP_DONT_CARE)
                 .clearValue(clearValue);
     }
 
     private static Pipeline createPipeline(VkCtx vkCtx, ShaderModule[] shaderModules, DescSetLayout[] descSetLayouts) {
         var vtxBuffStruct = new EmptyVtxBuffStruct();
-        var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(), new int[]{})
+        var buildInfo = new PipelineBuildInfo(shaderModules, vtxBuffStruct.getVi(), new int[]{ATT_FORMAT})
                 .setDepthFormat(DEPTH_FORMAT)
                 .setPushConstRanges(
                         new PushConstRange[]{
@@ -102,24 +129,24 @@ public class ShadowRender {
                         })
                 .setDescSetLayouts(descSetLayouts)
                 .setDescSetLayouts(descSetLayouts)
-                .setUseBlend(true)
                 .setDepthClamp(vkCtx.getDevice().getDepthClamp());
         var pipeline = new Pipeline(vkCtx, buildInfo);
         vtxBuffStruct.cleanup();
         return pipeline;
     }
 
-    private static VkRenderingInfo createRenderInfo(VkRenderingAttachmentInfo depthAttachments) {
-        VkRenderingInfo result = VkRenderingInfo.calloc();
+    private static VkRenderingInfo createRenderInfo(VkRenderingAttachmentInfo.Buffer colorAttachmentInfo,
+                                                    VkRenderingAttachmentInfo depthAttachments) {
+        var result = VkRenderingInfo.calloc().sType$Default();
         try (var stack = MemoryStack.stackPush()) {
             int shadowMapSize = EngCfg.getInstance().getShadowMapSize();
             VkExtent2D extent = VkExtent2D.calloc(stack);
             extent.width(shadowMapSize);
             extent.height(shadowMapSize);
             var renderArea = VkRect2D.calloc(stack).extent(extent);
-            result.sType$Default()
-                    .renderArea(renderArea)
+            result.renderArea(renderArea)
                     .layerCount(Scene.SHADOW_MAP_CASCADE_COUNT)
+                    .pColorAttachments(colorAttachmentInfo)
                     .pDepthAttachment(depthAttachments);
         }
         return result;
@@ -148,7 +175,10 @@ public class ShadowRender {
         renderingInfo.free();
         depthAttachmentInfo.free();
         depthAttachment.cleanup(vkCtx);
+        colorAttachmentInfo.free();
+        colorAttachment.cleanup(vkCtx);
         MemoryUtil.memFree(pushConstBuff);
+        clrValueColor.free();
         clrValueDepth.free();
     }
 
@@ -156,8 +186,8 @@ public class ShadowRender {
         return cascadeShadows[currentFrame];
     }
 
-    public Attachment getDepthAttachment() {
-        return depthAttachment;
+    public Attachment getShadowAttachment() {
+        return colorAttachment;
     }
 
     public void loadMaterials(VkCtx vkCtx, MaterialsCache materialsCache, TextureCache textureCache) {
@@ -181,12 +211,11 @@ public class ShadowRender {
 
             VkCommandBuffer cmdHandle = cmdBuffer.getVkCommandBuffer();
 
-            VkUtils.imageBarrier(stack, cmdHandle, depthAttachment.getImage().getVkImage(),
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-                    VK_ACCESS_2_NONE, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                    VK_IMAGE_ASPECT_DEPTH_BIT);
+            VkUtils.imageBarrier(stack, cmdHandle, colorAttachment.getImage().getVkImage(),
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_ACCESS_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT);
 
             vkCmdBeginRendering(cmdHandle, renderingInfo);
 

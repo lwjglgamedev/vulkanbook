@@ -66,13 +66,13 @@ public class LightRender {
 
         storageDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        long buffSize = (long) (VkUtils.VEC4_SIZE + VkUtils.VEC3_SIZE) * Scene.MAX_LIGHTS;
+        long buffSize = (long) (VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE + VkUtils.FLOAT_SIZE) * Scene.MAX_LIGHTS;
         lightsBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, DESC_ID_LIGHTS, storageDescSetLayout);
 
         sceneDescSetLayout = new DescSetLayout(vkCtx, new DescSetLayout.LayoutInfo(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, 1,
                 VK_SHADER_STAGE_FRAGMENT_BIT));
-        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.INT_SIZE + VkUtils.MAT4X4_SIZE;
+        buffSize = VkUtils.VEC3_SIZE * 2 + VkUtils.FLOAT_SIZE + VkUtils.INT_SIZE + VkUtils.MAT4X4_SIZE;
         sceneBuffs = VkUtils.createHostVisibleBuffs(vkCtx, buffSize, VkUtils.MAX_IN_FLIGHT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, DESC_ID_SCENE, sceneDescSetLayout);
 
@@ -185,7 +185,7 @@ public class LightRender {
     }
 
     public void render(EngCtx engCtx, VkCtx vkCtx, CmdBuffer cmdBuffer, MrtAttachments mrtAttachments,
-                       Attachment depthAttachment, CascadeShadows cascadeShadows, int currentFrame) {
+                       Attachment shadowAttachment, CascadeShadows cascadeShadows, int currentFrame) {
         try (var stack = MemoryStack.stackPush()) {
             Scene scene = engCtx.scene();
 
@@ -208,11 +208,11 @@ public class LightRender {
                         VK_IMAGE_ASPECT_COLOR_BIT);
             }
 
-            VkUtils.imageBarrier(stack, cmdHandle, depthAttachment.getImage().getVkImage(),
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-                    VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                    VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
-                    VK_IMAGE_ASPECT_DEPTH_BIT);
+            VkUtils.imageBarrier(stack, cmdHandle, shadowAttachment.getImage().getVkImage(),
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT);
 
             updateCascadeShadowMatrices(vkCtx, cascadeShadows, currentFrame);
 
@@ -296,9 +296,13 @@ public class LightRender {
         int numLights = lights != null ? lights.length : 0;
         for (int i = 0; i < numLights; i++) {
             Light light = lights[i];
-            light.position().get(offset, dataBuff);
-            offset += VkUtils.VEC4_SIZE;
-            light.color().get(offset, dataBuff);
+            light.getPosition().get(offset, dataBuff);
+            offset += VkUtils.VEC3_SIZE;
+            dataBuff.putInt(offset, light.isDirectional() ? 1 : 0);
+            offset += VkUtils.INT_SIZE;
+            dataBuff.putFloat(offset, light.getIntensity());
+            offset += VkUtils.FLOAT_SIZE;
+            light.getColor().get(offset, dataBuff);
             offset += VkUtils.VEC3_SIZE;
         }
 
@@ -314,7 +318,10 @@ public class LightRender {
         scene.getCamera().getPosition().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
-        scene.getAmbientLight().get(offset, dataBuff);
+        dataBuff.putFloat(offset, scene.getAmbientLightIntensity());
+        offset += VkUtils.FLOAT_SIZE;
+
+        scene.getAmbientLightColor().get(offset, dataBuff);
         offset += VkUtils.VEC3_SIZE;
 
         Light[] lights = scene.getLights();

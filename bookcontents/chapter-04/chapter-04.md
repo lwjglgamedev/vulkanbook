@@ -168,7 +168,7 @@ If the surface has already defined its extent, we pick that. If it is not define
 ## Swap chain images
 
 We have seen that the last step in `SwapChain` constructor is to create image views. What are image views? We would need images to render to, but in the specific case of
-the swap chain these images have already been created when we created the swap chain. Therefore, why not just retrieve them ? Why we need image views?
+the swap chain these images have already been created when we created the swap chain. Therefore, why not just retrieve them? Why we need image views?
 In Vulkan we cannot just use the images, we need an indirect element to access them. This element is called Image View and basically it states how the image will be accessed. Before going on, it is important to precisely define the concepts involved in handling images in Vulkan. In order to have an image that can be accessed by shaders in Vulkan we need:
 
 - A `Buffer` which contains the raw data of the image, its contents. A `Buffer` is just a linear array of data.
@@ -209,9 +209,9 @@ public class SwapChain {
 }
 ```
 
-The first thing we do is retrieve the **actual** number of images that our swap chain has. But wait, we had already specified this when we created the swap chain, why we do need to retrieve that again? The answer is that we created the swap chain with a desired number of images, but the Vulkan driver may have returned a different number. This is why we need to call the `vkGetSwapchainImagesKHR` function to retrieve the number of images. This is whey we used the length of the returned image views to the the `numImages` attribute.
+The first thing we do is retrieve the **actual** number of images that our swap chain has. But wait, we had already specified this when we created the swap chain, why we do need to retrieve that again? The answer is that we created the swap chain with a desired number of images, but the Vulkan driver may have returned a different number. This is why we need to call the `vkGetSwapchainImagesKHR` function to retrieve the number of images. This is whey we used the length of the returned image views to the `numImages` attribute.
 After that, we call that same function again to retrieve the handles to the images themselves.
-Now we iterate over the images to create new `ImageView` instances. The `ImageView` class encapsulates the creation and disposal of Vulkan image views. Since the parameters to properly set up image views can be quite lengthy, it defines a build helper class, as an inner class, using a fluent like API style. This way we will increase readability of the code tha constructs images, and we will be able to add support for new parameters without breaking existing code.
+Now we iterate over the images to create new `ImageView` instances. The `ImageView` class encapsulates the creation and disposal of Vulkan image views. Since the parameters to properly set up image views can be quite lengthy, it defines a build helper class, as an inner class, using a fluent like API style. This way we will increase readability of the code that constructs images, and we will be able to add support for new parameters without breaking existing code.
 
 ```java
 ...
@@ -310,7 +310,7 @@ In order to create a Image View we need to fill up a `VkImageViewCreateInfo` str
 - `format`: The format of the image. In this case we just use the format of the underlying swap chain images.
 - `subresourceRange`: This parameter allow us to select a specific range of the underlying image. We can select a specific set of mipmap levels or layers (in the case of array of layers). In this case, we can control the maximum mipmap level (through the `mipLevels`argument), and we stick to 1 layer. Regarding the aspects, for this specific case, we will get the color aspect (for example there are some other aspect for depth images).
 
-With the `VkImageViewCreateInfo` structure filled up, we just need to call the `vkCreateImageView` to get a handle to the the Image View. The rest of the class is just some *getters* to access main attributes and the `cleanup` method to free the resources.
+With the `VkImageViewCreateInfo` structure filled up, we just need to call the `vkCreateImageView` to get a handle to the Image View. The rest of the class is just some *getters* to access main attributes and the `cleanup` method to free the resources.
 
 ```java
 ...
@@ -335,7 +335,7 @@ public class ImageView {
 }
 ```
 
-Going back to the `Swapchain`class we need also to create a `cleanup` method to free the resources and som other *getters*:
+Going back to the `Swapchain`class we need also to create a `cleanup` method to free the resources and some other *getters*:
 ```java
 public class SwapChain {
     ...
@@ -385,7 +385,7 @@ public class VkCtx {
 }
 ```
 
-We have also modified also the `EngineProperties` class to read a new property to configure the usage of vsync and to define de requested number of images for the swap chain:
+We have also modified also the `EngineProperties` class to read a new property to configure the usage of vsync and to define the requested number of images for the swap chain:
 
 ```java
 public class EngCfg {
@@ -422,6 +422,6 @@ vsync=true
 ...
 ```
 
-Ant that is all by now, we are still getting a plain white window, but soon we will be abele to render something.
+Ant that is all by now, we are still getting a plain white window, but soon we will be able to render something.
 
 [Next chapter](../chapter-05/chapter-05.md)

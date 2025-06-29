@@ -126,7 +126,7 @@ public class VkBuffer {
 }
 ```
 
-The `allocation` attribute is a handle to the allocated memory, which will be used later on to refer to that block and to perform the map and unmap operations. This removes the need to get track of the allocated size and the memory handle.Let's review the changes in the constructor:
+The `allocation` attribute is a handle to the allocated memory, which will be used later on to refer to that block and to perform the map and unmap operations. This removes the need to get track of the allocated size and the memory handle. Let's review the changes in the constructor:
 
 ```java
 public class VkBuffer {
