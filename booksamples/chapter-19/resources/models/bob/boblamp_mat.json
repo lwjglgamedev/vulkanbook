@@ -1,7 +1,7 @@
 [
   {
     "id": "boblamp-mat-0",
-    "texture_path": "resources\\models\\bob/guard1_body.png",
+    "texture_path": "resources/models/bob/guard1_body.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {
@@ -15,7 +15,7 @@
   },
   {
     "id": "boblamp-mat-1",
-    "texture_path": "resources\\models\\bob/guard1_face.png",
+    "texture_path": "resources/models/bob/guard1_face.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {
@@ -29,7 +29,7 @@
   },
   {
     "id": "boblamp-mat-2",
-    "texture_path": "resources\\models\\bob/guard1_helmet.png",
+    "texture_path": "resources/models/bob/guard1_helmet.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {
@@ -43,7 +43,7 @@
   },
   {
     "id": "boblamp-mat-3",
-    "texture_path": "resources\\models\\bob/iron_grill.png",
+    "texture_path": "resources/models/bob/iron_grill.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {
@@ -57,7 +57,7 @@
   },
   {
     "id": "boblamp-mat-4",
-    "texture_path": "resources\\models\\bob/round_grill.png",
+    "texture_path": "resources/models/bob/round_grill.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {
@@ -71,7 +71,7 @@
   },
   {
     "id": "boblamp-mat-5",
-    "texture_path": "resources\\models\\bob/guard1_body.png",
+    "texture_path": "resources/models/bob/guard1_body.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {

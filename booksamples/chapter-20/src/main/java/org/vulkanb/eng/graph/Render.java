@@ -147,27 +147,27 @@ public class Render {
         cmdBuffer.endRecording();
     }
 
-    public void render(EngCtx engCtx, int currentRenderFrame) {
+    public void render(EngCtx engCtx, int currentFrame) {
         SwapChain swapChain = vkCtx.getSwapChain();
 
-        waitForFence(currentRenderFrame);
+        waitForFence(currentFrame);
 
-        var cmdPool = cmdPools[currentRenderFrame];
-        var cmdBuffer = cmdBuffers[currentRenderFrame];
+        var cmdPool = cmdPools[currentFrame];
+        var cmdBuffer = cmdBuffers[currentFrame];
 
         animRender.render(engCtx, vkCtx, modelsCache, animationsCache);
 
         recordingStart(cmdPool, cmdBuffer);
 
-        scnRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentRenderFrame);
-        shadowRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentRenderFrame);
+        scnRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentFrame);
+        shadowRender.render(engCtx, vkCtx, cmdBuffer, globalBuffers, currentFrame);
         lightRender.render(engCtx, vkCtx, cmdBuffer, scnRender.getMrtAttachments(), shadowRender.getShadowAttachment(),
-                shadowRender.getCascadeShadows(currentRenderFrame), currentRenderFrame);
+                shadowRender.getCascadeShadows(currentFrame), currentFrame);
         postRender.render(vkCtx, cmdBuffer, lightRender.getAttachment());
-        guiRender.render(vkCtx, cmdBuffer, currentRenderFrame, postRender.getAttachment());
+        guiRender.render(vkCtx, cmdBuffer, currentFrame, postRender.getAttachment());
 
         int imageIndex;
-        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentRenderFrame])) < 0) {
+        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
             resize(engCtx);
             return;
         }
@@ -176,7 +176,7 @@ public class Render {
 
         recordingStop(cmdBuffer);
 
-        submit(cmdBuffer, currentRenderFrame, imageIndex);
+        submit(cmdBuffer, currentFrame, imageIndex);
 
         resize = swapChain.presentImage(presentQueue, renderCompleteSemphs[imageIndex], imageIndex);
     }

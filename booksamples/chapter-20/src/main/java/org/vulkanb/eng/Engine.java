@@ -1,5 +1,6 @@
 package org.vulkanb.eng;
 
+import org.tinylog.Logger;
 import org.vulkanb.eng.graph.Render;
 import org.vulkanb.eng.graph.vk.VkUtils;
 import org.vulkanb.eng.scene.Scene;
@@ -10,11 +11,10 @@ import java.util.concurrent.*;
 
 public class Engine {
 
-    private static final int WORKER_COUNT = 2;
+    private static final int EXECUTOR_THREADS = 1;
     private final EngCtx engCtx;
     private final ExecutorService executor;
     private final IGameLogic gameLogic;
-    private final Phaser phaser = new Phaser(1);
     private final Render render;
     private final Callable<Void> renderTask;
     private int currentRenderFrame;
@@ -27,18 +27,26 @@ public class Engine {
         render = new Render(engCtx);
         InitData initData = gameLogic.init(engCtx);
         render.init(engCtx, initData);
-        executor = Executors.newFixedThreadPool(WORKER_COUNT);
+        executor = Executors.newFixedThreadPool(EXECUTOR_THREADS);
         renderTask = () -> {
             render.render(engCtx, currentUpdateFrame);
-            phaser.arriveAndDeregister();
             return null;
         };
         currentUpdateFrame = 1;
         currentRenderFrame = 0;
+
+        for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
+            render.updateGlobalBuffers(engCtx, i);
+        }
     }
 
     private void cleanup() {
-        executor.shutdownNow();
+        try {
+            executor.shutdownNow();
+            executor.awaitTermination(60, TimeUnit.SECONDS);
+        } catch (InterruptedException ie) {
+            Logger.error("Executor interrupted", ie);
+        }
         gameLogic.cleanup();
         render.cleanup();
         engCtx.cleanup();
@@ -52,15 +60,11 @@ public class Engine {
 
         long updateTime = initialTime;
         Window window = engCtx.window();
-        boolean firstExec = true;
         while (!window.shouldClose()) {
             long now = System.currentTimeMillis();
             deltaUpdate += (now - initialTime) / timeU;
 
-            if (!firstExec) {
-                phaser.register();
-                executor.submit(renderTask);
-            }
+            var future = executor.submit(renderTask);
 
             window.pollEvents();
             gameLogic.input(engCtx, now - initialTime);
@@ -74,17 +78,22 @@ public class Engine {
             }
             render.updateGlobalBuffers(engCtx, currentUpdateFrame);
 
-            if (!firstExec) {
-                phaser.arriveAndAwaitAdvance();
-            }
+            waitTasks(future);
 
             currentUpdateFrame = (currentUpdateFrame + 1) % VkUtils.MAX_IN_FLIGHT;
             currentRenderFrame = (currentRenderFrame + 1) % VkUtils.MAX_IN_FLIGHT;
 
             initialTime = now;
-            firstExec = false;
         }
 
         cleanup();
+    }
+
+    private void waitTasks(Future<Void> future) {
+        try {
+            future.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
