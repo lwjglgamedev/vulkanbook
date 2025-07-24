@@ -196,7 +196,6 @@ public class PostRender {
         renderInfo.free();
         colorAttachment.cleanup(vkCtx);
         colorAttachmentInfo.free();
-        
         colorAttachment = createColorAttachment(vkCtx);
         colorAttachmentInfo = createColorAttachmentInfo(colorAttachment, clrValueColor);
         renderInfo = createRenderInfo(colorAttachment, colorAttachmentInfo);

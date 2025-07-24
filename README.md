@@ -16,7 +16,7 @@ We will use [LWJGL](http://www.lwjgl.org/) as the Java library which provides th
 > - New Vulkan functions (1.3)
 > - ...
 >
-> Therefore, Vulkan 1.3 is required. If you want to access previous version, just go the [legacy branch](https://github.com/lwjglgamedev/vulkanbook/tree/master).
+> Therefore, Vulkan 1.3 is required. If you want to access previous version, just go the [legacy branch](https://github.com/lwjglgamedev/vulkanbook/tree/legacy).
 
 ## Book Code
 
