@@ -418,7 +418,7 @@ public class Render {
     private final CmdPool[] cmdPools;
     private final Fence[] fences;
     private final Queue.GraphicsQueue graphQueue;
-    private final Semaphore[] imageAqSemphs;
+    private final Semaphore[] presCompleteSemphs;
     private final Queue.PresentQueue presentQueue;
     private final Semaphore[] renderCompleteSemphs;
     private final ScnRender scnRender;
@@ -441,7 +441,7 @@ public class Render {
         for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
             cmdPools[i] = new CmdPool(vkCtx, graphQueue.getQueueFamilyIndex(), false);
             cmdBuffers[i] = new CmdBuffer(vkCtx, cmdPools[i], true, true);
-            imageAqSemphs[i] = new Semaphore(vkCtx);
+            presCompleteSemphs[i] = new Semaphore(vkCtx);
             fences[i] = new Fence(vkCtx, true);
         }
         for (int i = 0; i < numSwapChainImages; i++) {
@@ -456,7 +456,7 @@ public class Render {
         scnRender.cleanup();
 
         Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
-        Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(presCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
         Arrays.asList(fences).forEach(i -> i.cleanup(vkCtx));
         for (int i = 0; i < cmdPools.length; i++) {
             cmdBuffers[i].cleanup(vkCtx, cmdPools[i]);
@@ -520,7 +520,7 @@ public class Render {
 
         recordingStart(cmdPool, cmdBuffer);
 
-        int imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame]);
+        int imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), presCompleteSemphs[currentFrame]);
         if (imageIndex < 0) {
             return;
         }
@@ -547,7 +547,7 @@ The `render` loop performs the following actions:
 - We then call to `recordingStart` which resets the command pool and sets the command buffer in recording mode. Remember that we will not be resetting the command
 buffers but the pool. After this step we could start recording "A commands".
 - In our case, since we do not have "A commands" yet", we just acquire next swap chain image. We will see the implementation later on, but this method returns
-the index of the image acquired (it may not be just the next image index). The `imageAqSemphs` array is the semaphore used to synchronize image acquisition
+the index of the image acquired (it may not be just the next image index). The `presCompleteSemphs` array is the semaphore used to synchronize image acquisition
 When the image is acquired, this semaphore will be signaled. Any operation depending on this image to be acquired, can use this semaphore as a blocking mechanism.
 - If the `acquireNextImage` returns a negative value, this will mean that the operation failed. This could be because the window has been resized. By now, we just return.
 - Then we can record "B commands" which we will do by calling `scnRender.render(vkCtx, cmdBuffer, imageIndex);`
@@ -569,7 +569,7 @@ public class Render {
             VkSemaphoreSubmitInfo.Buffer waitSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
                     .sType$Default()
                     .stageMask(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
-                    .semaphore(imageAqSemphs[currentFrame].getVkSemaphore());
+                    .semaphore(presCompleteSemphs[currentFrame].getVkSemaphore());
             VkSemaphoreSubmitInfo.Buffer signalSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
                     .sType$Default()
                     .stageMask(VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT)
@@ -589,8 +589,8 @@ since we depend on swap chain image view, we want to make sure that the image ha
 - `signalSemphs`: It holds a list of semaphores that will be signaled when all the commands have finished. Remember that we use semaphores for GPU-GPU synchronization. In this case, we are submitting the semaphore used in the swap chain presentation. This will provoke that the image cannot be presented until the commands have finished, that is, until
 render has finished. This is why we use the `VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT`, all the commands need to have finalized their journey through the pipeline.
 
-Please notice that we have different array sizes for the image acquisition semaphores and the render complete semaphores. Later one (`renderCompleteSemphs`) will need to be
-in accessed with the swap chain acquire image index, while the first one (`imageAqSemphs`) will just need frame in flight index.
+Please notice that we have different array sizes for the presentation complete semaphores and the render complete semaphores. Later one (`renderCompleteSemphs`) will need to be
+in accessed with the swap chain acquire image index, while the first one (`presCompleteSemphs`) will just need frame in flight index.
 
 Finally, we use the current `Fence` instance, this way we block the CPU from resetting command buffers that are still in use.
 
@@ -626,7 +626,7 @@ In order to acquire an image we need to call the function `vkAcquireNextImageKHR
 - `swapchain`: The handle to the Vulkan swap chain.
 - `timeout`: It specifies the maximum time to get blocked in this call (in nanoseconds). If the value is greater than `0` and we are not able to get an image in that time, we will get a `VK_TIMEOUT` error. In our case, we just want to block indefinitely. 
 - `semaphore`: If it is not a null handle (`VK_NULL_HANDLE`) it must point to a valid semaphore. The semaphore will be signaled when the GPU is done with the acquired image.
-In our case, we use the image acquisition semaphore associated to current frame.
+In our case, we use the presentation complete semaphore associated to current frame.
 - `fence`: The purpose is the same as in the `semaphore` attribute but using a `Fence`. In our case we do not need this type of synchronization so we just pass a null.
 - `pImageIndex`: It is a return value attribute, It contains the index of the image acquired. It is important to note that the driver may not return always the next image in the set of swap chain images. This is the reason the `acquireNextImage` method returns the image index that has been acquired.
 

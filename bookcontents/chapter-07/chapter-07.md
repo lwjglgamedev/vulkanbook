@@ -772,7 +772,7 @@ public class Render {
         recordingStart(cmdPool, cmdBuffer);
 
         int imageIndex;
-        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
+        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), presCompleteSemphs[currentFrame])) < 0) {
             resize(engCtx);
             return;
         }
@@ -799,9 +799,9 @@ public class Render {
         vkCtx.resize(window);
 
         Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
-        Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(presCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
         for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
-            imageAqSemphs[i] = new Semaphore(vkCtx);
+            presCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         for (int i = 0; i < vkCtx.getSwapChain().getNumImages(); i++) {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);

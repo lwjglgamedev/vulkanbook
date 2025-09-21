@@ -1145,7 +1145,7 @@ public class Render {
         postRender.render(vkCtx, cmdBuffer, scnRender.getAttColor());
 
         int imageIndex;
-        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
+        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), presCompleteSemphs[currentFrame])) < 0) {
             resize(engCtx);
             return;
         }

@@ -22,7 +22,7 @@ public class Render {
     private final CmdPool[] cmdPools;
     private final Fence[] fences;
     private final Queue.GraphicsQueue graphQueue;
-    private final Semaphore[] imageAqSemphs;
+    private final Semaphore[] presCompleteSemphs;
     private final MaterialsCache materialsCache;
     private final ModelsCache modelsCache;
     private final PostRender postRender;
@@ -45,14 +45,14 @@ public class Render {
         cmdPools = new CmdPool[VkUtils.MAX_IN_FLIGHT];
         cmdBuffers = new CmdBuffer[VkUtils.MAX_IN_FLIGHT];
         fences = new Fence[VkUtils.MAX_IN_FLIGHT];
-        imageAqSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
+        presCompleteSemphs = new Semaphore[VkUtils.MAX_IN_FLIGHT];
         int numSwapChainImages = vkCtx.getSwapChain().getNumImages();
         renderCompleteSemphs = new Semaphore[numSwapChainImages];
         for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
             cmdPools[i] = new CmdPool(vkCtx, graphQueue.getQueueFamilyIndex(), false);
             cmdBuffers[i] = new CmdBuffer(vkCtx, cmdPools[i], true, true);
             fences[i] = new Fence(vkCtx, true);
-            imageAqSemphs[i] = new Semaphore(vkCtx);
+            presCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         for (int i = 0; i < numSwapChainImages; i++) {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
@@ -78,7 +78,7 @@ public class Render {
         materialsCache.cleanup(vkCtx);
 
         Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
-        Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(presCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
         Arrays.asList(fences).forEach(i -> i.cleanup(vkCtx));
         for (int i = 0; i < cmdPools.length; i++) {
             cmdBuffers[i].cleanup(vkCtx, cmdPools[i]);
@@ -129,7 +129,7 @@ public class Render {
         postRender.render(vkCtx, cmdBuffer, scnRender.getAttColor());
 
         int imageIndex;
-        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
+        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), presCompleteSemphs[currentFrame])) < 0) {
             resize(engCtx);
             return;
         }
@@ -156,9 +156,9 @@ public class Render {
         vkCtx.resize(window);
 
         Arrays.asList(renderCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
-        Arrays.asList(imageAqSemphs).forEach(i -> i.cleanup(vkCtx));
+        Arrays.asList(presCompleteSemphs).forEach(i -> i.cleanup(vkCtx));
         for (int i = 0; i < VkUtils.MAX_IN_FLIGHT; i++) {
-            imageAqSemphs[i] = new Semaphore(vkCtx);
+            presCompleteSemphs[i] = new Semaphore(vkCtx);
         }
         for (int i = 0; i < vkCtx.getSwapChain().getNumImages(); i++) {
             renderCompleteSemphs[i] = new Semaphore(vkCtx);
@@ -181,7 +181,7 @@ public class Render {
             VkSemaphoreSubmitInfo.Buffer waitSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
                     .sType$Default()
                     .stageMask(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
-                    .semaphore(imageAqSemphs[currentFrame].getVkSemaphore());
+                    .semaphore(presCompleteSemphs[currentFrame].getVkSemaphore());
             VkSemaphoreSubmitInfo.Buffer signalSemphs = VkSemaphoreSubmitInfo.calloc(1, stack)
                     .sType$Default()
                     .stageMask(VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT)

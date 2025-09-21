@@ -147,7 +147,7 @@ public class Render {
         guiRender.render(vkCtx, cmdBuffer, currentFrame, postRender.getAttachment());
 
         int imageIndex;
-        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), imageAqSemphs[currentFrame])) < 0) {
+        if (resize || (imageIndex = swapChain.acquireNextImage(vkCtx.getDevice(), presCompleteSemphs[currentFrame])) < 0) {
             resize(engCtx);
             return;
         }
