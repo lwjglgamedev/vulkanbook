@@ -344,7 +344,7 @@ We need to modify the `MeshData` class to include texture coordinates:
 ```java
 package org.vulkanb.eng.model;
 
-public record MeshData(String id, float[] positions, int[] indices) {
+public record MeshData(String id, float[] positions, float[] textCoords, int[] indices) {
 }
 ```
 
