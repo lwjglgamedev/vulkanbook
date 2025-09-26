@@ -596,7 +596,7 @@ public class Scene {
 }
 ```
 
-    ## Enable depth testing
+## Enable depth testing
 
 We need also to modify the pipeline to actually use the depth image for depth testing. Since we may have pipelines that do not use depth testing at all, we will indicate if it's required in the `PipelineBuildInfo` class:
 
