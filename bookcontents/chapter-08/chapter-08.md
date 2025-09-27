@@ -117,7 +117,45 @@ Let's review the code of the  `mainProcessing` method first:
 public class ModelGenerator {
     ...
     private void mainProcessing() throws IOException {
-        ...
+        Logger.debug("Loading model data [{}]", modelPath);
+        var modelFile = new File(modelPath);
+        if (!modelFile.exists()) {
+            throw new RuntimeException("Model path does not exist [" + modelPath + "]");
+        }
+
+        AIScene aiScene = aiImportFile(modelPath, FLAGS);
+        if (aiScene == null) {
+            throw new RuntimeException("Error loading model [modelPath: " + modelPath + "]");
+        }
+
+        String modelId = modelFile.getName();
+        if (modelId.contains(".")) {
+            modelId = modelId.substring(0, modelId.lastIndexOf('.'));
+        }
+
+        ModelBinData modelBinData = new ModelBinData(modelPath);
+
+        int numMaterials = aiScene.mNumMaterials();
+        Logger.debug("Number of materials: {}", numMaterials);
+        List<MaterialData> matList = new ArrayList<>();
+        File parentDirectory = modelFile.getParentFile();
+        for (int i = 0; i < numMaterials; i++) {
+            var aiMaterial = AIMaterial.create(aiScene.mMaterials().get(i));
+            MaterialData material = processMaterial(aiScene, aiMaterial, modelId, parentDirectory.getPath(), i);
+            matList.add(material);
+        }
+
+        int numMeshes = aiScene.mNumMeshes();
+        PointerBuffer aiMeshes = aiScene.mMeshes();
+        List<MeshData> meshList = new ArrayList<>();
+        for (int i = 0; i < numMeshes; i++) {
+            AIMesh aiMesh = AIMesh.create(aiMeshes.get(i));
+            MeshData meshData = processMesh(aiMesh, matList, i, modelBinData);
+            meshList.add(meshData);
+        }
+
+        var model = new ModelData(modelId, meshList, modelBinData.getVtxFilePath(), modelBinData.getIdxFilePath());
+        
         String outModelFile = modelPath.substring(0, modelPath.lastIndexOf('.')) + ".json";
         Writer writer = new FileWriter(outModelFile);
         var gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).setPrettyPrinting().create();
