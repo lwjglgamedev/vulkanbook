@@ -425,17 +425,6 @@ public record ModelData(String id, List<MeshData> meshes, String vtxPath, String
 }
 ```
 
-We will create also a new class to serialize and deserialize material information named `MaterialData`:
-
-```java
-package org.vulkanb.eng.model;
-
-import java.util.List;
-
-public record ModelData(String id, List<MeshData> meshes, String vtxPath, String idxPath) {
-}
-```
-
 Finally, we will create an utility class, to load and deserialize preprocessed models and material files:
 
 ```java
