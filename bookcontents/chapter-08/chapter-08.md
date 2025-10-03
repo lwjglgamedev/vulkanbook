@@ -2353,7 +2353,18 @@ public class Render {
 ```
 
 The `init` method, also loads materials, textures,m models and ends up invoking `loadMaterials` in the `ScnRender` class to create
-the proper descriptor sets.
+the proper descriptor sets. `InitData` class needs to be updated to support the addition of materials like this:
+
+```java
+package org.vulkanb.eng;
+
+import org.vulkanb.eng.model.*;
+
+import java.util.List;
+
+public record InitData(List<ModelData> models, List<MaterialData> materials) {
+}
+```
 
 We need to change we load the models in the `Main` class. Instead of defining the data in the `init` method we just use the `ModelLoader`
 `loadModel` and `loadMaterials` methods to load the data:
