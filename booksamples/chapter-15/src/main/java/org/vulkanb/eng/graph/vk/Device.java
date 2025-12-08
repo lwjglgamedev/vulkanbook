@@ -96,13 +96,15 @@ public class Device {
             int numExtensions = numExtensionsBuf.get(0);
             Logger.trace("Device supports [{}] extensions", numExtensions);
 
-            var propsBuff = VkExtensionProperties.calloc(numExtensions, stack);
-            vkEnumerateDeviceExtensionProperties(physDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
-            for (int i = 0; i < numExtensions; i++) {
-                VkExtensionProperties props = propsBuff.get(i);
-                String extensionName = props.extensionNameString();
-                deviceExtensions.add(extensionName);
-                Logger.trace("Supported device extension [{}]", extensionName);
+            try (var propsBuff = VkExtensionProperties.calloc(numExtensions)) {
+                vkEnumerateDeviceExtensionProperties(physDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
+                for (int i = 0; i < numExtensions; i++) {
+                    VkExtensionProperties props = propsBuff.get(i);
+                    String extensionName = props.extensionNameString();
+                    deviceExtensions.add(extensionName);
+                    Logger.trace("Supported device extension [{}]", extensionName);
+                }
+
             }
         }
         return deviceExtensions;

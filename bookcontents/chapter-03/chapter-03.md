@@ -396,9 +396,14 @@ public class Device {
 }
 ```
 
-First we retrieve the supported device extensions by calling the `getDeviceExtensions` (we will see it later). If we are on MacOS and portability subset extension is supported, we need to enable it. Additionally, if you recall, when selecting the physical device we checked if it supported the KHR Swap chain extension, now it is the turn to explicitly say that we are going to use it. In order to define required extensions, we create a `PointerBuffer` which will hold a list of `null` terminated strings. The `getDeviceExtensions` method is similar to the one defined to get instance extensions. We just first call the `vkEnumerateDeviceExtensionProperties` to get the number of extensions,
-create a `VkExtensionProperties` buffer to hold all the values and call `vkEnumerateDeviceExtensionProperties` to populate it. After that we just transfer all t he data 
-to a `Set` of `String`s:
+First we retrieve the supported device extensions by calling the `getDeviceExtensions` (we will see it later). If we are on MacOS and portability subset extension is supported, we need to enable it. Additionally, if you recall, when selecting the physical device we checked if it supported the KHR Swap chain extension, now it is the turn to explicitly say that we are going to use it. In order to define required extensions, we create a `PointerBuffer` which will hold a list of `null` terminated strings.
+The `getDeviceExtensions` method is similar to the one defined to get instance extensions. We just first call the `vkEnumerateDeviceExtensionProperties` to get the number
+of extensions, create a `VkExtensionProperties` buffer to hold all the values and call `vkEnumerateDeviceExtensionProperties` to populate it. After that we just transfer
+all the data to a `Set` of `String`s. You will notice that we do not use the `stack` to allocate device extensions. Depending on your local configuration, the 
+number of extensions can be quite large, and the memory required to allocate all that information can exceed default stack size.
+To prevent incurring in an "Out of stack space" error, we will allocate `VkExtensionProperties` in a `try` `catch` block to automatically allocate and deallocate it
+without using LWJGL's stack.
+
 
 ```java
 public class Device {
@@ -411,13 +416,15 @@ public class Device {
             int numExtensions = numExtensionsBuf.get(0);
             Logger.trace("Device supports [{}] extensions", numExtensions);
 
-            var propsBuff = VkExtensionProperties.calloc(numExtensions, stack);
-            vkEnumerateDeviceExtensionProperties(physDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
-            for (int i = 0; i < numExtensions; i++) {
-                VkExtensionProperties props = propsBuff.get(i);
-                String extensionName = props.extensionNameString();
-                deviceExtensions.add(extensionName);
-                Logger.trace("Supported device extension [{}]", extensionName);
+            try (var propsBuff = VkExtensionProperties.calloc(numExtensions)) {
+                vkEnumerateDeviceExtensionProperties(physDevice.getVkPhysicalDevice(), (String) null, numExtensionsBuf, propsBuff);
+                for (int i = 0; i < numExtensions; i++) {
+                    VkExtensionProperties props = propsBuff.get(i);
+                    String extensionName = props.extensionNameString();
+                    deviceExtensions.add(extensionName);
+                    Logger.trace("Supported device extension [{}]", extensionName);
+                }
+
             }
         }
         return deviceExtensions;

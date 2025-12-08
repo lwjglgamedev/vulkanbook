@@ -2,9 +2,6 @@ package org.vulkanb;
 
 import org.tinylog.Logger;
 import org.vulkanb.eng.*;
-import org.vulkanb.eng.graph.Render;
-import org.vulkanb.eng.scene.Scene;
-import org.vulkanb.eng.wnd.Window;
 
 public class Main implements IGameLogic {
 
@@ -14,7 +11,7 @@ public class Main implements IGameLogic {
         Logger.info("Started application");
         engine.run();
     }
-    
+
     @Override
     public void cleanup() {
         // To be implemented

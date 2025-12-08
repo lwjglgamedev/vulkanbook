@@ -58,6 +58,11 @@ We will see if [Project Panama](https://openjdk.java.net/projects/panama/) can f
 `malloc` is suggested for performance gains, but sometimes calloc is necessary.
 When using calloc, we do not need to initialize some information fields.*
 
+> [!WARNING]  
+> Keep in mind that you should not allocate large objects in the `MemoryStack`. You should use it for relative small short lived objects.
+> In case you need to allocate larger objects, either you should increase its default size, or use allocation methods that do not require a `MemoryStack` instance.
+> In this case, you need to either manually free the allocation or perform the allocation in a `try` `catch` block.
+
 ### Creating Vulkan Structures
 
 Here you can see the basis of all the Vulkan calls.
