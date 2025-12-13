@@ -634,7 +634,7 @@ public class ScnRender {
 You can see that we get the buffer associated to the correct frame to dump the view matrix, and include the associated descriptor set in
 the list of bindings. You may notice that we are using the `getDescSet` method that requires an index to retrieve the proper descriptor set
 (remember that we created a list of them). The recording of drawing commands for the entities has now been extract to the `renderEntities`
-which last parameters is a lag to control which entities we draw, the ones hat have transparent materials or the ones that not.
+which last parameters is a flag to control which entities we draw, the ones hat have transparent materials or the ones that not.
 
 The `renderEntities` code is similar to the one used in previous chapter, we simply just filter entities according to this transparency
 criteria:
