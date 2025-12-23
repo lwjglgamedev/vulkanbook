@@ -20,15 +20,15 @@ We will use [LWJGL](http://www.lwjgl.org/) as the Java library which provides th
 
 ## Book Code
 
-The book itself is also hosted in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/test/bookcontents).
+The book itself is also hosted in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/bookcontents).
 
 ## Source Code
 
-The source code of the samples of this book is in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/test/booksamples).
+The source code of the samples of this book is in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples).
 
 ## EPUB version
 
-An EPUB verion is automatically gerenated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/tree/master/test/vulkanbook.epub).
+An EPUB version is automatically generated in [GitHub](https://github.com/lwjglgamedev/vulkanbook/blob/master/bookcontents/vulkanbook.epub).
 
 ## Support
 

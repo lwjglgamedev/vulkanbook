@@ -120,7 +120,8 @@ public class Instance {
 }
 ```
 
-In this case we are defining our application information with the structure `VkApplicationInfo`.
+In this case we are defining our application information with the structure `VkApplicationInfo` (the equivalent of `VkApplicationInfo` in the
+zig Vulkan binding we are using).
 As you can see, we cannot create the usual Java objects, but rather we allocate it through the stack and use the following attributes:
 
 - `pApplicationName`: It is basically just some text that will identify the application that uses this instance.
