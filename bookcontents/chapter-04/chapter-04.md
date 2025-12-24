@@ -110,7 +110,7 @@ Presentation modes need to be explained in detail. Vulkan defines the following 
 
 In our case, the `Swapchain` class constructor receives a parameter, named `vsync` which we will use to specify if we want to wait for the vertical blanking or not. If `vsync` is true we will use the `VK_PRESENT_MODE_FIFO_KHR`. In this case our frame rate will be, as a maximum, the maximum refresh rate of our screen. If `vsync` is false we will opt for the `VK_PRESENT_MODE_IMMEDIATE_KHR` presentation mode.
 
-With this structure filled-up we can finally create swap chain by invoking the `vkCreateSwapchainKHR` function, where will struct the pointer to the swap chin instance through a
+With this structure filled-up we can finally create swap chain by invoking the `vkCreateSwapchainKHR` function, where will struct the pointer to the swap chain instance through a
 `LongBuffer`. The last step is to create swap chain image views. Prior to analyze that we will start by showing pending methods already used in the constructor.
 Let's tart with the definition of the `calcNumImages`:
 
@@ -136,7 +136,7 @@ public class SwapChain {
 
 The first thing we do is retrieve the minimum and maximum number of images that our surface supports. If we get a value of `0` for the maximum number of images, this means that there is no limit. The rest of the code is basically to try to stick with the requested value if it's within the maximum-minimum range.
 
-Now it is the turn to shoe the definition of the `calcSurfaceFormat` method:
+Now it is the turn to show the definition of the `calcSwapChainExtent` method:
 
 ```java
 public class SwapChain {
@@ -209,7 +209,7 @@ public class SwapChain {
 }
 ```
 
-The first thing we do is retrieve the **actual** number of images that our swap chain has. But wait, we had already specified this when we created the swap chain, why we do need to retrieve that again? The answer is that we created the swap chain with a desired number of images, but the Vulkan driver may have returned a different number. This is why we need to call the `vkGetSwapchainImagesKHR` function to retrieve the number of images. This is whey we used the length of the returned image views to the `numImages` attribute.
+The first thing we do is retrieve the **actual** number of images that our swap chain has. But wait, we had already specified this when we created the swap chain, why we do need to retrieve that again? The answer is that we created the swap chain with a desired number of images, but the Vulkan driver may have returned a different number. This is why we need to call the `vkGetSwapchainImagesKHR` function to retrieve the number of images. This is why we used the length of the returned image views to the `numImages` attribute.
 After that, we call that same function again to retrieve the handles to the images themselves.
 Now we iterate over the images to create new `ImageView` instances. The `ImageView` class encapsulates the creation and disposal of Vulkan image views. Since the parameters to properly set up image views can be quite lengthy, it defines a build helper class, as an inner class, using a fluent like API style. This way we will increase readability of the code that constructs images, and we will be able to add support for new parameters without breaking existing code.
 
@@ -335,7 +335,7 @@ public class ImageView {
 }
 ```
 
-Going back to the `Swapchain`class we need also to create a `cleanup` method to free the resources and some other *getters*:
+Going back to the `Swapchain` class we need also to create a `cleanup` method to free the resources and some other *getters*:
 ```java
 public class SwapChain {
     ...
