@@ -252,7 +252,7 @@ public class Semaphore {
 
 In this case we are modeling what is called a binary semaphore, which can be in two states: signaled and un-signaled. When you create a semaphore is in an un-signaled state. When we submit command we can specify a semaphore to be signaled when the commands complete. If later on, we record some other commands or perform some operation that require those previous commands to be completed, we use the same semaphore to wait. The cycle is like this, the semaphore in the first step is un-signaled, when the operations are completed get signaled and then, commands that are waiting can continue (we say that these second step activities are waiting for the semaphore to be signaled). Creating a semaphore is easy, just define a `VkSemaphoreCreateInfo`  and call the `vkCreateSemaphore` function. The rest of the methods are the usual ones, one for cleaning up the resources and another one to get the semaphore handle.
 
-Now it's turn for the `Fence`class:
+Now it's turn for the `Fence` class:
 
 ```java
 package org.vulkanb.eng.graph.vk;
@@ -299,7 +299,7 @@ public class Fence {
 }
 ```
 
-As in the `Semaphore` class, the `Fence` class is also very simple. We also need to fill up an initialization structure named `VkFenceCreateInfo`. In this case, we can set (through a constructor argument), if the fence should be already signaled when created or not. Besides the cleaning method and the one for getting the handle we have one method called `fenceWait` which waits waits for the fence to be signaled (waits in the CPU the signal raised by the GPU). We have another one named `reset` which resets the fence to un-signaled state by calling the `vkResetFences` function.
+As in the `Semaphore` class, the `Fence` class is also very simple. We also need to fill up an initialization structure named `VkFenceCreateInfo`. In this case, we can set (through a constructor argument), if the fence should be already signaled when created or not. Besides the cleaning method and the one for getting the handle we have one method called `fenceWait` which waits for the fence to be signaled (waits in the CPU the signal raised by the GPU). We have another one named `reset` which resets the fence to un-signaled state by calling the `vkResetFences` function.
 
 ![Synchronization](rc05-yuml-02.svg)
 
@@ -368,7 +368,7 @@ So, let's just create one instance of each and that's it, right? Well, it turns 
 is not in use. Ok, so let's then use a fence and a semaphore to prevent that, and that's all, right? Again, it is not so easy. Remember when we talked about the
 `SwapChain` class? We created several image views. We want to be able to perform operations in the CPU while the GPU is working, this is why we tried to use 
 triple buffering. So we need to have several resources while processing each frame. How many of them? At first, you may think that you need as many as image views
-have the `SwapChain`image views. The reality, however, is that you do not need as many, with just two is enough. The reason is that we do not want the CPU to wait for
+have the `SwapChain` image views. The reality, however, is that you do not need as many, with just two is enough. The reason is that we do not want the CPU to wait for
 the GPU to prevent having latency. We will refer to this number as frames in flight, which shall not be confused with total swap chain image views.
 In fact, we will create a new constant in the `VkUtils` class for this:
 
