@@ -474,7 +474,7 @@ We will need:
 - An array of command buffers, one per frame in flight where will be recording the commands for each of them.
 - Synchronization instances, semaphores and fences, as well, as many as frames in flight with the exception of the semaphores that will be signaled when the render process
 is completed. 
-- One one `Queue.GraphicsQueue` since we can use them in multiple frames. Synchronization wil be controlled by fences and semaphores.
+- One `Queue.GraphicsQueue` since we can use them in multiple frames. Synchronization wil be controlled by fences and semaphores.
 - You will see to new classes that have not been defined yet: `Queue.PresentQueue` (which will be used to present swap chain images)
 and `ScnRender` (to actually render a scene). We will see their definition later on.
 - The attribute `currentFrame` will hold the current frame to be processed. It will be updated in each render loop.
@@ -581,16 +581,16 @@ public class Render {
 }
 ```
 
-This method basically delegates in the `Queue.submit` constructing all th required arguments. Let's concentrate on what semaphores we are using:
+This method basically delegates in the `Queue.submit` constructing all the required arguments. Let's concentrate on what semaphores we are using:
 - `waitSemphs`: It holds a list of semaphores that we will use to wait before the commands get executed. The execution of the commands will block until the semaphores are signaled. In this case, we are submitting the semaphore that was used for acquiring the swap chain image. This semaphore will be signaled when the image is effectively acquired, blocking the command execution until this happens. You will see that we are using a `stageMask` attribute which we set to `VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT`. 
 You will understand this when we talk about pipelines, but this attribute allow us to fine control when we want to control this wait process. Commands, when 
-submitted go through different stages (vertex output, fragment output, ...). In this case we need to wait when generating the output color, so we use the `VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT` value. 
-since we depend on swap chain image view, we want to make sure that the image has been acquired when we start outputting final colors. 
+submitted go through different stages (vertex output, fragment output, ...). In this case we need to wait when generating the output color, so we use the `VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT` value. Since we depend on swap chain image view, we want to make sure that the image has been acquired
+when we start outputting final colors. 
 - `signalSemphs`: It holds a list of semaphores that will be signaled when all the commands have finished. Remember that we use semaphores for GPU-GPU synchronization. In this case, we are submitting the semaphore used in the swap chain presentation. This will provoke that the image cannot be presented until the commands have finished, that is, until
 render has finished. This is why we use the `VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT`, all the commands need to have finalized their journey through the pipeline.
 
 Please notice that we have different array sizes for the presentation complete semaphores and the render complete semaphores. Later one (`renderCompleteSemphs`) will need to be
-in accessed with the swap chain acquire image index, while the first one (`presCompleteSemphs`) will just need frame in flight index.
+accessed with the swap chain acquire image index, while the first one (`presCompleteSemphs`) will just need frame in flight index.
 
 Finally, we use the current `Fence` instance, this way we block the CPU from resetting command buffers that are still in use.
 
