@@ -45,7 +45,7 @@ The constructor just receives the `VkCtx` that will be used to create this buffe
 - `usage`: It specifies the allowed usages of the buffer. We can specify that this buffer can be used for transfer commands (for example to uses as source in buffer copy operations), as a destination transfer, for uniforms. etc. This will be received in the constructor of the `VulkanBuffer` class through an argument with the same name.
 - `sharingMode`: If set to `VK_SHARING_MODE_EXCLUSIVE`, it can only be accessed by a queue family at a time. `VK_SHARING_MODE_CONCURRENT` allows the buffer contents to be accessed by more than one queue family at a time. Concurrent mode incurs on performance penalties, so we will just use exclusive mode.
 
-With that structure we can invoke the `vkCreateBuffer`function to create the buffer handle. It is important to remark, that this call does not allocate the memory for the buffer, we just create the handle, we will need to manually allocate that memory and associate that to the buffer later on. Therefore the next thing we do is to retrieve the memory requirements of the new created buffer, by calling the `vkGetBufferMemoryRequirements` function.
+With that structure we can invoke the `vkCreateBuffer` function to create the buffer handle. It is important to remark, that this call does not allocate the memory for the buffer, we just create the handle, we will need to manually allocate that memory and associate that to the buffer later on. Therefore the next thing we do is to retrieve the memory requirements of the new created buffer, by calling the `vkGetBufferMemoryRequirements` function.
 
 ```java
 public class VkBuffer {
@@ -80,7 +80,7 @@ public class VulkanBuffer {
 }
 ```
 
-In order to fill the `memoryTypeIndex` we call the `memoryTypeFromProperties`method from the `VkUtils` class, which is defined like this:
+In order to fill the `memoryTypeIndex` we call the `memoryTypeFromProperties` method from the `VkUtils` class, which is defined like this:
 
 ```java
 public class VkUtils {
@@ -1301,7 +1301,7 @@ public class ScnRender {
 }
 ```
 
-Going back to the `ForwardRenderActivity` constructor, after the code that checks if recompilation is required, we just create a `ShaderProgram` instance with a vertex and a fragment shader modules. As it has been said, in the loop that iterates to create the command buffers, we have removed the pre-recording. The rest is the same.
+Going back to the `ScnRender` constructor, after the code that checks if recompilation is required, we just create a `ShaderProgram` instance with a vertex and a fragment shader modules. As it has been said, in the loop that iterates to create the command buffers, we have removed the pre-recording. The rest is the same.
 
 Now we need to update the `ScnRender` `render` method:
 

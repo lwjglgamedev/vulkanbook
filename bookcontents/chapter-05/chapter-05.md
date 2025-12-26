@@ -940,7 +940,7 @@ steps which command need to transverse) we are referring to, and with access mas
 
 Let's analyze the first image memory barrier:
 - We set the `oldLayout` to the `VK_IMAGE_LAYOUT_UNDEFINED`, which basically says, we do not care about previous layout state
-and set `newLayout` to `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` which is is the state we want to perform rendering operations.
+and set `newLayout` to `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` which is the state we want to perform rendering operations.
 - We set `srcStage` mask to `VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT` which basically states that all previously submitted commands need to have finished
 that state in the pipeline.
 - We set `srcAccess` to `VK_ACCESS_2_NONE`, because we do not care an initial layout we do not need to set any special restriction on source access.
