@@ -288,7 +288,7 @@ public class Attachment {
     }
 }
 ```
-We just create and image and the associated image view. Depending on the type of image (color or depth image), we setup the aspect mask accordingly. We also have defined a `boolean` attribute, named `depthAttachment` to identify if it is a depth attachment or not.
+We just create an image and the associated image view. Depending on the type of image (color or depth image), we setup the aspect mask accordingly. We also have defined a `boolean` attribute, named `depthAttachment` to identify if it is a depth attachment or not.
 
 ## Changing vertices structure
 
@@ -747,7 +747,7 @@ Once we have created the ranges, we can include them in the `VkPipelineLayoutCre
 
 ## Putting it all up together
 
-We have coded all the elements required to support the proper rendering of 3D models and pass transformation matrices to the shaders. We now can use them and also support another missing feature: resizing support. Let's start with the changes required in the `Render` class toi support resizing.
+We have coded all the elements required to support the proper rendering of 3D models and pass transformation matrices to the shaders. We now can use them and also support another missing feature: resizing support. Let's start with the changes required in the `Render` class to support resizing.
 
 ```java
 ...
@@ -817,12 +817,12 @@ public class Render {
 
 In the `render` method, prior to acquiring the swap chain image we check if the `resize` flag has been set to true. This
 can happen if presenting the  image fails. If it is not true, we try to acquire the image. If this fails, or  `resize` is `true`
-this will mean that we nee to handle window resizing and call the `resize` method. You may notice also that the `ScnRender` class
+this will mean that we need to handle window resizing and call the `resize` method. You may notice also that the `ScnRender` class
 now receives an instance of `EngCtx` also.
 
-The new `resize` method first check if the window size is equal to zero. This will mean that the window is minimized and makes no sense
-in continuing. After that, itr resets the `resize` flag and  waits for the device to be idle, calls resize over `VkCtx` instance
-amd clean ups the synchronization semaphores and creates new ones. It also calls the `resize` method over `ScnRender` class.
+The new `resize` method first checks if the window size is equal to zero. This will mean that the window is minimized and makes no sense
+in continuing. After that, it resets the `resize` flag and  waits for the device to be idle, calls resize over `VkCtx` instance
+and clean ups the synchronization semaphores and creates new ones. It also calls the `resize` method over `ScnRender` class.
 
 Let's view the changes in the `VkCtx` class:
 
