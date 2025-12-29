@@ -1672,8 +1672,8 @@ public class DescSet {
 ```
 
 Please note that an array of images is different just requires a single descriptor. In the `setImages` we used as many descriptor
-as image views. In this case we are just using one. As you can see the loop is used just to iterate over `VkDescriptorImageInfo` instance,
-but we keep a single `VkWriteDescriptorSet` with a single binding point. We ill use this to associate an array of textures for the materials.
+as image views. In this case we are just using one. As you can see the loop is used just to iterate over the `VkDescriptorImageInfo` instances,
+but we keep a single `VkWriteDescriptorSet` with a single binding point. We will use this to associate an array of textures for the materials.
 
 Maybe you have already noticed, but the `ImageView` class has a new method named `isDepthImage` which we use to properly select the
 layout when associating images to a descriptor set. This requires the modification of `ImageView` class:
@@ -1870,7 +1870,7 @@ public class DescAllocator {
 
 The process is as follows:
 - We iterate over all the created descriptor pools.
-- After that, we iterate over the descriptor set layout descriptor types. Remember that a descriptor ste layout can reference several
+- After that, we iterate over the descriptor set layout descriptor types. Remember that a descriptor set layout can reference several
 descriptor types.
 - For each of the types we get the available descriptors in the current pool.
 - If we do no recognize the descriptor type or we are requesting more descriptors than a single pool can handle (exceeding the physical
@@ -1883,7 +1883,7 @@ the descriptor sets, and update the available space in the associated pool.
 The process can still be improved to reduce fragmentation, But I did not want to complicate the code even more. In any case, you get the
 idea and can modify it to be more efficient easily.
 
-The rest of the method of the class are as follow:
+The rest of the methods of the class are as follows:
 
 ```java
 public class DescAllocator {
@@ -2218,7 +2218,7 @@ public class ScnRender {
 }
 ```
 
-We will need also to update the `render` method yo use the descriptor sets:
+We will need also to update the `render` method to use the descriptor sets:
 
 ```java
 public class ScnRender {
@@ -2296,7 +2296,7 @@ public class ScnRender {
 }
 ```
 
-The changes required in the `Render` class are smaller, we basically instantiate the `MaterialsCache` and `TextureCache` classes an adapt some methods invocations to the new parameters added:
+The changes required in the `Render` class are smaller, we basically instantiate the `MaterialsCache` and `TextureCache` classes and adapt some methods invocations to the new parameters added:
 
 ```java
 public class Render {
