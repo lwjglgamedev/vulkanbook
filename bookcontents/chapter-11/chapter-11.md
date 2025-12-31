@@ -1,14 +1,14 @@
 # Chapter 11 - Post processing
 
-In this chapter we will implement a post-processing stage. We will render to a buffer instead of directly rendering to a swap chain image and once, we have finished we
-will apply some effects such us FXAA filtering and gamma correction.
+In this chapter we will implement a post-processing stage. We will render to a buffer instead of directly rendering to a swap chain image and once we have finished we
+will apply some effects such as FXAA filtering and gamma correction.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-11).
 
 ## Specialization constants
 
 We will first introduce a new concept, specialization constants, which are a way to update constants in shaders at module loading time. That is, we can
-modify the value of a constant without the need to recompile the shader. We will use this concept in some of the shaders in this chapter. This an example
+modify the value of a constant without the need to recompile the shader. We will use this concept in some of the shaders in this chapter. This is an example
 of a specialization constant defined in GLSL
 
 ```glsl
@@ -22,7 +22,7 @@ Specialization constants, for a shader, are defined by using the `VkSpecializati
 - `pData`:  a Pointer to a buffer which will hold the data for the specialization constants.
 - `pMapEntries`: A map of entries, having one entry per specialization constant.
 
-Each entry is modelled by the `VkSpecializationMapEntry` struct which has the following fields:
+Each entry is modeled by the `VkSpecializationMapEntry` struct which has the following fields:
 - `constantID`: The identifier of the constant in the SPIR-V file (The number associated to the `constant_id` field).
 - `offset`: The byte offset of the specialization constant value within the supplied data buffer.
 - `size`: The size in bytes of the constant.
@@ -75,7 +75,7 @@ public class Pipeline {
 
 ## Rendering to an attachment
 
-We will start first by modifying the `ScnRender` class to use its own attachment for color output instead of using swap chain images. If you recall we already did have
+We will start by modifying the `ScnRender` class to use its own attachment for color output instead of using swap chain images. If you recall we already did have
 attachments for depth information. The changes in the `ScnRender` class start like this:
 
 ```java
@@ -140,7 +140,7 @@ public class ScnRender {
 ```
 
 In addition to just having a single `VkRenderingAttachmentInfo.Buffer`, the `imageLayout` is now `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` instead of being
-`VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR` since the image is not related yo the swap chain now. The methods `createDepthAttachment` and `createDepthAttachmentInfo` are
+`VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR` since the image is not related to the swap chain now. The methods `createDepthAttachment` and `createDepthAttachmentInfo` are
 like this:
 
 ```java
@@ -351,7 +351,7 @@ public class ScnRender {
 
 ## Post processing
 
-We will use a post processing stage to filter the rendered results and to apply tone correction. We will perform this by rendering a quad to a string using
+We will use a post processing stage to filter the rendered results and to apply tone correction. We will perform this by rendering a quad to the screen using
 the attachment used for rendering in the `ScnRender` class as a texture to render to another image attachment applying the filtering and tone correction actions.
 This will be done in a new class named `PostRender`. The class starts like this:
 
@@ -422,7 +422,7 @@ public class PostRender {
 }
 ```
 
-As you can see is quite similar to the other render class. In this case we just create a color attachment (no need for depth attachment). We wll need a texture
+As you can see is quite similar to the other render class. In this case we just create a color attachment (no need for depth attachment). We will need a texture
 sampler to access the output attachment coming from the `ScnRender` class, which is received as a parameter in the `srcAttachment` variable. We will need a descriptor
 set to access that texture and another one to store screen dimensions. We have added a new constant in the `VkUtils` class to model the size of a `vec2`.
 
@@ -710,7 +710,7 @@ the descriptor sets and perform a call to `vkCmdDraw`. With this call we just dr
 that we will just need to render a quad in clip space, so we do not need even the coordinates, we will generate them using the vertex fragment. We will not 
 even using two triangles to render a quad, one single triangle is enough for us to achieve the same effect. We will see how it is done in the  vertex shader.
 
-We to define the method to set the screen size dimensions to the associated buffera and to create a `resize` method:
+We to define the method to set the screen size dimensions to the associated buffer and to create a `resize` method:
 
 ```java
 public class PostRender {
@@ -757,11 +757,11 @@ void main()
 
 So let's dissect what `outTextCoord` will be depending on the value of `gl_VertexIndex`:
 
-- For the first vertex, `gl_VertexIndex` will have the vale `0`, shifting one position to the left will just be also `0` and performing an AND operation with `2` (`0b10`)
+- For the first vertex, `gl_VertexIndex` will have the value `0`, shifting one position to the left will just be also `0` and performing an AND operation with `2` (`0b10`)
 will just be also `0` for the `x` coordinate of `outTextCoord`. The `y` coordinate will be also `0`. So we will have (`0`, `0`).
-- For the second vertex, `gl_VertexIndex` will have the vale `1` (`0b01`), shifting one position will be `1` (`0b10`) and performing an AND operation with `2` (`0b10`) will
+- For the second vertex, `gl_VertexIndex` will have the value `1` (`0b01`), shifting one position will be `1` (`0b10`) and performing an AND operation with `2` (`0b10`) will
 be `2` (`0b10`) for the `x` coordinate of `outTextCoord`. The `y`coordinate will be `0`. So we will have (`2`, `0`).
-- For the second vertex, `gl_VertexIndex` will have the vale `2` (`0b10`), shifting one position will be `0` (`0b00`) and performing an AND operation with `2` (`0b10`) will
+- For the second vertex, `gl_VertexIndex` will have the value `2` (`0b10`), shifting one position will be `0` (`0b00`) and performing an AND operation with `2` (`0b10`) will
 be `2` (`0b00`) for the `x` coordinate of `outTextCoord`. The `y`coordinate will be `2`. So we will have (`0`, `2`).
 
 Now, let's review what will be the value of `gl_Position` will be depending on the value of `outTextCoord`:
@@ -769,14 +769,14 @@ Now, let's review what will be the value of `gl_Position` will be depending on t
 - For the second vertex, we will have (`2`, `0`) for `outTextCoord`, so `gl_Position` will be (`3`, `1`, `0`, `1`).
 - For the third vertex, we will have (`0`, `2`) for `outTextCoord`, so `gl_Position` will be (`-1`, `-3`, `0`, `1`).
 
-The next figure shows the resulting triangle with texture coordinates in red and position in green and with dashed line the quad that is withing clip space coordinates
-([-1,1], [1, -1]). As you can see by drawing a triangle we get a quad within clips space that we will use to generate the post-processing image.
+The next figure shows the resulting triangle with texture coordinates in red and position in green and with dashed line the quad that is within clip space coordinates
+([-1,1], [1, -1]). As you can see by drawing a triangle we get a quad within clip space that we will use to generate the post-processing image.
 
 [quad](./rc11-quad.svg)
 
 The fragment shader is defined like this:
 
-```java
+```glsl
 #version 450
 
 layout (constant_id = 0) const int USE_FXAA = 0;
@@ -859,7 +859,7 @@ void main() {
 }
 ```
 
-We use the specialization constant flag that enables / disables FXAA filtering. As you can see we `inputTexture` descriptor set is the result of the scene rendering
+We use the specialization constant flag that enables / disables FXAA filtering. As you can see the `inputTexture` descriptor set is the result of the scene rendering
 stage. FXAA implementation has been obtained from [here](https://mini.gmshaders.com/p/gm-shaders-mini-fxaa).
 
 ## Copying to the swap chain
