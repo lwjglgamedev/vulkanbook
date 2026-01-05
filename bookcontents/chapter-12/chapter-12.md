@@ -31,7 +31,7 @@ The first step is to add the [imgui-java](https://github.com/SpaiR/imgui-java) d
 
 ## Render the GUI
 
-In this case, we will be rendering the GUI elements over the scene. Since we will not be applying any post effects to the GUI, such as lighting, we will render them just after the lighting phase has been completed. In order to do that, we will handle GUI rendering in a new class named `GuiRender`, which starts like this:
+In this case, we will be rendering the GUI elements over the scene. We will handle GUI rendering in a new class named `GuiRender`, which starts like this:
 ```java
 package org.vulkanb.eng.graph.gui;
 
@@ -525,7 +525,7 @@ public class GuiRender {
 
 As it has been shown above, we will have two set of buffers, one for the vertices and the other one for the indices. We will have as many buffers frames in flight we have,
 We first check if `imDrawData.ptr` is null, which may be caused because we have not initialized the GUI and retrieve the total number of vertices and indices to be drawn.
-If there are noe vertices or no indices, we just return. required by the GUI defined by the `IGuiInstance` implementation. If the buffers have not been created yet or the number of vertices and indices they hold are less than the already allocated (this means that the GUI elements have changed and we need more space), we create new
+If there are no vertices or no indices, we just return. If the buffers have not been created yet or the number of vertices and indices they hold are less than the already allocated (this means that the GUI elements have changed and we need more space), we create new
 Vulkan buffers. The buffers need to be accessed from both the GPU and the application. After that, we just copy the vertices and indices data to those buffers. Once the data has been copied, we call a new method in the `VulkanBuffer` class named `flush`. The rationale for that is that we have not used the `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` flag when creating the Vulkan buffers. Therefore, we need to ensure that the buffer data is available to the GPU by calling the `flush` method in the `VulkanBuffer` class.
 
 The `GuiRender` class also defines a `resize` method that should be invoked when the render area changes its size. In this methods, we just update the ImGui display size:
@@ -864,7 +864,7 @@ public class Main implements IGameLogic {
 }
 ```
 
-We have two possible GUI Windows to show, the default ImGui demo window and a simple onw which hows a texture. Therefore, we need to load that sample texture. In the `input`
+We have two possible GUI Windows to show, the default ImGui demo window and a simple one which shows a texture. Therefore, we need to load that sample texture. In the `input`
 method we also check if the input has been handled by ImGui and return in this case to avoid double handling of users input. The final result is shown in the next figure.
 
 <img src="rc12-screen-shot.png" title="" alt="Screen Shot" data-align="center">
