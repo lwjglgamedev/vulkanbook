@@ -1,7 +1,7 @@
 [
   {
     "id": "box-mat-0",
-    "texture_path": "resources\\models\\box/BoxTexture.png",
+    "texture_path": "resources/models/box/BoxTexture.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {

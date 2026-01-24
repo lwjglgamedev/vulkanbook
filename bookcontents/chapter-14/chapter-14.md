@@ -272,6 +272,12 @@ public class ScnRender {
                         VK_ACCESS_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                         VK_IMAGE_ASPECT_COLOR_BIT);
             }
+            VkUtils.imageBarrier(stack, cmdHandle, mrtAttachments.getDepthAttachment().getImage().getVkImage(),
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                    VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                    VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    VK_IMAGE_ASPECT_DEPTH_BIT);            
             ...
             int width = mrtAttachments.getWidth();
             int height = mrtAttachments.getHeight();
@@ -281,8 +287,9 @@ public class ScnRender {
     ...
 }
 ```
- Changes are minimal, we just change how we set image barriers, because the attachments are now retrieved through `MrtAttachments` class. We also prepare the method
- to handle more than one color attachment (although bny now juw ill have just one). The resize method also needs to be updated:
+ Changes are minimal, we just change how we set image barriers, because the attachments are now retrieved through `MrtAttachments` class.
+ We also prepare the method to handle more than one color attachment (although bny now juw ill have just one). The resize method also needs
+ to be updated:
 
 ```java
 public class ScnRender {
@@ -519,7 +526,12 @@ public class LightRender {
                         VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
                         VK_IMAGE_ASPECT_COLOR_BIT);
             }
-
+            VkUtils.imageBarrier(stack, cmdHandle, mrtAttachments.getDepthAttachment().getImage().getVkImage(),
+                    VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_READ_BIT,
+                    VK_IMAGE_ASPECT_DEPTH_BIT);
+                    
             vkCmdBeginRendering(cmdHandle, renderInfo);
 
             vkCmdBindPipeline(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.getVkPipeline());

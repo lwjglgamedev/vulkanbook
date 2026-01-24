@@ -1,7 +1,7 @@
 [
   {
     "id": "wall-mat-0",
-    "texture_path": "resources\\models\\wall/wall.png",
+    "texture_path": "resources/models/wall/wall.png",
     "normal_map_path": "",
     "metal_rough_map": "",
     "diffuse_color": {

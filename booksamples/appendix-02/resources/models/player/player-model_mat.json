@@ -1,8 +1,8 @@
 [
   {
     "id": "player-model-mat-0",
-    "texture_path": "resources\\models\\player/Guard_02__diffuse.png",
-    "normal_map_path": "resources\\models\\player/Guard_02__normal.png",
+    "texture_path": "resources/models/player/Guard_02__diffuse.png",
+    "normal_map_path": "resources/models/player/Guard_02__normal.png",
     "metal_rough_map": "",
     "diffuse_color": {
       "x": 1.0,
