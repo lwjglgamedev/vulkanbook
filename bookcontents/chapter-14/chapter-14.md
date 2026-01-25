@@ -288,7 +288,7 @@ public class ScnRender {
 }
 ```
  Changes are minimal, we just change how we set image barriers, because the attachments are now retrieved through `MrtAttachments` class.
- We also prepare the method to handle more than one color attachment (although bny now juw ill have just one). The resize method also needs
+ We also prepare the method to handle more than one color attachment (although by now we will have just one). The resize method also needs
  to be updated:
 
 ```java
