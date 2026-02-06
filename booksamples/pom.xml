@@ -171,7 +171,7 @@
         <java.version>24</java.version>    
         <jcommander.version>3.0</jcommander.version>
         <joml.version>1.10.8</joml.version>
-        <lwjgl.version>3.4.0</lwjgl.version>
+        <lwjgl.version>3.4.1</lwjgl.version>
         <maven.version>3.9</maven.version>
         <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
         <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
