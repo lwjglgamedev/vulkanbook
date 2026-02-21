@@ -661,7 +661,7 @@ public class LightRender {
 }
 ```
 
-We wil use two no descriptor sets, on to store light information and the other to store general scene information (ambient light,
+We will use two new descriptor sets, on eto store light information and the other one to store general scene information (ambient light,
 total number of active lights, and the camera position which will be used in light computation). Lights information will be exposed to the shader as an storage buffer (it will be basically an array of lights) while scene information will be a uniform. For both descriptor sets we will use buffers. Since the information stored in them may change in each frame we will
 use an array of buffers with as many instances as frames in flight. We need to update also the `createPipeline` method since now we expect an array of color formats and the `cleanup` method to free the new resources.
 
