@@ -389,8 +389,10 @@ public class Window {
     }
 }
 ```
-`KeyboardInput` is the is the class responsible for handling key input. We provide several methods to check uf a key is currently being pressed and to handle single key press.
-The `glfwGetKey`function returns `true` if a specific key is currently being pressed, so if we do not want to loose events we store that event in a map to detect if a key has been pressed between input checking calls. Pressed state is reset in each loop by calling `resetInput`.
+`KeyboardInput` is the class responsible for handling key input. We provide several methods to check uf a key is currently being pressed and
+ to handle single key press. The `glfwGetKey`function returns `true` if a specific key is currently being pressed, so if we do not want to
+ loose events we store that event in a map to detect if a key has been pressed between input checking calls. Pressed state is reset in each
+ loop by calling `resetInput`.
 
 ```java
 package org.vulkanb.eng.wnd;
