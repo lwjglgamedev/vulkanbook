@@ -1773,9 +1773,9 @@ public class DescAllocator {
         int maxDescs = engCfg.getMaxDescs();
         VkPhysicalDeviceLimits limits = physDevice.getVkPhysicalDeviceProperties().properties().limits();
         Map<Integer, Integer> descLimits = new HashMap<>();
-        descLimits.put(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Math.min(maxDescs, limits.maxDescriptorSetUniformBuffers()));
-        descLimits.put(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Math.min(maxDescs, limits.maxDescriptorSetSamplers()));
-        descLimits.put(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, Math.min(maxDescs, limits.maxDescriptorSetStorageBuffers()));
+        descLimits.put(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (int)Math.min(maxDescs, Integer.toUnsignedLong(limits.maxDescriptorSetUniformBuffers())));
+        descLimits.put(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, (int)Math.min(maxDescs, Integer.toUnsignedLong(limits.maxDescriptorSetSamplers())));
+        descLimits.put(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, (int)Math.min(maxDescs, Integer.toUnsignedLong(limits.maxDescriptorSetStorageBuffers())));
         return descLimits;
     }
     ...
