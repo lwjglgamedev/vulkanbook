@@ -87,7 +87,7 @@ When creating objects, we need to define their structure, sometimes with other s
 
 - `sType`: The structure type (required).
   Although this is required in regular C/C++ Code, LWJGL provides a convenience method to set it automatically, named `sType$Default`.
-  This method does ot require the `sType` field to be set. We will use this convenience method in this book.
+  This method does to require the `sType` field to be set. We will use this convenience method in this book.
 - `pNext`: Pointer to an extension-specific structure.
 - `flags`: Often unused, but intended for specific behaviors. 
 
@@ -158,7 +158,7 @@ This can be turned off when our application is ready for delivery.
 
 > [!WARNING]  
 > **macOS** To enable validation layers on macOS, after installing the Vulkan SDK, you will need to configure LWJGL to use the Vulkan Loader.  
-> This can be done be setting the following VM paramters: ```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```  
+> This can be done be setting the following VM parameters: ```-Dorg.lwjgl.librarypath=/usr/local/lib -Dorg.lwjgl.vulkan.libname=libvulkan.1.dylib```  
 > Details about MoltenVK and Vulkan Loader on macOS are [here](https://vulkan.lunarg.com/doc/view/1.3.261.1/mac/getting_started.html#moltenvk)
 
 Our `Instance` class constructor receives a boolean parameter indication is validations should be enabled or not.

@@ -217,7 +217,7 @@ public class ScnRender {
 }
 ```
 
-The `createShaderModules` method needs to be updated due to the specialization chanages:
+The `createShaderModules` method needs to be updated due to the specialization changes:
 
 ```java
 public class ScnRender {
@@ -705,7 +705,7 @@ public class PostRender {
 First, we transition the output attachment used by the `ScnRender` class to `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`, since we will be using this attachment
 as a source, we will not be modifying it. We need this to happen when we reach `VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT` stage and to access in read only mode
 (`VK_ACCESS_2_SHADER_READ_BIT`). This is achieved with the first barrier. We need also to ensure that the output attachment of this class is in
-`VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` layout by setting the second barrier. AFter that, we just bind the pipeline, set the view port and scissors, bind
+`VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` layout by setting the second barrier. After that, we just bind the pipeline, set the view port and scissors, bind
 the descriptor sets and perform a call to `vkCmdDraw`. With this call we just draw 3 vertices without needing to bind any vertex or index buffer. Remember
 that we will just need to render a quad in clip space, so we do not need even the coordinates, we will generate them using the vertex fragment. We will not 
 even using two triangles to render a quad, one single triangle is enough for us to achieve the same effect. We will see how it is done in the  vertex shader.

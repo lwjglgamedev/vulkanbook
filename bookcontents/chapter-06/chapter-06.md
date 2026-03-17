@@ -283,7 +283,7 @@ public class VtxBuffStruct {
 
 ## Loading the data
 
-We have created the structures that will hold the data for our models (`VkBuffer`) and the ones that define their format (`VtxBuffStruct`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that wll be used to actually form the triangles. We will define a new class named `VulkanModel` which will hold the information for 3D models. For now, it will hold the buffers for the different meshes that compose a 3D model. In next chapters it will be extended to support richer structures. At this moment a model is just a collection of meshes which will hold the references to buffers that contain positions data and their indices. This class will also define the methods to populate those structures. The basic structure of this class is quite simple:
+We have created the structures that will hold the data for our models (`VkBuffer`) and the ones that define their format (`VtxBuffStruct`). We are now ready to load the data into the GPU. In essence, we need to load the data into two buffers, one for the positions of the vertices and another one for the indices of the triangle coordinates that will be used to actually form the triangles. We will define a new class named `VulkanModel` which will hold the information for 3D models. For now, it will hold the buffers for the different meshes that compose a 3D model. In next chapters it will be extended to support richer structures. At this moment a model is just a collection of meshes which will hold the references to buffers that contain positions data and their indices. This class will also define the methods to populate those structures. The basic structure of this class is quite simple:
 
 ```java
 package org.vulkanb.eng.graph;
@@ -1270,7 +1270,7 @@ public class ScnRender {
 }
 ```
 
-We just check if we have enabled shader recompilation, and if do, call `ShaderCompiler.compileShaderIfChanged`. Then we jsut return
+We just check if we have enabled shader recompilation, and if do, call `ShaderCompiler.compileShaderIfChanged`. Then we just return
 `ShaderModule` instances for vertex and fragment shaders. The `createPipeline` method is defined like this:
 
 ```java

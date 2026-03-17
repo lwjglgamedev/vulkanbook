@@ -41,7 +41,7 @@ We will create a buffer that will contain as many entries as entities and will h
 meshes associated to them. Each entry in that buffer will contain:
 
 - The index in the buffer that holds the model matrices associated to the entity.
-- The material index (in previous chapters, since we recorded a draw call for each mesh and entity, we used push constants for that. Now, we cannot use tha approach since we
+- The material index (in previous chapters, since we recorded a draw call for each mesh and entity, we used push constants for that. Now, we cannot use than approach since we
 will submit a single draw call.)
 - The address of the vertex buffer associated to the mesh.
 - The address of the index buffer associated to the mesh.
@@ -520,9 +520,9 @@ void main()
 }
 ```
 
-Firs we need to pass the material index to the fragment shader as an outout variable (`outMaterialIdx`), since it will not be available through push constants. We use
+Firs we need to pass the material index to the fragment shader as an output variable (`outMaterialIdx`), since it will not be available through push constants. We use
 the `flat` modifier since we do not want to perform any kind of interpolation. Push constants now just define addresses for the instances buffer (the one we defined
-in the `GlobalBuffers` class as `buffInstanceData`) and the buffer tha hold models matrices. The `InstancesDataBuffer` just defines the data explained above, the
+in the `GlobalBuffers` class as `buffInstanceData`) and the buffer that hold models matrices. The `InstancesDataBuffer` just defines the data explained above, the
 model matrix index, the material index and the addresses of the vertices and indices buffers. In order to access the proper element in that buffer, we just use the
 `gl_InstanceIndex` built in variable as explained previously. The rest of the code is quite similar, once we get the proper references, we process the vertices in the same
 way. We need only to pass the material index to be used in the fragment shader (`scn_frg.glsl`), which needs only to be changed a little bit to retrieve that value from 
@@ -763,7 +763,7 @@ public class ShadowRender {
 
 ## Final changes
 
-Animation render (`AnimRender`) needs just to be changes since the way we traverse thorugh the entities of animated models as now changes, that is all. The concepts
+Animation render (`AnimRender`) needs just to be changes since the way we traverse through the entities of animated models as now changes, that is all. The concepts
 are still the same:
 
 ```java

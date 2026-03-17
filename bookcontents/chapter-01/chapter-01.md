@@ -19,7 +19,7 @@ The base requirements to run the samples of this book are:
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-01).
 
-When posting source code, we wil use `...` to state that there is code above or below the fragment code in a class or in a method.
+When posting source code, we will use `...` to state that there is code above or below the fragment code in a class or in a method.
 
 ## Main class
 

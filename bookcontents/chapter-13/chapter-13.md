@@ -412,7 +412,7 @@ public class Engine {
 }
 ```
 
-And that’s all. We have all the infrastructure we need in order to play sounds. We just need to use it in the `Main` class where we set up a background sound and a specific sound whish is activated at a specific animation frame with its intensity relative to listener position:
+And that’s all. We have all the infrastructure we need in order to play sounds. We just need to use it in the `Main` class where we set up a background sound and a specific sound which is activated at a specific animation frame with its intensity relative to listener position:
 
 ```java
 package org.vulkanb;

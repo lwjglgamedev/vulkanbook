@@ -254,7 +254,7 @@ public class ModelGenerator {
  We first try to retrieve the texture of the material by calling the `aiGetMaterialTexture` function. This function receives as a parameter an instance of an `AIString` that will be used to return the texture path. If the path is present (if it is not null or empty) we insert the path where the textures for this model will reside. 
  We first check if the path corresponds to an embedded texture using the `EMBED_TEXT_ID` regular expression.
  Embedded textures start with '*' followed by a number. If it is an embedded texture we extract its contents to a file
- using the `pcDataCompressed` function (we assume it is in PNG format). If it is not an embedded texture, we jus transform the path. 
+ using the `pcDataCompressed` function (we assume it is in PNG format). If it is not an embedded texture, we just transform the path. 
  Many models use absolute paths, which probably won't fit with the path were you store the model. This is the reason why get just the file name, without the possible path (either absolute or relative) that could be used in the model. We assume the textures will
  be placed in the same directory as the model file.
  
@@ -539,7 +539,7 @@ We have already created the classes that support images and image views, however
 ```
 
 We will create a a few classes that will help us in the process of managing textures. The First one is named `ImageSrc` and
-it is just a record to hold the decoded image data (raw data), its width and height  nd the number of channels.
+it is just a record to hold the decoded image data (raw data), its width and height  and the number of channels.
 
 ```java
 package org.vulkanb.eng.graph.vk;
@@ -1187,7 +1187,7 @@ Descriptors represent shader resources such us buffers, images or samplers. We w
 
 Managing descriptors is often a tedious tasks, you need to define, for each pool the number of descriptor sets that it will be able
 to hold for each of the supported types. Each descriptor needs to be associated to a descriptor set layout, which are tightly
-related to how they wll be used in the shaders, etc. In order to facilitate this process, we are going to use the following approach:
+related to how they will be used in the shaders, etc. In order to facilitate this process, we are going to use the following approach:
 
 - We will create descriptor pools which will support the descriptor sets we are going to use, size to the maximum number
 of elements supported by the driver.
@@ -1455,7 +1455,7 @@ the latest edge value.
 - `compareEnable`: It enables a comparison when performing texture lookups.
 - `compareOp`: It specifies the comparison operation. We will not be using this at this moment.
 - `mipmapMode`: This is used to specify the mipmap filter to apply in lookups. We will address that in later chapters.
-- `minLod`, `maxLod` and `mipLoadBias`: These parameters are used for mip mapping, so we will review them later on.
+- `minLod`, `maxLod` and `mipLodBias`: These parameters are used for mip mapping, so we will review them later on.
 
 Finally, we enable anisotropic filter if the device supports it. With all that information we just call the `vkCreateSampler` function and complete the class with the usual `cleanup` and the getter methods. Anisotropic filtering is used to eliminate aliasing effects when sampling from a texture. The classes completes with classical `cleanup` method and a *getter* to access the texture sampler handle.
 
@@ -1876,7 +1876,7 @@ descriptor types.
 - If we do no recognize the descriptor type or we are requesting more descriptors than a single pool can handle (exceeding the physical
 device limits), we just abort.
 - If we detect that we need more descriptors than we set the `targetPool` to `null` and break to continue with the next descriptor pool.
-- If we have finished iterating over tha available descriptor pools and `targetPool` this means that we need to create another pool.
+- If we have finished iterating over the available descriptor pools and `targetPool` this means that we need to create another pool.
 - Once we have a pool, either because on of the existing ones have enough spare space or because we have created a new one, we create
 the descriptor sets, and update the available space in the associated pool.
 
@@ -2079,7 +2079,7 @@ if it has texture and the associated index). Remember, that due to `std140` layo
 consideration extra padding. This will be a storage buffer, and does not need to be sized.
 
 We will receive the position of the associated material in the buffer through a push constant. With all that information we can get
-the outout color either form the associated texture or the material diffuse color.
+the output color either form the associated texture or the material diffuse color.
 
 Now it's the moment to use all these concepts together in the `ScnRender` class:
 

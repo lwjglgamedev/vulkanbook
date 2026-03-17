@@ -72,7 +72,7 @@ public class PhysDevice {
         }
     }
 
-    public static PhysDevice createPhysicalDevice(Instance instance, String prefDeviceName) {
+    public static PhysDevice createPhysicalDevice(Instance instance, String preferredDeviceName) {
         Logger.debug("Selecting physical devices");
         PhysDevice result = null;
         try (var stack = MemoryStack.stackPush()) {
@@ -99,7 +99,7 @@ public class PhysDevice {
                     continue;
                 }
 
-                if (prefDeviceName != null && prefDeviceName.equals(deviceName)) {
+                if (preferredDeviceName != null && preferredDeviceName.equals(deviceName)) {
                     result = physDevice;
                     break;
                 }

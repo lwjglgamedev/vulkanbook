@@ -575,7 +575,7 @@ public class AnimRender {
 }
 ```
 
-The `loadModels` method has been simplified a lot since we do not need to create descriptor sets for all the buffers, we just need to keep the code that assciates group
+The `loadModels` method has been simplified a lot since we do not need to create descriptor sets for all the buffers, we just need to keep the code that associates group
 sizes to each mesh: 
 
 ```java

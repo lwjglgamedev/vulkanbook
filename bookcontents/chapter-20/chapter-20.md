@@ -5,7 +5,7 @@
 In this chapter we will perform input processing and update and render code in separate threads. It is just a simple example which may help you in increasing parallelism even
 more a graphics engine (having separate threads for different render tasks, etc.). In this case, we will use a new frame to perform render tasks, and reuse existing main
 thread to process input and game update logic. Since we are using GLFW, any input related task needs to be done in the main thread. If you would want to process input in
-a separate thread you would need first to access tio input state and then process that in that new thread. In order to keep code simple we will just use the same main thread.
+a separate thread you would need first to access to input state and then process that in that new thread. In order to keep code simple we will just use the same main thread.
 
 But how we avoid to be updating entities information, such as model matrices, while we use that information in the render tasks? With latest changes we just dump entities
 information into a buffer that will be used for render. We have been doing this prior to executing render tasks so there was no need to sync that. If we do it in parallel

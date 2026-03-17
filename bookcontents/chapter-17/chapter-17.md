@@ -1,6 +1,6 @@
 # Chapter 17 - Animations
 
-In this chapter we will add support for skeletal animations using compute shaders to perform the required transformations to animate a model. By doing so, we will handle static and animated models in the scene render stage exactly the same way. The compute shader will perform the required transformations and wil dump the results in a buffer. By doing that way, we will not need to change a line of our shaders, we will just be accessing buffers that have vertex information with the same layout. Please keep in mind that, in order to keep this example as simple as possible, we will simplify the animation mechanism, for example, we will not be interpolating between animation key frames and we will not control animation duration.
+In this chapter we will add support for skeletal animations using compute shaders to perform the required transformations to animate a model. By doing so, we will handle static and animated models in the scene render stage exactly the same way. The compute shader will perform the required transformations and will dump the results in a buffer. By doing that way, we will not need to change a line of our shaders, we will just be accessing buffers that have vertex information with the same layout. Please keep in mind that, in order to keep this example as simple as possible, we will simplify the animation mechanism, for example, we will not be interpolating between animation key frames and we will not control animation duration.
 
 You can find the complete source code for this chapter [here](../../booksamples/chapter-17).
 
@@ -1271,7 +1271,7 @@ public class AnimRender {
 
 The code is similar to the recording methods in the scene, shadow and lighting phases. We first wait for the fence to prevent using the command while in use. Once we start the recording we first submit the global memory barrier, waiting for the vertex stage to complete before starting commands that will go through the compute stage. After that, we iterate over the models and their meshes, setting the appropriate descriptor sets that will hold the binding pose data and the weights list. For each associated entity we set up the descriptor linked to the storage buffer that will hold the results, and the joint matrices list associated to the specific frame used to render the entity. Finally we call the `vkCmdDispatch` function to dispatch the compute shader execution.
 
-Finally, the `AnimRender` class defines some utility methods to start anf finish command recording.
+Finally, the `AnimRender` class defines some utility methods to start and finish command recording.
 ```java
 public class AnimRender {
     ...

@@ -61,7 +61,7 @@ Creating a command pool is pretty straightforward, we just set up an initializat
 - `queueFamilyIndex`: Selects the queue family index where the commands created in this pool can be submitted to. 
 
 We have omitted one parameter which you may also see in other Vulkan documentation, the `flags` parameter which allows to specify the behavior of the command pool.
-Basically, we have two options, we can get command buffers from the pool and return them whenever we have used them (we have submitted them tio a queue), or we can
+Basically, we have two options, we can get command buffers from the pool and return them whenever we have used them (we have submitted them to a queue), or we can
 reuse them between several submits. In this later case, you need to reset them. In order to do so, you need to explicitly create the command pool to support this behavior,
 by setting the `flags` parameter with the `VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT` value. This will allow commands to be reset individually.
 You may think this should be the recommended approach for performance, but in fact it is just the opposite. It is much better to return command to the pool once
@@ -164,7 +164,7 @@ public class CmdBuffer {
 }
 ```
 
-We have two methods to start recording, the first one, which receives no parameter is a convenience method which can be used for primary command buffers. The next one receives an `InheritanceInfo` instance which is required for secondary buffers. To start recording we need to create a `VkCommandBufferBeginInfo` structure and invoke the `vkBeginCommandBuffer` function. If we are submitting a short lived command, we can signal that using the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. In this case, the driver may not try to optimize that command buffer since it will only be used one time. Secondary buffers need to be instructed which render pass and frame buffer they will need to use since a render pass wil not be started when recording. We need to fill up the `VkCommandBufferInheritanceInfo` structure filled up with the color and depth attachments formats (more on this later). Secondary command buffers can be integrated into primary command buffers by executing the `vkCmdExecuteCommands` function.
+We have two methods to start recording, the first one, which receives no parameter is a convenience method which can be used for primary command buffers. The next one receives an `InheritanceInfo` instance which is required for secondary buffers. To start recording we need to create a `VkCommandBufferBeginInfo` structure and invoke the `vkBeginCommandBuffer` function. If we are submitting a short lived command, we can signal that using the flag `VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT`. In this case, the driver may not try to optimize that command buffer since it will only be used one time. Secondary buffers need to be instructed which render pass and frame buffer they will need to use since a render pass will not be started when recording. We need to fill up the `VkCommandBufferInheritanceInfo` structure filled up with the color and depth attachments formats (more on this later). Secondary command buffers can be integrated into primary command buffers by executing the `vkCmdExecuteCommands` function.
 
 The next methods are the usual `cleanup` for releasing resources, to finalize the recording and another one to get the command buffer Vulkan instance.
 
@@ -391,11 +391,11 @@ so presentation cannot start until render work has been finished. The issue here
 - In Frame `#0`:
     - We acquire the first swap chain image (with an index equal to `0`).
     - We submit the work using `renderCompleteSemphs[0]`.
-    - We present the swap chain image (that is, call the `vkQueuePresentKHR` function using `renderCompleteSemphs[0]` sempahore).
+    - We present the swap chain image (that is, call the `vkQueuePresentKHR` function using `renderCompleteSemphs[0]` semaphore).
 - In Frame `#1`:
     - We acquire the next swap chain image (with an index equal to `1`).
     - We submit the work using `renderCompleteSemphs[1]`.
-    - We present the swap chain image (that is, call the `vkQueuePresentKHR` function using `renderCompleteSemphs[1]` sempahore).
+    - We present the swap chain image (that is, call the `vkQueuePresentKHR` function using `renderCompleteSemphs[1]` semaphore).
     - Everything is ok up to this point.
 - In Frame `#2`:
     - We acquire the next swap chain image (with an index equal to `2`).
@@ -474,7 +474,7 @@ We will need:
 - An array of command buffers, one per frame in flight where will be recording the commands for each of them.
 - Synchronization instances, semaphores and fences, as well, as many as frames in flight with the exception of the semaphores that will be signaled when the render process
 is completed. 
-- One `Queue.GraphicsQueue` since we can use them in multiple frames. Synchronization wil be controlled by fences and semaphores.
+- One `Queue.GraphicsQueue` since we can use them in multiple frames. Synchronization be controlled by fences and semaphores.
 - You will see to new classes that have not been defined yet: `Queue.PresentQueue` (which will be used to present swap chain images)
 and `ScnRender` (to actually render a scene). We will see their definition later on.
 - The attribute `currentFrame` will hold the current frame to be processed. It will be updated in each render loop.
@@ -712,7 +712,7 @@ In this book we will use Vulkan dynamic rendering vs the traditional approach ba
 to the attachments (the images) that we want to render to vs having to specify them upfront through render passes and frame buffers. The result is fewer code and
 reduced setup steps. Dynamic render provides more flexibility and we can change the target attachments at runtime without recreating the associated elements
 (render passes and frame buffers). However, for certain tasks it is a little bit more explicit than the traditional approach. For example, with render passes
-you get som implicit image transitions (which basically prepared images from undefined layouts to the proper render one). Dynamic render requires us to explicitly
+you get some implicit image transitions (which basically prepared images from undefined layouts to the proper render one). Dynamic render requires us to explicitly
 define layout transitions and synchronization, which requires a little bit m ore of code, but is not so dramatic. In addition, I personally find more clear
 the dynamic render approach, where everything is explicit and you do not have to guess what automatic transition or locking is applied.
 

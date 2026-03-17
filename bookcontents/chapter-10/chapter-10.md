@@ -321,7 +321,7 @@ public class Image {
     ...
 ```
 
-First, we no longer will ned keep track of the allocated memory but we will need to keep an allocation handle, as in the case of the
+First, we no longer will need keep track of the allocated memory but we will need to keep an allocation handle, as in the case of the
 `VkBuffer` class. The constructor now looks like this:
 
 ```java
