@@ -13,7 +13,7 @@ In order to render shadows, we just need to render the scene from the light poin
 The problem with shadow depth maps is their resolution, we need to cover a wide area, and in order to get high quality visuals we would need huge images to store that information. One possible solution for that are cascade shadow maps. It is based on the fact that, shadows of objects that are closer to the camera need to have a higher quality than shadows for distant objects. The approach that Cascaded Shadow Maps (CSMs) use is to divide the view frustum into several splits. Splits closer to the camera cover a smaller amount of space whilst distant regions cover much wider regions. CSMs use one depth map per split. For each of these splits, the depth map is rendered, adjusting the light view and projection matrices to cover each split.
 
 Specifically, we will use the Variance Shadow Mapping (VSM) technique to generate and calculate shadows. In previous versions,
-we just computed the depth for the different shadow map cascades. This caused several artifacts which wer difficult to mitigate,
+we just computed the depth for the different shadow map cascades. This caused several artifacts which were difficult to mitigate,
 such as shadow acne and peter panning. Instead of just storing the depth values we will also store the depth squared. By doing
 so, and by calculating in a different way if a fragment is in shadow, we will be able to get more quality in the shadows.
 For any fragment, when computing if it is in shadow or not, we will calculate the mean and the variance. We will use
@@ -83,7 +83,7 @@ public class CascadeShadows {
 }
 ```
 
-Shadow cascades calculation is done in the class `ShadowUtils`which starts like this:
+Shadow cascades calculation is done in the class `ShadowUtils` which starts like this:
 
 ```java
 package org.vulkanb.eng.graph.shadow;
@@ -870,7 +870,7 @@ public class Attachment {
 
 ## Changes in light stage
 
-Prior to reviewing the changes in the `LightingRender` class, we will examine the changes in the shaders so we can better understand the modifications required in that class. The vertex shader (`light_vtx.glsl`) does not need to be modified at all, the changes will affect the fragment shader (`light_frg.glsl`). Let's dissect the changes. First, we will define a set of specialization constants:
+Prior to reviewing the changes in the `LightRender` class, we will examine the changes in the shaders so we can better understand the modifications required in that class. The vertex shader (`light_vtx.glsl`) does not need to be modified at all, the changes will affect the fragment shader (`light_frg.glsl`). Let's dissect the changes. First, we will define a set of specialization constants:
 
 ```glsl
 ...
@@ -938,9 +938,10 @@ float calcVisibility(vec4 worldPosition, uint cascadeIndex) {
 
     float visibility = chebyshevUpperBound(moments, depth);
     return visibility;
-}```
-T
-his function, transforms from world coordinates space to the NDC space of the directional light, for a specific cascade split, using its orthographic projection. That is, we multiply world space by the projection view matrix of the specified cascade split. After that, we need to transform those coordinates to texture coordinates (that is in the range [0, 1], starting at the top left corner). With that information, we check if is affected by shadow or not by calling the `chebyshevUpperBound` function.
+}
+```
+
+This function, transforms from world coordinates space to the NDC space of the directional light, for a specific cascade split, using its orthographic projection. That is, we multiply world space by the projection view matrix of the specified cascade split. After that, we need to transform those coordinates to texture coordinates (that is in the range [0, 1], starting at the top left corner). With that information, we check if is affected by shadow or not by calling the `chebyshevUpperBound` function.
 
 The `main` function is defined like this:
 
@@ -1004,7 +1005,7 @@ void main() {
 Basically, we cascade shadows splits to select the one that matches the view distance and use that index. With that information we invoke the `calcVisibility` function.
 Finally, if the debug mode is activated we apply a color to that fragment to identify the cascades we are using.
 
-Before examining the changes in the `LightingRender` class we will create a new class named `LightSpecConsts` which will create the required structures that will hold specialization constants information. The class is defined like this:
+Before examining the changes in the `LightRender` class we will create a new class named `LightSpecConsts` which will create the required structures that will hold specialization constants information. The class is defined like this:
 
 ```java
 package org.vulkanb.eng.graph.light;
@@ -1067,7 +1068,7 @@ public class LightSpecConsts {
 First, we create a buffer that will hold the specialization constants data, which will be the number of cascade shadows and the
 debug flag. We need to create one `VkSpecializationMapEntry` for each specialization constant. The `VkSpecializationMapEntry` defines the numerical identifier used by the constant, the size of the data and the offset in the buffer that holds the data for all the constants. With all that information, we create the `VkSpecializationInfo` structure.
 
-Now we can examine the changes in the `LightingRender` class. First, we will create new attributes for the specialization constants and the cascade shadows data (we will
+Now we can examine the changes in the `LightRender` class. First, we will create new attributes for the specialization constants and the cascade shadows data (we will
 need one buffer per frame in flight in this case to be able to update it in each frame). This will require new descriptor sets. We will also need more space for
 scene information:
 
