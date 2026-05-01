@@ -128,4 +128,8 @@ The following list collects the ones that I've found more useful, and that I've 
 > (push and pop) thattmay cause issues.
 > Remember that these are JVM arguments, not program arguments. If you set them in a IDE you may need to set this in the correct place.  
 
+## Renderdoc on Linux
+
+If you are on Linux with Wayland, in order for renderdoc to work you may need to set up the `XDG_SESSION_TYPE` envirnment variable to `x11`.
+
 [Next chapter](../chapter-01/chapter-01.md)

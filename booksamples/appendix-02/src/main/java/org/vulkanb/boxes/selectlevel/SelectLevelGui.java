@@ -34,7 +34,8 @@ public class SelectLevelGui implements IGuiInstance {
     public void processGui(EngCtx engCtx, FontsManager fontsManager) {
         ImGui.newFrame();
 
-        ImGui.pushFont(fontsManager.getFont(DEFAULT_FONT));
+        var font = fontsManager.getFont(DEFAULT_FONT);
+        ImGui.pushFont(font.imFont(), font.size());
 
         ImVec2 textSize = new ImVec2();
         ImGui.calcTextSize(textSize, TXT_SELECT_LEVEL);

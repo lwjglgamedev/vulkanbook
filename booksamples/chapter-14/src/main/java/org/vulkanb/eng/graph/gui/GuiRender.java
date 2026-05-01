@@ -58,6 +58,7 @@ public class GuiRender {
         DescAllocator descAllocator = vkCtx.getDescAllocator();
         DescSet descSet = descAllocator.addDescSets(device, DESC_ID_TEXT, 1, textDescSetLayout)[0];
         descSet.setImage(device, fontsTexture.getImageView(), fontsTextureSampler, textDescSetLayout.getLayoutInfo().binding());
+        ImGui.getIO().getFonts().setTexID(descSet.getVkDescriptorSet());
 
         KeyboardInput ki = engCtx.window().getKeyboardInput();
         ki.setCharCallBack(new GuiUtils.CharCallBack());
@@ -224,12 +225,10 @@ public class GuiRender {
             for (int i = 0; i < numCmdLists; i++) {
                 int cmdBufferSize = imDrawData.getCmdListCmdBufferSize(i);
                 for (int j = 0; j < cmdBufferSize; j++) {
-                    long textDescSet;
                     long textId = imDrawData.getCmdListCmdBufferTextureId(i, j);
-                    if (textId == 0) {
-                        textDescSet = descAllocator.getDescSet(DESC_ID_TEXT).getVkDescriptorSet();
-                    } else {
-                        textDescSet = guiTexturesMap.get(textId);
+                    Long textDescSet = guiTexturesMap.get(textId);
+                    if (textDescSet == null) {
+                        textDescSet = textId;
                     }
                     descriptorSets.put(0, textDescSet);
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,

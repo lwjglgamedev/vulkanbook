@@ -93,6 +93,7 @@ public class GuiRender {
         DescAllocator descAllocator = vkCtx.getDescAllocator();
         DescSet descSet = descAllocator.addDescSets(device, DESC_ID_TEXT, 1, textDescSetLayout)[0];
         descSet.setImage(device, fontsTexture.getImageView(), fontsTextureSampler, textDescSetLayout.getLayoutInfo().binding());
+        ImGui.getIO().getFonts().setTexID(descSet.getVkDescriptorSet());
 
         KeyboardInput ki = engCtx.window().getKeyboardInput();
         ki.setCharCallBack(new GuiUtils.CharCallBack());
@@ -107,7 +108,10 @@ public class GuiRender {
 The constructor is quite similar to the other `*Render` classes. In this case, we receive as an input a color attachment where will be rendering. This will be the 
 attachment used for post processing. We will not use depth attachments in this case, since GUI elements are essentially 2D shapes. We need to create render info,
 shader modules, the associated pipelines and we will use arrays to store vertices and indices buffers to store ImGui render results. For each frame, ImGui will generate
-the vertices and indices associated to the GUI elements we need to render. At the end of the constructor you will see that wee set a char callback and add a key
+the vertices and indices associated to the GUI elements we need to render. It is important to set up a descriptor set for the default texture and call the `setTexID`
+function that will have the descriptor to be used as a default.
+
+At the end of the constructor you will see that wee set a char callback and add a key
 callback to the `KeyboardInput` instance. We need to do this in order to handle keyboard input in ImGui widgets, we will see the definition of the `GuiUtils` class later on.
 
 The "usual" methods are defined like this:
@@ -405,7 +409,6 @@ public class GuiRender {
             vkCmdPushConstants(cmdHandle, pipeline.getVkPipelineLayout(),
                     VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstantBuffer);
 
-            DescAllocator descAllocator = vkCtx.getDescAllocator();
             LongBuffer descriptorSets = stack.mallocLong(1);
 
             ImVec4 imVec4 = new ImVec4();
@@ -417,12 +420,10 @@ public class GuiRender {
             for (int i = 0; i < numCmdLists; i++) {
                 int cmdBufferSize = imDrawData.getCmdListCmdBufferSize(i);
                 for (int j = 0; j < cmdBufferSize; j++) {
-                    long textDescSet;
                     long textId = imDrawData.getCmdListCmdBufferTextureId(i, j);
-                    if (textId == 0) {
-                        textDescSet = descAllocator.getDescSet(DESC_ID_TEXT).getVkDescriptorSet();
-                    } else {
-                        textDescSet = guiTexturesMap.get(textId);
+                    Long textDescSet = guiTexturesMap.get(textId);
+                    if (textDescSet == null) {
+                        textDescSet = textId;
                     }
                     descriptorSets.put(0, textDescSet);
                     vkCmdBindDescriptorSets(cmdHandle, VK_PIPELINE_BIND_POINT_GRAPHICS,

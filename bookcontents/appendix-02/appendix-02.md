@@ -1,6 +1,6 @@
 # Appendix 02 - A sample 3D game
 
-In this appendix we will provide a ample 3D game to show how everything fits together. I will not explain the whole set of source code, instead, I will just highlight some changes made to the core source code base and some remarks.
+In this appendix we will provide a sample 3D game to show how everything fits together. I will not explain the whole set of source code, instead, I will just highlight some changes made to the core source code base and some remarks.
 
 You can find the complete source code for this chapter [here](../../booksamples/appendix-02).
 
@@ -31,16 +31,17 @@ import java.util.*;
 public class FontsManager {
 
     private static final String CONFIG_FILE = "resources/fonts/fonts.json";
+    private static final int DEFAULT_SIZE = 10;
 
-    private final Map<String, ImFont> fontsMap;
-    private ImFont defaultFont;
+    private final Map<String, Font> fontsMap;
+    private Font defaultFont;
 
     public FontsManager() {
         fontsMap = new HashMap<>();
         Logger.debug("Loading font configuration file {}", CONFIG_FILE);
         try {
             ImGuiIO imGuiIO = ImGui.getIO();
-            defaultFont = imGuiIO.getFonts().addFontDefault();
+            defaultFont = new Font(imGuiIO.getFonts().addFontDefault(), DEFAULT_SIZE);
 
             String cfgFileContents = Files.readString(Path.of(CONFIG_FILE));
 
@@ -50,20 +51,20 @@ public class FontsManager {
 
             for (FontData fontData : fontDataList) {
                 Logger.debug("Loading font [{}]", fontData.ttfFile());
-                ImFont font = imGuiIO.getFonts().addFontFromFileTTF(fontData.ttfFile(), fontData.size());
-                fontsMap.put(fontData.id(), font);
+                ImFont imFont = imGuiIO.getFonts().addFontFromFileTTF(fontData.ttfFile(), fontData.size());
+                fontsMap.put(fontData.id(), new Font(imFont, (int) fontData.size));
             }
         } catch (IOException excp) {
             Logger.error("Error loading configuration file {}", CONFIG_FILE, excp);
         }
     }
 
-    public ImFont getDefaultFont() {
+    public Font getDefaultFont() {
         return defaultFont;
     }
 
-    public ImFont getFont(String fontId) {
-        ImFont font;
+    public Font getFont(String fontId) {
+        Font font;
         if (fontsMap.containsKey(fontId)) {
             font = fontsMap.get(fontId);
         } else {
@@ -73,9 +74,13 @@ public class FontsManager {
         return font;
     }
 
+    public record Font(ImFont imFont, int size) {
+    }
+
     record FontData(String id, String ttfFile, float size) {
     }
-}```
+}
+```
 
 As you can see, in the constructor we load the JSON file which defines the fonts available. That file may look like this:
 
@@ -85,7 +90,7 @@ As you can see, in the constructor we load the JSON file which defines the fonts
       "id": "MAIN",
       "ttf_file": "resources/fonts/neuropolitical_rg.otf",
       "size": 82.0
-    }	
+    }
 ]
 ```
 
@@ -152,6 +157,8 @@ public class GuiRender {
         DescAllocator descAllocator = vkCtx.getDescAllocator();
         DescSet descSet = descAllocator.addDescSets(device, DESC_ID_TEXT, 1, textDescSetLayout)[0];
         descSet.setImage(device, fontsTexture.getImageView(), fontsTextureSampler, textDescSetLayout.getLayoutInfo().binding());
+        imGuiIO.getFonts().setTexID(descSet.getVkDescriptorSet());
+        guiTexturesMap.put(descSet.getVkDescriptorSet(), descSet.getVkDescriptorSet());
     }
     ...
 }
@@ -195,7 +202,8 @@ public class Render {
 
 Now, how do we use the fonts in the code? Prior to using a font we just need to call the `pushFont` function in Imgui, like this:
 ```java
-ImGui.pushFont(fontsManager.getFont("MAIN"));
+var font = fontsManager.getFont(DEFAULT_FONT);
+ImGui.pushFont(font.imFont(), font.size());
 ```
 
 Once we have done with the font we just pop the font:
