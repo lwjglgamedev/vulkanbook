@@ -2,7 +2,7 @@
 
 In this chapter we will add the capability to display Graphical User Interfaces (GUI) on top of the rendered scene. We will use the [Dear ImGui library](https://github.com/ocornut/imgui) through the [imgui-java](https://github.com/SpaiR/imgui-java) wrapper. ImGui is a light-weight GUI library render-agnostic which can be used with OpenGL, DirectX or Vulkan. We can construct complex GUIs, capable of reacting to user input, and get its output as vertex buffers which we can render in our application as other regular shape. The purpose of this chapter is not to explain ImGui deeply, but to show how can be integrated with our Vulkan based render pipeline.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-12).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-12).
 
 ## Imgui-java dependencies
 

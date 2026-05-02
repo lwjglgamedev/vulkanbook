@@ -5,7 +5,7 @@ This is the very first thing that will be created when dealing with Vulkan.
 Basically, a Vulkan instance is where all the application state is glued together.
 In Vulkan, there is no global state--all that information is organized around a Vulkan instance.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-02).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-02).
 
 ## Instance first steps
 

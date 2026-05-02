@@ -17,7 +17,7 @@ The base requirements to run the samples of this book are:
   Personally, I'm using [IntelliJ IDEA](https://www.jetbrains.com/es-es/idea/).
   If you're using an IDE, you may let it compile and run it for you.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-01).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-01).
 
 When posting source code, we will use `...` to state that there is code above or below the fragment code in a class or in a method.
 

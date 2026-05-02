@@ -3,7 +3,7 @@
 In this chapter we will implement a post-processing stage. We will render to a buffer instead of directly rendering to a swap chain image and once we have finished we
 will apply some effects such as FXAA filtering and gamma correction.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-11).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-11).
 
 ## Specialization constants
 

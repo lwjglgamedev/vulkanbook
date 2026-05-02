@@ -2,7 +2,7 @@
 
 In this chapter we will introduce new concepts that are required to render a scene to the screen. We will finally combine all these new concepts with the elements described in previous chapters to clear the screen. Therefore, it is crucial to understand all of them and how are they related in order to be able to progress in the book.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-05).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-05).
 
 ## Command Buffers
 

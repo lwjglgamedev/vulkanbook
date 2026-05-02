@@ -2,7 +2,7 @@
 
 This is transition chapter. We will add small improvements and present some new concepts to prepare more relevant changes in the next chapters (therefore, it will be a shorter chapter). We will improve the visuals by adding support for transparent objects and mipmaps. We will also add support for a camera to move inside the 3D scene.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-09).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-09).
 
 ## Transparent objects
 

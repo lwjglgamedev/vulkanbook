@@ -13,7 +13,7 @@ we will use a simple trick to avoid that problem. If you recall, we have an arra
 frame "n" for updating tasks, and frames associated with "n-1" when performing render tasks. It is like if we were updating the information associated to the next frame to be
 rendered.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-20).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-20).
 
 ## Source code changes
 

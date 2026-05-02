@@ -2,7 +2,7 @@
 
 In this chapter we will be finally rendering a shape, developing the required classes to load data to the GPU and using the graphics pipeline. We will start, as in the previous chapters, by explaining the elements that we will need later on to use together to draw something to the screen.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-06).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-06).
 
 ## Buffers
 

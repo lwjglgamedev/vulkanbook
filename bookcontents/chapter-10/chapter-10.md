@@ -2,7 +2,7 @@
 
 This will be a short chapter where we will introduce the VMA library which will help us with Vulkan memory allocation.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-10).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-10).
 
 ## Vulkan Memory Allocator (VMA)
 

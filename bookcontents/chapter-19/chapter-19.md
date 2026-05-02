@@ -10,7 +10,7 @@ a more efficient way of drawing because:
 
 As you can see, the ultimate goal is to maximize the utilization of the GPU while removing potential bottlenecks that may occur at the CPU side and latencies due to CPU to GPU communications.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-19).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-19).
 
 ## Overview
 

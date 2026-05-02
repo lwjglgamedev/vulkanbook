@@ -2,7 +2,7 @@
 
 In this chapter, we will add shadows to the scene applying Cascaded Shadow Maps (CSM). This chapter applies the techniques shown by Sascha Willems in his Vulkan examples. Specifically, it uses part of the source code for the examples related to [cascaded shadow mapping](https://github.com/SaschaWillems/Vulkan/blob/master/examples/shadowmappingcascade) and [deferred shadow ](https://github.com/SaschaWillems/Vulkan/blob/master/examples/deferredshadows). I cannot stress enough how good are the examples provided by Sascha Willems, you should carefully have a look at them.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-16).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-16).
 
 ## Cascade shadow mapping overview
 

@@ -2,7 +2,7 @@
 
 In this appendix we will provide some insights on how to troubleshoot Vulkan device loss errors. The root cause of device loss errors may be hard to track, therefore, Vulkan provides some debugging extensions to help developers track down these errors.
 
-You can find the complete source code for this chapter [here](../../booksamples/appendix-01).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/appendix-01).
 
 ## Enabling the extensions
 

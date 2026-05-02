@@ -2,7 +2,7 @@
 
 In this chapter we will add support for loading complex 3D models which may include textures.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-08).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-08).
 
 ## Assimp
 

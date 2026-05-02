@@ -2,7 +2,7 @@
 
 In this chapter we will complete deferred shading example by adding support for lights and PBR (Physically based rendering) to improve the visuals.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-15).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-15).
 
 ## PBR
 

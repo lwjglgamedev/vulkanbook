@@ -2,7 +2,7 @@
 
 In this appendix we will provide a sample 3D game to show how everything fits together. I will not explain the whole set of source code, instead, I will just highlight some changes made to the core source code base and some remarks.
 
-You can find the complete source code for this chapter [here](../../booksamples/appendix-02).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/appendix-02).
 
 ## Overview of the game
 

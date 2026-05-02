@@ -5,7 +5,7 @@ scene and another one to apply lighting. In this chapter we will only setup the 
 introducing new Vulkan concepts, just combine the ones we have described previously to support deferred shading. Therefore, you will see larger chunks of code with an
 explanatory overview, focusing on the key concepts of Vulkan that need to be applied to implement deferred shading.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-14).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-14).
 
 ## Deferred shading
 

@@ -3,7 +3,7 @@
 In this chapter we will use Buffer device address, which will allow us to refer to buffer virtual addresses in shaders instead of using descriptor sets. This is very convenient
 to use a bind-less approach where we will access data  as pointers, and will simplify the code a lot. The drawback is that any miss-use in setting the addresses may cause the GPU to crash.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-18).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-18).
 
 
 ## Enable BDA

@@ -2,7 +2,7 @@
 
 In this chapter we will progress in the definition of the Vulkan structures required to render a 3D scene. Specifically, we will setup the Physical and Logical devices and a Surface.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-03).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-03).
 
 ## Physical device selection
 

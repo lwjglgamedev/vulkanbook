@@ -2,7 +2,7 @@
 
 Until this moment we have been dealing with graphics, but another key aspect of every game is audio. In this chapter we will add sound support.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-13).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-13).
 
 ## OpenAL
 

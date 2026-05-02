@@ -2,7 +2,7 @@
 
 In this chapter we will continue our road to render on the screen. We will describe in detail a concept that has been mentioned in previous chapters, the swap chain.
 
-You can find the complete source code for this chapter [here](../../booksamples/chapter-04).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-04).
 
 ## Swap chain
 

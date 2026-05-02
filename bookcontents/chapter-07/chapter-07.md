@@ -1,7 +1,7 @@
 # Chapter 07 - Going 3D
 
 In this chapter we will be rendering a 3D model, a spinning cube. Although our models did already have a z-coordinate, the output attachments we are using only deal with colors, depth values were not handled at all. We need to define a new attachment to store depth information, a depth image. In addition to that, we will add support for window resizing.
-You can find the complete source code for this chapter [here](../../booksamples/chapter-07).
+You can find the complete source code for this chapter [here](https://github.com/lwjglgamedev/vulkanbook/tree/master/booksamples/chapter-07).
 
 ## Depth Image
 
