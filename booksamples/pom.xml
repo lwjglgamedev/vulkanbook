@@ -170,7 +170,7 @@
         <imgui-java.version>1.92.0</imgui-java.version>
         <java.version>24</java.version>    
         <jcommander.version>3.0</jcommander.version>
-        <joml.version>1.10.8</joml.version>
+        <joml.version>1.10.9</joml.version>
         <lwjgl.version>3.4.1</lwjgl.version>
         <maven.version>3.9</maven.version>
         <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
