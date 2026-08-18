@@ -47,7 +47,7 @@ public class VkBuffer {
 }
 ```
 
-The method to get the buffer device address is define din the `VkUtils` class, which also defines a constant to define the size of bytes of buffer memory addresses (8 bytes).
+The method to get the buffer device address is defined in the `VkUtils` class, which also defines a constant to define the size of bytes of buffer memory addresses (8 bytes).
 To get the address we just call the `vkGetBufferDeviceAddress` over a buffer handle:
 
 ```java
@@ -84,7 +84,7 @@ public class VkBuffer {
 }
 ```
 
-Since we are allocating memory with [VMA](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator), we need to enable that feature in VMA allocator suing the
+Since we are allocating memory with [VMA](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator), we need to enable that feature in VMA allocator using the
 `VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT` flag:
 
 ```java
@@ -103,7 +103,7 @@ public class MemAlloc {
 ## Scene render changes
 
 Now we are ready to start using BDAs in our render stages, let's start with the scene render one. In order to understand the changes that need to be done, we will examine
-first the vertex shade. This will help us to understand how BDA works from the GPU side and the changes that are required in the Java Code. The vertex shader (`scn_vtx.glsl`)
+first the vertex shader. This will help us to understand how BDA works from the GPU side and the changes that are required in the Java Code. The vertex shader (`scn_vtx.glsl`)
 starts like this:
 
 ```glsl
