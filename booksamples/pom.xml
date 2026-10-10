@@ -181,7 +181,7 @@
         <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
         <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
         <native-maven-plugin.version>1.1.1</native-maven-plugin.version>
-        <tinylog.version>2.8.0</tinylog.version>
+        <tinylog.version>2.8.1</tinylog.version>
     </properties>
 
     <profiles>
