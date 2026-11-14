@@ -763,7 +763,7 @@ public class ShadowRender {
 
 ## Final changes
 
-Animation render (`AnimRender`) needs just to be changes since the way we traverse through the entities of animated models as now changes, that is all. The concepts
+Animation render (`AnimRender`) needs just to be changed since the way we traverse through the entities of animated models has now changed, that is all. The concepts
 are still the same:
 
 ```java
