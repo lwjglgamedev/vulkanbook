@@ -191,7 +191,7 @@ The buffers that we will use are:
 - `buffInstanceData`: This will hold instance data (model matrix index, material index and the addresses for the vertex and index buffers).
 - `buffModelMatrices`: This will hold model matrices for the entities.
 
-You may have notices that we use array of buffers, we will have separate buffer instances per frame in flight. We then can update the contents of the buffers
+You may have notice that we use array of buffers, we will have separate buffer instances per frame in flight. We then can update the contents of the buffers
 associated to current frame while the ones associated to a previous frame, which may still be in use, can be safely accessed by the GPU. We will we upsizing
 the buffers as long as we run if need more space. We will never shrink the buffers if the data to be used requires less space to avoid buffer recreation calls.
 This is why we need to keep track of the number of indirect command buffers to be submitted, which is stored, per frame in flight, in the `drawCounts` array.
@@ -331,7 +331,7 @@ Let's dissect the method:
 - We first iterate over the models and their associated entities.
 - We get the meshes associated to the model.
 - If the model is animated, we need to create an indirect command for each of the entities and meshes, no instanced render will be used. This is why we create
-always the commands with `instanceCount` equal to `1`. We need to properly set the `firstInstance` vale. In this case, for  each mesh of the entity we just increase the value
+always the commands with `instanceCount` equal to `1`. We need to properly set the `firstInstance` value. In this case, for  each mesh of the entity we just increase the value
 with one. Later on, in the shaders we will use the built in variable `gl_InstanceIndex`, which will help us to navigate through the `buffInstanceData` data. In each mesh
 that we will process for animated models for each entity the `gl_InstanceIndex` will be equal to the value set in the `firstInstance` field.
 - For non animated models, we will just create one `VkDrawIndirectCommand` per mesh, setting the `instanceCount` to the number of entities associated to the model. In this case
@@ -520,7 +520,7 @@ void main()
 }
 ```
 
-Firs we need to pass the material index to the fragment shader as an output variable (`outMaterialIdx`), since it will not be available through push constants. We use
+First we need to pass the material index to the fragment shader as an output variable (`outMaterialIdx`), since it will not be available through push constants. We use
 the `flat` modifier since we do not want to perform any kind of interpolation. Push constants now just define addresses for the instances buffer (the one we defined
 in the `GlobalBuffers` class as `buffInstanceData`) and the buffer that hold models matrices. The `InstancesDataBuffer` just defines the data explained above, the
 model matrix index, the material index and the addresses of the vertices and indices buffers. In order to access the proper element in that buffer, we just use the
@@ -649,7 +649,7 @@ public class ScnRender {
 ```
 
 As you can see the changes are quite minimal. We just need to update the size of the push constants and in the `render` method we just call the `vkCmdDrawIndirect`
-function, with the buffer we previously filled up in the `updateCmdIndirectCommands` method form the `GlobalBuffers` class. The `renderEntities` method is now gone.
+function, with the buffer we previously filled up in the `updateCmdIndirectCommands` method from the `GlobalBuffers` class. The `renderEntities` method is now gone.
 The `setPushConstants` method needs to be simplified to pass just the two addresses we will need. 
 
 ## Shadow render changes
